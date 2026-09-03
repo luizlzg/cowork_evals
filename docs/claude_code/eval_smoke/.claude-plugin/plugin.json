@@ -1,0 +1,6 @@
+{
+  "name": "eval-smoke",
+  "description": "Throwaway plugin used to prove the claude plugin eval harness runs. Not for release.",
+  "version": "0.0.1",
+  "dependencies": []
+}

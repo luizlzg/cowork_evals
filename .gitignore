@@ -1,0 +1,19 @@
+# Python environments
+.venv/
+.venv_cowork/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Eval output. Slow and costly to produce, never committed.
+logs/
+results/
+tmp/
+
+# Local machine state
+.claude/settings.local.json
+.env
+.DS_Store
