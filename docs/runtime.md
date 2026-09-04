@@ -74,7 +74,7 @@ Exact Python pins: [`data/requirements.txt`](data/requirements.txt), the verbati
 | ------------ | ------------------------------------------------------------------------------------ |
 | OS           | Ubuntu 22.04.5 LTS (jammy)                                                           |
 | Architecture | aarch64 (ARM64). On an x86_64 dev machine package builds and behaviour differ        |
-| Python       | 3.10.12 (`/usr/bin/python3`, also `/usr/bin/python3.10`), mirrored by `.venv_cowork` |
+| Python       | 3.10.12 (`/usr/bin/python3`, also `/usr/bin/python3.10`), mirrored by the venv backend |
 | pip          | 25.3                                                                                 |
 | uv           | 0.12.3                                                                               |
 | Node.js      | v22.23.2                                                                             |

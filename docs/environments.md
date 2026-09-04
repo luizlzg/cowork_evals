@@ -2,32 +2,42 @@
 
 Two Python environments. They are not reconciled, and neither replaces the other.
 
-| Environment   | Path           | Python | Defined by                               | Runs                 |
-| ------------- | -------------- | ------ | ---------------------------------------- | -------------------- |
-| Repo tooling  | `.venv`        | 3.14   | `pyproject.toml` dependency groups       | `scripts/`, `tests/` |
-| CoWork mirror | `.venv_cowork` | 3.10   | `docs/data/requirements_installable.txt` | Code under eval      |
+| Environment   | Path                             | Python | Defined by                         | Runs                 |
+| ------------- | -------------------------------- | ------ | ---------------------------------- | -------------------- |
+| Repo tooling  | `.venv`                          | 3.14   | `pyproject.toml` dependency groups | `scripts/`, `tests/` |
+| CoWork mirror | `~/.cache/cowork_evals/venv-<digest>/` | 3.10 | `requirements_installable.txt` | Code under eval      |
 
 Repo tooling never runs on a CoWork VM, so it is unconstrained. Code under eval runs on the
-VM, so it is fully constrained. One interpreter for both would drag the repo tooling down to
-3.10 for no gain.
+VM, so it is pinned to what the VM has.
 
-## Building them
+Only the mirror is shipped. `.venv` is this repository's own, a consumer never builds it,
+and `cowork_evals setup` does not create it. See [library.md](library.md), which also says
+how the mirror digest is computed.
+
+The mirror is built today at `.venv_cowork` in the repository root. It moves to the cache
+path above when the package is built, so that one mirror serves the command and the
+development scripts alike.
+
+## Building it
 
 ```bash
-scripts/init.sh                # both
-scripts/venv.sh                # .venv, after a pyproject.toml change
-scripts/cowork_venv.sh         # .venv_cowork, after a requirements change
-scripts/cowork_venv.sh --check # verify the mirror, no writes
+cowork_evals setup --venv      # the shipped route
+cowork_evals check --venv      # verify the mirror, no writes
+
+scripts/init.sh                # development: both environments
+scripts/venv.sh                # development: .venv, after a pyproject.toml change
+scripts/cowork_venv.sh         # development: the mirror, after a requirements change
+scripts/cowork_venv.sh --check # development: verify the mirror, no writes
 ```
 
-`scripts/cowork_venv.sh` owns the mirror. Shell, not Python: it runs before and
-independently of `.venv`.
+`scripts/cowork_venv.sh` owns the mirror during development. Shell, not Python: it runs
+before and independently of `.venv`.
 
-| Invocation   | Does                                                                |
-| ------------ | ------------------------------------------------------------------- |
-| (no args)    | Create `.venv_cowork` if absent, sync it, exit 0 if already correct |
-| `--recreate` | Delete and rebuild from scratch                                     |
-| `--check`    | Verify only, no writes, non-zero exit on drift                      |
+| Invocation   | Does                                                             |
+| ------------ | ---------------------------------------------------------------- |
+| (no args)    | Create the mirror if absent, sync it, exit 0 if already correct  |
+| `--recreate` | Delete and rebuild from scratch                                  |
+| `--check`    | Verify only, no writes, non-zero exit on drift                   |
 
 `--check` verifies three things: the interpreter reports 3.10, all 127 pins are installed at
 their exact versions, and nothing else is installed except the test-only packages listed in
@@ -72,10 +82,12 @@ holds, and [docker.md](docker.md) for the container that does reproduce them.
 
 ## Two requirements files
 
-| File                                     | Is                                       | Used by          |
-| ---------------------------------------- | ---------------------------------------- | ---------------- |
-| `docs/data/requirements.txt`             | The VM `pip freeze`, 136 pins, verbatim  | Import checking  |
-| `docs/data/requirements_installable.txt` | The same minus the 9 that cannot install | `cowork_venv.sh` |
+| File                               | Is                                       | Used by                          |
+| ---------------------------------- | ---------------------------------------- | -------------------------------- |
+| `requirements.txt`                 | The VM `pip freeze`, 136 pins, verbatim  | Import checking, the image       |
+| `requirements_installable.txt`     | The same minus the 9 that cannot install | `setup --venv`, `cowork_venv.sh` |
+
+Both are at `docs/data/` today and ship as package data. See [library.md](library.md).
 
 The nine are `command-not-found`, `dbus-python`, `distro-info`, `pipx`, `PyGObject`,
 `pyinotify`, `python-apt`, `ufw`, `unattended-upgrades`. They are importable in a session,

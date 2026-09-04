@@ -3,24 +3,52 @@
 Reference material for running evals against Claude CoWork. Read the page that covers what
 you are about to change, and link to it rather than restating it.
 
+Evals are not written here. This repository is a library, installed by the repository that
+owns the plugins under test. [`library.md`](library.md) is that boundary and
+[`cli.md`](cli.md) is the command a consumer runs.
+
+An eval is written once, in the format at [`eval_format.md`](eval_format.md), and runs on
+any of the three backends. [`approaches.md`](approaches.md) says which backend honours which
+part of it.
+
 | Page                                             | Covers                                                          |
 | ------------------------------------------------ | --------------------------------------------------------------- |
-| [`approaches.md`](approaches.md)                 | The three approaches and what each proves                       |
-| [`running_evals.md`](running_evals.md)           | The eval system: layout, scopes, flags, gate, logs, cadence     |
+| [`library.md`](library.md)                       | The boundary: what ships, how it installs, where state lives    |
+| [`cli.md`](cli.md)                               | The `cowork_evals` command: verbs, backends, scope, exit codes  |
+| [`approaches.md`](approaches.md)                 | The three backends, the one case format, and what each proves   |
+| [`eval_format.md`](eval_format.md)               | What a case file contains: tree, frontmatter, graders, traps    |
+| [`running_evals.md`](running_evals.md)           | The eval system: mirror, pinned flags, gate, logs, cadence      |
 | [`docker.md`](docker.md)                         | The container that reproduces the CoWork image                  |
-| [`cowork_driver.md`](cowork_driver.md)           | Driving a real CoWork session and collecting the result         |
+| [`cowork_driver.md`](cowork_driver.md)           | Driving CoWork from a script: commands, sequence, result document |
 | [`runtime.md`](runtime.md)                       | What a CoWork session provides and what is on the image         |
 | [`environments.md`](environments.md)             | The two Python environments and how to build them               |
-| [`plugin_eval.md`](plugin_eval.md)               | `claude plugin eval`: case layout, graders, flags, limits       |
+| [`plugin_eval.md`](plugin_eval.md)               | `claude plugin eval`: availability, flags, harness limits, cost |
 | [`cowork_desktop.md`](cowork_desktop.md)         | Desktop application internals: deep links, session filesystem   |
 | [`data/requirements.txt`](data/requirements.txt) | `pip freeze` from a CoWork VM, 136 pins, verbatim               |
 | `data/requirements_installable.txt`              | The same minus the 9 pins that cannot install off the VM        |
 
-Every page here is a snapshot of something measured, not a contract. Each carries its
-capture date. Re-probe and update the date when the thing it describes changes.
+Three pages are measurements: `runtime.md`, `cowork_desktop.md` and `data/`. Each carries
+its capture date, is a snapshot rather than a contract, and is re-probed when the thing it
+describes changes. The rest are design, and say so at the top.
+
+`data/` is shipped data rather than reference material. It moves into the package when the
+package is built, and [`library.md`](library.md) says so.
 
 A page here never links to a plan. Plans are deleted once implemented, so anything durable
 a plan establishes is written into one of these pages before the plan is removed.
+
+## Provenance
+
+Adapted from an internal marketplace repository, which is not public. Absolute paths are
+redacted, because this repository is public.
+
+| Source document             | Adapted into                             |
+| --------------------------- | ---------------------------------------- |
+| `dev/environment.md`        | [`environments.md`](environments.md)     |
+| `dev/runtime.md`            | [`runtime.md`](runtime.md)               |
+| `dev/data/requirements*`    | [`data/`](data/)                         |
+| `plan_evals_claude_code.md` | [`plugin_eval.md`](plugin_eval.md)       |
+| `plan_run_cowork.md`        | [`cowork_desktop.md`](cowork_desktop.md) |
 
 Writing rules are in [`../CLAUDE.md`](../CLAUDE.md). The public repository rule is in
 [`../README.md`](../README.md), and it applies to every page here.

@@ -6,17 +6,15 @@ checklist is complete, and then deleted.
 A plan is therefore not a place to record anything durable. It links to `docs/`, and
 `docs/` never links back. Whatever a plan establishes that outlives the work is written
 into `docs/` before the plan is removed, and every plan's last phase says so explicitly.
-This table shrinks as plans are implemented.
 
-| Plan                                                                       | Approach                     | Depends on            |
-| -------------------------------------------------------------------------- | ---------------------------- | --------------------- |
-| [plan_evals_claude_code_venv_cowork.md](plan_evals_claude_code_venv_cowork.md) | Claude Code, mirrored venv | none                  |
-| [plan_evals_claude_code_docker.md](plan_evals_claude_code_docker.md)       | Claude Code, Docker          | the venv plan         |
-| [plan_evals_claude_cowork.md](plan_evals_claude_cowork.md)                 | CoWork, driven directly      | none                  |
+A row is added below when a plan is written, and removed when the plan is deleted.
 
-Start with the venv plan. It owns the case layout, the runner flags, the result gate and
-the log layout, and the Docker plan changes only where the runner executes. The CoWork plan
-is independent and can run in parallel.
+No plan is open.
+
+Build order, when the backend plans are written: the package skeleton and the CLI first,
+because they own the command surface, the gate and the log layout. Then the venv backend,
+then Docker, which changes only where the harness executes. The CoWork backend is
+independent of both.
 
 ## How a plan is written
 

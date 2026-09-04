@@ -11,16 +11,31 @@ before changing anything under it. Never restate one of these in another file; l
 | Index               | Owns                                                     |
 | ------------------- | -------------------------------------------------------- |
 | `README.md`         | What the repo is, and the public repository rule         |
-| `docs/README.md`    | Reference material: runtime, environments, harness, CoWork |
+| `docs/README.md`    | Reference material: boundary, command, runtime, harness  |
 | `plans/README.md`   | How a plan is structured and executed                    |
-| `scripts/README.md` | Every task, and the shell conventions                    |
+| `plugins/README.md` | The fixture plugins, and what they are not               |
+| `scripts/README.md` | Every development task, and the shell conventions        |
 | `tests/README.md`   | What is a test here, and what is not                     |
 
 ## Working rules
 
-- **Every task is a shell script** under `scripts/`. No build system, no Makefile.
+- **This is a library, not a consumer.** No eval for a shipped plugin is written here. The
+  repository that owns the plugins installs this package and points it at its own tree.
+  `plugins/` holds fixtures for this repository's own tests, nothing more. See
+  `docs/library.md`.
+- **One command.** Everything a consumer does goes through `cowork_evals`, and a consumer
+  never invokes `claude plugin eval`. Never add a second entry point or a per-backend
+  executable. The surface is `docs/cli.md`.
+- **Shipped code is a Python package** under `src/cowork_evals/`: standard library only, no
+  runtime dependencies, and 3.10 compatible because it is somebody else's development
+  dependency. **Development tasks are shell scripts** under `scripts/`, are never shipped,
+  and have no build system and no Makefile.
+- **One case format, three backends.** Every eval is written in the `claude plugin eval`
+  case format, and the same case tree runs on the mirrored venv, in Docker, and on CoWork.
+  Never add a second format or a per-backend variant of a case. The format is
+  `docs/eval_format.md`. Which backend honours which field is `docs/approaches.md`.
 - **Two environments, never mixed.** `.venv` is Python 3.14 repository tooling. Code that
-  must behave like a CoWork session runs under `.venv_cowork` through
+  must behave like a CoWork session runs under the 3.10 CoWork mirror through
   `scripts/cowork_run.sh`. Never run `uv run` under the mirror. See
   `docs/environments.md`.
 - **A plan is the state while it exists.** Tick a box only when it is verified, then

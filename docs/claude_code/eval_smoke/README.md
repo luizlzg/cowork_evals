@@ -11,8 +11,8 @@ docs/claude_code/eval_smoke/run.sh                    # all three cases
 docs/claude_code/eval_smoke/run.sh --case 'capital-*' # one case or a glob
 ```
 
-`run.sh` calls `claude plugin eval` directly. It does not use `scripts/eval.sh`, does not
-write to `logs/`, and is not gated by `scripts/eval_gate.py`: when the harness is what you
+`run.sh` calls `claude plugin eval` directly. It does not use `cowork_evals`, does not
+write to `logs/`, and is not gated: when the harness is what you
 are debugging, this repository's wrapper is one more thing that can be wrong.
 
 It also proves the enablement variable works, because it exports it.

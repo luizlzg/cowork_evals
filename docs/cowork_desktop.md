@@ -19,6 +19,8 @@ list at the end of this page after an update.
 | Host to guest RPC | vsock, `CID=2 port=51234`. Not SSH                                   |
 | Guest OS          | Ubuntu 22.04.5 LTS, kernel 6.8.0-136-generic, aarch64                |
 | Claude Code in VM | SDK payload at `claude-code-vm/<version>/claude`                     |
+| New session boot  | About 45 seconds from deep link to the first tool call in the guest  |
+| Guest bash tool   | `mcp__workspace__bash`, an MCP tool, not Claude Code's own `Bash`     |
 
 A build may install more than one profile directory. Which one is active is read from `lsof`
 on the running process. Set the profile name for any tooling through an environment
@@ -41,6 +43,18 @@ The application registers the `claude` URL scheme, and its router accepts a prom
 
 Both `surface=cowork` and the bare form produced a session, so the parameter is not load
 bearing on the evidence available.
+
+The three route statuses above come from three probes, one prompt each. Two shapes were
+covered, and they are the two a grader reads:
+
+| Probe                                                              | Established                                                       |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| A prompt asking for one exact token back                           | A session directory, and the reply captured verbatim              |
+| A prompt asking for `uname -a`, `ls /sessions` and `/etc/os-release` | A tool call into the guest, and its output captured on the host  |
+| The same token prompt through `claude://cowork/new`                | The application answers and writes no session directory           |
+
+Not covered by those probes, and therefore not stated anywhere in this page: repeated runs,
+concurrent sessions, the terminal lifecycle state, parallel tool calls, and attachments.
 
 The application caps `q` at 14336 characters and truncates silently above it. A driver must
 refuse a longer prompt rather than truncate, or a case is graded on an altered prompt.

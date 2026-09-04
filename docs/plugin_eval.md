@@ -3,6 +3,10 @@
 Claude Code's own eval harness. It loads one plugin into a fresh isolated `claude -p`
 session, runs each case several times, and scores the result with graders.
 
+This page is what the CLI does. What a case file contains is
+[eval_format.md](eval_format.md), which is the authoring contract for every backend,
+including the CoWork one that does not use this harness.
+
 Written against CLI 2.1.259. The command is in early access and has no public documentation
 page, so `claude plugin eval --help` in your own build is the authority when this page and
 the CLI disagree.
@@ -24,7 +28,7 @@ covers Bedrock, Vertex, Foundry, any client with a custom `ANTHROPIC_BASE_URL`, 
 client with `DISABLE_TELEMETRY`, `DO_NOT_TRACK`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`
 or `DISABLE_GROWTHBOOK` set. It needs CLI 2.1.207 or later.
 
-Every runner script in this repository exports it, so no developer sets anything by hand:
+Every backend that calls this command exports it, so no developer sets anything by hand:
 
 ```sh
 export CLAUDE_CODE_WALNUT_SPIRE="${CLAUDE_CODE_WALNUT_SPIRE:-1}"
@@ -42,58 +46,10 @@ Self-test from an empty directory:
 | `early access`        | Not enabled here |
 | `No eval cases found` | Enabled          |
 
-## Case layout
+## The cases it reads
 
-Cases live under the plugin's eval directory, `evals/` by default.
-
-```
-<plugin>/evals/<case>/prompt.md          # frontmatter + the prompt body
-<plugin>/evals/<case>/graders/<name>.md  # frontmatter + the rubric or pattern
-<plugin>/evals/<case>/case.yaml          # optional, context.* only
-<plugin>/evals/mocks/<server>/<tool>.md  # MCP stand-ins
-<plugin>/evals/results/                  # written by the CLI
-```
-
-Discovery is recursive, so a grouping directory that is not itself a case is searched
-through rather than run. That is how one directory per skill works.
-
-`prompt.md` frontmatter: `name`, `tags`, `plugins`, `runs`, `max_turns`, `timeout_seconds`,
-`allowed_tools`, `model`, `append_system_prompt`, `env`. Defaults are `runs: 3`,
-`max_turns: 10`, `timeout_seconds: 300`. Case `env` keys must start with `EVAL_`.
-
-`case.yaml` carries only what `prompt.md` cannot: `context.scaffold_script`,
-`context.history_file`, `context.add_dirs`. It needs `schema_version: "1.1"` and `name`.
-
-Two frontmatter keys make a case addressable:
-
-- `tags: [<skill>]` matching its directory. `--tag` is the only reliable per-skill selector;
-  `--case` globs the case directory name.
-- `plugins: ["../../.."]`, the plugin root, counted from the case directory.
-
-## Graders
-
-| Type          | Asserts                                                          |
-| ------------- | ---------------------------------------------------------------- |
-| `regex`       | `pattern`, `flags`, `match: contains \| not_contains \| count:N` |
-| `tool_used`   | `tool`, `input_match`, `min` (default 1), `max`                  |
-| `tool_order`  | `before`, `after`                                                |
-| `file_exists` | `path`, a glob over files the agent created                      |
-| `llm`         | `criteria`, `focus`. A judge model votes 2 of 3                  |
-| `baseline`    | `baseline_file`, `criteria`                                      |
-
-Grader targets: `last_message` (default), `trace`, `files` (created paths, not contents),
-`{source: file, path}` (a produced file's contents), `mock_calls`.
-
-Prefer a deterministic grader over a judged one for anything long. Judges are noisy on long
-inputs.
-
-The skill-fired idiom:
-
-```yaml
-type: tool_used
-tool: Skill
-input_match: '"skill"\s*:\s*"(?:[\w-]+:)?<skill>"'
-```
+Cases live under the plugin's eval directory, `evals/` by default, and the CLI writes its
+own output to `evals/results/`. The file format is [eval_format.md](eval_format.md).
 
 ## Running
 
@@ -133,7 +89,8 @@ document with none of that loss.
 
 ## Limits a case author has to know
 
-Each of these has a silent failure mode.
+Each of these has a silent failure mode, and none of them can be fixed by editing the case.
+The ones that can are in [eval_format.md](eval_format.md).
 
 - **Only the plugin under test loads.** No user or project settings, no `CLAUDE.md`, no
   other plugins, no personal MCP servers.
@@ -141,22 +98,10 @@ Each of these has a silent failure mode.
   read-only set, unioned with the operator's `--allow-tools`. `Bash`, `Write`, `Edit`,
   `WebFetch`, `WebSearch` and `mcp__*` need an explicit grant. A plugin's own MCP tools are
   named `mcp__plugin_<plugin>_<server>__<tool>`.
-- **A grader file needs `---` frontmatter delimiters.** Without them it is a note and is
-  ignored, so the case runs with fewer graders than it appears to have.
-- **`min: 0, max: 0` is how a must-not-call assertion is written.** `max: 0` alone can never
-  pass, because `min` stays 1.
 - **Granting `Bash` turns on the OS sandbox.** On a machine with no sandbox backend the run
   is refused rather than run unconfined.
-- **`file_exists` only sees files created during the run.** Not scaffold output, and not
-  files merely modified.
 - **The Artifact tool is unavailable in a run.** A skill that ends by publishing cannot be
   exercised past that point.
-- **`llm` graders refuse binaries.** A `.pptx` is a ZIP. Render to an image, or write text.
-  An image file is shown to the judge as an image.
-- **Scaffolds run in an empty working directory** with a minimal environment, no
-  credentials, and a 2-minute cap. Reference resources as `$(dirname "$0")/...`.
-- **`context.add_dirs` must stay inside the case directory.** Naming the eval directory, a
-  sibling case, the plugin root or the case's own `graders/` refuses the run.
 - **Enterprise managed policy still applies inside a run.** Results on a managed machine
   differ from an unmanaged one by exactly that policy.
 - **The network is not blocked.** The per-run sandbox is a fresh workspace, `HOME` and
