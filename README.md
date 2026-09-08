@@ -66,8 +66,9 @@ written without an identifier does not go in the repository.
 ## Contributing
 
 ```bash
-scripts/init.sh   # builds .venv (3.14, tooling) and the 3.10 CoWork mirror
-scripts/test.sh
+scripts/init.sh                 # builds .venv (3.14, tooling) and the 3.10 CoWork mirror
+scripts/test.sh                 # the unit tests
+scripts/test.sh -m integration  # the real CoWork tests. Boots a VM and leaves a session
 scripts/lint.sh
 ```
 

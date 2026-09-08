@@ -2,9 +2,12 @@
 #
 # Run the repository test suite under .venv.
 #
-# Any argument is passed through to pytest.
+# Unit tests are the default selection. Integration tests need a real CoWork profile, and
+# the live one fires a real CoWork run. Any argument is passed through to pytest.
 #
-#   test.sh
+#   test.sh                                  the unit tests
+#   test.sh -m integration                   every real-system test, the live run included
+#   test.sh -m "integration and not live"    the real-system tests that spend nothing
 #   test.sh tests/test_x.py -k name -vv
 set -euo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"

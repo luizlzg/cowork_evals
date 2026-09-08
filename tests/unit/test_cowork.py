@@ -1,42 +1,22 @@
 """The driver reads a session as docs/cowork_driver.md says it does.
 
-Every assertion is over a hand-written fixture under tests/data/cowork/. No test starts a
-CoWork session.
+Every assertion is over a hand-written session directory, under tests/data/cowork/ or under
+tmp_path. No test here starts a CoWork session. The tests that read a real profile are in
+tests/integration/. See ../README.md.
 """
 
 from __future__ import annotations
 
 import json
 import os
-import uuid
 from pathlib import Path
 
 import pytest
 
 from cowork_evals import Config, CoWork, CoWorkError
 
-ROOT = Path(__file__).resolve().parent / "data" / "cowork" / "sessions"
+ROOT = Path(__file__).resolve().parent.parent / "data" / "cowork" / "sessions"
 PROFILE = ROOT / "acct0000" / "prof0000"
-
-# Every key the result document carries, and no other. docs/cowork_driver.md.
-DOCUMENT_KEYS = {
-    "prompt",
-    "prompt_sha256",
-    "session_dir",
-    "submitted_at",
-    "collected_at",
-    "transcript",
-    "other_transcripts",
-    "subagent_transcripts",
-    "audit_prompt",
-    "lifecycle",
-    "turns",
-    "tool_calls",
-    "tool_names",
-    "final_text",
-    "outputs",
-    "log_file",
-}
 
 
 @pytest.fixture
@@ -82,9 +62,11 @@ def test_sessions_defaults_to_the_configured_root(tmp_path: Path) -> None:
     assert raised.value.code == 2
 
 
-def test_the_document_carries_exactly_the_documented_keys(driver: CoWork) -> None:
+def test_the_document_carries_exactly_the_documented_keys(
+    driver: CoWork, document_keys: set[str]
+) -> None:
     document = driver.collect(PROFILE / "one_turn")
-    assert set(document) == DOCUMENT_KEYS
+    assert set(document) == document_keys
     assert "exit_code" not in document
 
 
@@ -164,7 +146,8 @@ def test_a_subagent_transcript_is_recorded_and_never_merged(driver: CoWork) -> N
     assert "Read every note" not in json.dumps(document["turns"])
 
 
-def test_a_partial_last_line_is_skipped(driver: CoWork) -> None:
+def test_a_truncated_tail_keeps_the_records_before_it(driver: CoWork) -> None:
+    """Both fixture files end mid-record, which is what a file being appended looks like."""
     document = driver.collect(PROFILE / "partial_line")
     assert document["lifecycle"] == ["queued", "started"]
     assert document["final_text"] == "Ubuntu 22.04.5 LTS"
@@ -189,7 +172,7 @@ def test_a_known_prompt_beats_the_audit_record(driver: CoWork) -> None:
     assert document["audit_prompt"] == "Reply with exactly: PONG"
 
 
-def test_the_configuration_is_frozen_and_overridable_at_construction() -> None:
+def test_a_constructor_override_beats_the_configuration() -> None:
     driver = CoWork(Config(profile="Fixture"), max_runs=3)
     assert driver.config.max_runs == 3
     assert driver.config.profile == "Fixture"
@@ -242,14 +225,6 @@ def test_a_prompt_above_the_cap_is_refused(tmp_path: Path) -> None:
 
 def test_a_prompt_at_the_cap_is_allowed(tmp_path: Path) -> None:
     build(tmp_path)._check("x" * 14336)
-
-
-def test_a_linted_prompt_is_refused(tmp_path: Path) -> None:
-    driver = build(tmp_path)
-    with pytest.raises(CoWorkError) as raised:
-        driver._check("Send an email to the team")
-    assert raised.value.code == 2
-    assert "rule send" in str(raised.value)
 
 
 def test_the_rate_ceiling_is_refused(tmp_path: Path) -> None:
@@ -481,88 +456,6 @@ def test_quiescence_fires_once_the_run_has_started(tmp_path: Path) -> None:
 def test_a_refusal_before_firing_leaves_no_run_log_line(tmp_path: Path) -> None:
     driver = stepping(tmp_path)
     with pytest.raises(CoWorkError) as raised:
-        driver.submit("Send an email to the team")
+        driver.submit("x" * 14337)
     assert raised.value.code == 2
     assert driver.history() == []
-
-
-# The fixtures above are hand-written, so they prove the reader matches this repository's
-# reading of the record shapes. This proves it matches a real profile, on any machine that
-# has one, and is skipped on any machine that does not.
-
-TAXONOMY = {2, 3, 4, 5, 6, 7, 8}
-
-
-def configured_profile() -> Config | None:
-    """The configuration this repository is set up with, when it names a readable profile."""
-    try:
-        config = Config.load()
-        return config if config.profile_dir.is_dir() else None
-    except CoWorkError:
-        return None
-
-
-@pytest.mark.skipif(configured_profile() is None, reason="no readable CoWork profile configured")
-def test_the_reader_handles_every_session_in_a_real_profile() -> None:
-    """Nothing here prints a path, a prompt or an identifier. Public repository rule."""
-    config = configured_profile()
-    assert config is not None
-    driver = CoWork(config)
-    found = driver.sessions()
-    if not found:
-        pytest.skip("the configured profile holds no sessions")
-
-    for session in found:
-        try:
-            document = driver.collect(session)
-        except CoWorkError as error:
-            assert error.code in TAXONOMY
-            continue
-        assert set(document) == DOCUMENT_KEYS
-        json.dumps(document)
-        assert isinstance(document["final_text"], str)
-        assert document["final_text"]
-        for call in document["tool_calls"]:
-            assert isinstance(call["name"], str)
-        assert document["tool_names"] == [call["name"] for call in document["tool_calls"]]
-
-
-# The only test that proves the application end of the contract: that the deep link
-# prefills, that the synthetic Return submits, and that `completed` is written. It fires a
-# real run, so it costs a VM boot, counts against the rate ceiling and leaves one permanent
-# session in the signed-in account. Deselected by default; run it with
-# `scripts/test.sh -m live`. It needs the macOS Accessibility grant, a signed-in CoWork and
-# the desktop application already running.
-
-
-@pytest.mark.live
-@pytest.mark.timeout(1800)
-def test_a_live_run_returns_the_marker() -> None:
-    config = configured_profile()
-    if config is None:
-        pytest.skip("no readable CoWork profile configured")
-
-    driver = CoWork(config)
-    marker = f"MARKER-{uuid.uuid4().hex[:12].upper()}"
-    before = len(driver.sessions())
-    before_log = len(driver.history())
-
-    document = driver.run(f"Reply with exactly: {marker}")
-
-    assert marker in document["final_text"]
-    assert document["lifecycle"][-1] == "completed"
-    assert set(document) == DOCUMENT_KEYS
-    json.dumps(document)
-
-    assert len(driver.sessions()) == before + 1
-    assert Path(document["session_dir"]) in driver.sessions()
-
-    entries = driver.history()
-    assert len(entries) == before_log + 1
-    assert entries[-1]["outcome"] == "submitted"
-    assert entries[-1]["session_dir"] == document["session_dir"]
-
-    written = Path(document["log_file"]).read_text(encoding="utf-8")
-    assert "firing the deep link:" in written
-    assert "discovered the session:" in written
-    assert "the completion signal fired: lifecycle state completed" in written

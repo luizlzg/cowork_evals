@@ -18,10 +18,15 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# The live marker fires a real CoWork session, so it is deselected by default.
-# Run it with: scripts/test.sh -m live
-addopts = "-q --strict-markers -m 'not live'"
-markers = ["live: submits a real CoWork run. Costs a VM boot and leaves a session"]
+# Unit tests are the default selection. Integration tests need a real CoWork profile or a
+# real CoWork run, so they are deselected. Run them with: scripts/test.sh -m integration
+# tests/unit and tests/integration both hold a test_cowork.py. importlib import mode
+# keeps the two basenames distinct without an __init__.py in either directory.
+addopts = "-q --strict-markers --import-mode=importlib -m 'not integration'"
+markers = [
+  "integration: needs a real CoWork profile or a real CoWork run",
+  "live: submits a real CoWork run. Costs a VM boot and leaves a session",
+]
 timeout = 300
 
 [tool.ruff]
