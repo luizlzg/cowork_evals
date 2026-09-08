@@ -4,9 +4,10 @@ How the desktop application starts a session, where it writes, and what a script
 drive it. These are the measured internals. What the driver does with them is
 [cowork_driver.md](cowork_driver.md).
 
-Captured 2026-09-02 on a macOS development machine by direct probe. Application internals
-are not a public interface. Expect any release to change them, and re-probe the coupling
-list at the end of this page after an update.
+Captured 2026-09-02 on a macOS development machine by direct probe, and re-probed
+2026-09-08 for section 3, which reads session directories already on disk. Application
+internals are not a public interface. Expect any release to change them, and re-probe the
+coupling list at the end of this page after an update.
 
 ## Measured facts
 
@@ -54,7 +55,8 @@ covered, and they are the two a grader reads:
 | The same token prompt through `claude://cowork/new`                | The application answers and writes no session directory           |
 
 Not covered by those probes, and therefore not stated anywhere in this page: repeated runs,
-concurrent sessions, the terminal lifecycle state, parallel tool calls, and attachments.
+concurrent sessions, parallel tool calls, and attachments. The terminal lifecycle state was
+not covered either, and is established below by the 2026-09-08 re-probe.
 
 The application caps `q` at 14336 characters and truncates silently above it. A driver must
 refuse a longer prompt rather than truncate, or a case is graded on an altered prompt.
@@ -97,6 +99,17 @@ Transcript record keys observed: `type`, `message`, `toolUseResult`, `attributio
 `isSidechain`, `cwd`, `gitBranch`. Content blocks carry `id` on a `tool_use` and
 `tool_use_id` on a `tool_result`, which is how a reader pairs them.
 
+Transcript record types observed, snapshot 2026-09-08 over five session directories:
+`user`, `assistant`, `attachment`, `queue-operation`, `atis-latch` and `last-prompt`. Only
+`user` and `assistant` carry a `message`. A reader takes turns from those two and ignores the
+rest, because the set is open.
+
+`message.content` is a string or a list of blocks. Observed block types: `text`, `thinking`,
+`tool_use` and `tool_result`. A `thinking` block is not turn text.
+
+Subagent records carry `isSidechain: true`. Each `subagents/agent-<id>.jsonl` has a sibling
+`agent-<id>.meta.json` holding `agentType`, `description`, `spawnDepth` and `toolUseId`.
+
 Audit record shape:
 
 ```json
@@ -105,13 +118,46 @@ Audit record shape:
  "_audit_timestamp":"...","_audit_hmac":"..."}
 {"type":"command_lifecycle","command_uuid":"...","state":"queued","session_id":"..."}
 {"type":"command_lifecycle","command_uuid":"...","state":"started","session_id":"..."}
+{"type":"result","subtype":"success","is_error":false,"num_turns":13,
+ "total_cost_usd":0.64,"result":"...","stop_reason":"end_turn","session_id":"..."}
+{"type":"command_lifecycle","command_uuid":"...","state":"completed","session_id":"..."}
 ```
 
-`queued` and `started` were observed. The terminal state was not observed and must be
-established before a driver can key completion on it.
+`completed` is the terminal `command_lifecycle` state. Snapshot 2026-09-08, five session
+directories, nine commands, every one of them reaching `completed`. No other terminal state
+was seen, so a failed or cancelled command has an unknown state name and quiescence remains
+the fallback signal.
+
+The terminal record carries `type`, `state`, `command_uuid`, `session_id`, `uuid`,
+`timestamp`, `_audit_timestamp` and `_audit_hmac`, and nothing else. It carries no assistant
+text, no turn count and no cost.
+
+The `result` record immediately before it carries all three: `result` is the final assistant
+text, `num_turns` the turn count, `total_cost_usd` the cost. It also carries `subtype`,
+`is_error`, `stop_reason`, `terminal_reason`, `usage`, `modelUsage`, `duration_ms` and
+`permission_denials`.
+
+Every lifecycle record carries `command_uuid`. One session directory holds more than one
+command: three of the five held three each, one prompt per command, and the states of two
+commands interleave when a prompt is queued before the previous one completes. A driver that
+submits one prompt into a fresh session sees one command, and keys completion on the first
+`completed` it sees.
 
 The `user` record is what makes a run identifiable: its `message.content` is the submitted
 prompt verbatim. A driver compares it and refuses any session that does not match.
+
+### Discovery by structure
+
+Snapshot 2026-09-08, two profiles. A session directory is exactly three levels below the
+sessions root and holds an `audit.jsonl`. No `audit.jsonl` exists at any other depth. The
+`audit.jsonl` test is what separates a session from its siblings at the same depth:
+`cowork_plugins`, `memory`, `usage-ledger`, `rpm` and the `skills-plugin` tree all sit three
+levels down and hold none.
+
+`.claude/projects/session/` was present in every session directory probed, holding one
+top level `<uuid>.jsonl` per run. The `<uuid>/subagents/` directory exists only when a
+subagent ran. A reader still tolerates the directory's absence, because a session directory
+is created before its first transcript is written.
 
 ## 4. Guest mounts
 
@@ -171,3 +217,11 @@ the 14336 cap, the sessions root path, the three level session directory depth, 
 `audit.jsonl` filename, the `user` and `command_lifecycle` record types, the `state` values,
 the transcript path under `.claude/projects/session`, the `subagents/*.jsonl` layout, the
 `tool_use` `id` and `tool_result` `tool_use_id` fields, and the `outputs/` directory.
+
+Every field a reader of a collected session acts on, by file:
+
+| File            | Fields                                                                        |
+| --------------- | ------------------------------------------------------------------------------- |
+| `audit.jsonl`   | `type`, `state`, `command_uuid`, `timestamp`, `message.content`, and on a `result` record `result`, `num_turns`, `total_cost_usd`, `is_error` |
+| The transcript  | `type`, `timestamp`, `isSidechain`, `attributionMcpServer`, `attributionMcpTool`, `message.role`, `message.content`, and per block `type`, `text`, `id`, `name`, `input`, `tool_use_id`, `content` |
+| The directory   | `.claude/projects/session/<uuid>.jsonl`, `<uuid>/subagents/*.jsonl`, `outputs/` |

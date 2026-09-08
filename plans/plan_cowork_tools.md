@@ -223,14 +223,14 @@ observed. Establish it, and the other shapes the phase 4 reader acts on, before 
 reader. Everything here is read from session directories already on disk. Nothing is
 submitted.
 
-- [ ] Record the terminal `command_lifecycle` state name, its keys, and whether it carries
+- [x] Record the terminal `command_lifecycle` state name, its keys, and whether it carries
       the final assistant text, the turn count and the cost.
-- [ ] Record whether a lifecycle record carries `command_uuid`, and whether one session
+- [x] Record whether a lifecycle record carries `command_uuid`, and whether one session
       directory holds more than one command.
-- [ ] Record whether `.claude/projects/session/` is present in every session directory.
-- [ ] Confirm that discovery by structure selects sessions and nothing else: a directory
+- [x] Record whether `.claude/projects/session/` is present in every session directory.
+- [x] Confirm that discovery by structure selects sessions and nothing else: a directory
       three levels below the sessions root holding `audit.jsonl`.
-- [ ] Write all of it into `docs/cowork_desktop.md` with the capture date, and extend that
+- [x] Write all of it into `docs/cowork_desktop.md` with the capture date, and extend that
       page's coupling list with every key phase 4 reads.
 
 Gate. `docs/cowork_desktop.md` carries no row reading `not observed`, and every field the
