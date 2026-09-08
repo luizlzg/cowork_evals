@@ -221,17 +221,17 @@ pass, and hides a twenty-minute build inside a test run.
 Every box but the last is a `docker run` with a fixed command and a fixed expected output.
 No model is in the loop, because none of these is a question about a model.
 
-- [ ] Assert the daemon is reachable and the image is present at the current digest, failing
+- [x] Assert the daemon is reachable and the image is present at the current digest, failing
       with `scripts/image.sh` named when it is not.
-- [ ] Assert `python3 -V` in the container reports exactly the version
+- [x] Assert `python3 -V` in the container reports exactly the version
       [`../docs/runtime.md`](../docs/runtime.md) records. A patch bump in jammy fails here
       first, and the fixture's grader is updated with the page in the same commit.
-- [ ] Run the probe and assert the comparison passes.
-- [ ] Assert `bwrap` comes up under `--security-opt seccomp=unconfined`, by running it
+- [x] Run the probe and assert the comparison passes.
+- [x] Assert `bwrap` comes up under `--security-opt seccomp=unconfined`, by running it
       directly. This is the Bash sandbox measurement, and it needs no harness and no case.
-- [ ] Assert `claude --version` runs under the host uid and gid with no passwd entry. This
+- [x] Assert `claude --version` runs under the host uid and gid with no passwd entry. This
       is the uid mapping measurement, and Node's `os.userInfo()` is what would raise.
-- [ ] Assert the plugin mount refuses a write, the log mount accepts one, and a file written
+- [x] Assert the plugin mount refuses a write, the log mount accepts one, and a file written
       into the log mount is owned by the host uid and gid.
 - [ ] Assert `claude plugin eval` in an empty directory prints `No eval cases found`. That
       is the enablement self-test in [`../docs/plugin_eval.md`](../docs/plugin_eval.md): it
@@ -255,7 +255,7 @@ deselected by `-m "integration and not live"`. Two rather than one, because a si
 end-to-end run cannot say whether the credential, the model, the mounts or the harness is at
 fault.
 
-- [ ] Widen the `live` marker in `pyproject.toml`, which today names a CoWork run only, to
+- [x] Widen the `live` marker in `pyproject.toml`, which today names a CoWork run only, to
       any test that submits a real run.
 - [ ] `claude -p` in the container with a prompt asking for one word, asserting that word
       comes back. No plugin, no harness, no mounts. It is the minimal proof that Claude Code

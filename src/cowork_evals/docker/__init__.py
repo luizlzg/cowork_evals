@@ -173,7 +173,7 @@ class Docker:
             f"{os.getuid()}:{os.getgid()}",
             "--env",
             f"HOME={CONTAINER_HOME}",
-            *self._extra_ca_env_argv(),
+            *self.extra_ca_env_argv(),
             *self._credential_mount_argv(),
             self.tag,
             "claude",
@@ -211,8 +211,8 @@ class Docker:
             # user namespaces unfiltered. docs/docker.md.
             "--security-opt",
             "seccomp=unconfined",
-            *self._extra_ca_env_argv(),
-            *self._credential_argv(),
+            *self.extra_ca_env_argv(),
+            *self.credential_argv(),
             "-v",
             f"{root}:{CONTAINER_PLUGIN}:ro",
             "-v",
@@ -221,7 +221,7 @@ class Docker:
             *eval_argv(container_target, CONTAINER_LOGS, options),
         ]
 
-    def _credential_argv(self) -> list[str]:
+    def credential_argv(self) -> list[str]:
         """The key wins when both routes are available. docs/docker.md.
 
         The key is passed by name, never by value: the value reaches the container through
@@ -231,7 +231,7 @@ class Docker:
             return ["--env", "ANTHROPIC_API_KEY"]
         return self._credential_mount_argv()
 
-    def _extra_ca_env_argv(self) -> list[str]:
+    def extra_ca_env_argv(self) -> list[str]:
         """Node carries its own root store and does not read the system one.
 
         The image already trusts the extra CA; this is what makes the CLI inside it trust
@@ -274,7 +274,7 @@ class Docker:
         output_dir = Path(output_dir).resolve()
         completed = subprocess.run(
             self.run_argv(target, output_dir, options),
-            env=self._child_environment(),
+            env=self.child_environment(),
         )
         result = output_dir / RESULT_NAME
         if not result.is_file():
@@ -284,7 +284,7 @@ class Docker:
             )
         return result
 
-    def _child_environment(self) -> dict[str, str]:
+    def child_environment(self) -> dict[str, str]:
         """This process's environment, plus the key when it came from `.env`.
 
         `run_argv` passes ANTHROPIC_API_KEY by name, so the value has to be in the
