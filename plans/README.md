@@ -12,9 +12,9 @@ deleted.
 
 ## Written
 
-| Plan                                             | Builds                                          | Branch             |
-| ------------------------------------------------ | ------------------------------------------------ | ------------------ |
-| [`plan_cowork_tools.md`](plan_cowork_tools.md)   | The CoWork driver library                       | `feat/cowork-tools` |
+| Plan | Builds | Branch |
+| ---- | ------ | ------ |
+| none |        |        |
 
 ## Build order
 
