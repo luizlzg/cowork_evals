@@ -2,12 +2,26 @@
 
 Branch `feat/cowork-tools`, cut from `main`. Eight phases, one commit each.
 
-**Not finished. Phase 7 is outstanding and blocks the rest.** Phases 1 to 6 are done, and
-phase 8 is done except the two boxes that need phase 7. Phase 7 is one live submission, and
-it is run by a person: an assistant may run it only when `.claude/settings.local.json`
-already carries `Bash(open "claude://*")` and `Bash(osascript:*)`, and an assistant cannot
-write those rules. This file stays until phase 7 and the last two boxes of phase 8 are
-ticked.
+**Implemented. Every box is ticked and the branch is merged.** The file stays, per
+[`README.md`](README.md). Three things below were proposed here and reversed during the
+work; the section that follows records them, and the phases are left as they were written.
+Where a phase and that section disagree, that section is what was built.
+
+## What changed during implementation
+
+The developer decided each of these while the work was in flight. The phases below are the
+proposal, not the outcome.
+
+| Proposed here                                        | Built instead                                     | Why                                                        |
+| ---------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------ |
+| `src/cowork_evals/prompt_lint.py`, a deny-list refusing a prompt on a live account | Nothing. The module was written in phase 3 and removed | A refusal the developer did not ask for. `CLAUDE.md`, never invent a restriction |
+| `runner`, a callable seam so a test passes a recording fake | Nothing. `open` and `osascript` are run directly | A fake is a mock. `CLAUDE.md`, never mock. What a test cannot reach without the application, the live test in `tests/integration/` reaches by firing one |
+| `tests/test_*.py`, one flat directory                | `tests/unit/` and `tests/integration/`, selected by `-m integration` | A test needing a real profile cannot sit in the default selection |
+
+Three modules therefore became two, `config.py` and `cowork.py`, and the driver has no
+deny-list and no injectable seam. All of it is in
+[`../docs/cowork_driver.md`](../docs/cowork_driver.md) and
+[`../tests/README.md`](../tests/README.md).
 
 ## Scope
 
