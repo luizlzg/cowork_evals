@@ -18,7 +18,8 @@ builds, and the one fixture firing at the end of it, are in [`README.md`](README
 | `src/cowork_evals/docker/Dockerfile`       | What the build builds                                     |
 | `src/cowork_evals/docker/probe.py`         | The parity probe, run inside the container                |
 | `src/cowork_evals/docker/parity.py`        | The comparison, run on the host                           |
-| `scripts/parity.sh`                        | The development task over those two                       |
+| `scripts/image.sh`                         | The development task that builds the image                |
+| `scripts/parity.sh`                        | The development task over the probe and the comparison    |
 | `plugins/smoke/`                           | The fixture the integration tier fires                    |
 | `tests/unit/test_env.py`, `tests/unit/test_harness.py`, `tests/unit/test_docker.py`, `tests/unit/test_parity.py`, `tests/integration/test_docker.py` | [`../tests/README.md`](../tests/README.md) |
 
@@ -122,6 +123,10 @@ doing no work at construction, so `Docker().digest` works on a machine with no d
       present. An empty list means ready. It writes nothing and builds nothing.
 - [ ] `login_argv()`: the interactive container a developer logs in through once. The same
       two credential mounts as a run, and no plugin and no log mount.
+- [ ] `scripts/image.sh`: build the image for `EVAL_PLATFORM` through `build()`, `--check`
+      verifies the current digest is present and writes nothing, `--recreate` builds with
+      `--no-cache`. It is `scripts/cowork_venv.sh` for the image, and it is what a developer
+      runs before the integration tier, because the CLI that would do it is `plan_cli.md`.
 
 ## Phase 5: The harness argument list
 
@@ -200,23 +205,25 @@ so it exercises discovery.
 
 ## Phase 9: The integration tier, and the measurements
 
-`tests/integration/test_docker.py`. It needs a running daemon and one credential route. A
-missing precondition fails the test and never skips it.
+`tests/integration/test_docker.py`. It needs a running daemon, the image already built by
+`scripts/image.sh`, and one credential route. A missing precondition fails the test and
+never skips it. Nothing here builds: a test that builds its own subject reports a build as a
+pass, and hides a twenty-minute build inside a test run.
 
-- [ ] Build the image, with a timeout that fits a cold build. The 300 second default in
-      `pyproject.toml` does not.
-- [ ] Assert the digest tag exists and a second build is a no-op.
+- [ ] Assert the daemon is reachable and the image is present at the current digest, failing
+      with `scripts/image.sh` named when it is not.
 - [ ] Run the probe and assert the comparison passes.
 - [ ] Assert the plugin mount refuses a write, the log mount accepts one, and a file written
       into the log mount is owned by the host uid and gid.
 - [ ] Fire `plugins/smoke/` through `run()` and assert the result document says the case
-      passed.
+      passed, with a timeout that fits one agentic run. The 300 second default in
+      `pyproject.toml` binds every test in this file.
 - [ ] Record in `docs/docker.md`: the capture date and the host as OS, architecture and
-      container runtime, then the platform, the image size, the cold and warm build times,
-      the pin mismatches, the extra packages, the non-Python deltas, the font family count,
-      `import uno`, the uid mapping option needed, the Bash sandbox option needed, and the
-      installed Claude Code version. No machine name, no user name, no home directory path:
-      [`../README.md`](../README.md).
+      container runtime, then the platform, the image size, the cold and warm build times
+      taken from `scripts/image.sh`, the pin mismatches, the extra packages, the non-Python
+      deltas, the font family count, `import uno`, the uid mapping option needed, the Bash
+      sandbox option needed, and the installed Claude Code version. No machine name, no user
+      name, no home directory path: [`../README.md`](../README.md).
 - [ ] Record whether a first launch in a fresh configuration directory blocks a
       non-interactive run. If it does, the login step seeds the state file beside the
       configuration directory and `docs/docker.md` says so. If it does not, the run mounts
@@ -244,7 +251,7 @@ Nothing durable may survive only in this file.
 - [ ] `docs/running_evals.md`: mark the container backend, its Dockerfile, `parity.sh` and
       `plugins/smoke/` built.
 - [ ] `docs/approaches.md`: correct the closing line saying no backend is built.
-- [ ] `scripts/README.md`: turn the `parity.sh` note into a row.
+- [ ] `scripts/README.md`: a row for `image.sh`, and turn the `parity.sh` note into a row.
 - [ ] `tests/README.md`: a row per new test file, and the integration tier's new
       preconditions.
 - [ ] `plugins/README.md`: mark `smoke` built, and say it serves both Claude Code backends.
