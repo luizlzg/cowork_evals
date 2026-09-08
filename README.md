@@ -16,8 +16,8 @@ format, because it drives a live session rather than the harness.
 
 [`docs/approaches.md`](docs/approaches.md) says what each one proves and what it does
 not, which subset, and links each to its design.
-[`docs/running_evals.md`](docs/running_evals.md) says what is built: today, only the 3.10
-mirror.
+[`docs/running_evals.md`](docs/running_evals.md) says what is built: today, the 3.10 mirror
+and the CoWork driver.
 
 The code under test is bound to Python 3.10 and the CoWork wheel set. Nothing in this
 package is; it runs on a laptop. See [`docs/runtime.md`](docs/runtime.md).
@@ -45,7 +45,7 @@ Desktop, and the CoWork desktop application. `cowork_evals check` reports what i
 | ------------------------------- | ------------------------------------------------------------------- |
 | `src/cowork_evals/`             | The package. What ships, and the only thing that does               |
 | [`docs/`](docs/README.md)       | Reference material. [`docs/README.md`](docs/README.md) is the index |
-| [`plans/`](plans/README.md)     | Work in progress. A plan is deleted once implemented                |
+| [`plans/`](plans/README.md)     | Work in progress. A plan stays after it is implemented              |
 | [`scripts/`](scripts/README.md) | Development tasks for this repository. Never shipped                |
 | [`plugins/`](plugins/README.md) | Fixture plugins for this repository's own tests                     |
 | [`tests/`](tests/README.md)     | Deterministic tests for this repository's own code                  |

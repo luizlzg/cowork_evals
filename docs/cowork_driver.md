@@ -42,7 +42,7 @@ The driver is a library and nothing else. It has no entry point, no console scri
 desktop application and reads host paths, and nothing it does belongs to a session. It is
 therefore not bound to 3.10; see [library.md](library.md).
 
-Three modules, and PyYAML.
+Two modules, and PyYAML.
 
 | Module                     | Holds                                                       |
 | -------------------------- | ------------------------------------------------------------ |
@@ -65,6 +65,7 @@ doc = cw.run("Reply with exactly: PONG")  # submit, wait, collect
 
 | Method                              | Does                                        | Returns                          | Fires |
 | ----------------------------------- | --------------------------------------------- | --------------------------------- | ----- |
+| `from_file(path, **overrides)`      | Builds from a named configuration file      | A `CoWork`                       | no    |
 | `run(prompt)`                       | `submit`, then `wait`, then `collect`       | The result document              | yes   |
 | `submit(prompt)`                    | Steps 1 to 7 of the sequence                | The attributed session directory | yes   |
 | `wait(session_dir)`                 | Step 8, the completion signal               | The same directory               | no    |
@@ -185,6 +186,7 @@ Loading rules:
 | A missing `cowork_evals.yaml` is not an error. Every field falls back to its default      |
 | A file named to `Config.load` or `CoWork.from_file` must exist, so a mistyped path is never a silent set of defaults |
 | An unknown key inside `cowork:` is an error, so a typo is never a silent default          |
+| A value of the wrong type is an error, wherever the `Config` was built from                |
 | An unknown top level section is ignored, so a later backend adds its own without touching this loader |
 | An override passed to the `CoWork` constructor or to `Config.load` beats the file, which beats the default |
 | `~` in a path is expanded. A relative path resolves against the working directory          |
@@ -217,8 +219,9 @@ hours. It stays in the home directory, because the ceiling protects one CoWork a
 an account is not per-project.
 
 The diagnostic log is written by `run` and `submit` only, through a handler on the
-`cowork_evals` logger. The library never configures the root logger and never adds a handler
-twice. `log_dir: null` turns the file off, and the logger then carries whatever handler the
+`cowork_evals` logger. Every `CoWorkError` that leaves one of them is logged once, where the
+handler is opened, rather than at the step that raised it. The library never configures the
+root logger and never adds a handler twice. `log_dir: null` turns the file off, and the logger then carries whatever handler the
 caller attached. Two calls in the same second would share one name, so the second gets a
 counter suffix.
 
@@ -261,12 +264,12 @@ One dictionary, and it holds exactly these keys.
 | `prompt`                | The submitted prompt                                                   |
 | `prompt_sha256`         | Its digest, the join key to the run log                                |
 | `session_dir`           | Absolute path of the attributed session                                |
-| `submitted_at`          | Timestamp of the `user` audit record, when the prompt reached the application |
+| `submitted_at`          | Timestamp of that same record, when the prompt reached the application |
 | `collected_at`          | Timestamp of the collection                                            |
 | `transcript`            | Path of the main transcript                                            |
 | `other_transcripts`     | Paths of the remaining top level transcripts                           |
 | `subagent_transcripts`  | Paths under `subagents/`                                               |
-| `audit_prompt`          | The prompt as recorded in `audit.jsonl`                                |
+| `audit_prompt`          | The prompt as recorded in the first `user` record of `audit.jsonl`     |
 | `lifecycle`             | Every `command_lifecycle` state name, in order                         |
 | `turns`                 | Role and text per turn                                                 |
 | `tool_calls`            | Id, name, input, MCP attribution, timestamp, and the paired result     |

@@ -35,8 +35,8 @@ describes changes. The rest are design, and say so at the top.
 `data/` is shipped data rather than reference material. It moves into the package when the
 package is built, and [`library.md`](library.md) says so.
 
-A page here never links to a plan. Plans are deleted once implemented, so anything durable
-a plan establishes is written into one of these pages before the plan is removed.
+A page here never links to a plan. Anything durable a plan establishes is written into one
+of these pages while the work happens, so no page here depends on a plan file.
 
 ## Provenance
 

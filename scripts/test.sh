@@ -8,7 +8,7 @@
 #   test.sh                                  the unit tests
 #   test.sh -m integration                   every real-system test, the live run included
 #   test.sh -m "integration and not live"    the real-system tests that spend nothing
-#   test.sh tests/test_x.py -k name -vv
+#   test.sh tests/unit/test_cowork.py -k name -vv
 set -euo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 need uv

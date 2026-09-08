@@ -225,7 +225,7 @@ comparison runs on the host. Nothing from this package is installed into the ima
 The tools recorded as not present are `wkhtmltopdf`, `weasyprint`, `exiftool`, `docker` and
 the `sqlite3` CLI.
 
-The probe writes one JSON document. `tests/test_parity.py` asserts over recorded copies of
+The probe writes one JSON document. `tests/unit/test_parity.py` asserts over recorded copies of
 it under `tests/data/`, so the tests start no container.
 
 ## What the container still does not reproduce

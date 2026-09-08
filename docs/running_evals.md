@@ -25,7 +25,7 @@ here.
 | The case validator                        | no    | [eval_format.md](eval_format.md)            |
 | The 3.10 and import check over code under test | no | nowhere yet                                 |
 | The container backend and its Dockerfile  | no    | [docker.md](docker.md)                      |
-| `scripts/parity.sh` and `tests/test_parity.py` | no | [docker.md](docker.md)                     |
+| `scripts/parity.sh` and `tests/unit/test_parity.py` | no | [docker.md](docker.md)                     |
 | The CoWork driver                         | yes   | [cowork_driver.md](cowork_driver.md)        |
 | The CoWork backend over it                | no    | [cowork_driver.md](cowork_driver.md)        |
 | `plugins/smoke/`, the mirror fixture      | no    | [../plugins/README.md](../plugins/README.md) |

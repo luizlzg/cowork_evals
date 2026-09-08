@@ -100,7 +100,7 @@ This page owns the split. Every other page links here for it.
 | `requirements_installable.txt` | The same minus the nine below            | 127  | `setup --venv`, `cowork_venv.sh` |
 
 Both are at `docs/data/` today and ship as package data. See [library.md](library.md).
-`tests/test_environments.py` asserts that the second is the first minus exactly those nine,
+`tests/unit/test_environments.py` asserts that the second is the first minus exactly those nine,
 at identical versions.
 
 The nine are `command-not-found`, `dbus-python`, `distro-info`, `pipx`, `PyGObject`,

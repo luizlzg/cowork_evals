@@ -25,8 +25,8 @@ coupling list at the end of this page after an update.
 | Guest bash tool   | `mcp__workspace__bash`, an MCP tool, not Claude Code's own `Bash`     |
 
 A build may install more than one profile directory. Which one is active is read from `lsof`
-on the running process. Set the profile name for any tooling through an environment
-variable; do not hardcode it.
+on the running process. Name the active profile in `cowork_evals.yaml`; do not hardcode it.
+See [cowork_driver.md](cowork_driver.md).
 
 Chrome DevTools Protocol was not pursued. The application ships Electron fuses that disable
 `RunAsNode` and `EnableNodeCliInspectArguments`.
@@ -229,6 +229,6 @@ Every field a reader of a collected session acts on, by file:
 
 | File            | Fields                                                                        |
 | --------------- | ------------------------------------------------------------------------------- |
-| `audit.jsonl`   | `type`, `state`, `command_uuid`, `timestamp`, `message.content`, and on a `result` record `result`, `num_turns`, `total_cost_usd`, `is_error` |
-| The transcript  | `type`, `timestamp`, `isSidechain`, `attributionMcpServer`, `attributionMcpTool`, `message.role`, `message.content`, and per block `type`, `text`, `id`, `name`, `input`, `tool_use_id`, `content` |
+| `audit.jsonl`   | `type`, `state`, `timestamp`, `message.content`                                |
+| The transcript  | `type`, `attributionMcpServer`, `attributionMcpTool`, `timestamp`, `message.role`, `message.content`, and per block `type`, `text`, `id`, `name`, `input`, `tool_use_id`, `content` |
 | The directory   | `.claude/projects/session/<uuid>.jsonl`, `<uuid>/subagents/*.jsonl`, `outputs/` |
