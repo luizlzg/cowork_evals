@@ -23,7 +23,7 @@ system's: what is built and usable is
 | # | Plan                     | Builds                                                                            | Status      | Branch              |
 | - | ------------------------ | ----------------------------------------------------------------------------------- | ----------- | ------------------- |
 | 1 | `plan_cowork_tools.md`   | The CoWork driver: submit one prompt, wait, return what the session produced      | implemented | `feat/cowork-tools` |
-| 2 | `plan_docker.md`         | The image, its digest, `scripts/parity.sh`, and the harness run inside a container | not written |                     |
+| 2 | `plan_docker.md`         | The image, its digest, `scripts/parity.sh`, and the harness run inside a container | written     | `feat/docker`       |
 | 3 | `plan_venv.md`           | The staged relocatable 3.10 runtime, and the harness run under it                 | not written |                     |
 | 4 | `plan_cowork_backend.md` | The case reader and the CoWork grader over the driver                             | not written |                     |
 | 5 | `plan_cli.md`            | Scope resolution, the run directory, the gate, and the command                    | not written |                     |
@@ -39,6 +39,26 @@ Plans 2 and 3 each build one backend whole. Running an eval on those two backend
 `aggregate-result.json` itself, so there is nothing above the backend to put in a plan of its
 own. Only the host changes between them. See
 [`../docs/approaches.md`](../docs/approaches.md).
+
+### What a backend plan builds, and what it does not
+
+Plans 1, 2 and 3 build mechanisms. They build the way to reach a running agent: the desktop
+driver, the container, and the staged 3.10 runtime. None of them writes an eval, runs a
+suite, or introduces a cadence. Those belong to the consumer repository, and the rule is in
+[`../CLAUDE.md`](../CLAUDE.md).
+
+A mechanism still has to be shown to work, and some facts about one cannot be reached by
+reading a file. Each of plans 2 and 3 therefore ends by firing `plugins/smoke/` once,
+from the integration tier, and recording what that settled.
+
+| Plan | Fires once to establish                                                              |
+| ---- | -------------------------------------------------------------------------------------- |
+| 2    | Whether bubblewrap comes up in the container, whether a uid with no passwd entry stops the CLI, and whether the two bind mounts behave |
+| 3    | Whether a staged interpreter is reachable from inside the OS sandbox, and whether a case that shells out gets 3.10 |
+
+One fixture case, in the integration tier, is not a suite. It never runs in the default
+selection, and nothing here runs it on a cadence. See
+[`../tests/README.md`](../tests/README.md).
 
 Plan 4 is separate because CoWork is not symmetric with the other two. The driver returns one
 session document for one prompt. Reading the case tree, deciding which case the backend can
