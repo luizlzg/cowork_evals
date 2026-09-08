@@ -343,12 +343,16 @@ started. Every taxonomy code except 3 and 7 is raised in a test.
 
 ## Phase 7: The live smoke run
 
-One real submission on a machine that has the desktop application, the Accessibility grant
-and the two permission rules in `.claude/settings.local.json`. The rules are in
-[`../docs/cowork_desktop.md`](../docs/cowork_desktop.md), and an assistant cannot write them.
+One real submission, run by a person in their own terminal. That is the default because it
+needs no Claude Code permission rule: the rules in
+[`../docs/cowork_desktop.md`](../docs/cowork_desktop.md) exist only so an assistant may run
+`open` and `osascript`, and an assistant cannot write them. An assistant runs this phase
+instead only when `.claude/settings.local.json` already carries both rules.
 
-- [ ] Confirm the grant and the rules are in place, and that `cowork_evals.yaml` names the
-      active profile.
+What is required either way: the desktop application, the macOS Accessibility grant for the
+terminal that owns the process, a signed-in CoWork, and `disableDeepLinkRegistration` unset.
+
+- [ ] Confirm the grant is in place and that `cowork_evals.yaml` names the active profile.
 - [ ] Build a `CoWork()` from `cowork_evals.yaml` and call `run()` with a read-only prompt
       that asks for one exact marker token back.
 - [ ] Confirm the returned document holds the marker in `final_text`, that `history()` reads
