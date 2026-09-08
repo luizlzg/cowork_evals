@@ -13,27 +13,26 @@ A plan is still not a place to record anything durable. It links to `docs/`, and
 never links back. Whatever a plan establishes that outlives the work is written into `docs/`
 while the work happens.
 
-A row is added to the written table when a plan is written.
+## Plans
 
-## Written
+Five plans, in build order. Each is written when the one before it is merged, so a later
+plan is informed by what the earlier one measured. `status` is the plan's own state, not the
+system's: what is built and usable is
+[`../docs/running_evals.md`](../docs/running_evals.md).
 
-| Plan                   | Builds                                                        | Branch              |
-| ---------------------- | -------------------------------------------------------------- | ------------------- |
-| `plan_cowork_tools.md` | The CoWork driver: submit one prompt, wait, return the session | `feat/cowork-tools` |
+| # | Plan                     | Builds                                                                            | Status      | Branch              |
+| - | ------------------------ | ----------------------------------------------------------------------------------- | ----------- | ------------------- |
+| 1 | `plan_cowork_tools.md`   | The CoWork driver: submit one prompt, wait, return what the session produced      | implemented | `feat/cowork-tools` |
+| 2 | `plan_docker.md`         | The image, its digest, `scripts/parity.sh`, and the harness run inside a container | not written |                     |
+| 3 | `plan_venv.md`           | The staged relocatable 3.10 runtime, and the harness run under it                 | not written |                     |
+| 4 | `plan_cowork_backend.md` | The case reader and the CoWork grader over the driver                             | not written |                     |
+| 5 | `plan_cli.md`            | Scope resolution, the run directory, the gate, and the command                    | not written |                     |
 
-## Build order
-
-Five plans. Each is written when the one before it is merged, so a later plan is informed by
-what the earlier one measured. The build status of the system is
-[`../docs/running_evals.md`](../docs/running_evals.md), and no status is kept here.
-
-| # | Plan                       | Builds                                                                            |
-| - | -------------------------- | --------------------------------------------------------------------------------- |
-| 1 | `plan_cowork_tools.md`     | The CoWork driver: submit one prompt, wait, return what the session produced      |
-| 2 | `plan_docker.md`           | The image, its digest, `scripts/parity.sh`, and the harness run inside a container |
-| 3 | `plan_venv.md`             | The staged relocatable 3.10 runtime, and the harness run under it                 |
-| 4 | `plan_cowork_backend.md`   | The case reader and the CoWork grader over the driver                             |
-| 5 | `plan_cli.md`              | Scope resolution, the run directory, the gate, and the command                    |
+| Status        | Means                                                              |
+| ------------- | -------------------------------------------------------------------- |
+| `not written` | The plan file does not exist yet                                    |
+| `written`     | The plan file exists, and its checklist is not finished             |
+| `implemented` | Every box is ticked and the branch is merged. The file stays        |
 
 Plans 2 and 3 each build one backend whole. Running an eval on those two backends is
 `claude plugin eval`, which discovers the cases, runs them, grades them and writes
