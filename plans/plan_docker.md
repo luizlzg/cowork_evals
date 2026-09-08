@@ -227,6 +227,11 @@ No model is in the loop, because none of these is a question about a model.
       is the uid mapping measurement, and Node's `os.userInfo()` is what would raise.
 - [ ] Assert the plugin mount refuses a write, the log mount accepts one, and a file written
       into the log mount is owned by the host uid and gid.
+- [ ] Assert `claude plugin eval` in an empty directory prints `No eval cases found`. That
+      is the enablement self-test in [`../docs/plugin_eval.md`](../docs/plugin_eval.md): it
+      reads the credential and the enablement variable, runs no case and spends nothing.
+      `early access` there means the harness is not enabled for this credential, which is
+      not something a passing eval run could tell apart from a broken image.
 - [ ] Record in `docs/docker.md`: the capture date and the host as OS, architecture and
       container runtime, then the platform, the image size, the cold and warm build times
       taken from `scripts/image.sh`, the pin mismatches, the extra packages, the non-Python
@@ -238,15 +243,22 @@ No model is in the loop, because none of these is a question about a model.
       configuration directory and `docs/docker.md` says so. If it does not, the run mounts
       the configuration directory alone.
 
-The last box, once every box above it passes. It is the only one that spends money and the
-only one with a model in it, so it carries `live` as well as `integration` and is deselected
-by `-m "integration and not live"`.
+The last two boxes, once every box above them passes. They are the only ones with a model in
+them and the only ones that spend, so both carry `live` as well as `integration` and are
+deselected by `-m "integration and not live"`. Two rather than one, because a single failing
+end-to-end run cannot say whether the credential, the model, the mounts or the harness is at
+fault.
 
 - [ ] Widen the `live` marker in `pyproject.toml`, which today names a CoWork run only, to
       any test that submits a real run.
+- [ ] `claude -p` in the container with a prompt asking for one word, asserting that word
+      comes back. No plugin, no harness, no mounts. It is the minimal proof that Claude Code
+      runs there and the credential is accepted, and it costs one short reply.
 - [ ] Fire `plugins/smoke/` through `run()` and assert the result document says the case
       passed, with a timeout that fits one agentic run. The 300 second default in
-      `pyproject.toml` binds every test in this file.
+      `pyproject.toml` binds every test in this file. Everything the box above does not
+      cover is here: the harness, the two mounts, `--output-dir`, the `Bash` grant and the
+      result document.
 
 Two boxes above measure a fact that can change what phase 6 built. Both are fixed in this
 phase's commit rather than left to a later one.
