@@ -1,0 +1,115 @@
+"""The `claude plugin eval` command line, built once for both Claude Code backends.
+
+Every flag emitted here is pinned in [docs/running_evals.md](../../docs/running_evals.md),
+and the harness behind them is [docs/plugin_eval.md](../../docs/plugin_eval.md). The venv
+backend reuses this unchanged; only the host differs.
+
+Both paths arrive already resolved for the host the harness runs on, so the container
+backend passes container paths and nothing here resolves one.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from .env import setting
+
+# The debug log's name inside the run's output directory. The log layout fixes it.
+# docs/running_evals.md.
+DEBUG_FILE_NAME = "debug.txt"
+
+# Two pinned flags have no option and no setting. `--threshold 0` hands pass and fail to
+# the gate; `--ablation none` keeps a `tool_used: Skill` grader scored.
+THRESHOLD = "0"
+ABLATION = "none"
+
+
+@dataclass(frozen=True)
+class RunOptions:
+    """One run's resolved options. Every field is already the value that will be emitted."""
+
+    model: str
+    judge_model: str
+    max_cost_usd: str
+    allow_tools: tuple[str, ...]
+    runs: int | None = None
+    tags: tuple[str, ...] = field(default_factory=tuple)
+    case: str | None = None
+
+    @classmethod
+    def resolve(
+        cls,
+        *,
+        model: str | None = None,
+        judge_model: str | None = None,
+        max_cost_usd: str | None = None,
+        allow_tools: tuple[str, ...] | None = None,
+        runs: int | None = None,
+        tags: tuple[str, ...] = (),
+        case: str | None = None,
+    ) -> RunOptions:
+        """An explicit value beats the setting, which beats the built-in default.
+
+        `EVAL_ALLOW_TOOLS` is whitespace-separated and replaces the value rather than
+        adding to it, so a widened value names `Bash` again.
+        """
+        return cls(
+            model=model if model is not None else setting("EVAL_MODEL"),
+            judge_model=judge_model if judge_model is not None else setting("EVAL_JUDGE_MODEL"),
+            max_cost_usd=(
+                max_cost_usd if max_cost_usd is not None else setting("EVAL_MAX_COST_USD")
+            ),
+            allow_tools=(
+                allow_tools
+                if allow_tools is not None
+                else tuple(setting("EVAL_ALLOW_TOOLS").split())
+            ),
+            runs=runs,
+            tags=tags,
+            case=case,
+        )
+
+
+def eval_argv(target: Path | str, output_dir: Path | str, options: RunOptions) -> list[str]:
+    """The whole command line. Nothing that is neither pinned nor optioned is emitted.
+
+    `--debug-file` goes before `plugin`, and never a bare `--debug`, which swallows the
+    subcommand name as its filter. `--json` is never emitted, for the reason in
+    docs/plugin_eval.md.
+    """
+    output_dir = Path(output_dir)
+    argv = [
+        "claude",
+        "--debug-file",
+        str(output_dir / DEBUG_FILE_NAME),
+        "plugin",
+        "eval",
+        # The target goes ahead of every variadic flag below, which would swallow it.
+        str(target),
+        "--model",
+        options.model,
+        "--judge-model",
+        options.judge_model,
+        "--ablation",
+        ABLATION,
+        "--threshold",
+        THRESHOLD,
+        "--max-cost-usd",
+        options.max_cost_usd,
+        "--output-dir",
+        str(output_dir),
+        "--no-publish",
+        "--no-scaffold",
+        "--verbose",
+    ]
+    if options.runs is not None:
+        argv += ["--runs", str(options.runs)]
+    if options.case is not None:
+        argv += ["--case", options.case]
+    # Variadic, and last.
+    if options.allow_tools:
+        argv += ["--allow-tools", *options.allow_tools]
+    if options.tags:
+        argv += ["--tag", *options.tags]
+    return argv

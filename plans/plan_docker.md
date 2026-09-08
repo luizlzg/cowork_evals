@@ -134,16 +134,16 @@ doing no work at construction, so `Docker().digest` works on a machine with no d
 both Claude Code backends. The pinned flags are
 [`../docs/running_evals.md`](../docs/running_evals.md).
 
-- [ ] A frozen `RunOptions`, loaded from the `EVAL_*` settings, an explicit value beating
+- [x] A frozen `RunOptions`, loaded from the `EVAL_*` settings, an explicit value beating
       the setting.
-- [ ] `eval_argv(target, output_dir, options)`: every pinned flag, and nothing that is
+- [x] `eval_argv(target, output_dir, options)`: every pinned flag, and nothing that is
       neither pinned nor optioned. Both paths arrive already resolved for the host the
       harness runs on, so the container backend passes container paths.
-- [ ] Put the target ahead of `--tag` and `--allow-tools`, which are variadic and swallow a
+- [x] Put the target ahead of `--tag` and `--allow-tools`, which are variadic and swallow a
       trailing target.
-- [ ] Never emit `--json`. Always emit `--no-publish`, `--no-scaffold`, `--verbose`,
+- [x] Never emit `--json`. Always emit `--no-publish`, `--no-scaffold`, `--verbose`,
       `--threshold 0` and `--ablation none`, with no way to override the last two.
-- [ ] Emit `--debug-file <output_dir>/debug.txt`, the file name the log layout fixes, before
+- [x] Emit `--debug-file <output_dir>/debug.txt`, the file name the log layout fixes, before
       `plugin`, and never a bare `--debug`, which swallows the subcommand name as its
       filter.
 

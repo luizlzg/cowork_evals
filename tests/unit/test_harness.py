@@ -1,0 +1,112 @@
+"""The `claude plugin eval` command line. docs/running_evals.md pins every flag here.
+
+Nothing in this file runs the harness. The argument list is the unit under test.
+"""
+
+from __future__ import annotations
+
+from cowork_evals.harness import RunOptions, eval_argv
+
+
+def options(**overrides) -> RunOptions:
+    """A fully explicit RunOptions, so a test reads no setting it did not set."""
+    fixed = {
+        "model": "sonnet",
+        "judge_model": "haiku",
+        "max_cost_usd": "5",
+        "allow_tools": ("Bash",),
+    }
+    return RunOptions(**{**fixed, **overrides})
+
+
+def value_after(argv: list[str], flag: str) -> str:
+    return argv[argv.index(flag) + 1]
+
+
+# Resolving the options.
+
+
+def test_the_settings_supply_the_defaults(environment, working_directory, tmp_path):
+    with (
+        environment(
+            EVAL_MODEL=None, EVAL_JUDGE_MODEL=None, EVAL_MAX_COST_USD=None, EVAL_ALLOW_TOOLS=None
+        ),
+        working_directory(tmp_path),
+    ):
+        resolved = RunOptions.resolve()
+    assert resolved == RunOptions(
+        model="sonnet", judge_model="haiku", max_cost_usd="5", allow_tools=("Bash",)
+    )
+
+
+def test_a_setting_beats_the_default(environment, working_directory, tmp_path):
+    with environment(EVAL_MODEL="opus", EVAL_ALLOW_TOOLS="Bash Write"), working_directory(tmp_path):
+        resolved = RunOptions.resolve()
+    assert resolved.model == "opus"
+    assert resolved.allow_tools == ("Bash", "Write")
+
+
+def test_an_explicit_value_beats_the_setting(environment, working_directory, tmp_path):
+    with environment(EVAL_MODEL="opus"), working_directory(tmp_path):
+        assert RunOptions.resolve(model="haiku").model == "haiku"
+
+
+# The command line.
+
+
+def test_the_target_comes_before_every_variadic_flag():
+    argv = eval_argv("/work/plugin/evals", "/work/logs", options(tags=("skill",)))
+    target = argv.index("/work/plugin/evals")
+    assert target < argv.index("--allow-tools")
+    assert target < argv.index("--tag")
+
+
+def test_the_debug_file_goes_before_the_subcommand():
+    argv = eval_argv("/work/plugin/evals", "/work/logs", options())
+    assert argv[:5] == ["claude", "--debug-file", "/work/logs/debug.txt", "plugin", "eval"]
+    assert "--debug" not in argv, "a bare --debug swallows the subcommand name as its filter"
+
+
+def test_every_always_pinned_flag_is_emitted():
+    argv = eval_argv("/work/plugin/evals", "/work/logs", options())
+    assert value_after(argv, "--model") == "sonnet"
+    assert value_after(argv, "--judge-model") == "haiku"
+    assert value_after(argv, "--ablation") == "none"
+    assert value_after(argv, "--threshold") == "0"
+    assert value_after(argv, "--max-cost-usd") == "5"
+    assert value_after(argv, "--output-dir") == "/work/logs"
+    assert value_after(argv, "--allow-tools") == "Bash"
+    for flag in ("--no-publish", "--no-scaffold", "--verbose"):
+        assert flag in argv
+
+
+def test_json_is_never_emitted():
+    assert "--json" not in eval_argv("/work/plugin/evals", "/work/logs", options())
+
+
+def test_the_threshold_and_the_ablation_cannot_be_overridden():
+    """Neither is a field of RunOptions, so no caller can reach them."""
+    assert not hasattr(options(), "threshold")
+    assert not hasattr(options(), "ablation")
+
+
+def test_nothing_unasked_is_emitted():
+    argv = eval_argv("/work/plugin/evals", "/work/logs", options())
+    for flag in ("--runs", "--case", "--tag", "--report", "--keep-temp", "--mocks", "--eval-dir"):
+        assert flag not in argv
+
+
+def test_the_optional_flags_are_emitted_when_asked():
+    argv = eval_argv(
+        "/work/plugin/evals",
+        "/work/logs",
+        options(runs=1, case="smoke-*", tags=("plugin", "skill")),
+    )
+    assert value_after(argv, "--runs") == "1"
+    assert value_after(argv, "--case") == "smoke-*"
+    assert argv[argv.index("--tag") + 1 :] == ["plugin", "skill"]
+
+
+def test_a_widened_allow_tools_replaces_the_value():
+    argv = eval_argv("/work/plugin/evals", "/work/logs", options(allow_tools=("Bash", "Write")))
+    assert argv[argv.index("--allow-tools") + 1 :] == ["Bash", "Write"]
