@@ -32,7 +32,7 @@ before changing anything under it. Never restate one of these in another file; l
 
   | Code                                     | Runs on              | Python | May depend on                        |
   | ---------------------------------------- | -------------------- | ------ | ------------------------------------ |
-  | This package, `src/cowork_evals/`        | a developer's laptop | 3.14   | anything, kept few and each justified |
+  | This package, `src/cowork_evals/`        | a developer's laptop | 3.14   | anything                             |
   | The code under test, under the eval path | the CoWork session VM | 3.10  | the image wheel set, and nothing else |
 
   The second row is the hard one: every file under the path passed to `cowork_evals run`,

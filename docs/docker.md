@@ -118,6 +118,22 @@ installed into the image.
 A two-file context needs no `.dockerignore`, transfers nothing, and cannot put a working
 tree into a public image layer. See [library.md](library.md).
 
+## How Docker is driven
+
+The `cowork_evals` process runs the `docker` CLI through `subprocess`. It does not use
+`docker-py`, which is the usual way to reach Docker from Python.
+
+| Fact                                                                                   | Consequence                                        |
+| -------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| A cross-architecture `--platform` build goes through buildx. buildx is the CLI's builder; `docker-py` drives the daemon's classic builder | The SDK is weakest on the one build this page exists for |
+| `docker context` resolves which daemon to talk to and the CLI reads it. `docker-py` takes `DOCKER_HOST`, and Rancher Desktop on its containerd backend exposes no Docker API socket at all | The CLI reaches both daemons [cli.md](cli.md) names |
+
+Using the SDK for `run` and the CLI for `build` would be two mechanisms for one job.
+
+What the SDK gives back is typed errors instead of an exit code, and no argument quoting.
+The second is worth little here: `--dry-run` prints the argument list a run would use, so
+that list is built either way. See [cli.md](cli.md).
+
 ## The Claude Code CLI
 
 The harness is not part of the CoWork image, so it is not in the inventory above. The
@@ -131,36 +147,56 @@ global is added.
 
 ## Credentials
 
-The container authenticates with `ANTHROPIC_API_KEY`, passed at run time with
-`--env ANTHROPIC_API_KEY`. The value comes from the environment or from `.env`, which is
-never committed. See [library.md](library.md).
+Two routes, because a laptop and a runner cannot authenticate the same way. A run takes
+whichever is available, and the key wins when both are.
+
+| Route                | For                                          | How                                            |
+| -------------------- | -------------------------------------------- | ---------------------------------------------- |
+| `ANTHROPIC_API_KEY`  | a CI runner, or any host with no interactive terminal | passed with `--env`. Nothing is mounted |
+| A mounted login      | a developer's machine                        | mounted read-write from the host, below        |
+
+The login happens once, in an interactive container that `setup --docker` starts when
+neither route is available, and it writes a configuration directory this package owns:
+
+| Host path                                   | Holds                                                |
+| ------------------------------------------- | ---------------------------------------------------- |
+| `~/.cache/cowork_evals/claude/.claude/`     | the configuration directory, including `.credentials.json` |
+| `~/.cache/cowork_evals/claude/.claude.json` | the CLI state file                                   |
+
+Both are mounted into the container home, read-write: the CLI refreshes its token and
+rewrites its state file on every start. They are the only host paths a run mounts besides
+the plugin and the log directory, and the container keeps nothing else. A run that uses the
+key mounts neither.
 
 - Never bake a credential into an image layer.
-- Never mount the host `~/.claude` or `~/.claude.json`. The harness copies credentials into
-  its own per-run sandbox, and mounting the host profile puts a live OAuth token inside a
-  container that runs author-supplied prompts.
-- API key auth cannot publish a report to claude.ai. The runner passes `--no-publish`
-  anyway, so nothing changes.
+- Never mount the host `~/.claude` or `~/.claude.json`. That is the developer's own live
+  session, inside a container that runs author-supplied prompts. The directory above is a
+  separate login this package owns and can revoke on its own.
+- A claude.ai login can publish a report. `--no-publish` is pinned, so none is published.
+  See [running_evals.md](running_evals.md).
+- `ANTHROPIC_API_KEY` comes from the environment or from `.env`, which is never committed.
+  See [library.md](library.md).
 
-An unset `ANTHROPIC_API_KEY` is a failed preflight, so it exits 3 and names the variable.
-See [cli.md](cli.md).
+Neither route available is a failed preflight, so it exits 3 and names both. See
+[cli.md](cli.md).
 
-`CLAUDE_CODE_WALNUT_SPIRE` is passed in with `--env` alongside the credential, because the
-process inside the container is `claude plugin eval` itself with no wrapper in the way. A
-shell opened in the container by hand must export it. See
-[plugin_eval.md](plugin_eval.md).
+`CLAUDE_CODE_WALNUT_SPIRE` is passed in with `--env`, because the process inside the
+container is `claude plugin eval` itself with no wrapper in the way. A shell opened in the
+container by hand must export it. See [plugin_eval.md](plugin_eval.md).
 
 ## Mounts
 
-| Host path            | Container path        | Mode | Why                                            |
-| -------------------- | --------------------- | ---- | ---------------------------------------------- |
-| the plugin root      | `/work/plugin`        | ro   | The plugin under test                          |
-| the run's log dir    | `/work/logs`          | rw   | The only path the run may write outside `/tmp` |
+| Host path                                   | Container path        | Mode | Why                                            |
+| ------------------------------------------- | --------------------- | ---- | ---------------------------------------------- |
+| the plugin root                             | `/work/plugin`        | ro   | The plugin under test                          |
+| the run's log dir                           | `/work/logs`          | rw   | The only path the run may write outside `/tmp` |
+| `~/.cache/cowork_evals/claude/.claude/`     | `$HOME/.claude`       | rw   | The login, above                               |
+| `~/.cache/cowork_evals/claude/.claude.json` | `$HOME/.claude.json`  | rw   | The login, above                               |
 
-Read-only everywhere except the log directory. A case that writes into the consumer's
-checkout is a defect and must fail rather than succeed quietly. `--output-dir` points at
-`/work/logs`, so the harness's own output does not land in the plugin directory and the
-read-only mount does not fail a correct run.
+Read-only everywhere except the log directory and the two credential paths. A case that
+writes into the consumer's checkout is a defect and must fail rather than succeed quietly.
+`--output-dir` points at `/work/logs`, so the harness's own output does not land in the
+plugin directory and the read-only mount does not fail a correct run.
 
 The container holds nothing from this package. The `cowork_evals` process stays on the host,
 builds this argument list, names the run directory, writes the `latest` symlink, prunes old
@@ -198,11 +234,14 @@ them. The measurement below records which option was needed.
 
 ## Image tagging
 
-The image is tagged `cowork-evals:<digest>` and also `cowork-evals:latest`, where `<digest>`
-is the first 12 characters of the sha256 of the Dockerfile, both requirements files and the
-resolved `CLAUDE_CODE_VERSION`.
-Every build input is in the digest, including the build argument, so two CLI versions cannot
-share one tag and no change can be served from a stale image.
+The image is tagged `cowork-evals:<digest>`, where `<digest>` is the first 12 characters of
+the sha256 of the Dockerfile, both requirements files, the resolved `CLAUDE_CODE_VERSION`
+and the resolved platform. Without the platform an `arm64` and an `amd64` image share one
+tag. Every build input is in the digest, including the build argument, so two CLI versions
+cannot share one tag and no change can be served from a stale image.
+
+There is no `latest` tag. Nothing reads one: `run` and `check` resolve the digest tag, and a
+`latest` left behind by an older build points at an image no command would choose.
 
 ## Parity
 
@@ -237,7 +276,13 @@ those, see [cowork_driver.md](cowork_driver.md).
 
 ## Measurements
 
+Taken on one host and true of that host. Each is a snapshot, dated, with the host written as
+its OS, architecture and container runtime, never as a machine name. A reader on another
+platform re-runs `scripts/parity.sh` and the integration tier rather than assuming these.
+
 | Measurement                         | Value            |
+| ----------------------------------- | ---------------- |
+| Captured on                         | not yet measured |
 | ----------------------------------- | ---------------- |
 | Platform built                      | not yet measured |
 | Image size                          | not yet measured |
@@ -251,5 +296,3 @@ those, see [cowork_driver.md](cowork_driver.md).
 | Bash sandbox option needed          | not yet measured |
 | uid mapping option needed           | not yet measured |
 | Claude Code CLI version installed   | not yet measured |
-| Smoke case, container, wall clock   | not yet measured |
-| Smoke case, container, `costUsd`    | not yet measured |

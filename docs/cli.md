@@ -89,7 +89,7 @@ and a run that silently spends ten more building an image is not readable in a l
 | Backend    | Requires                                                             | Fails when                                                  |
 | ---------- | -------------------------------------------------------------------- | ----------------------------------------------------------- |
 | `--venv`   | `claude` on `PATH`, the mirror at the current digest, the uv interpreter the mirror was built from | the mirror is absent or stale, `python3 -V` is not 3.10, or the interpreter to stage is absent |
-| `--docker` | a Docker or Rancher daemon, the image at the current digest, `ANTHROPIC_API_KEY` | the daemon is down, the image is absent or stale, the key is unset |
+| `--docker` | a Docker or Rancher daemon, the image at the current digest, and either `ANTHROPIC_API_KEY` or the container login | the daemon is down, the image is absent or stale, or neither credential route is available |
 | `--cowork` | macOS, the CoWork desktop application, an Accessibility grant        | the grant is missing, so there is no headless route and no CI |
 
 A failed preflight exits 3 and prints one line naming the command that fixes it:
@@ -106,11 +106,13 @@ use.
 | Command          | Builds                                                                    | Idempotent                            |
 | ---------------- | ------------------------------------------------------------------------- | ------------------------------------- |
 | `setup --venv`   | `~/.cache/cowork_evals/venv-<digest>/` from `requirements_installable.txt` | prints `current` and exits 0          |
-| `setup --docker` | the image tagged `cowork-evals:<digest>`                                   | prints `current` and exits 0          |
+| `setup --docker` | the image tagged `cowork-evals:<digest>`, then the container login if one is needed | prints `current` and exits 0 |
 | `setup --all`    | both                                                                       | both                                  |
 
 `setup --docker` builds one image. Each run gets a fresh container from it, so there is no
-long-lived container to create. See [docker.md](docker.md).
+long-lived container to create. When `ANTHROPIC_API_KEY` is unset and no container login
+exists, it then starts one interactive container to log in. A host with no interactive
+terminal sets the key instead and `setup --docker` builds only. See [docker.md](docker.md).
 
 There is no `setup --cowork`. The desktop application and the Accessibility grant are
 installed and granted by hand, and `check --cowork` reports what is missing.
@@ -137,7 +139,8 @@ Deletes artefacts this CLI created and nothing else.
 | `--older-than DAYS` | restricts every selection above. Default 30                   |
 
 `run` prunes log directories older than 30 days on its own, so `prune --logs` is for
-reclaiming space on purpose.
+reclaiming space on purpose. `prune --docker` leaves the container login alone: it is a
+credential, not a build product, and deleting it forces an interactive login.
 
 ## Exit codes
 

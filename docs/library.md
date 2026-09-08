@@ -26,9 +26,10 @@ uv add --dev cowork-evals
 pip install cowork-evals
 ```
 
-`[project.scripts]` provides the `cowork_evals` executable. `cowork_evals --version` prints
-the installed distribution version from package metadata, and every run records it in
-`env.txt`, so a log says which version produced it.
+`[project.scripts]` will provide the `cowork_evals` executable. It is not in
+`pyproject.toml` yet, because nothing is behind it until the CLI is built.
+`cowork_evals --version` prints the installed distribution version from package metadata,
+and every run records it in `env.txt`, so a log says which version produced it.
 
 The consumer pins the version in its own `pyproject.toml`. That is the pin. The wheel set
 and the image inventory are measurements of a VM that moves, so a consumer on an old version
@@ -58,25 +59,17 @@ is [environments.md](environments.md).
 | Constraint            | Value    | In `pyproject.toml` | Reason                                                        |
 | --------------------- | -------- | ------------------- | -------------------------------------------------------------- |
 | `requires-python`     | `>=3.14` | yes                 | This package runs on a developer's laptop, never in a session |
-| `dependencies`        | few      | one                 | Nothing about CoWork constrains what this package imports     |
+| `dependencies`        | any      | yes                 | Nothing about CoWork constrains what this package imports     |
 | ruff `target-version` | `py314`  | yes                 | The same. It lints this package, not the code under test      |
 | `[tool.uv] package`   | removed  | yes                 | Removing it makes uv build a distribution                     |
 
 `package = false` was removed in the commit that added `src/cowork_evals/`, and not before,
-because `uv sync` fails against a package with no package tree. `[project.scripts]` is a
-later commit and is unrelated to it.
+because `uv sync` fails against a package with no package tree. `[project.scripts]` comes in
+a later commit and is unrelated to it.
 
 `requires-python` is a floor, so it also sets the interpreter a consumer's development
 environment needs. Lower it when a consumer on an older one asks. Nothing about CoWork
 forces a value here.
-
-A dependency is allowed. This package is a consumer's development dependency, so the list is
-kept short and every entry is named below with what needs it, but there is no rule against
-one.
-
-| Dependency | Needed by                                              | Added when |
-| ---------- | -------------------------------------------------------- | ---------- |
-| PyYAML     | `cowork_evals.config`, which reads `cowork_evals.yaml` | 2026-09-08 |
 
 ## Where the restrictions are
 
@@ -129,12 +122,14 @@ a CI job may set a variable directly instead, and wins when it does.
 | `.env` in the working directory | the default     | a consumer's standing settings          |
 | The built-in default            | nothing         | a machine that sets nothing             |
 
-`.env` holds `KEY=value` lines, `#` comments and blank lines. No `export`, no shell
-expansion, and no quoting beyond a matched pair of quotes around a value. A key the CLI does
-not recognise is ignored, because a consumer's `.env` serves more than this command.
+`.env` is read with `python-dotenv`, so the format is that library's, and it is read with
+interpolation off: a value is never expanded against another value or against the
+environment. The file is read, never applied to `os.environ`, because the process
+environment is the layer above it. A key the CLI does not recognise is ignored, because a
+consumer's `.env` serves more than this command.
 
-`.env` is never committed. It carries `ANTHROPIC_API_KEY`, and the public repository rule in
-[../README.md](../README.md) applies to every other value in it as well.
+`.env` is never committed. It may carry `ANTHROPIC_API_KEY`, and the public repository rule
+in [../README.md](../README.md) applies to every other value in it as well.
 
 The CoWork driver takes none of this. It is configured by `cowork_evals.yaml`, reads no
 environment variable, and reads no `.env`. See [cowork_driver.md](cowork_driver.md).
@@ -152,6 +147,7 @@ environment variable, and reads no `.env`. See [cowork_driver.md](cowork_driver.
 | ---------------- | ------------------------------------------------ | ---------------- |
 | CoWork mirror    | `~/.cache/cowork_evals/venv-<digest>/`           | `setup --venv`   |
 | Container image  | tag `cowork-evals:<digest>`                      | `setup --docker` |
+| Container login  | `~/.cache/cowork_evals/claude/`, when no API key is set | `setup --docker` |
 | Run logs         | `./logs/evals/<yyyymmdd-hhmmss>-<scope>/`        | `run`            |
 | Staged runtime   | `<plugin>/.cowork-runtime/`, for the length of a run | `run --venv` |
 
