@@ -178,19 +178,19 @@ Only two things are compared mechanically, because the delta table in
 `data/requirements.txt`, and the five tools recorded as absent. Everything else the probe
 reports is printed for a reader. No page under `docs/` is parsed.
 
-- [ ] `docker/probe.py`: one JSON document on stdout holding the OS release, the
+- [x] `docker/probe.py`: one JSON document on stdout holding the OS release, the
       architecture, the version of each tool in [`../docs/runtime.md`](../docs/runtime.md),
       `import uno`, `unoserver --version`, the font family count and the full `pip freeze`.
       3.10 syntax, standard library only.
-- [ ] `docker/parity.py`: apply the delta table exactly. Exit 1 on a missing or moved pin,
+- [x] `docker/parity.py`: apply the delta table exactly. Exit 1 on a missing or moved pin,
       on one of the five absent tools being present, and on `import uno` failing. Print an
       extra package or a differing tool version without failing.
-- [ ] Add `packaging` to `dependencies` in `pyproject.toml` and compare pins through
+- [x] Add `packaging` to `dependencies` in `pyproject.toml` and compare pins through
       `packaging.utils.canonicalize_name`. No PEP 503 normalisation is written here.
-- [ ] Report the platform the probe actually ran on, so an x86 run is never read as aarch64.
-- [ ] `scripts/parity.sh`: run the probe in the container with the probe bind-mounted
+- [x] Report the platform the probe actually ran on, so an x86 run is never read as aarch64.
+- [x] `scripts/parity.sh`: run the probe in the container with the probe bind-mounted
       read-only, then the comparison on the host. It installs nothing into the image.
-- [ ] `tests/unit/test_parity.py`: recorded probe documents under `tests/data/`, one per row
+- [x] `tests/unit/test_parity.py`: recorded probe documents under `tests/data/`, one per row
       of the delta table. No container starts.
 
 ## Phase 8: The fixture
