@@ -21,6 +21,7 @@ coupling list at the end of this page after an update.
 | Guest OS          | Ubuntu 22.04.5 LTS, kernel 6.8.0-136-generic, aarch64                |
 | Claude Code in VM | SDK payload at `claude-code-vm/<version>/claude`                     |
 | New session boot  | About 45 seconds from deep link to the first tool call in the guest  |
+| Driven run        | 8.2 seconds end to end, deep link to collected result. Snapshot 2026-09-08 |
 | Guest bash tool   | `mcp__workspace__bash`, an MCP tool, not Claude Code's own `Bash`     |
 
 A build may install more than one profile directory. Which one is active is read from `lsof`
@@ -29,6 +30,10 @@ variable; do not hardcode it.
 
 Chrome DevTools Protocol was not pursued. The application ships Electron fuses that disable
 `RunAsNode` and `EnableNodeCliInspectArguments`.
+
+The driven run is one measurement of one prompt: a marker prompt, no tool call, and a warm
+VM bundle already on disk. It is the floor, not the typical case. The 45 second boot above
+is what a cold VM costs, and a prompt that calls a tool pays it.
 
 ## 1. Input, by deep link
 

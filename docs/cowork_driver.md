@@ -315,8 +315,15 @@ is enforced against the run log: before submitting, `run` and `submit` count the
 whose timestamp falls in the trailing 24 hours, and refuse with code 2 when that count is
 already `max_runs`. Every submission is logged, successful or not, so a failing loop is
 throttled by the same ceiling as a working one. A refusal at step 1 has fired nothing and is
-not logged. `collect` never checks it. The window is fixed at 24 hours; only the count is
-configurable, and there is no way to skip it.
+not logged. `collect` never checks it.
+
+The line is written after the sequence returns or raises, so a process killed between the
+deep link and that write leaves a fired submission the ceiling never counts. Observed once,
+2026-09-08. Nothing inside the library closes that window, because the line cannot be
+written before the thing it records.
+
+The window is fixed at 24 hours; only the count is configurable, and there is no way to
+skip it.
 
 The default of 50 is a working day of development, and it is a ceiling, not a budget. A
 sweep that needs more raises `max_runs` deliberately.

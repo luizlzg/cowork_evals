@@ -359,15 +359,15 @@ instead only when `.claude/settings.local.json` already carries both rules.
 What is required either way: the desktop application, the macOS Accessibility grant for the
 terminal that owns the process, a signed-in CoWork, and `disableDeepLinkRegistration` unset.
 
-- [ ] Confirm the grant is in place and that `cowork_evals.yaml` names the active profile.
-- [ ] Build a `CoWork()` from `cowork_evals.yaml` and call `run()` with a read-only prompt
+- [x] Confirm the grant is in place and that `cowork_evals.yaml` names the active profile.
+- [x] Build a `CoWork()` from `cowork_evals.yaml` and call `run()` with a read-only prompt
       that asks for one exact marker token back.
-- [ ] Confirm the returned document holds the marker in `final_text`, that `history()` reads
+- [x] Confirm the returned document holds the marker in `final_text`, that `history()` reads
       back one new line, and that the library wrote nothing under the profile.
-- [ ] Confirm the diagnostic log names the fired link, the discovered session and the
+- [x] Confirm the diagnostic log names the fired link, the discovered session and the
       completion signal that fired.
-- [ ] Call `sessions()` and confirm it finds the new session.
-- [ ] Record the wall clock time of the run in `docs/cowork_desktop.md`.
+- [x] Call `sessions()` and confirm it finds the new session.
+- [x] Record the wall clock time of the run in `docs/cowork_desktop.md`.
 
 Gate. The call returns the marker and raises nothing. A missing grant raises `CoWorkError`
 with `.code == 3` and `osascript` error 1002 on stderr, and that blocks the phase rather than
