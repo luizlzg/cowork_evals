@@ -9,7 +9,18 @@ from __future__ import annotations
 import os
 import re
 
-from cowork_evals.docker import CONTAINER_EXTRA_CA, CONTAINER_HOME, DATA, DOCKERFILE, Docker
+import pytest
+
+from cowork_evals.docker import (
+    CONTAINER_EXTRA_CA,
+    CONTAINER_HOME,
+    DATA,
+    DOCKERFILE,
+    Docker,
+    DockerError,
+    plugin_root,
+)
+from cowork_evals.harness import RunOptions
 
 
 def build_arg(argv: list[str], flag: str) -> str:
@@ -156,3 +167,127 @@ def test_login_argv_points_node_at_the_extra_ca_when_the_host_has_one(environmen
     with environment(SSL_CERT_FILE=str(ca)):
         argv = Docker(platform="linux/arm64").login_argv()
     assert f"NODE_EXTRA_CA_CERTS={CONTAINER_EXTRA_CA}" in argv
+
+
+# The plugin root.
+
+
+def test_the_plugin_root_is_the_nearest_manifest_above_the_target(tmp_path):
+    root = tmp_path / "marketplace" / "smoke"
+    (root / ".claude-plugin").mkdir(parents=True)
+    (root / ".claude-plugin" / "plugin.json").write_text("{}")
+    case = root / "evals" / "plugin" / "python-version"
+    case.mkdir(parents=True)
+    assert plugin_root(case) == root.resolve()
+    assert plugin_root(root) == root.resolve(), "the root itself is a target the CLI accepts"
+
+
+def test_a_target_under_no_plugin_raises(tmp_path):
+    with pytest.raises(DockerError):
+        plugin_root(tmp_path)
+
+
+# The run argument list.
+
+
+@pytest.fixture
+def plugin(tmp_path):
+    """A plugin root with one case under it, on disk. Nothing here starts a container."""
+    root = tmp_path / "smoke"
+    (root / ".claude-plugin").mkdir(parents=True)
+    (root / ".claude-plugin" / "plugin.json").write_text("{}")
+    (root / "evals" / "plugin" / "python-version").mkdir(parents=True)
+    return root
+
+
+def run_options() -> RunOptions:
+    return RunOptions(model="sonnet", judge_model="haiku", max_cost_usd="5", allow_tools=("Bash",))
+
+
+def test_run_argv_mounts_the_plugin_read_only_and_the_logs_read_write(
+    environment, plugin, tmp_path
+):
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    with environment(ANTHROPIC_API_KEY="k", SSL_CERT_FILE=None):
+        argv = Docker(platform="linux/arm64").run_argv(plugin, logs, run_options())
+    mounts = [argv[i + 1] for i, value in enumerate(argv) if value == "-v"]
+    assert mounts == [
+        f"{plugin.resolve()}:/work/plugin:ro",
+        f"{logs.resolve()}:/work/logs:rw",
+    ]
+
+
+def test_run_argv_carries_the_uid_the_home_and_the_sandbox_option(environment, plugin, tmp_path):
+    with environment(ANTHROPIC_API_KEY="k", SSL_CERT_FILE=None, CLAUDE_CODE_WALNUT_SPIRE=None):
+        argv = Docker(platform="linux/arm64").run_argv(plugin, tmp_path, run_options())
+    assert argv[:3] == ["docker", "run", "--rm"]
+    assert build_arg(argv, "--platform") == "linux/arm64"
+    assert build_arg(argv, "--user") == f"{os.getuid()}:{os.getgid()}"
+    assert f"HOME={CONTAINER_HOME}" in argv
+    assert build_arg(argv, "--security-opt") == "seccomp=unconfined"
+    assert "CLAUDE_CODE_WALNUT_SPIRE=1" in argv
+
+
+def test_the_container_side_target_is_relative_to_the_plugin_root(environment, plugin, tmp_path):
+    case = plugin / "evals" / "plugin" / "python-version"
+    with environment(ANTHROPIC_API_KEY="k", SSL_CERT_FILE=None):
+        argv = Docker(platform="linux/arm64").run_argv(case, tmp_path, run_options())
+    assert "/work/plugin/evals/plugin/python-version" in argv
+
+
+def test_the_plugin_root_itself_is_the_mount_point(environment, plugin, tmp_path):
+    with environment(ANTHROPIC_API_KEY="k", SSL_CERT_FILE=None):
+        argv = Docker(platform="linux/arm64").run_argv(plugin, tmp_path, run_options())
+    assert "/work/plugin" in argv
+
+
+def test_the_output_dir_is_the_log_mount(environment, plugin, tmp_path):
+    with environment(ANTHROPIC_API_KEY="k", SSL_CERT_FILE=None):
+        argv = Docker(platform="linux/arm64").run_argv(plugin, tmp_path, run_options())
+    assert build_arg(argv, "--output-dir") == "/work/logs"
+    assert build_arg(argv, "--debug-file") == "/work/logs/debug.txt"
+
+
+def test_a_key_is_one_env_by_name_and_no_credential_mount(environment, plugin, tmp_path):
+    """The value never reaches an argument list. docs/docker.md."""
+    with environment(ANTHROPIC_API_KEY="sk-secret", SSL_CERT_FILE=None):
+        docker = Docker(platform="linux/arm64")
+        argv = docker.run_argv(plugin, tmp_path, run_options())
+    assert "ANTHROPIC_API_KEY" in argv
+    assert "sk-secret" not in " ".join(argv)
+    assert str(docker.claude_dir) not in " ".join(argv)
+    assert str(docker.state_file) not in " ".join(argv)
+
+
+def test_without_a_key_the_two_login_paths_are_mounted_read_write(
+    environment, working_directory, plugin, tmp_path
+):
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    with environment(ANTHROPIC_API_KEY=None, SSL_CERT_FILE=None), working_directory(tmp_path):
+        docker = Docker(platform="linux/arm64")
+        argv = docker.run_argv(plugin, logs, run_options())
+    mounts = [argv[i + 1] for i, value in enumerate(argv) if value == "-v"]
+    assert mounts == [
+        f"{docker.claude_dir}:{CONTAINER_HOME}/.claude:rw",
+        f"{docker.state_file}:{CONTAINER_HOME}/.claude.json:rw",
+        f"{plugin.resolve()}:/work/plugin:ro",
+        f"{logs.resolve()}:/work/logs:rw",
+    ]
+    assert "ANTHROPIC_API_KEY" not in argv
+
+
+def test_run_argv_ends_with_the_tag_and_the_harness_command(environment, plugin, tmp_path):
+    with environment(ANTHROPIC_API_KEY="k", SSL_CERT_FILE=None):
+        docker = Docker(platform="linux/arm64")
+        argv = docker.run_argv(plugin, tmp_path, run_options())
+    image = argv.index(docker.tag)
+    assert argv[image + 1 : image + 4] == ["claude", "--debug-file", "/work/logs/debug.txt"]
+    assert "--no-publish" in argv[image:]
+
+
+def test_run_argv_mounts_nothing_else_from_the_host(environment, plugin, tmp_path):
+    with environment(ANTHROPIC_API_KEY="k", SSL_CERT_FILE=None):
+        argv = Docker(platform="linux/arm64").run_argv(plugin, tmp_path, run_options())
+    assert argv.count("-v") == 2

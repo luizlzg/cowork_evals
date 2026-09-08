@@ -17,6 +17,7 @@ import subprocess
 from pathlib import Path
 
 from ..env import setting
+from ..harness import RunOptions, eval_argv
 
 DOCKERFILE = Path(__file__).parent / "Dockerfile"
 DATA = Path(__file__).parent.parent / "data"
@@ -34,8 +35,16 @@ CLAUDE_DIR_NAME = ".claude"
 STATE_FILE_NAME = ".claude.json"
 CREDENTIALS_FILE_NAME = ".credentials.json"
 
+# What makes a directory a plugin root. docs/eval_format.md.
+PLUGIN_MANIFEST = Path(".claude-plugin") / "plugin.json"
+
 # Inside the container. The uid the run carries has no passwd entry, so HOME is explicit.
 CONTAINER_HOME = "/tmp/eval-home"
+CONTAINER_PLUGIN = "/work/plugin"
+CONTAINER_LOGS = "/work/logs"
+
+# What the harness leaves behind, and the only thing a backend returns. docs/running_evals.md.
+RESULT_NAME = "aggregate-result.json"
 
 # An optional extra root CA, for a host whose network inspects TLS. The host path comes
 # from SSL_CERT_FILE, which such a host already sets for its own tooling, and never from
@@ -46,6 +55,19 @@ CONTAINER_EXTRA_CA = "/usr/local/share/ca-certificates/extra_ca.crt"
 
 class DockerError(Exception):
     """A container backend failure, carrying a message and nothing else."""
+
+
+def plugin_root(target: Path | str) -> Path:
+    """The nearest directory at or above `target` holding `.claude-plugin/plugin.json`.
+
+    It is what the read-only mount is rooted at, and what the container-side target is
+    relative to.
+    """
+    resolved = Path(target).resolve()
+    for candidate in (resolved, *resolved.parents):
+        if (candidate / PLUGIN_MANIFEST).is_file():
+            return candidate
+    raise DockerError(f"no {PLUGIN_MANIFEST} at or above {resolved}")
 
 
 class Docker:
@@ -157,6 +179,58 @@ class Docker:
             "claude",
         ]
 
+    def run_argv(
+        self, target: Path | str, output_dir: Path | str, options: RunOptions
+    ) -> list[str]:
+        """One run, as a container. The harness command line is harness.eval_argv.
+
+        The plugin root goes in read-only and the run's log directory read-write. Nothing
+        else from the host is mounted, and the harness writes its output into the log
+        mount rather than under the plugin. docs/docker.md.
+        """
+        root = plugin_root(target)
+        relative = Path(target).resolve().relative_to(root)
+        container_target = CONTAINER_PLUGIN
+        if relative != Path("."):
+            container_target = f"{CONTAINER_PLUGIN}/{relative.as_posix()}"
+        return [
+            "docker",
+            "run",
+            "--rm",
+            "--platform",
+            self.platform,
+            "--user",
+            f"{os.getuid()}:{os.getgid()}",
+            "--env",
+            f"HOME={CONTAINER_HOME}",
+            # The process in the container is the harness itself, with no wrapper to
+            # export the enablement variable. docs/plugin_eval.md.
+            "--env",
+            f"CLAUDE_CODE_WALNUT_SPIRE={setting('CLAUDE_CODE_WALNUT_SPIRE')}",
+            # Granting Bash turns on the OS sandbox, and bubblewrap needs unprivileged
+            # user namespaces unfiltered. docs/docker.md.
+            "--security-opt",
+            "seccomp=unconfined",
+            *self._extra_ca_env_argv(),
+            *self._credential_argv(),
+            "-v",
+            f"{root}:{CONTAINER_PLUGIN}:ro",
+            "-v",
+            f"{Path(output_dir).resolve()}:{CONTAINER_LOGS}:rw",
+            self.tag,
+            *eval_argv(container_target, CONTAINER_LOGS, options),
+        ]
+
+    def _credential_argv(self) -> list[str]:
+        """The key wins when both routes are available. docs/docker.md.
+
+        The key is passed by name, never by value: the value reaches the container through
+        this process's own environment, so it is in no argument list and in no log.
+        """
+        if setting("ANTHROPIC_API_KEY"):
+            return ["--env", "ANTHROPIC_API_KEY"]
+        return self._credential_mount_argv()
+
     def _extra_ca_env_argv(self) -> list[str]:
         """Node carries its own root store and does not read the system one.
 
@@ -183,6 +257,44 @@ class Docker:
         completed = subprocess.run(argv)
         if completed.returncode != 0:
             raise DockerError(f"docker build failed with exit {completed.returncode}: {self.tag}")
+
+    def run(
+        self,
+        target: Path | str,
+        output_dir: Path | str,
+        options: RunOptions | None = None,
+    ) -> Path:
+        """Run one container and return the result document it left behind.
+
+        The caller creates `output_dir` first, and owns naming it. A non-zero exit is not
+        itself a failure: the harness exits 1 below threshold and 2 on partial results,
+        and the gate reads the document either way. No document at all is.
+        """
+        options = options if options is not None else RunOptions.resolve()
+        output_dir = Path(output_dir).resolve()
+        completed = subprocess.run(
+            self.run_argv(target, output_dir, options),
+            env=self._child_environment(),
+        )
+        result = output_dir / RESULT_NAME
+        if not result.is_file():
+            raise DockerError(
+                f"the container left no {RESULT_NAME} in {output_dir}, "
+                f"and exited {completed.returncode}"
+            )
+        return result
+
+    def _child_environment(self) -> dict[str, str]:
+        """This process's environment, plus the key when it came from `.env`.
+
+        `run_argv` passes ANTHROPIC_API_KEY by name, so the value has to be in the
+        environment of the `docker` process rather than in its arguments.
+        """
+        environment = dict(os.environ)
+        key = setting("ANTHROPIC_API_KEY")
+        if key:
+            environment["ANTHROPIC_API_KEY"] = key
+        return environment
 
     def daemon_is_reachable(self) -> bool:
         try:

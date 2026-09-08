@@ -151,25 +151,25 @@ both Claude Code backends. The pinned flags are
 
 Still `src/cowork_evals/docker/__init__.py`. It wraps phase 5's list in a container.
 
-- [ ] `plugin_root(target)`: the nearest ancestor of the target holding
+- [x] `plugin_root(target)`: the nearest ancestor of the target holding
       `.claude-plugin/plugin.json`, and a raised `DockerError` when there is none. It is
       what the read-only mount is rooted at and what the container-side target is relative
       to.
-- [ ] `run_argv(target, output_dir, options)`: `docker run --rm`, the platform, the host uid
+- [x] `run_argv(target, output_dir, options)`: `docker run --rm`, the platform, the host uid
       and gid, `HOME=/tmp/eval-home`, `--security-opt seccomp=unconfined`, and phase 5's
       list as the command, built with container paths.
-- [ ] The plugin root read-only at `/work/plugin`, the run's log directory read-write at
+- [x] The plugin root read-only at `/work/plugin`, the run's log directory read-write at
       `/work/logs`, `--output-dir` at the log mount, and nothing else from the host.
-- [ ] The credential, by the rule in [`../docs/docker.md`](../docs/docker.md): with
+- [x] The credential, by the rule in [`../docs/docker.md`](../docs/docker.md): with
       `ANTHROPIC_API_KEY` set, one `--env` and no credential mount; without it, the two
       login paths mounted read-write under `HOME`, because the CLI rewrites its state file
       and refreshes its token on every start. `tests/unit/test_docker.py` asserts over both
       shapes of the argument list.
-- [ ] Pass `CLAUDE_CODE_WALNUT_SPIRE` with `--env`: the process in the container is the
+- [x] Pass `CLAUDE_CODE_WALNUT_SPIRE` with `--env`: the process in the container is the
       harness itself, with no wrapper to export it.
-- [ ] `run(target, output_dir)`: run the container and return the path to the
+- [x] `run(target, output_dir)`: run the container and return the path to the
       `aggregate-result.json` it left behind. Raise when it produced none.
-- [ ] Name no run directory, write no `latest` symlink, prune nothing, decide nothing.
+- [x] Name no run directory, write no `latest` symlink, prune nothing, decide nothing.
 
 ## Phase 7: The probe, the comparison and `scripts/parity.sh`
 
