@@ -1,20 +1,25 @@
 # plans
 
-Work in progress. Each plan is executed on its own branch off `main`, merged back when its
-checklist is complete, and then deleted.
+Work in progress. Each plan is executed on its own branch off `main` and merged back when
+its checklist is complete.
 
-A plan is therefore not a place to record anything durable. It links to `docs/`, and
-`docs/` never links back. Whatever a plan establishes that outlives the work is written
-into `docs/` before the plan is removed, and every plan's last phase says so explicitly.
+**A plan is never deleted by Claude.** The developer decides when a plan goes, and says so.
+A completed plan stays until then, because it is the record of which decisions were asked
+for and which were proposed, and that record is what anyone needs when a design decision is
+questioned later. Git history does not answer that: every commit here is authored by the
+developer with Claude as co-author, so it cannot tell the two apart.
 
-A row is added to the written table when a plan is written, and removed when the plan is
-deleted.
+A plan is still not a place to record anything durable. It links to `docs/`, and `docs/`
+never links back. Whatever a plan establishes that outlives the work is written into `docs/`
+while the work happens.
+
+A row is added to the written table when a plan is written.
 
 ## Written
 
-| Plan | Builds | Branch |
-| ---- | ------ | ------ |
-| none |        |        |
+| Plan                   | Builds                                                        | Branch              |
+| ---------------------- | -------------------------------------------------------------- | ------------------- |
+| `plan_cowork_tools.md` | The CoWork driver: submit one prompt, wait, return the session | `feat/cowork-tools` |
 
 ## Build order
 
