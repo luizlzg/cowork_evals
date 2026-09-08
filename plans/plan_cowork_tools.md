@@ -203,12 +203,12 @@ session identifier and the prompts of a real account. Phase 8 writes it into
 
 ## Phase 1: The package tree
 
-- [ ] Create `src/cowork_evals/__init__.py`, holding a docstring and nothing else.
-- [ ] Add `[build-system]` to `pyproject.toml`: `requires = ["hatchling"]`,
+- [x] Create `src/cowork_evals/__init__.py`, holding a docstring and nothing else.
+- [x] Add `[build-system]` to `pyproject.toml`: `requires = ["hatchling"]`,
       `build-backend = "hatchling.build"`, and `[tool.hatch.build.targets.wheel]` with
       `packages = ["src/cowork_evals"]`.
-- [ ] Set `dependencies = ["PyYAML>=6"]`.
-- [ ] Remove `[tool.uv] package = false`.
+- [x] Set `dependencies = ["PyYAML>=6"]`.
+- [x] Remove `[tool.uv] package = false`.
 
 `scripts/lint.sh` runs ruff over `.`, so it reaches `src/` with no change.
 

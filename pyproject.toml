@@ -1,9 +1,13 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "cowork-evals"
 version = "0.1.0"
 description = "Run evals for Claude CoWork skills and plugins"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = ["PyYAML>=6"]
 
 [dependency-groups]
 dev = [
@@ -24,5 +28,5 @@ target-version = "py314"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
-[tool.uv]
-package = false
+[tool.hatch.build.targets.wheel]
+packages = ["src/cowork_evals"]
