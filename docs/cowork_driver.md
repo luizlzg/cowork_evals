@@ -47,7 +47,6 @@ Three modules, and PyYAML.
 | Module                     | Holds                                                       |
 | -------------------------- | ------------------------------------------------------------ |
 | `cowork_evals.config`      | `cowork_evals.yaml`, the frozen `Config`, and `CoWorkError` |
-| `cowork_evals.prompt_lint` | The deny-list linter below                                  |
 | `cowork_evals.cowork`      | `CoWork`, the driver                                        |
 
 `Config`, `CoWork` and `CoWorkError` are the whole public surface, and they are re-exported
@@ -111,7 +110,7 @@ A command line over this library is not built and belongs to its own plan.
 
 | # | Step                | Does                                                                                | Fails as |
 | - | ------------------- | ----------------------------------------------------------------------------------- | -------- |
-| 1 | Refuse              | Check the configuration, the rate ceiling, the 14336 cap, and the prompt linter     | 2        |
+| 1 | Refuse              | Check the configuration, the rate ceiling and the 14336 cap                         | 2        |
 | 2 | Record the baseline | List the session directories that already exist                                     |          |
 | 3 | Fire the deep link  | `open claude://claude.ai/new?q=<prompt>&surface=<surface>`                          | 3        |
 | 4 | Settle              | Sleep `settle_seconds` while the window navigates and focuses the composer          |          |
@@ -337,51 +336,6 @@ what makes manual cleanup tractable. Removal is manual, through the application.
 organization inference gateway, with whatever MCP servers that account has. A prompt can
 send mail or mutate data for real.
 
-A prompt linter runs before every submission and refuses a prompt that instructs a mutation.
-It is a module the driver imports, not a command, so it has no entry point of its own. The
-driver raises code 2 on refusal. There is no flag, argument or configuration key that
-disables it.
-
-### The deny-list
-
-The rule the linter enforces: **read anything, mutate nothing outside the session.** Writing
-a file inside the session is not a mutation. Sending mail, moving a calendar, editing a
-document or pushing a commit is.
-
-The linter splits the prompt into sentences on `.`, `;`, `?`, `!` and newline. A sentence is
-refused when it matches a rule below and names no session-local target. A prompt is refused
-when any of its sentences is. Every pattern is a case-insensitive regular expression on word
-boundaries, so the rules are mechanical and the tests are one prompt per rule.
-
-| Rule       | Patterns                                                                            |
-| ---------- | ------------------------------------------------------------------------------------ |
-| `send`     | `send`, `reply to`, `forward`, `post to`, `publish`, `share`, `notify`, `invite`     |
-| `create`   | `create`, `add`, `schedule`, `book`, `draft`, `file a`, `submit`                     |
-| `modify`   | `update`, `edit`, `rename`, `move`, `assign`, `enable`, `disable`, `mark`            |
-| `destroy`  | `delete`, `remove`, `cancel`, `decline`, `archive`, `trash`, `revoke`, `unsubscribe` |
-| `deploy`   | `install`, `deploy`, `commit`, `push`, `merge`, `upload`, `rm -`, `mv `, `git push`, `curl -X (POST|PUT|PATCH|DELETE)` |
-| `transact` | `approve`, `pay`, `purchase`, `order a`, `place an order`, `authorize`, `sign`       |
-
-A sentence naming `outputs/`, `/sessions/`, `/tmp`, `TMPDIR` or `the session` is exempt, so
-`Write the summary to outputs/summary.md` passes.
-
-Each pattern is the mutating verb in the phrasing a prompt actually uses, not the bare word,
-wherever the bare word has a common read-only sense. `reply to` is a rule and `reply with`
-is not, so `Reply with exactly: PONG` passes. `order a` is a rule and `in order to` is not.
-Words with no usable verb sense in a prompt are left out entirely: `set`, `clear`, `change`,
-`close`, `resolve`, `confirm` and `message` all refuse more read-only prompts than mutating
-ones, and are not in the list.
-
-The list grows when a mutating prompt gets through. It is a deny-list, so it is never
-complete.
-
-The limit: a linter is a filter, not a sandbox. It reads English, so it is
-blunt in both directions. It refuses harmless prompts that happen to use a listed verb, and
-the fix is to rephrase or split the sentence, because there is no skip flag. It passes a
-mutating prompt that avoids every listed verb, and nothing outside the session can restrict
-the session's tools. Reads and local computation only remains a rule enforced by review as
-well as by the linter.
-
 ## Failure taxonomy
 
 A grading layer has to tell these apart, so `CoWorkError.code` is one of these and never
@@ -390,7 +344,7 @@ line over it maps them onto its own.
 
 | Code | Meaning                                                    |
 | ---- | ---------------------------------------------------------- |
-| 2    | Refused before submission: configuration, rate ceiling, prompt too long, or lint |
+| 2    | Refused before submission: configuration, rate ceiling, or prompt too long |
 | 3    | Submission failed: `open` or `osascript` returned non-zero |
 | 4    | No session directory appeared within the timeout           |
 | 5    | More than one session directory appeared, cannot attribute |

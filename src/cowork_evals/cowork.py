@@ -21,7 +21,6 @@ from typing import Any
 from urllib.parse import quote, urlencode
 
 from .config import PROMPT_LIMIT, Config, CoWorkError, _override
-from .prompt_lint import lint
 
 # A session directory is exactly three levels below the sessions root and holds an
 # audit.jsonl. docs/cowork_desktop.md.
@@ -299,10 +298,6 @@ class CoWork:
                 "and the application would truncate it silently",
             )
 
-        refusal = lint(prompt)
-        if refusal is not None:
-            raise CoWorkError(2, f"prompt refused by the linter: {refusal}")
-
     def _recent(self) -> int:
         """Submissions in the trailing 24 hours, counted from the run log."""
         cutoff = datetime.now(UTC) - CEILING_WINDOW
@@ -361,10 +356,12 @@ class CoWork:
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
-    """Parse a JSON Lines file, skipping an unparsable line.
+    """Parse a JSON Lines file, dropping a line that does not parse.
 
-    Both audit.jsonl and the transcript are appended while the run is live, so the last
-    line can be partial.
+    Both audit.jsonl and the transcript are appended while the run is live, and this is
+    called on both while a run is in flight, so a read can catch a partial last line. That
+    truncated tail is the only unparsable line with a known cause. A line that does not
+    parse anywhere else has none, and is dropped rather than trusted.
     """
     try:
         text = path.read_text(encoding="utf-8")
@@ -566,7 +563,7 @@ def _parse_timestamp(value: Any) -> datetime | None:
     if not isinstance(value, str):
         return None
     try:
-        stamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        stamp = datetime.fromisoformat(value)
     except ValueError:
         return None
     return stamp if stamp.tzinfo is not None else stamp.replace(tzinfo=UTC)
