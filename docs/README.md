@@ -36,7 +36,11 @@ design carrying a dated snapshot, and says so.
 Three pages are neither. `eval_format.md` is the authoring contract a case is written to,
 `plugin_eval.md` describes a Claude Code command this repository does not own and carries
 the CLI version it was written against, and `environments.md` marks which of its routes are
-built and which are design. Every other page is design and says so at the top.
+built and which are design.
+
+Every other page says at the top which of it is built and which is design. `docker.md`,
+`library.md` and `approaches.md` are part built; `cli.md`, `cowork_driver.md` and
+`staged_runtime.md` are design.
 
 A page here never links to a plan. Anything durable a plan establishes is written into one
 of these pages while the work happens, so no page here depends on a plan file.

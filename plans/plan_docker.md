@@ -238,7 +238,7 @@ No model is in the loop, because none of these is a question about a model.
       reads the credential and the enablement variable, runs no case and spends nothing.
       `early access` there means the harness is not enabled for this credential, which is
       not something a passing eval run could tell apart from a broken image.
-- [ ] Record in `docs/docker.md`: the capture date and the host as OS, architecture and
+- [x] Record in `docs/docker.md`: the capture date and the host as OS, architecture and
       container runtime, then the platform, the image size, the cold and warm build times
       taken from `scripts/image.sh`, the pin mismatches, the extra packages, the non-Python
       deltas, the font family count, `import uno`, the uid mapping option needed, the Bash
@@ -283,19 +283,19 @@ the cases this repository pins `--allow-tools Bash` for.
 
 Nothing durable may survive only in this file.
 
-- [ ] `docs/docker.md`: fill every measurement from phase 9.
-- [ ] `docs/library.md`: add the new modules to the ships table.
-- [ ] `docs/running_evals.md`: mark the container backend, its Dockerfile, `parity.sh` and
+- [x] `docs/docker.md`: fill every measurement from phase 9.
+- [x] `docs/library.md`: add the new modules to the ships table.
+- [x] `docs/running_evals.md`: mark the container backend, its Dockerfile, `parity.sh` and
       `plugins/smoke/` built, and correct the row calling `smoke` the staged runtime
       fixture, which is one of the two backends it serves.
-- [ ] `docs/approaches.md`: correct the closing line saying no backend is built.
-- [ ] `scripts/README.md`: a row for `image.sh`, and turn the `parity.sh` note into a row.
-- [ ] `tests/README.md`: a row per new test file, the integration tier's new preconditions,
+- [x] `docs/approaches.md`: correct the closing line saying no backend is built.
+- [x] `scripts/README.md`: a row for `image.sh`, and turn the `parity.sh` note into a row.
+- [x] `tests/README.md`: a row per new test file, the integration tier's new preconditions,
       and the `live` marker now covering a real eval run as well as a real CoWork run.
-- [ ] `plugins/README.md`: mark `smoke` built.
-- [ ] `README.md`: correct the Contributing block, whose integration line describes that
+- [x] `plugins/README.md`: mark `smoke` built.
+- [x] `README.md`: correct the Contributing block, whose integration line describes that
       tier as CoWork only.
-- [ ] `plans/README.md`: correct the closing sentence saying a plan will not survive, which
+- [x] `plans/README.md`: correct the closing sentence saying a plan will not survive, which
       the status table on the same page contradicts.
-- [ ] Re-read every touched page for a statement this plan made false.
+- [x] Re-read every touched page for a statement this plan made false.
 - [ ] `plans/README.md`: mark this plan `implemented`.

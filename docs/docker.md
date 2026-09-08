@@ -8,7 +8,9 @@ The image inventory this container has to match is [runtime.md](runtime.md). The
 around it is [running_evals.md](running_evals.md) and the command that reaches it is
 [cli.md](cli.md). The cheaper alternative is [environments.md](environments.md).
 
-Design. Nothing here is built and the measurements at the end are not taken. What is built
+The container, the image digest, the argument lists, the parity probe and the fixture are
+built. The `cowork_evals` command over them is not: today the image is built by
+`scripts/image.sh` and a run goes through `cowork_evals.docker.Docker.run`. What is built
 is the status table in [running_evals.md](running_evals.md).
 
 ## Usage
@@ -19,6 +21,8 @@ cowork_evals check --docker                                   # daemon, image di
 cowork_evals run --docker path/to/plugin/evals/<skill>        # one skill, in the container
 cowork_evals run --docker path/to/repo                        # every plugin, in the container
 
+scripts/image.sh                                              # development: build for EVAL_PLATFORM
+scripts/image.sh --check                                      # development: the digest is present, no writes
 scripts/parity.sh                                             # development: probe the image, compare
 ```
 
@@ -26,15 +30,18 @@ scripts/parity.sh                                             # development: pro
 writes the same logs. `--dry-run` prints the `docker run` argument list one argument per line
 and starts nothing. See [cli.md](cli.md).
 
-`scripts/parity.sh` is a development task for this repository, not part of the command. It
-is how the image is proved to match [runtime.md](runtime.md) before a release.
+`scripts/image.sh` and `scripts/parity.sh` are development tasks for this repository and are
+not part of the command. `parity.sh` is how the image is proved to match
+[runtime.md](runtime.md) before a release.
 
 ## Why the image can be close
 
 The CoWork image is Ubuntu 22.04.5 (jammy), and every recorded non-Python version is the
 version jammy ships: pandoc 2.9.2.1, tesseract 4.1.1, ImageMagick 6.9.11-60, ffmpeg 4.4.2,
 poppler-utils 22.02.0, ghostscript 9.55.0, qpdf 10.6.3, git 2.34.1, OpenJDK 11.0.31,
-Python 3.10.12. `apt-get install` from jammy therefore reproduces them exactly.
+Python 3.10.12. `apt-get install` from jammy therefore reproduces them, up to the point
+releases jammy has taken since the capture: the measurement below found one, Java at
+11.0.32.
 
 Four things do not come from jammy apt, and each has one source:
 
@@ -174,7 +181,9 @@ that list is built either way. See [cli.md](cli.md).
 The harness is not part of the CoWork image, so it is not in the inventory above. The
 container installs it as a global npm package, `@anthropic-ai/claude-code`, at the version
 in the `CLAUDE_CODE_VERSION` build argument. The default is 2.1.259, the version
-[plugin_eval.md](plugin_eval.md) is written against.
+[plugin_eval.md](plugin_eval.md) is written against, and `CLAUDE_CODE_VERSION` in the
+environment or in `.env` moves it. It is in the image digest, so two versions cannot share
+one tag.
 
 It is one deliberate delta against [runtime.md](runtime.md), which records corepack and npm
 as the only npm globals. Parity does not read npm globals and does not fail on it. No other
@@ -228,6 +237,11 @@ container by hand must export it. See [plugin_eval.md](plugin_eval.md).
 | `~/.cache/cowork_evals/claude/.claude/`     | `$HOME/.claude`       | rw   | The login, above                               |
 | `~/.cache/cowork_evals/claude/.claude.json` | `$HOME/.claude.json`  | rw   | The login, above                               |
 
+The plugin root is the nearest ancestor of the path argument holding
+`.claude-plugin/plugin.json`, and the target the harness is given inside the container is
+that path relative to it, under `/work/plugin`. A path with no plugin root above it is an
+error.
+
 Read-only everywhere except the log directory and the two credential paths. A case that
 writes into the consumer's checkout is a defect and must fail rather than succeed quietly.
 `--output-dir` points at `/work/logs`, so the harness's own output does not land in the
@@ -246,9 +260,9 @@ root-owned. That uid has no passwd entry, so `HOME` is set explicitly to a writa
 under `/tmp`, created in the image world-writable.
 
 A uid with no passwd entry is the one thing here that can stop the CLI: Node's
-`os.userInfo()` raises rather than returning a stub. The fallback is to run as root and
-`chown -R` `/work/logs` to the host uid and gid on the way out, which keeps the ownership
-property that the uid mapping exists for. The measurement below records which was needed.
+`os.userInfo()` raises rather than returning a stub. It does not on the image measured
+below, so `--user <uid>:<gid>` is what the backend passes and the documented fallback, root
+plus a `chown -R` of `/work/logs` on the way out, is not used.
 
 The CoWork mirror is neither mounted nor built in the image: system `python3` is already 3.10
 with the full pin set. The mirror rule holds unchanged here and is stated in
@@ -260,12 +274,12 @@ Granting `Bash` turns on the OS sandbox, and a host with no sandbox backend refu
 rather than running unconfined. See [plugin_eval.md](plugin_eval.md).
 
 The image installs `bubblewrap`, 0.6.1 in jammy, and the container runs with
-`--security-opt seccomp=unconfined` so unprivileged user namespaces are not filtered. The
-fallback, if that is still refused, is
-`--cap-add SYS_ADMIN --security-opt apparmor=unconfined`.
+`--security-opt seccomp=unconfined` so unprivileged user namespaces are not filtered.
+`bwrap` comes up under it on the host measured below, so the documented fallback,
+`--cap-add SYS_ADMIN --security-opt apparmor=unconfined`, is not used.
 
 A container that cannot grant `Bash` cannot run a case that shells out, which is most of
-them. The measurement below records which option was needed.
+them.
 
 ## Image tagging
 
@@ -280,13 +294,17 @@ There is no `latest` tag. Nothing reads one: `run` and `check` resolve the diges
 
 ## Parity
 
-`scripts/parity.sh` is the development task: it runs one probe inside the container, then
-compares the JSON the probe writes against [runtime.md](runtime.md) and
-`requirements.txt`. It checks the OS release, the architecture, every version in the
-runtime tables, `import uno`, the font family count, and the full `pip freeze`.
+`scripts/parity.sh` is the development task: it runs one probe inside the container, with
+the probe bind-mounted read-only, then compares what the probe wrote. It checks the OS
+release, the architecture, every version in the runtime tables, `import uno`, the font
+family count, and the full `pip freeze`.
 
 It is a shell script like every other task under [../scripts/](../scripts/), and the
 comparison runs on the host. Nothing from this package is installed into the image to do it.
+
+No page under `docs/` is parsed. The pins come from the shipped `requirements.txt`, and the
+non-Python versions are a table in `parity.py` that cites [runtime.md](runtime.md). A change
+to that page is carried into the table by hand, in the same commit.
 
 | Delta                                          | Result                 | Why                                                            |
 | ---------------------------------------------- | ---------------------- | -------------------------------------------------------------- |
@@ -299,8 +317,9 @@ comparison runs on the host. Nothing from this package is installed into the ima
 The tools recorded as not present are `wkhtmltopdf`, `weasyprint`, `exiftool`, `docker` and
 the `sqlite3` CLI.
 
-The probe writes one JSON document. `tests/unit/test_parity.py` asserts over recorded copies of
-it under `tests/data/`, so the tests start no container.
+The probe writes one JSON document. `tests/unit/test_parity.py` asserts over recorded copies
+of it under `tests/data/docker/`, one per row of the table above, so the tests start no
+container.
 
 ## What the container still does not reproduce
 
@@ -315,19 +334,28 @@ Taken on one host and true of that host. Each is a snapshot, dated, with the hos
 its OS, architecture and container runtime, never as a machine name. A reader on another
 platform re-runs `scripts/parity.sh` and the integration tier rather than assuming these.
 
-| Measurement                         | Value            |
-| ----------------------------------- | ---------------- |
-| Captured on                         | not yet measured |
-| ----------------------------------- | ---------------- |
-| Platform built                      | not yet measured |
-| Image size                          | not yet measured |
-| Build time, cold                    | not yet measured |
-| Build time, warm                    | not yet measured |
-| Python pin mismatches               | not yet measured |
-| Extra Python packages               | not yet measured |
-| Non-Python deltas                   | not yet measured |
-| Font families in the image          | not yet measured |
-| `import uno` from system python3    | not yet measured |
-| Bash sandbox option needed          | not yet measured |
-| uid mapping option needed           | not yet measured |
-| Claude Code CLI version installed   | not yet measured |
+| Measurement                       | Value                                                   |
+| --------------------------------- | ------------------------------------------------------- |
+| Captured on                       | 2026-09-08                                              |
+| Host                              | macOS on aarch64, Rancher Desktop, dockerd 29.5.3       |
+| Platform built                    | `linux/arm64`, native                                   |
+| Image size                        | 3.72 GB                                                 |
+| Build time, cold                  | 5 min 30 s, `--no-cache`, native, over a proxy           |
+| Build time, warm                  | under a second: the digest is present, so nothing runs  |
+| Python pin mismatches             | 0 of 136                                                |
+| Extra Python packages             | 0                                                       |
+| Non-Python deltas                 | Java 11.0.32 against the recorded 11.0.31, a jammy point release |
+| Font families in the image        | 111 against the recorded 118                            |
+| `import uno` from system python3  | yes                                                     |
+| Bash sandbox option needed        | `--security-opt seccomp=unconfined`. `bwrap` comes up under it |
+| uid mapping option needed         | `--user <uid>:<gid>`. `claude --version` runs under a uid with no passwd entry |
+| Claude Code CLI version installed | 2.1.259                                                 |
+| Extra root CA needed              | yes on this host. Three upstream hosts inspect TLS      |
+
+All 136 pins are present at the recorded version, the nine from apt included, so the
+fidelity gain over the mirror is real. The two deltas above are printed by
+`scripts/parity.sh` and neither fails it.
+
+The font count is 7 families short. The image installs the Noto fallback faces rather than
+`fonts-noto-core`, which alone adds 192 families over the record, so the remaining gap is
+between one jammy font package and another rather than between two font stacks.

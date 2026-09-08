@@ -25,12 +25,10 @@ command on the interpreter the backend put there. See
 and [../docs/docker.md](../docs/docker.md) for the container's. The status table for
 everything unbuilt is [../docs/running_evals.md](../docs/running_evals.md).
 
-The case is a `plugin` one, not a skill one, because a directory under `evals/` is a skill
-name, `plugin` or `mocks`, and this plugin carries no skill. See
-[../docs/eval_format.md](../docs/eval_format.md).
-
 It carries no skill. Whether a model activates a skill is an eval question, and this fixture
-answers a mechanism question.
+answers a mechanism question. The case is therefore a `plugin` one: a directory under
+`evals/` is a skill name, `plugin` or `mocks`, and there is no skill to name. See
+[../docs/eval_format.md](../docs/eval_format.md).
 
 Do not confuse it with `docs/claude_code/eval_smoke/`, which proves the harness itself
 works, with nothing from this repository in the way. That one is also written here, not

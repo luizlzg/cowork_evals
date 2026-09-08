@@ -16,8 +16,8 @@ format, because it drives a live session rather than the harness.
 
 [`docs/approaches.md`](docs/approaches.md) says what each one proves and what it does
 not, which subset, and links each to its design.
-[`docs/running_evals.md`](docs/running_evals.md) says what is built: today, the 3.10 mirror
-and the CoWork driver.
+[`docs/running_evals.md`](docs/running_evals.md) says what is built: today, the 3.10 mirror,
+the CoWork driver and the container backend.
 
 The code under test is bound to Python 3.10 and the CoWork wheel set. Nothing in this
 package is; it runs on a laptop. See [`docs/runtime.md`](docs/runtime.md).
@@ -68,7 +68,9 @@ written without an identifier does not go in the repository.
 ```bash
 scripts/init.sh                 # builds .venv (3.14, tooling) and the 3.10 CoWork mirror
 scripts/test.sh                 # the unit tests
-scripts/test.sh -m integration  # the real CoWork tests. Boots a VM and leaves a session
+scripts/image.sh                # builds the container image the integration tier needs
+scripts/parity.sh               # probes that image against the CoWork inventory
+scripts/test.sh -m integration  # the real-system tests. Boots a CoWork VM, and spends on two eval runs
 scripts/lint.sh
 ```
 
