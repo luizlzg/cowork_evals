@@ -158,7 +158,8 @@ Still `src/cowork_evals/docker/__init__.py`. It wraps phase 5's list in a contai
 - [ ] The credential, by the rule in [`../docs/docker.md`](../docs/docker.md): with
       `ANTHROPIC_API_KEY` set, one `--env` and no credential mount; without it, the two
       login paths mounted read-write under `HOME`, because the CLI rewrites its state file
-      and refreshes its token on every start.
+      and refreshes its token on every start. `tests/unit/test_docker.py` asserts over both
+      shapes of the argument list.
 - [ ] Pass `CLAUDE_CODE_WALNUT_SPIRE` with `--env`: the process in the container is the
       harness itself, with no wrapper to export it.
 - [ ] `run(target, output_dir)`: run the container and return the path to the
@@ -199,7 +200,7 @@ so it exercises discovery.
 
 ## Phase 9: The integration tier, and the measurements
 
-`tests/integration/test_docker.py`. It needs a running daemon and the container login. A
+`tests/integration/test_docker.py`. It needs a running daemon and one credential route. A
 missing precondition fails the test and never skips it.
 
 - [ ] Build the image, with a timeout that fits a cold build. The 300 second default in
@@ -210,8 +211,6 @@ missing precondition fails the test and never skips it.
       into the log mount is owned by the host uid and gid.
 - [ ] Fire `plugins/smoke/` through `run()` and assert the result document says the case
       passed.
-- [ ] Assert both credential routes reach a run: one with `ANTHROPIC_API_KEY` set and no
-      login mounted, one with the login mounted and the key unset.
 - [ ] Record in `docs/docker.md`: the capture date and the host as OS, architecture and
       container runtime, then the platform, the image size, the cold and warm build times,
       the pin mismatches, the extra packages, the non-Python deltas, the font family count,
