@@ -327,4 +327,4 @@ Nothing durable may survive only in this file.
 - [x] `plans/README.md`: correct the closing sentence saying a plan will not survive, which
       the status table in the same file contradicts.
 - [x] Re-read every touched file for a statement this plan made false.
-- [ ] `plans/README.md`: mark this plan `implemented`.
+- [x] `plans/README.md`: mark this plan `implemented`.
