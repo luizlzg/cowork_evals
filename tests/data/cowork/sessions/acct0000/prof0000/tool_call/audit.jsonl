@@ -1,0 +1,4 @@
+{"type":"user","uuid":"u-0002","session_id":"s-0002","client_platform":"desktop_app","timestamp":"2026-09-08T11:00:00.000Z","message":{"role":"user","content":"Report the guest kernel version"}}
+{"type":"command_lifecycle","command_uuid":"c-0002","state":"queued","session_id":"s-0002","timestamp":"2026-09-08T11:00:00.100Z"}
+{"type":"command_lifecycle","command_uuid":"c-0002","state":"started","session_id":"s-0002","timestamp":"2026-09-08T11:00:01.000Z"}
+{"type":"command_lifecycle","command_uuid":"c-0002","state":"completed","session_id":"s-0002","timestamp":"2026-09-08T11:01:00.000Z"}

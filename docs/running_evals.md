@@ -26,7 +26,8 @@ here.
 | The 3.10 and import check over code under test | no | nowhere yet                                 |
 | The container backend and its Dockerfile  | no    | [docker.md](docker.md)                      |
 | `scripts/parity.sh` and `tests/test_parity.py` | no | [docker.md](docker.md)                     |
-| The CoWork driver and its backend         | no    | [cowork_driver.md](cowork_driver.md)        |
+| The CoWork driver                         | yes   | [cowork_driver.md](cowork_driver.md)        |
+| The CoWork backend over it                | no    | [cowork_driver.md](cowork_driver.md)        |
 | `plugins/smoke/`, the mirror fixture      | no    | [../plugins/README.md](../plugins/README.md) |
 
 ## The cases it runs
@@ -40,8 +41,8 @@ case is not expressible. A path holding several plugins means every plugin's sui
 each its own harness invocation, gated once.
 
 There is no sweep on CoWork. One case there costs a VM boot plus a full agentic run and
-counts against `COWORK_MAX_RUNS`, so a sweep is a smoke set named case by case. That is why
-[cli.md](cli.md) makes a multi-plugin path a usage error on `--cowork`.
+counts against the driver's `max_runs` ceiling, so a sweep is a smoke set named case by
+case. That is why [cli.md](cli.md) makes a multi-plugin path a usage error on `--cowork`.
 
 The CoWork backend does not call `claude plugin eval`. It reads the same case tree, submits
 each case's prompt body through the driver, grades the driver's result document with the

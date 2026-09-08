@@ -58,7 +58,7 @@ runs on two backends of three, so a pass-through would be silently ignored on th
 | `--model M`               | yes      | yes        | refused, the session decides      |
 | `--judge-model M`         | yes      | yes        | yes, for judged graders           |
 | `--allow-tools T...`      | yes      | yes        | refused, the session decides      |
-| `--max-cost-usd N`        | yes      | yes        | refused, `COWORK_MAX_RUNS` binds  |
+| `--max-cost-usd N`        | yes      | yes        | refused, the driver's `max_runs` binds |
 | `--tag T`, `--case GLOB`  | yes      | yes        | yes                               |
 | `--out DIR`               | yes      | yes        | yes                               |
 | `--build-missing`         | yes      | yes        | refused, nothing to build         |
@@ -155,11 +155,12 @@ The exit code is the CLI's, and no backend's code reaches an operator unchanged.
 a `partial: true` result document, and the gate turns that into exit 1. See
 [plugin_eval.md](plugin_eval.md).
 
-The CoWork driver has its own taxonomy, exit 2 to 8, in
-[cowork_driver.md](cowork_driver.md). The `--cowork` backend maps it:
+The CoWork driver has its own taxonomy, codes 2 to 8, carried by a raised `CoWorkError` and
+never by an exit code. It is in [cowork_driver.md](cowork_driver.md). The `--cowork` backend
+maps it:
 
-| Driver exit                                            | Becomes                                          |
+| Driver code                                            | Becomes                                          |
 | ------------------------------------------------------- | ------------------------------------------------ |
 | 2, for configuration or the rate ceiling               | Checked in preflight, before any case: exit 3    |
 | 2 to 8, raised while running a case                    | That case is an error in the result document, and the gate exits 1 |
-| 0                                                      | The case is graded normally                      |
+| No raise                                               | The case is graded normally                      |

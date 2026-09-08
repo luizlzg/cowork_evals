@@ -1,0 +1,5 @@
+{"type":"user","uuid":"tu-2","timestamp":"2026-09-08T11:00:01.000Z","message":{"role":"user","content":"Report the guest kernel version"}}
+{"type":"assistant","uuid":"ta-2","timestamp":"2026-09-08T11:00:05.000Z","attributionMcpServer":"workspace","attributionMcpTool":"bash","message":{"role":"assistant","content":[{"type":"tool_use","id":"call-b","name":"mcp__workspace__bash","input":{"command":"uname -r"}},{"type":"tool_use","id":"call-a","name":"mcp__workspace__bash","input":{"command":"cat /etc/os-release"}}]}}
+{"type":"user","uuid":"tu-3","timestamp":"2026-09-08T11:00:09.000Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"call-a","content":"NAME=\"Ubuntu\""},{"type":"tool_result","tool_use_id":"orphan","content":"belongs to a subagent"}]}}
+{"type":"user","uuid":"tu-4","timestamp":"2026-09-08T11:00:10.000Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"call-b","content":"6.8.0-136-generic"}]}}
+{"type":"assistant","uuid":"ta-3","timestamp":"2026-09-08T11:00:12.000Z","message":{"role":"assistant","content":"The guest kernel is 6.8.0-136-generic."}}

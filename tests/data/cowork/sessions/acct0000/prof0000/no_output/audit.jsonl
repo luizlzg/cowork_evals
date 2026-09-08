@@ -1,0 +1,3 @@
+{"type":"user","uuid":"u-0005","session_id":"s-0005","client_platform":"desktop_app","timestamp":"2026-09-08T14:00:00.000Z","message":{"role":"user","content":"Read the inbox"}}
+{"type":"command_lifecycle","command_uuid":"c-0005","state":"queued","session_id":"s-0005","timestamp":"2026-09-08T14:00:00.100Z"}
+{"type":"command_lifecycle","command_uuid":"c-0005","state":"started","session_id":"s-0005","timestamp":"2026-09-08T14:00:01.000Z"}

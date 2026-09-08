@@ -39,6 +39,20 @@ before changing anything under it. Never restate one of these in another file; l
   meaning each skill, command, agent and hook, imports only what the image carries. See
   `docs/runtime.md`. The first row is constrained by nothing about CoWork; the rules that do
   apply to it are in `docs/library.md`.
+- **Never mock, and never skip.** No mock, fake, stub, patch or injected seam appears in a
+  test, and no library that supplies one is a dependency. No test is skipped, and no `if`
+  bypasses the assertions inside one. A test runs against the real thing or it is not
+  written. Either rule is lifted only when the developer approves that exception.
+- **Two tiers of test.** A test is unit and runs by default, or it is marked `integration`
+  and is selected with `-m integration`. Integration is for what needs a real CoWork
+  profile or a real run, and it is run at the end of a plan and after a merge into `main`.
+  A missing precondition fails an integration test. It never skips it. See
+  `tests/README.md`.
+- **Never invent a restriction.** No guard, gate, filter, ceiling, deny-list or refusal
+  goes into this package unless the developer asked for it. A limit that comes from a
+  measured fact about the application is not a restriction, and it cites the measurement.
+  Everything else is the developer's call, including in a plan: a plan proposes, it does
+  not authorize.
 - **Development tasks are shell scripts** under `scripts/`, are never shipped, and have no
   build system and no Makefile.
 - **One case format, three backends.** Every eval is written in the `claude plugin eval`
@@ -51,9 +65,12 @@ before changing anything under it. Never restate one of these in another file; l
   `docs/environments.md`.
 - **A plan is the state while it exists.** Tick a box only when it is verified, then
   commit. Do not batch ticks. A cleared context resumes from the plan file.
-- **A plan is deleted once implemented, so nothing durable may live only in one.** A plan
-  links to `docs/`. Documentation never links to a plan. Anything a plan establishes that
-  outlives the work is written into `docs/` before the plan is removed.
+- **Never delete a plan.** The developer decides when a plan goes, and says so. A plan is
+  also the record of who decided what, which is the first thing anyone needs when a design
+  decision is questioned later.
+- **Nothing durable lives only in a plan.** A plan links to `docs/`. Documentation never
+  links to a plan. Anything a plan establishes that outlives the work is written into
+  `docs/` while the work happens, not as a step before removing the file.
 - NEVER sign commits or PRs as Claude.
 
 ## Writing rules

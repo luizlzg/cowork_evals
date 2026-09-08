@@ -2,6 +2,13 @@
 
 Branch `feat/cowork-tools`, cut from `main`. Eight phases, one commit each.
 
+**Not finished. Phase 7 is outstanding and blocks the rest.** Phases 1 to 6 are done, and
+phase 8 is done except the two boxes that need phase 7. Phase 7 is one live submission, and
+it is run by a person: an assistant may run it only when `.claude/settings.local.json`
+already carries `Bash(open "claude://*")` and `Bash(osascript:*)`, and an assistant cannot
+write those rules. This file stays until phase 7 and the last two boxes of phase 8 are
+ticked.
+
 ## Scope
 
 A Python library that drives the CoWork desktop application: submit one prompt, wait for the
@@ -203,12 +210,12 @@ session identifier and the prompts of a real account. Phase 8 writes it into
 
 ## Phase 1: The package tree
 
-- [ ] Create `src/cowork_evals/__init__.py`, holding a docstring and nothing else.
-- [ ] Add `[build-system]` to `pyproject.toml`: `requires = ["hatchling"]`,
+- [x] Create `src/cowork_evals/__init__.py`, holding a docstring and nothing else.
+- [x] Add `[build-system]` to `pyproject.toml`: `requires = ["hatchling"]`,
       `build-backend = "hatchling.build"`, and `[tool.hatch.build.targets.wheel]` with
       `packages = ["src/cowork_evals"]`.
-- [ ] Set `dependencies = ["PyYAML>=6"]`.
-- [ ] Remove `[tool.uv] package = false`.
+- [x] Set `dependencies = ["PyYAML>=6"]`.
+- [x] Remove `[tool.uv] package = false`.
 
 `scripts/lint.sh` runs ruff over `.`, so it reaches `src/` with no change.
 
@@ -223,14 +230,14 @@ observed. Establish it, and the other shapes the phase 4 reader acts on, before 
 reader. Everything here is read from session directories already on disk. Nothing is
 submitted.
 
-- [ ] Record the terminal `command_lifecycle` state name, its keys, and whether it carries
+- [x] Record the terminal `command_lifecycle` state name, its keys, and whether it carries
       the final assistant text, the turn count and the cost.
-- [ ] Record whether a lifecycle record carries `command_uuid`, and whether one session
+- [x] Record whether a lifecycle record carries `command_uuid`, and whether one session
       directory holds more than one command.
-- [ ] Record whether `.claude/projects/session/` is present in every session directory.
-- [ ] Confirm that discovery by structure selects sessions and nothing else: a directory
+- [x] Record whether `.claude/projects/session/` is present in every session directory.
+- [x] Confirm that discovery by structure selects sessions and nothing else: a directory
       three levels below the sessions root holding `audit.jsonl`.
-- [ ] Write all of it into `docs/cowork_desktop.md` with the capture date, and extend that
+- [x] Write all of it into `docs/cowork_desktop.md` with the capture date, and extend that
       page's coupling list with every key phase 4 reads.
 
 Gate. `docs/cowork_desktop.md` carries no row reading `not observed`, and every field the
@@ -247,15 +254,15 @@ either way, because the fallback is needed when a run stalls before its terminal
 `src/cowork_evals/config.py` and `src/cowork_evals/prompt_lint.py`. Both are pure: they read
 their own file or their argument, and nothing else.
 
-- [ ] `Config.load(path=None, **overrides)`: read `cowork_evals.yaml` with `yaml.safe_load`,
+- [x] `Config.load(path=None, **overrides)`: read `cowork_evals.yaml` with `yaml.safe_load`,
       apply the five rules in the configuration section above, and return a frozen `Config`.
-- [ ] Expand `~` and resolve a relative path against the working directory.
-- [ ] `sessions_root` derived from `profile`, as `docs/cowork_desktop.md` records it.
-- [ ] Split a prompt into sentences on `.`, `;`, `?`, `!` and newline.
-- [ ] Compile each linter rule's patterns once, case-insensitive, on word boundaries.
-- [ ] Exempt a sentence naming `outputs/`, `/sessions/`, `/tmp`, `TMPDIR` or `the session`.
-- [ ] Return the refusal reason naming the rule and the sentence, or `None`.
-- [ ] No flag, no argument and no configuration key that disables the linter.
+- [x] Expand `~` and resolve a relative path against the working directory.
+- [x] `sessions_root` derived from `profile`, as `docs/cowork_desktop.md` records it.
+- [x] Split a prompt into sentences on `.`, `;`, `?`, `!` and newline.
+- [x] Compile each linter rule's patterns once, case-insensitive, on word boundaries.
+- [x] Exempt a sentence naming `outputs/`, `/sessions/`, `/tmp`, `TMPDIR` or `the session`.
+- [x] Return the refusal reason naming the rule and the sentence, or `None`.
+- [x] No flag, no argument and no configuration key that disables the linter.
 
 Gate. `tests/test_config.py` passes: a missing file yields defaults, an unknown key inside
 `cowork:` raises, an unknown top level section is ignored, an override beats the file, and
@@ -269,24 +276,24 @@ The `CoWork` object, then `sessions` and `collect` and the private readers under
 rules are the reading rules in [`../docs/cowork_driver.md`](../docs/cowork_driver.md), and
 the record shapes are `docs/cowork_desktop.md` as phase 2 leaves it.
 
-- [ ] `CoWork(config=None, *, runner=None, **overrides)` and `CoWork.from_file(path)`: hold
+- [x] `CoWork(config=None, *, runner=None, **overrides)` and `CoWork.from_file(path)`: hold
       the resolved configuration, expose it as `.config`, and validate nothing else.
-- [ ] Re-export `Config`, `CoWork` and `CoWorkError` from `__init__.py`, with `__all__`.
-- [ ] `sessions(root=None)`: every directory three levels below the root holding
+- [x] Re-export `Config`, `CoWork` and `CoWorkError` from `__init__.py`, with `__all__`.
+- [x] `sessions(root=None)`: every directory three levels below the root holding
       `audit.jsonl`, sorted. The root defaults to `config.sessions_root`.
-- [ ] Parse `audit.jsonl`, skipping an unparsable line.
-- [ ] Select the main transcript: the newest top level file by modification time under
+- [x] Parse `audit.jsonl`, skipping an unparsable line.
+- [x] Select the main transcript: the newest top level file by modification time under
       `.claude/projects/session/`. Record the rest separately, and record `subagents/*.jsonl`
       separately again.
-- [ ] Read `message.content` as either a string or a list of blocks.
-- [ ] Pair a `tool_result` to its `tool_use` by `tool_use_id`, and drop a result whose call
+- [x] Read `message.content` as either a string or a list of blocks.
+- [x] Pair a `tool_result` to its `tool_use` by `tool_use_id`, and drop a result whose call
       is absent from this transcript.
-- [ ] Take `final_text` from the last assistant text turn. A run with none raises code 8.
-- [ ] List `outputs/` relative to the session directory.
-- [ ] `collect(session_dir, prompt=None)`: the result document, every key in the design's
+- [x] Take `final_text` from the last assistant text turn. A run with none raises code 8.
+- [x] List `outputs/` relative to the session directory.
+- [x] `collect(session_dir, prompt=None)`: the result document, every key in the design's
       table except `exit_code`, plus `log_file`, and no other key. It needs no profile, so it
       reads an archived session on a machine that has no CoWork.
-- [ ] Tolerate a session directory with no transcript, which phase 2 establishes as possible.
+- [x] Tolerate a session directory with no transcript, which phase 2 establishes as possible.
 
 Gate. `tests/test_cowork.py` passes over hand-written fixtures under `tests/data/cowork/`:
 a one-turn session, a session with a tool call and its result, a session with a subagent
@@ -296,17 +303,17 @@ no profile configured, and the document carries exactly the documented keys.
 
 ## Phase 5: The run log, the rate ceiling and the diagnostic log
 
-- [ ] Append one line per submission to `run_log`, holding the timestamp, the prompt hash,
+- [x] Append one line per submission to `run_log`, holding the timestamp, the prompt hash,
       the session directory and the outcome. Log a failed submission too.
-- [ ] `history(run_log=None)`: the run log as a list of dictionaries, oldest first.
-- [ ] Count the entries in the trailing 24 hours and raise code 2 at `max_runs`. The window
+- [x] `history(run_log=None)`: the run log as a list of dictionaries, oldest first.
+- [x] Count the entries in the trailing 24 hours and raise code 2 at `max_runs`. The window
       is fixed. `collect` never checks it.
-- [ ] Raise code 2 for an unset or unreadable profile, for a prompt longer than 14336
+- [x] Raise code 2 for an unset or unreadable profile, for a prompt longer than 14336
       characters, and for a linted prompt, all before anything is fired.
-- [ ] Open `<log_dir>/<yyyymmdd-hhmmss>-cowork_evals.log` on the `cowork_evals` logger at the
+- [x] Open `<log_dir>/<yyyymmdd-hhmmss>-cowork_evals.log` on the `cowork_evals` logger at the
       start of a firing call, create `log_dir` if absent, and close the handler when the call
       returns or raises. `log_dir: null` turns it off. The root logger is never touched.
-- [ ] Put the log path in the result document as `log_file`.
+- [x] Put the log path in the result document as `log_file`.
 
 Gate. `tests/test_cowork.py` covers each refusal over a temporary run log and a temporary
 profile: no profile, prompt too long, ceiling reached, a linted prompt. Each raises
@@ -319,19 +326,19 @@ file.
 The four firing methods: `deep_link`, `submit`, `wait` and `run`. The nine steps and the code
 each failure produces are the sequence table in [`../docs/cowork_driver.md`](../docs/cowork_driver.md).
 
-- [ ] `deep_link(prompt)`: percent-encode the prompt, and omit `surface` when it is empty.
-- [ ] Record the baseline set of session directories before firing.
-- [ ] Fire the link with `open` through `runner`, sleep `settle_seconds`, then send Return
+- [x] `deep_link(prompt)`: percent-encode the prompt, and omit `surface` when it is empty.
+- [x] Record the baseline set of session directories before firing.
+- [x] Fire the link with `open` through `runner`, sleep `settle_seconds`, then send Return
       through `osascript`. A non-zero return raises code 3.
-- [ ] Poll for a session directory not in the baseline until `session_timeout`. None raises
+- [x] Poll for a session directory not in the baseline until `session_timeout`. None raises
       code 4. More than one raises code 5.
-- [ ] Keep polling for the `user` audit record after the directory appears, and compare its
+- [x] Keep polling for the `user` audit record after the directory appears, and compare its
       prompt with the submitted one. A mismatch raises code 6.
-- [ ] `wait`: block until the completion signal fires, on the terminal lifecycle state,
+- [x] `wait`: block until the completion signal fires, on the terminal lifecycle state,
       falling back to quiescence. Count quiescence only after the run has started.
       `run_timeout` raises code 7.
-- [ ] `run`: `submit`, then `wait`, then `collect`, passing the submitted prompt through.
-- [ ] Every raise from `submit`, `wait` and `run` carries `session_dir` when one is known, and
+- [x] `run`: `submit`, then `wait`, then `collect`, passing the submitted prompt through.
+- [x] Every raise from `submit`, `wait` and `run` carries `session_dir` when one is known, and
       is written to the diagnostic log before it leaves the library.
 
 Gate. `tests/test_cowork.py` passes against a `CoWork` built with a recording fake as
@@ -352,15 +359,15 @@ instead only when `.claude/settings.local.json` already carries both rules.
 What is required either way: the desktop application, the macOS Accessibility grant for the
 terminal that owns the process, a signed-in CoWork, and `disableDeepLinkRegistration` unset.
 
-- [ ] Confirm the grant is in place and that `cowork_evals.yaml` names the active profile.
-- [ ] Build a `CoWork()` from `cowork_evals.yaml` and call `run()` with a read-only prompt
+- [x] Confirm the grant is in place and that `cowork_evals.yaml` names the active profile.
+- [x] Build a `CoWork()` from `cowork_evals.yaml` and call `run()` with a read-only prompt
       that asks for one exact marker token back.
-- [ ] Confirm the returned document holds the marker in `final_text`, that `history()` reads
+- [x] Confirm the returned document holds the marker in `final_text`, that `history()` reads
       back one new line, and that the library wrote nothing under the profile.
-- [ ] Confirm the diagnostic log names the fired link, the discovered session and the
+- [x] Confirm the diagnostic log names the fired link, the discovered session and the
       completion signal that fired.
-- [ ] Call `sessions()` and confirm it finds the new session.
-- [ ] Record the wall clock time of the run in `docs/cowork_desktop.md`.
+- [x] Call `sessions()` and confirm it finds the new session.
+- [x] Record the wall clock time of the run in `docs/cowork_desktop.md`.
 
 Gate. The call returns the marker and raises nothing. A missing grant raises `CoWorkError`
 with `.code == 3` and `osascript` error 1002 on stderr, and that blocks the phase rather than
@@ -371,21 +378,21 @@ expected.
 
 Nothing durable may survive only in this file.
 
-- [ ] `docs/cowork_driver.md`: replace the `COWORK_*` configuration table with
+- [x] `docs/cowork_driver.md`: replace the `COWORK_*` configuration table with
       `cowork_evals.yaml`, add the API, state that the exit codes on that page are the
       taxonomy a `CoWorkError` carries rather than something the library returns, remove
       `exit_code` from the result document table and add `log_file`, and record the `CoWork`
       object, the three modules, the two log files and the completion signal as phase 2
       measured it.
-- [ ] `docs/library.md`: add PyYAML to the dependency table, correct the
+- [x] `docs/library.md`: add PyYAML to the dependency table, correct the
       `[tool.uv] package = false` row, and correct the `.env` precedence text, which no longer
       covers `COWORK_*`.
-- [ ] `docs/running_evals.md`: split the status row `The CoWork driver and its backend` into
+- [x] `docs/running_evals.md`: split the status row `The CoWork driver and its backend` into
       two, and mark the driver built.
-- [ ] `README.md`: add `src/` and `cowork_evals.yaml` to the layout table.
-- [ ] `tests/README.md`: add a row per new test file, and the hand-written fixture rule.
-- [ ] Re-read every touched page for a statement this plan made false.
-- [ ] `plans/README.md`: correct the build order paragraph, which assigns the package
+- [x] `README.md`: add `src/` and `cowork_evals.yaml` to the layout table.
+- [x] `tests/README.md`: add a row per new test file, and the hand-written fixture rule.
+- [x] Re-read every touched page for a statement this plan made false.
+- [x] `plans/README.md`: correct the build order paragraph, which assigns the package
       skeleton to the CLI plan. This plan brings it.
 - [ ] Remove this file, and remove its row from `plans/README.md`.
 

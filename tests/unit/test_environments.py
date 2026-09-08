@@ -1,8 +1,7 @@
 """The two environments are what docs/environments.md says they are.
 
-These tests read the environments on disk. They are skipped, not failed, when an
-environment has not been built, so a fresh clone can run the suite before
-scripts/init.sh.
+These tests read the environments on disk. An unbuilt environment fails them. Build both
+with scripts/init.sh before running the suite.
 """
 
 from __future__ import annotations
@@ -12,9 +11,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 VENV = ROOT / ".venv"
 COWORK = ROOT / ".venv_cowork"
 REQUIREMENTS = ROOT / "docs" / "data" / "requirements.txt"
@@ -71,14 +68,13 @@ def test_installable_is_the_freeze_minus_the_nine():
 
 
 def test_repo_venv_is_python_314():
-    if not (VENV / "bin" / "python").exists():
-        pytest.skip(".venv not built. Run scripts/venv.sh")
+    assert (VENV / "bin" / "python").exists(), ".venv not built. Run scripts/venv.sh"
     assert interpreter(VENV) == "3.14"
 
 
 def test_cowork_mirror_is_python_310():
-    if not (COWORK / "bin" / "python").exists():
-        pytest.skip(".venv_cowork not built. Run scripts/cowork_venv.sh")
+    built = (COWORK / "bin" / "python").exists()
+    assert built, ".venv_cowork not built. Run scripts/cowork_venv.sh"
     assert interpreter(COWORK) == "3.10"
 
 

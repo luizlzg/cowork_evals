@@ -1,9 +1,13 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "cowork-evals"
 version = "0.1.0"
 description = "Run evals for Claude CoWork skills and plugins"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = ["PyYAML>=6"]
 
 [dependency-groups]
 dev = [
@@ -14,7 +18,15 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q --strict-markers"
+# Unit tests are the default selection. Integration tests need a real CoWork profile or a
+# real CoWork run, so they are deselected. Run them with: scripts/test.sh -m integration
+# tests/unit and tests/integration both hold a test_cowork.py. importlib import mode
+# keeps the two basenames distinct without an __init__.py in either directory.
+addopts = "-q --strict-markers --import-mode=importlib -m 'not integration'"
+markers = [
+  "integration: needs a real CoWork profile or a real CoWork run",
+  "live: submits a real CoWork run. Costs a VM boot and leaves a session",
+]
 timeout = 300
 
 [tool.ruff]
@@ -24,5 +36,5 @@ target-version = "py314"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
-[tool.uv]
-package = false
+[tool.hatch.build.targets.wheel]
+packages = ["src/cowork_evals"]

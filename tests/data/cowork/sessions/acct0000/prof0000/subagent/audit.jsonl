@@ -1,0 +1,4 @@
+{"type":"user","uuid":"u-0003","session_id":"s-0003","client_platform":"desktop_app","timestamp":"2026-09-08T12:00:00.000Z","message":{"role":"user","content":"Summarize the notes"}}
+{"type":"command_lifecycle","command_uuid":"c-0003","state":"queued","session_id":"s-0003","timestamp":"2026-09-08T12:00:00.100Z"}
+{"type":"command_lifecycle","command_uuid":"c-0003","state":"started","session_id":"s-0003","timestamp":"2026-09-08T12:00:01.000Z"}
+{"type":"command_lifecycle","command_uuid":"c-0003","state":"completed","session_id":"s-0003","timestamp":"2026-09-08T12:02:00.000Z"}
