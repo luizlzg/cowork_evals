@@ -394,9 +394,6 @@ Nothing durable may survive only in this file.
 - [x] Re-read every touched page for a statement this plan made false.
 - [x] `plans/README.md`: correct the build order paragraph, which assigns the package
       skeleton to the CLI plan. This plan brings it.
-- Void. This box said to remove this file and its row from `plans/README.md`. It was acted
-  on in 943953c, and the file was restored in 3a0059d. A plan is never deleted by Claude,
-  and its row stays with its status. See [README.md](README.md).
 
 Gate. `scripts/test.sh` and `scripts/lint.sh` pass. No page under `docs/` links to this
 plan, and `plans/README.md` holds a row for it marked `implemented`.
