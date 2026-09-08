@@ -19,6 +19,7 @@ builds, and the one fixture firing at the end of it, are in [`README.md`](README
 | `src/cowork_evals/docker/probe.py`         | The parity probe, run inside the container                |
 | `src/cowork_evals/docker/parity.py`        | The comparison, run on the host                           |
 | `scripts/image.sh`                         | The development task that builds the image                |
+| `scripts/login.sh`                         | The development task that logs in                         |
 | `scripts/parity.sh`                        | The development task over the probe and the comparison    |
 | `plugins/smoke/`                           | The fixture the integration tier fires                    |
 | `tests/unit/test_env.py`, `tests/unit/test_harness.py`, `tests/unit/test_docker.py`, `tests/unit/test_parity.py`, `tests/integration/test_docker.py` | [`../tests/README.md`](../tests/README.md) |
@@ -89,7 +90,11 @@ precedence are [`../docs/library.md`](../docs/library.md).
 - [x] `FROM ubuntu:22.04`, with `ARG CLAUDE_CODE_VERSION` and `ARG TARGETARCH`.
 - [x] One apt layer: the document, image, media and CLI tooling, `default-jre-headless` for
       the Java 11 the `tabula-py` pin needs, the nine dist-packages suppliers, the Ubuntu
-      font stack, and `bubblewrap`.
+      font stack, `bubblewrap` and `socat`.
+- [x] `socat` as well as `bubblewrap`. The harness refuses a granted shell tool without
+      both, and every case here is pinned `--allow-tools Bash`. It is a second deliberate
+      delta against the inventory, recorded in [`../docs/docker.md`](../docs/docker.md).
+      Found by the last box of phase 9 failing, 2026-09-08.
 - [x] `pip install --upgrade pip==25.3`, then `pip install -r requirements_installable.txt`
       from the build context.
 - [x] LibreOffice 26.2.5.2 from the upstream deb set, mapping `TARGETARCH` to the kernel
@@ -118,11 +123,22 @@ doing no work at construction, so `Docker().digest` works on a machine with no d
       `--platform`, the tag and the build argument.
 - [x] `build()`: run it, stream the output, raise on a non-zero exit.
 - [x] `check()`: the unmet conditions in order, each with the command that fixes it. The
-      daemon reachable, the image present at the current digest, and one credential route
-      available: `ANTHROPIC_API_KEY` set, or `<login_dir>/.claude/.credentials.json`
-      present. An empty list means ready. It writes nothing and builds nothing.
+      daemon reachable, the image present at the current digest, and
+      `<login_dir>/.claude/.credentials.json` present. An empty list means ready. It writes
+      nothing and builds nothing.
 - [x] `login_argv()`: the interactive container a developer logs in through once. The same
       two credential mounts as a run, and no plugin and no log mount.
+- [x] `login()`: run that container with the terminal inherited, so the CLI opens the
+      browser and takes the code in its own prompt. `build_argv()` has `build()` and
+      `run_argv()` has `run()`; without this one nothing in the package ever starts a
+      login, and the only way to log in is to paste an argument list. It raises when the
+      container exits non-zero and when it wrote no credentials file.
+- [x] `seed_login_dir()`: create the configuration directory and write `{}` to the state
+      file when it is absent or empty. An empty `.claude.json` is not an absent one: the
+      CLI parses it, fails, and exits 1. Measured 2026-09-08.
+- [x] `scripts/login.sh`: log in through `login()`, `--check` reports without writing and
+      `--force` logs in over an existing login. A development task is a shell script, so a
+      developer types a script name and never a `python -c`.
 - [x] `scripts/image.sh`: build the image for `EVAL_PLATFORM` through `build()`, `--check`
       verifies the current digest is present and writes nothing, `--recreate` builds with
       `--no-cache`. It is `scripts/cowork_venv.sh` for the image, and it is what a developer
@@ -160,11 +176,10 @@ Still `src/cowork_evals/docker/__init__.py`. It wraps phase 5's list in a contai
       list as the command, built with container paths.
 - [x] The plugin root read-only at `/work/plugin`, the run's log directory read-write at
       `/work/logs`, `--output-dir` at the log mount, and nothing else from the host.
-- [x] The credential, by the rule in [`../docs/docker.md`](../docs/docker.md): with
-      `ANTHROPIC_API_KEY` set, one `--env` and no credential mount; without it, the two
+- [x] The credential, by the rule in [`../docs/docker.md`](../docs/docker.md): the two
       login paths mounted read-write under `HOME`, because the CLI rewrites its state file
-      and refreshes its token on every start. `tests/unit/test_docker.py` asserts over both
-      shapes of the argument list.
+      and refreshes its token on every start. `tests/unit/test_docker.py` asserts over that
+      argument list.
 - [x] Pass `CLAUDE_CODE_WALNUT_SPIRE` with `--env`: the process in the container is the
       harness itself, with no wrapper to export it.
 - [x] `run(target, output_dir)`: run the container and return the path to the
@@ -233,7 +248,7 @@ No model is in the loop, because none of these is a question about a model.
       is the uid mapping measurement, and Node's `os.userInfo()` is what would raise.
 - [x] Assert the plugin mount refuses a write, the log mount accepts one, and a file written
       into the log mount is owned by the host uid and gid.
-- [ ] Assert `claude plugin eval` in an empty directory prints `No eval cases found`. That
+- [x] Assert `claude plugin eval` in an empty directory prints `No eval cases found`. That
       is the enablement self-test in [`../docs/plugin_eval.md`](../docs/plugin_eval.md): it
       reads the credential and the enablement variable, runs no case and spends nothing.
       `early access` there means the harness is not enabled for this credential, which is
@@ -257,7 +272,7 @@ fault.
 
 - [x] Widen the `live` marker in `pyproject.toml`, which today names a CoWork run only, to
       any test that submits a real run.
-- [ ] `claude -p` in the container with a prompt asking for one word, asserting that word
+- [x] `claude -p` in the container with a prompt asking for one word, asserting that word
       comes back. No plugin, no harness, no mounts. It is the minimal proof that Claude Code
       runs there and the credential is accepted, and it costs one short reply.
 - [ ] Fire `plugins/smoke/` through `run()` and assert the result document says the case
@@ -278,6 +293,12 @@ If both sandbox options are refused, the container cannot grant `Bash`. The smok
 a command, so the last box cannot be ticked and this plan is not finished. Record the
 refusal in `docs/docker.md` and stop there: a backend that cannot grant `Bash` cannot run
 the cases this repository pins `--allow-tools Bash` for.
+
+## Reversals
+
+| Date       | Was                                                          | Is                                       | Decided by |
+| ---------- | ------------------------------------------------------------ | ---------------------------------------- | ---------- |
+| 2026-09-08 | Two credential routes, `ANTHROPIC_API_KEY` or a mounted login | One route, the mounted login. The key is removed from the code, the tests and `docs/` | the developer |
 
 ## Phase 10: Documentation
 

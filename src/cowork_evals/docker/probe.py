@@ -41,6 +41,7 @@ VERSION_COMMANDS = {
     "jq": ["jq", "--version"],
     "ssh": ["ssh", "-V"],
     "bwrap": ["bwrap", "--version"],
+    "socat": ["socat", "-V"],
     "wkhtmltopdf": ["wkhtmltopdf", "--version"],
     "weasyprint": ["weasyprint", "--version"],
     "exiftool": ["exiftool", "-ver"],

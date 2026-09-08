@@ -151,12 +151,13 @@ def test_login_argv_mounts_no_plugin_and_no_log_directory(environment):
     assert "/work/logs" not in " ".join(argv)
 
 
-def test_login_argv_is_interactive_and_runs_the_cli(environment):
+def test_login_argv_is_interactive_and_goes_straight_to_the_login(environment):
+    """Bare `claude` lands in the first-run wizard on a fresh configuration directory."""
     with environment(SSL_CERT_FILE=None):
         docker = Docker(platform="linux/arm64")
         argv = docker.login_argv()
     assert argv[:4] == ["docker", "run", "--rm", "-it"]
-    assert argv[-2:] == [docker.tag, "claude"]
+    assert argv[-5:] == [docker.tag, "claude", "auth", "login", "--claudeai"]
     assert build_arg(argv, "--user") == f"{os.getuid()}:{os.getgid()}"
     assert f"HOME={CONTAINER_HOME}" in argv
 
@@ -209,17 +210,17 @@ def test_run_argv_mounts_the_plugin_read_only_and_the_logs_read_write(
 ):
     logs = tmp_path / "logs"
     logs.mkdir()
-    with environment(ANTHROPIC_API_KEY="k", SSL_CERT_FILE=None):
+    with environment(SSL_CERT_FILE=None):
         argv = Docker(platform="linux/arm64").run_argv(plugin, logs, run_options())
     mounts = [argv[i + 1] for i, value in enumerate(argv) if value == "-v"]
-    assert mounts == [
+    assert mounts[-2:] == [
         f"{plugin.resolve()}:/work/plugin:ro",
         f"{logs.resolve()}:/work/logs:rw",
     ]
 
 
 def test_run_argv_carries_the_uid_the_home_and_the_sandbox_option(environment, plugin, tmp_path):
-    with environment(ANTHROPIC_API_KEY="k", SSL_CERT_FILE=None, CLAUDE_CODE_WALNUT_SPIRE=None):
+    with environment(SSL_CERT_FILE=None, CLAUDE_CODE_WALNUT_SPIRE=None):
         argv = Docker(platform="linux/arm64").run_argv(plugin, tmp_path, run_options())
     assert argv[:3] == ["docker", "run", "--rm"]
     assert build_arg(argv, "--platform") == "linux/arm64"
@@ -231,41 +232,31 @@ def test_run_argv_carries_the_uid_the_home_and_the_sandbox_option(environment, p
 
 def test_the_container_side_target_is_relative_to_the_plugin_root(environment, plugin, tmp_path):
     case = plugin / "evals" / "plugin" / "python-version"
-    with environment(ANTHROPIC_API_KEY="k", SSL_CERT_FILE=None):
+    with environment(SSL_CERT_FILE=None):
         argv = Docker(platform="linux/arm64").run_argv(case, tmp_path, run_options())
     assert "/work/plugin/evals/plugin/python-version" in argv
 
 
 def test_the_plugin_root_itself_is_the_mount_point(environment, plugin, tmp_path):
-    with environment(ANTHROPIC_API_KEY="k", SSL_CERT_FILE=None):
+    with environment(SSL_CERT_FILE=None):
         argv = Docker(platform="linux/arm64").run_argv(plugin, tmp_path, run_options())
     assert "/work/plugin" in argv
 
 
 def test_the_output_dir_is_the_log_mount(environment, plugin, tmp_path):
-    with environment(ANTHROPIC_API_KEY="k", SSL_CERT_FILE=None):
+    with environment(SSL_CERT_FILE=None):
         argv = Docker(platform="linux/arm64").run_argv(plugin, tmp_path, run_options())
     assert build_arg(argv, "--output-dir") == "/work/logs"
     assert build_arg(argv, "--debug-file") == "/work/logs/debug.txt"
 
 
-def test_a_key_is_one_env_by_name_and_no_credential_mount(environment, plugin, tmp_path):
-    """The value never reaches an argument list. docs/docker.md."""
-    with environment(ANTHROPIC_API_KEY="sk-secret", SSL_CERT_FILE=None):
-        docker = Docker(platform="linux/arm64")
-        argv = docker.run_argv(plugin, tmp_path, run_options())
-    assert "ANTHROPIC_API_KEY" in argv
-    assert "sk-secret" not in " ".join(argv)
-    assert str(docker.claude_dir) not in " ".join(argv)
-    assert str(docker.state_file) not in " ".join(argv)
-
-
-def test_without_a_key_the_two_login_paths_are_mounted_read_write(
+def test_the_two_login_paths_are_mounted_read_write(
     environment, working_directory, plugin, tmp_path
 ):
+    """The one credential route. docs/docker.md."""
     logs = tmp_path / "logs"
     logs.mkdir()
-    with environment(ANTHROPIC_API_KEY=None, SSL_CERT_FILE=None), working_directory(tmp_path):
+    with environment(SSL_CERT_FILE=None), working_directory(tmp_path):
         docker = Docker(platform="linux/arm64")
         argv = docker.run_argv(plugin, logs, run_options())
     mounts = [argv[i + 1] for i, value in enumerate(argv) if value == "-v"]
@@ -275,11 +266,10 @@ def test_without_a_key_the_two_login_paths_are_mounted_read_write(
         f"{plugin.resolve()}:/work/plugin:ro",
         f"{logs.resolve()}:/work/logs:rw",
     ]
-    assert "ANTHROPIC_API_KEY" not in argv
 
 
 def test_run_argv_ends_with_the_tag_and_the_harness_command(environment, plugin, tmp_path):
-    with environment(ANTHROPIC_API_KEY="k", SSL_CERT_FILE=None):
+    with environment(SSL_CERT_FILE=None):
         docker = Docker(platform="linux/arm64")
         argv = docker.run_argv(plugin, tmp_path, run_options())
     image = argv.index(docker.tag)
@@ -288,6 +278,34 @@ def test_run_argv_ends_with_the_tag_and_the_harness_command(environment, plugin,
 
 
 def test_run_argv_mounts_nothing_else_from_the_host(environment, plugin, tmp_path):
-    with environment(ANTHROPIC_API_KEY="k", SSL_CERT_FILE=None):
+    """The two login paths, the plugin and the logs. Nothing else."""
+    with environment(SSL_CERT_FILE=None):
         argv = Docker(platform="linux/arm64").run_argv(plugin, tmp_path, run_options())
-    assert argv.count("-v") == 2
+    assert argv.count("-v") == 4
+
+
+def test_seed_login_dir_writes_a_state_file_the_cli_will_accept(environment, tmp_path):
+    """An empty `.claude.json` is not an absent one: the CLI exits 1 on it."""
+    with environment(SSL_CERT_FILE=None):
+        docker = Docker(platform="linux/arm64", login_dir=tmp_path / "login")
+    docker.seed_login_dir()
+    assert docker.claude_dir.is_dir()
+    assert docker.state_file.read_text() == "{}"
+
+
+def test_seed_login_dir_replaces_an_empty_state_file(environment, tmp_path):
+    with environment(SSL_CERT_FILE=None):
+        docker = Docker(platform="linux/arm64", login_dir=tmp_path / "login")
+    docker.claude_dir.mkdir(parents=True)
+    docker.state_file.write_text("")
+    docker.seed_login_dir()
+    assert docker.state_file.read_text() == "{}"
+
+
+def test_seed_login_dir_keeps_a_state_file_the_cli_already_wrote(environment, tmp_path):
+    with environment(SSL_CERT_FILE=None):
+        docker = Docker(platform="linux/arm64", login_dir=tmp_path / "login")
+    docker.claude_dir.mkdir(parents=True)
+    docker.state_file.write_text('{"kept": true}')
+    docker.seed_login_dir()
+    assert docker.state_file.read_text() == '{"kept": true}'

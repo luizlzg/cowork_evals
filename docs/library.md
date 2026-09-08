@@ -134,8 +134,8 @@ environment. The file is read, never applied to `os.environ`, because the proces
 environment is the layer above it. A key the CLI does not recognise is ignored, because a
 consumer's `.env` serves more than this command.
 
-`.env` is never committed. It may carry `ANTHROPIC_API_KEY`, and the public repository rule
-in [../README.md](../README.md) applies to every other value in it as well.
+`.env` is never committed, and the public repository rule in
+[../README.md](../README.md) applies to every value in it.
 
 The CoWork driver takes none of this. It is configured by `cowork_evals.yaml`, reads no
 environment variable, and reads no `.env`. See [cowork_driver.md](cowork_driver.md).
@@ -144,7 +144,6 @@ environment variable, and reads no `.env`. See [cowork_driver.md](cowork_driver.
 | ---------------------------------------------------------- | ------------------------------------ |
 | `EVAL_MODEL`, `EVAL_JUDGE_MODEL`, `EVAL_ALLOW_TOOLS`, `EVAL_MAX_COST_USD`, `EVAL_MAX_COST_TOTAL_USD` | [running_evals.md](running_evals.md) |
 | `EVAL_PLATFORM`, `CLAUDE_CODE_VERSION`, `SSL_CERT_FILE`  | [docker.md](docker.md)               |
-| `ANTHROPIC_API_KEY`                                      | [docker.md](docker.md)               |
 | `CLAUDE_CODE_WALNUT_SPIRE`                               | [plugin_eval.md](plugin_eval.md)     |
 
 ## Where state lives

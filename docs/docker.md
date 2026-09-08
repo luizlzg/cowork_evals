@@ -23,6 +23,8 @@ cowork_evals run --docker path/to/repo                        # every plugin, in
 
 scripts/image.sh                                              # development: build for EVAL_PLATFORM
 scripts/image.sh --check                                      # development: the digest is present, no writes
+scripts/login.sh                                              # development: log in once, in a container
+scripts/login.sh --check                                      # development: a login is present, no writes
 scripts/parity.sh                                             # development: probe the image, compare
 ```
 
@@ -189,28 +191,49 @@ It is one deliberate delta against [runtime.md](runtime.md), which records corep
 as the only npm globals. Parity does not read npm globals and does not fail on it. No other
 global is added.
 
+`bubblewrap` and `socat` are the second and third, and both are harness infrastructure in
+the same sense as the CLI above. The harness refuses to start a granted shell tool unless
+both are installed, and every case here is pinned `--allow-tools Bash`. Measured 2026-09-08:
+without `socat` a run exits 1 with `sandbox is enabled but dependencies are missing: socat
+not installed`, and the case is scored 0 rather than errored, so the failure reads as a bad
+answer unless the notes column is read. `probe.py` reports both versions and parity fails on
+neither.
+
+[runtime.md](runtime.md) records neither, and there is no reason it would. CoWork starts a
+fresh VM per session, so the VM is the isolation boundary and Claude Code inside it has no
+shell to confine. This backend has no VM: the harness confines the shell inside the
+container, so it requires a backend to do it with. On the CoWork backend the harness does
+not run at all, so neither tool is in the picture there either.
+
+Both are therefore container-backend-only, and neither is a fidelity claim about the CoWork
+image. The one consequence for a consumer: a skill that shells out to `bubblewrap` or
+`socat` runs in this container and should not be assumed to run on CoWork.
+
 ## Credentials
 
-Two routes, because a laptop and a runner cannot authenticate the same way. A run takes
-whichever is available, and the key wins when both are.
+One route: a login this package owns, mounted. There is no API key route, by the
+developer's decision of 2026-09-08. A host with no interactive terminal logs in on a host
+that has one and carries the two paths below.
 
-| Route                | For                                          | How                                            |
-| -------------------- | -------------------------------------------- | ---------------------------------------------- |
-| `ANTHROPIC_API_KEY`  | a CI runner, or any host with no interactive terminal | passed with `--env`. Nothing is mounted |
-| A mounted login      | a developer's machine                        | mounted read-write from the host, below        |
-
-The login happens once, in an interactive container that `setup --docker` starts when
-neither route is available, and it writes a configuration directory this package owns:
+The login happens once, in an interactive container that `setup --docker` starts when the
+login is absent, and it writes a configuration directory this package owns:
 
 | Host path                                   | Holds                                                |
 | ------------------------------------------- | ---------------------------------------------------- |
 | `~/.cache/cowork_evals/claude/.claude/`     | the configuration directory, including `.credentials.json` |
 | `~/.cache/cowork_evals/claude/.claude.json` | the CLI state file                                   |
 
+The container carries no browser, so the CLI prints a URL and reads an authorization code
+back. That prompt masks its input, so a pasted code is not echoed. Measured 2026-09-08.
+
+The state file is created holding `{}`. An empty file is not an absent one: the CLI parses
+it, fails, and exits 1 with `JSON Parse error: Unexpected EOF`. Measured 2026-09-08 on the
+image below. `Docker.seed_login_dir()` writes it, and `Docker.login()` calls that before
+starting the login container.
+
 Both are mounted into the container home, read-write: the CLI refreshes its token and
 rewrites its state file on every start. They are the only host paths a run mounts besides
-the plugin and the log directory, and the container keeps nothing else. A run that uses the
-key mounts neither.
+the plugin and the log directory, and the container keeps nothing else.
 
 A first launch in a fresh configuration directory does not block a non-interactive run.
 Measured 2026-09-08 on the image below: `claude -p` in a container with an empty `$HOME`
@@ -224,10 +247,8 @@ seeds no state file beside it.
   separate login this package owns and can revoke on its own.
 - A claude.ai login can publish a report. `--no-publish` is pinned, so none is published.
   See [running_evals.md](running_evals.md).
-- `ANTHROPIC_API_KEY` comes from the environment or from `.env`, which is never committed.
-  See [library.md](library.md).
 
-Neither route available is a failed preflight, so it exits 3 and names both. See
+No login is a failed preflight, so it exits 3 and names the command that fixes it. See
 [cli.md](cli.md).
 
 `CLAUDE_CODE_WALNUT_SPIRE` is passed in with `--env`, because the process inside the
@@ -350,10 +371,10 @@ platform re-runs `scripts/parity.sh` and the integration tier rather than assumi
 | Build time, warm                  | under a second: the digest is present, so nothing runs  |
 | Python pin mismatches             | 0 of 136                                                |
 | Extra Python packages             | 0                                                       |
-| Non-Python deltas                 | Java 11.0.32 against the recorded 11.0.31, a jammy point release |
+| Non-Python deltas                 | Java 11.0.32 against the recorded 11.0.31, a jammy point release. `socat`, which the inventory does not record, for the shell sandbox |
 | Font families in the image        | 111 against the recorded 118                            |
 | `import uno` from system python3  | yes                                                     |
-| Bash sandbox option needed        | `--security-opt seccomp=unconfined`. `bwrap` comes up under it |
+| Bash sandbox option needed        | `--security-opt seccomp=unconfined`, and `socat` in the image. `bwrap` comes up under it |
 | uid mapping option needed         | `--user <uid>:<gid>`. `claude --version` runs under a uid with no passwd entry |
 | Claude Code CLI version installed | 2.1.259                                                 |
 | Extra root CA needed              | yes on this host. Three upstream hosts inspect TLS      |

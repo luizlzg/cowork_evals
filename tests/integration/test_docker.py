@@ -48,10 +48,7 @@ def docker() -> Docker:
 @pytest.fixture
 def credentialled(docker: Docker) -> Docker:
     """The same, for a test that reads the credential. A missing one fails it."""
-    assert docker.has_credential(), (
-        "no credential: set ANTHROPIC_API_KEY, or log in once with the container "
-        "`login_argv()` builds. docs/docker.md."
-    )
+    assert docker.has_credential(), "no credential: run `Docker().login()` once. docs/docker.md."
     return docker
 
 
@@ -85,7 +82,6 @@ def container(docker: Docker, *command: str, mounts: tuple[str, ...] = ()) -> st
         run_argv(docker, *command, mounts=mounts),
         capture_output=True,
         text=True,
-        env=docker.child_environment(),
     )
     return (completed.stdout + completed.stderr).strip()
 
@@ -118,6 +114,28 @@ def test_bwrap_comes_up_under_seccomp_unconfined(docker):
     """The Bash sandbox measurement. It needs no harness and no case."""
     output = container(
         docker, "bwrap", "--ro-bind", "/", "/", "--unshare-user", "--unshare-pid", "true"
+    )
+    assert output == "", output
+
+
+def test_bwrap_mounts_a_tmpfs_where_the_harness_mounts_one(docker):
+    """The bare invocation above passed while every sandboxed command failed.
+
+    The harness mounts a tmpfs on /run/shm, which the base image does not carry. Nothing
+    short of that mount reaches the failure, so it is asserted here rather than left to a
+    live run to find.
+    """
+    output = container(
+        docker,
+        "bwrap",
+        "--ro-bind",
+        "/",
+        "/",
+        "--tmpfs",
+        "/run/shm",
+        "--unshare-user",
+        "--unshare-pid",
+        "true",
     )
     assert output == "", output
 
@@ -194,7 +212,10 @@ def test_the_smoke_case_passes_through_the_backend(credentialled, tmp_path):
     """
     logs = tmp_path / "logs"
     logs.mkdir()
-    result = credentialled.run(SMOKE / "evals", logs, RunOptions.resolve(runs=1))
+    # The plugin directory itself, not evals/ beneath it: the target sets the containment
+    # root, and the case's `plugins` entry has to resolve inside it. Naming the plugin is
+    # what consents to loading it.
+    result = credentialled.run(SMOKE, logs, RunOptions.resolve(runs=1))
     document = json.loads(result.read_text())
 
     assert document["schemaVersion"] == 1

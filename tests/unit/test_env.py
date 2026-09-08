@@ -91,7 +91,6 @@ def test_the_documented_defaults(environment, tmp_path):
         "EVAL_PLATFORM": "linux/arm64",
         "CLAUDE_CODE_VERSION": "2.1.259",
         "CLAUDE_CODE_WALNUT_SPIRE": "1",
-        "ANTHROPIC_API_KEY": "",
     }
     with environment(**dict.fromkeys(DEFAULTS)):
         for name, value in DEFAULTS.items():

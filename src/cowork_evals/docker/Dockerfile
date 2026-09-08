@@ -18,8 +18,13 @@ ENV LANG=C.UTF-8
 
 # One apt layer: the document, image, media and CLI tooling jammy already carries at the
 # recorded versions, the Java 11 the tabula-py pin needs, the nine suppliers of
-# /usr/lib/python3/dist-packages, the Ubuntu font stack, bubblewrap for the Bash sandbox,
-# and the headers the sdist-only pins compile against.
+# /usr/lib/python3/dist-packages, the Ubuntu font stack, bubblewrap and socat for the Bash
+# sandbox, and the headers the sdist-only pins compile against.
+#
+# socat is a deliberate delta from the CoWork inventory, which does not record it. The
+# harness refuses to start a granted Bash tool without both bubblewrap and socat, and every
+# case here is pinned --allow-tools Bash. Measured 2026-09-08: without it the run exits 1
+# with `sandbox is enabled but dependencies are missing: socat not installed`.
 #
 # The font list carries the Noto fallback faces and not fonts-noto-core, which alone adds
 # 192 families over what docs/runtime.md records.
@@ -56,6 +61,7 @@ RUN apt-get update \
     ffmpeg \
     default-jre-headless \
     bubblewrap \
+    socat \
     command-not-found \
     pipx \
     python3-apt \
@@ -160,5 +166,13 @@ RUN npm install -g "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"
 # HOME is set to the first of these at run time, and the two mounts land under the second.
 RUN mkdir -p /tmp/eval-home /work/plugin /work/logs \
   && chmod 0777 /tmp/eval-home /work /work/plugin /work/logs
+
+# /run/shm as a real directory. jammy ships it as a symlink to /dev/shm, and bubblewrap
+# mounts a tmpfs there: the symlink resolves against a new root whose /dev is not staged
+# yet, so the mount fails with ENOENT. Every sandboxed command then exits 1 with `bwrap:
+# Can't mount tmpfs on /newroot/run/shm`, and the model reports a broken sandbox rather
+# than the command's output. Measured 2026-09-08. `mkdir -p` alone is a no-op on the
+# symlink, and running bwrap without that mount does not reach the failure.
+RUN rm -f /run/shm && mkdir -p /run/shm && chmod 1777 /run/shm
 
 WORKDIR /work

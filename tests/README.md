@@ -85,10 +85,11 @@ against session directories the test writes and then reads back.
 
 ### The container tier's preconditions
 
-`integration/test_docker.py` needs a reachable daemon and the image already built by
-`scripts/image.sh`. Nothing there builds it: a test that builds its own subject reports a
-build as a pass, and hides a long build inside a test run. Three of its tests read a
-credential as well, and a missing one fails them rather than skipping them.
+`integration/test_docker.py` needs a reachable daemon, the image already built by
+`scripts/image.sh`, and the login already made by `scripts/login.sh`. Nothing there builds
+or logs in: a test that builds its own subject reports a build as a pass, and hides a long
+build inside a test run. Three of its tests read the credential, and a missing one fails
+them rather than skipping them.
 
 ### The live marker
 

@@ -161,6 +161,10 @@ class Docker:
         The same two credential mounts as a run, and no plugin and no log mount. The
         caller creates both host paths first: Docker would otherwise create a root-owned
         directory in place of the missing state file.
+
+        `auth login` rather than bare `claude`, which lands in the first-run configuration
+        wizard on a fresh configuration directory. This container exists to produce a
+        credentials file, and nothing here picks a theme.
         """
         return [
             "docker",
@@ -174,9 +178,12 @@ class Docker:
             "--env",
             f"HOME={CONTAINER_HOME}",
             *self.extra_ca_env_argv(),
-            *self._credential_mount_argv(),
+            *self.credential_argv(),
             self.tag,
             "claude",
+            "auth",
+            "login",
+            "--claudeai",
         ]
 
     def run_argv(
@@ -222,14 +229,17 @@ class Docker:
         ]
 
     def credential_argv(self) -> list[str]:
-        """The key wins when both routes are available. docs/docker.md.
+        """The one credential route: the login this package owns, mounted. docs/docker.md.
 
-        The key is passed by name, never by value: the value reaches the container through
-        this process's own environment, so it is in no argument list and in no log.
+        Read-write, because the CLI refreshes its token and rewrites its state file on
+        every start.
         """
-        if setting("ANTHROPIC_API_KEY"):
-            return ["--env", "ANTHROPIC_API_KEY"]
-        return self._credential_mount_argv()
+        return [
+            "-v",
+            f"{self.claude_dir}:{CONTAINER_HOME}/{CLAUDE_DIR_NAME}:rw",
+            "-v",
+            f"{self.state_file}:{CONTAINER_HOME}/{STATE_FILE_NAME}:rw",
+        ]
 
     def extra_ca_env_argv(self) -> list[str]:
         """Node carries its own root store and does not read the system one.
@@ -241,14 +251,6 @@ class Docker:
             return []
         return ["--env", f"NODE_EXTRA_CA_CERTS={CONTAINER_EXTRA_CA}"]
 
-    def _credential_mount_argv(self) -> list[str]:
-        return [
-            "-v",
-            f"{self.claude_dir}:{CONTAINER_HOME}/{CLAUDE_DIR_NAME}:rw",
-            "-v",
-            f"{self.state_file}:{CONTAINER_HOME}/{STATE_FILE_NAME}:rw",
-        ]
-
     # Doing the work.
 
     def build(self, *, no_cache: bool = False) -> None:
@@ -257,6 +259,29 @@ class Docker:
         completed = subprocess.run(argv)
         if completed.returncode != 0:
             raise DockerError(f"docker build failed with exit {completed.returncode}: {self.tag}")
+
+    def login(self) -> None:
+        """Run the interactive login, once. A non-zero exit raises.
+
+        The terminal is inherited, so the CLI opens the browser and takes the code in its
+        own prompt. Whoever calls this owns a terminal: there is no headless login.
+        """
+        self.seed_login_dir()
+        completed = subprocess.run(self.login_argv())
+        if completed.returncode != 0:
+            raise DockerError(f"the login exited {completed.returncode}")
+        if not self.has_credential():
+            raise DockerError(f"the login wrote no {self.credentials_file.name}")
+
+    def seed_login_dir(self) -> None:
+        """Create the two login paths, with a state file the CLI will accept.
+
+        An empty `.claude.json` is not an absent one: the CLI reads it, fails to parse it,
+        and exits 1 with `JSON Parse error: Unexpected EOF`. Measured 2026-09-08.
+        """
+        self.claude_dir.mkdir(parents=True, exist_ok=True)
+        if not self.state_file.is_file() or self.state_file.stat().st_size == 0:
+            self.state_file.write_text("{}")
 
     def run(
         self,
@@ -272,10 +297,7 @@ class Docker:
         """
         options = options if options is not None else RunOptions.resolve()
         output_dir = Path(output_dir).resolve()
-        completed = subprocess.run(
-            self.run_argv(target, output_dir, options),
-            env=self.child_environment(),
-        )
+        completed = subprocess.run(self.run_argv(target, output_dir, options))
         result = output_dir / RESULT_NAME
         if not result.is_file():
             raise DockerError(
@@ -283,18 +305,6 @@ class Docker:
                 f"and exited {completed.returncode}"
             )
         return result
-
-    def child_environment(self) -> dict[str, str]:
-        """This process's environment, plus the key when it came from `.env`.
-
-        `run_argv` passes ANTHROPIC_API_KEY by name, so the value has to be in the
-        environment of the `docker` process rather than in its arguments.
-        """
-        environment = dict(os.environ)
-        key = setting("ANTHROPIC_API_KEY")
-        if key:
-            environment["ANTHROPIC_API_KEY"] = key
-        return environment
 
     def daemon_is_reachable(self) -> bool:
         try:
@@ -316,7 +326,7 @@ class Docker:
         return completed.returncode == 0
 
     def has_credential(self) -> bool:
-        return bool(setting("ANTHROPIC_API_KEY")) or self.credentials_file.is_file()
+        return self.credentials_file.is_file()
 
     def check(self) -> list[str]:
         """The unmet conditions, in order, each with the command that fixes it.
@@ -331,8 +341,5 @@ class Docker:
         elif not self.image_is_present():
             unmet.append(f"image {self.tag} is absent: run `cowork_evals setup --docker`")
         if not self.has_credential():
-            unmet.append(
-                "no credential: set ANTHROPIC_API_KEY, "
-                "or run `cowork_evals setup --docker` to log in"
-            )
+            unmet.append("no credential: run `cowork_evals setup --docker` to log in")
         return unmet
