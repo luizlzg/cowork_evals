@@ -6,8 +6,8 @@ points it at its own tree.
 
 This page is the boundary. The command surface is [cli.md](cli.md).
 
-Design. Nothing here is built. What is built is the status table in
-[running_evals.md](running_evals.md).
+Design, except the package tree and the CoWork driver, which are built. What is built is the
+status table in [running_evals.md](running_evals.md).
 
 ## The two repositories
 
@@ -38,7 +38,7 @@ mirrors an old VM. See [runtime.md](runtime.md).
 
 | Path                                       | Ships | Holds                                              |
 | ------------------------------------------ | ----- | -------------------------------------------------- |
-| `src/cowork_evals/`                        | yes   | The CLI, the three backends, the gate, the validator |
+| `src/cowork_evals/`                        | yes   | The CoWork driver, the CLI, the three backends, the gate, the validator |
 | `src/cowork_evals/data/requirements*.txt`  | yes   | The pins the mirror and the image are built from   |
 | `src/cowork_evals/docker/Dockerfile`       | yes   | What `setup --docker` builds                       |
 | `scripts/`                                 | no    | Development tasks for this repository only         |
@@ -58,13 +58,13 @@ is [environments.md](environments.md).
 | Constraint            | Value    | In `pyproject.toml` | Reason                                                        |
 | --------------------- | -------- | ------------------- | -------------------------------------------------------------- |
 | `requires-python`     | `>=3.14` | yes                 | This package runs on a developer's laptop, never in a session |
-| `dependencies`        | few      | empty today         | Nothing about CoWork constrains what this package imports     |
+| `dependencies`        | few      | one                 | Nothing about CoWork constrains what this package imports     |
 | ruff `target-version` | `py314`  | yes                 | The same. It lints this package, not the code under test      |
-| `[tool.uv] package`   | removed  | **no**              | Removing it makes uv build a distribution, and `src/cowork_evals/` does not exist yet |
+| `[tool.uv] package`   | removed  | yes                 | Removing it makes uv build a distribution                     |
 
-`package = false` is the one row `pyproject.toml` does not yet carry. It is removed in the
-same commit that adds `src/cowork_evals/` and `[project.scripts]`, and not before, because
-`uv sync` fails against a package with no package tree.
+`package = false` was removed in the commit that added `src/cowork_evals/`, and not before,
+because `uv sync` fails against a package with no package tree. `[project.scripts]` is a
+later commit and is unrelated to it.
 
 `requires-python` is a floor, so it also sets the interpreter a consumer's development
 environment needs. Lower it when a consumer on an older one asks. Nothing about CoWork
@@ -72,11 +72,11 @@ forces a value here.
 
 A dependency is allowed. This package is a consumer's development dependency, so the list is
 kept short and every entry is named below with what needs it, but there is no rule against
-one. `dependencies` is empty today because nothing has needed one yet.
+one.
 
-| Dependency | Needed by | Added when |
-| ---------- | --------- | ---------- |
-| none yet   |           |            |
+| Dependency | Needed by                                              | Added when |
+| ---------- | -------------------------------------------------------- | ---------- |
+| PyYAML     | `cowork_evals.config`, which reads `cowork_evals.yaml` | 2026-09-08 |
 
 ## Where the restrictions are
 
@@ -136,11 +136,13 @@ not recognise is ignored, because a consumer's `.env` serves more than this comm
 `.env` is never committed. It carries `ANTHROPIC_API_KEY`, and the public repository rule in
 [../README.md](../README.md) applies to every other value in it as well.
 
+The CoWork driver takes none of this. It is configured by `cowork_evals.yaml`, reads no
+environment variable, and reads no `.env`. See [cowork_driver.md](cowork_driver.md).
+
 | Variables                                                | Named in                             |
 | ---------------------------------------------------------- | ------------------------------------ |
 | `EVAL_MODEL`, `EVAL_JUDGE_MODEL`, `EVAL_ALLOW_TOOLS`, `EVAL_MAX_COST_USD`, `EVAL_MAX_COST_TOTAL_USD` | [running_evals.md](running_evals.md) |
 | `EVAL_PLATFORM`                                          | [docker.md](docker.md)               |
-| `COWORK_*`                                               | [cowork_driver.md](cowork_driver.md) |
 | `ANTHROPIC_API_KEY`                                      | [docker.md](docker.md)               |
 | `CLAUDE_CODE_WALNUT_SPIRE`                               | [plugin_eval.md](plugin_eval.md)     |
 

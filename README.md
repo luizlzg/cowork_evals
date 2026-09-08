@@ -43,12 +43,14 @@ Desktop, and the CoWork desktop application. `cowork_evals check` reports what i
 
 | Path                            | Holds                                                               |
 | ------------------------------- | ------------------------------------------------------------------- |
+| `src/cowork_evals/`             | The package. What ships, and the only thing that does               |
 | [`docs/`](docs/README.md)       | Reference material. [`docs/README.md`](docs/README.md) is the index |
 | [`plans/`](plans/README.md)     | Work in progress. A plan is deleted once implemented                |
 | [`scripts/`](scripts/README.md) | Development tasks for this repository. Never shipped                |
 | [`plugins/`](plugins/README.md) | Fixture plugins for this repository's own tests                     |
 | [`tests/`](tests/README.md)     | Deterministic tests for this repository's own code                  |
 | `logs/`                         | Eval run output. Git-ignored, and absent until a run creates it     |
+| `cowork_evals.yaml`             | The CoWork driver's configuration. Git-ignored: it names a profile  |
 
 ## Public repository
 

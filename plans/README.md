@@ -13,10 +13,10 @@ A row is added below when a plan is written, and removed when the plan is delete
 | ------------------------------------------------ | ------------------------------------------------ | ------------------ |
 | [`plan_cowork_tools.md`](plan_cowork_tools.md)   | The CoWork driver library                       | `feat/cowork-tools` |
 
-Build order, when the backend plans are written: the package skeleton and the CLI first,
-because they own the command surface, the gate and the log layout. Then the venv backend,
-then Docker, which changes only where the harness executes. The CoWork backend is
-independent of both.
+Build order, when the backend plans are written: the package skeleton is brought by the
+CoWork driver plan, and the CLI comes next, because it owns the command surface, the gate and
+the log layout. Then the venv backend, then Docker, which changes only where the harness
+executes. The CoWork backend is independent of both.
 
 ## How a plan is written
 

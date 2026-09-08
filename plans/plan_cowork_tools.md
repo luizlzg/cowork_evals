@@ -2,6 +2,13 @@
 
 Branch `feat/cowork-tools`, cut from `main`. Eight phases, one commit each.
 
+**Not finished. Phase 7 is outstanding and blocks the rest.** Phases 1 to 6 are done, and
+phase 8 is done except the two boxes that need phase 7. Phase 7 is one live submission, and
+it is run by a person: an assistant may run it only when `.claude/settings.local.json`
+already carries `Bash(open "claude://*")` and `Bash(osascript:*)`, and an assistant cannot
+write those rules. This file stays until phase 7 and the last two boxes of phase 8 are
+ticked.
+
 ## Scope
 
 A Python library that drives the CoWork desktop application: submit one prompt, wait for the
@@ -371,21 +378,21 @@ expected.
 
 Nothing durable may survive only in this file.
 
-- [ ] `docs/cowork_driver.md`: replace the `COWORK_*` configuration table with
+- [x] `docs/cowork_driver.md`: replace the `COWORK_*` configuration table with
       `cowork_evals.yaml`, add the API, state that the exit codes on that page are the
       taxonomy a `CoWorkError` carries rather than something the library returns, remove
       `exit_code` from the result document table and add `log_file`, and record the `CoWork`
       object, the three modules, the two log files and the completion signal as phase 2
       measured it.
-- [ ] `docs/library.md`: add PyYAML to the dependency table, correct the
+- [x] `docs/library.md`: add PyYAML to the dependency table, correct the
       `[tool.uv] package = false` row, and correct the `.env` precedence text, which no longer
       covers `COWORK_*`.
-- [ ] `docs/running_evals.md`: split the status row `The CoWork driver and its backend` into
+- [x] `docs/running_evals.md`: split the status row `The CoWork driver and its backend` into
       two, and mark the driver built.
-- [ ] `README.md`: add `src/` and `cowork_evals.yaml` to the layout table.
-- [ ] `tests/README.md`: add a row per new test file, and the hand-written fixture rule.
-- [ ] Re-read every touched page for a statement this plan made false.
-- [ ] `plans/README.md`: correct the build order paragraph, which assigns the package
+- [x] `README.md`: add `src/` and `cowork_evals.yaml` to the layout table.
+- [x] `tests/README.md`: add a row per new test file, and the hand-written fixture rule.
+- [x] Re-read every touched page for a statement this plan made false.
+- [x] `plans/README.md`: correct the build order paragraph, which assigns the package
       skeleton to the CLI plan. This plan brings it.
 - [ ] Remove this file, and remove its row from `plans/README.md`.
 
