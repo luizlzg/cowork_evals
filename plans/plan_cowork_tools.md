@@ -204,7 +204,7 @@ session identifier and the prompts of a real account. Phase 8 writes it into
   the only files the library owns. [`../docs/cowork_driver.md`](../docs/cowork_driver.md).
 - Importing a module reads no file, resolves no configuration and starts no process.
 - No test starts a CoWork session. A test asserts over a fixture directory. The one live run
-  is phase 7, and it is a phase gate, not a test.
+  is phase 7, and it is not a test.
   [`../tests/README.md`](../tests/README.md).
 - Mocking and patching are not used. The `runner` parameter is the only seam.
 
@@ -219,7 +219,7 @@ session identifier and the prompts of a real account. Phase 8 writes it into
 
 `scripts/lint.sh` runs ruff over `.`, so it reaches `src/` with no change.
 
-Gate. `scripts/init.sh`, then `scripts/test.sh` and `scripts/lint.sh` pass, and
+`scripts/init.sh`, then `scripts/test.sh` and `scripts/lint.sh` pass, and
 `uv run python -c "import cowork_evals, yaml"` succeeds.
 
 ## Phase 2: Re-probe the desktop internals
@@ -240,7 +240,7 @@ submitted.
 - [x] Write all of it into `docs/cowork_desktop.md` with the capture date, and extend that
       page's coupling list with every key phase 4 reads.
 
-Gate. `docs/cowork_desktop.md` carries no row reading `not observed`, and every field the
+`docs/cowork_desktop.md` carries no row reading `not observed`, and every field the
 phase 4 reader uses appears in its coupling list. Redact identifiers, per the public
 repository rule.
 
@@ -264,7 +264,7 @@ their own file or their argument, and nothing else.
 - [x] Return the refusal reason naming the rule and the sentence, or `None`.
 - [x] No flag, no argument and no configuration key that disables the linter.
 
-Gate. `tests/test_config.py` passes: a missing file yields defaults, an unknown key inside
+`tests/test_config.py` passes: a missing file yields defaults, an unknown key inside
 `cowork:` raises, an unknown top level section is ignored, an override beats the file, and
 `~` is expanded. `tests/test_prompt_lint.py` passes: one refused prompt per rule, and every
 exemption the design names, including `Reply with exactly: PONG`, `in order to` and
@@ -295,7 +295,7 @@ the record shapes are `docs/cowork_desktop.md` as phase 2 leaves it.
       reads an archived session on a machine that has no CoWork.
 - [x] Tolerate a session directory with no transcript, which phase 2 establishes as possible.
 
-Gate. `tests/test_cowork.py` passes over hand-written fixtures under `tests/data/cowork/`:
+`tests/test_cowork.py` passes over hand-written fixtures under `tests/data/cowork/`:
 a one-turn session, a session with a tool call and its result, a session with a subagent
 transcript, a session with a partial last line, a session with no assistant output, and a
 session with no transcript directory. `json.dumps(CoWork().collect(fixture))` succeeds with
@@ -315,7 +315,7 @@ no profile configured, and the document carries exactly the documented keys.
       returns or raises. `log_dir: null` turns it off. The root logger is never touched.
 - [x] Put the log path in the result document as `log_file`.
 
-Gate. `tests/test_cowork.py` covers each refusal over a temporary run log and a temporary
+`tests/test_cowork.py` covers each refusal over a temporary run log and a temporary
 profile: no profile, prompt too long, ceiling reached, a linted prompt. Each raises
 `CoWorkError` with `.code == 2`. A failed submission leaves a line `history` reads back. Two
 calls in one process leave two log files and no duplicated handler. `log_dir: null` writes no
@@ -341,7 +341,7 @@ each failure produces are the sequence table in [`../docs/cowork_driver.md`](../
 - [x] Every raise from `submit`, `wait` and `run` carries `session_dir` when one is known, and
       is written to the diagnostic log before it leaves the library.
 
-Gate. `tests/test_cowork.py` passes against a `CoWork` built with a recording fake as
+`tests/test_cowork.py` passes against a `CoWork` built with a recording fake as
 `runner`: `deep_link` encodes a prompt with spaces and newlines; the fake records the `open`
 and `osascript` argument lists;
 discovery returns the one new directory against a fixture baseline; two new directories raise
@@ -369,7 +369,7 @@ terminal that owns the process, a signed-in CoWork, and `disableDeepLinkRegistra
 - [x] Call `sessions()` and confirm it finds the new session.
 - [x] Record the wall clock time of the run in `docs/cowork_desktop.md`.
 
-Gate. The call returns the marker and raises nothing. A missing grant raises `CoWorkError`
+The call returns the marker and raises nothing. A missing grant raises `CoWorkError`
 with `.code == 3` and `osascript` error 1002 on stderr, and that blocks the phase rather than
 skipping it. This run leaves one permanent session in the account history, and that is
 expected.
@@ -395,5 +395,5 @@ Nothing durable may survive only in this file.
 - [x] `plans/README.md`: correct the build order paragraph, which assigns the package
       skeleton to the CLI plan. This plan brings it.
 
-Gate. `scripts/test.sh` and `scripts/lint.sh` pass. No page under `docs/` links to this
+`scripts/test.sh` and `scripts/lint.sh` pass. No page under `docs/` links to this
 plan, and `plans/README.md` holds a row for it marked `implemented`.

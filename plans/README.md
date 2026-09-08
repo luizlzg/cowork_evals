@@ -71,13 +71,12 @@ Writing rules are in [`../CLAUDE.md`](../CLAUDE.md). These are the rules specifi
 plan.
 
 - It points at `docs/`. It never restates a document, and nothing in `docs/` points back.
-- Its design lives in `docs/`. The plan holds scope, phases, checklists and gates only.
+- Its design lives in `docs/`. The plan holds scope, phases and checklists only.
 - It is self-contained and executable with a cleared context.
 - It is complete. No open question, no TBD, no decision left to the reader. Where a fact
   was unknown at writing time, the plan says which phase measures it and what ships if the
   measurement fails.
-- Every phase is one commit and has a gate. Do not start a phase before the previous gate
-  passes.
+- Every phase is one commit. Finish a phase before starting the next.
 - Testing and documentation are phases, not afterthoughts.
 
 ## How a plan is executed
