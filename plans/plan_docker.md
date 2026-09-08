@@ -199,17 +199,17 @@ reports is printed for a reader. No page under `docs/` is parsed.
 so it exercises discovery. It carries no skill: whether a model activates a skill is an eval
 question, and every question this plan asks is a mechanism question.
 
-- [ ] `.claude-plugin/plugin.json`, and one case at `evals/plugin/<case>/`. A directory
+- [x] `.claude-plugin/plugin.json`, and one case at `evals/plugin/<case>/`. A directory
       under `evals/` is a skill name, `plugin` or `mocks`, and this plugin has no skill, so
       the case is a `plugin` one. [`../docs/eval_format.md`](../docs/eval_format.md).
-- [ ] `tags: [plugin]`, matching that directory, and `plugins: ["../../.."]`. Both are
+- [x] `tags: [plugin]`, matching that directory, and `plugins: ["../../.."]`. Both are
       required, and the case validator checks both.
-- [ ] The prompt is one instruction: run `python3 -V` and reply with its output and nothing
+- [x] The prompt is one instruction: run `python3 -V` and reply with its output and nothing
       else.
-- [ ] One `regex` grader over `last_message`, `match: contains`, matching the exact string
+- [x] One `regex` grader over `last_message`, `match: contains`, matching the exact string
       `docs/runtime.md` records: `Python 3.10.12`. No `llm` grader: the answer is one fixed
       string, and a judge over a fixed string is a flaky way to compare two strings.
-- [ ] `runs: 1` written out.
+- [x] `runs: 1` written out.
 
 ## Phase 9: The integration tier, and the measurements
 
