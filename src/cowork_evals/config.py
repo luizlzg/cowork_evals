@@ -75,7 +75,8 @@ def _optional_path(name: str, value: Any) -> Path | None:
     return None if value is None else _path(name, value)
 
 
-# One converter per field. The key set is also the set of accepted keys and overrides.
+# One converter per field. The key set is also the set of accepted keys and overrides, and
+# `Config.__post_init__` runs the whole table, so a value is converted in exactly one place.
 _FIELDS: dict[str, Callable[[str, Any], Any]] = {
     "profile": _optional_text,
     "surface": _text,
@@ -104,9 +105,9 @@ class Config:
     log_dir: Path | None = Path("logs")
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "run_log", _path("run_log", self.run_log))
-        if self.log_dir is not None:
-            object.__setattr__(self, "log_dir", _path("log_dir", self.log_dir))
+        """Convert and check every field, whether it came from the file or from a caller."""
+        for name, convert in _FIELDS.items():
+            object.__setattr__(self, name, convert(name, getattr(self, name)))
 
     @property
     def profile_dir(self) -> Path:
@@ -141,7 +142,7 @@ class Config:
         path is never a silent set of defaults.
         """
         values = _read(path)
-        values.update(_convert(overrides, "override"))
+        values.update(_checked(overrides, "override"))
         return cls(**values)
 
 
@@ -169,18 +170,19 @@ def _read(path: Path | str | None) -> dict[str, Any]:
         return {}
     if not isinstance(section, dict):
         raise CoWorkError(2, f"{file}: expected a mapping under {SECTION}:")
-    return _convert(section, str(file))
+    return _checked(section, str(file))
 
 
 def _override(config: Config, overrides: dict[str, Any]) -> Config:
     """Apply constructor overrides to an already-resolved configuration."""
     if not overrides:
         return config
-    return dataclasses.replace(config, **_convert(overrides, "override"))
+    return dataclasses.replace(config, **_checked(overrides, "override"))
 
 
-def _convert(values: dict[str, Any], source: str) -> dict[str, Any]:
+def _checked(values: dict[str, Any], source: str) -> dict[str, Any]:
+    """Refuse an unknown key. The values themselves are converted by `__post_init__`."""
     unknown = sorted(set(values) - set(_FIELDS))
     if unknown:
         raise CoWorkError(2, f"{source}: unknown {SECTION} key {', '.join(unknown)}")
-    return {name: _FIELDS[name](name, value) for name, value in values.items()}
+    return values

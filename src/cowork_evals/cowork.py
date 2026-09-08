@@ -24,7 +24,7 @@ from .config import PROMPT_LIMIT, Config, CoWorkError, _override
 
 # A session directory is exactly three levels below the sessions root and holds an
 # audit.jsonl. docs/cowork_desktop.md.
-SESSION_DEPTH = 3
+SESSION_GLOB = "*/*/*"
 AUDIT = "audit.jsonl"
 TRANSCRIPTS = Path(".claude") / "projects" / "session"
 OUTPUTS = "outputs"
@@ -80,8 +80,12 @@ class CoWork:
         base = Path(root) if root is not None else self._config.sessions_root
         if not base.is_dir():
             return []
-        pattern = "/".join(["*"] * SESSION_DEPTH)
-        return sorted(d for d in base.glob(pattern) if d.is_dir() and (d / AUDIT).is_file())
+        return sorted(d for d in base.glob(SESSION_GLOB) if d.is_dir() and (d / AUDIT).is_file())
+
+    def history(self, run_log: Path | None = None) -> list[dict[str, Any]]:
+        """The run log as one dictionary per line, oldest first."""
+        path = Path(run_log) if run_log is not None else self._config.run_log
+        return _read_jsonl(path)
 
     def collect(self, session_dir: Path | str, *, prompt: str | None = None) -> dict[str, Any]:
         """Build the result document from one session directory already on disk."""
@@ -97,6 +101,7 @@ class CoWork:
 
         audit_prompt = _audit_prompt(audit)
         submitted = prompt if prompt is not None else audit_prompt
+        calls = _tool_calls(records)
         return {
             "prompt": submitted,
             "prompt_sha256": _digest(submitted),
@@ -109,8 +114,8 @@ class CoWork:
             "audit_prompt": audit_prompt,
             "lifecycle": _lifecycle(audit),
             "turns": turns,
-            "tool_calls": _tool_calls(records),
-            "tool_names": [call["name"] for call in _tool_calls(records)],
+            "tool_calls": calls,
+            "tool_names": [call["name"] for call in calls],
             "final_text": final_text,
             "outputs": _outputs(directory),
             "log_file": None if self._log_file is None else str(self._log_file),
@@ -131,11 +136,7 @@ class CoWork:
         with self._diagnostics():
             session_dir = self._submit(prompt)
             self._wait(session_dir)
-            try:
-                return self.collect(session_dir, prompt=prompt)
-            except CoWorkError as error:
-                LOGGER.error("collection failed with code %d: %s", error.code, error)
-                raise
+            return self.collect(session_dir, prompt=prompt)
 
     def submit(self, prompt: str) -> Path:
         """Steps 1 to 7: refuse, fire, discover and attribute. Returns the session."""
@@ -151,7 +152,6 @@ class CoWork:
         try:
             session_dir = self._fire_and_attribute(prompt)
         except CoWorkError as error:
-            LOGGER.error("submission failed with code %d: %s", error.code, error)
             self._record(prompt, error.session_dir, f"failed:{error.code}")
             raise
         self._record(prompt, session_dir, "submitted")
@@ -270,11 +270,6 @@ class CoWork:
                 )
             time.sleep(POLL_SECONDS)
 
-    def history(self, run_log: Path | None = None) -> list[dict[str, Any]]:
-        """The run log as one dictionary per line, oldest first."""
-        path = Path(run_log) if run_log is not None else self._config.run_log
-        return _read_jsonl(path)
-
     # Refusal, the run log and the diagnostic log. All of it happens before anything fires.
 
     def _check(self, prompt: str) -> None:
@@ -326,30 +321,33 @@ class CoWork:
     def _diagnostics(self) -> Iterator[Path | None]:
         """Open one diagnostic log for the length of one firing call.
 
-        `log_dir: null` turns the file off, and the logger then carries whatever handler
-        the caller attached. The root logger is never touched.
+        Every `CoWorkError` that leaves a firing call is logged here and nowhere else, so
+        the log names the failure whichever step raised it. `log_dir: null` turns the file
+        off, and the logger then carries whatever handler the caller attached. The root
+        logger is never touched.
         """
         directory = self._config.log_dir
-        if directory is None:
-            self._log_file = None
-            yield None
-            return
-
-        directory.mkdir(parents=True, exist_ok=True)
-        path = _log_path(directory)
-        handler = logging.FileHandler(path, encoding="utf-8")
-        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         level = LOGGER.level
-        LOGGER.addHandler(handler)
-        LOGGER.setLevel(logging.INFO)
-        self._log_file = path
+        handler = None
+        self._log_file = None
+        if directory is not None:
+            directory.mkdir(parents=True, exist_ok=True)
+            self._log_file = _log_path(directory)
+            handler = logging.FileHandler(self._log_file, encoding="utf-8")
+            handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+            LOGGER.addHandler(handler)
+            LOGGER.setLevel(logging.INFO)
         try:
-            yield path
+            yield self._log_file
+        except CoWorkError as error:
+            LOGGER.error("the call failed with code %d: %s", error.code, error)
+            raise
         finally:
-            LOGGER.removeHandler(handler)
-            handler.close()
-            LOGGER.setLevel(level)
             self._log_file = None
+            if handler is not None:
+                LOGGER.removeHandler(handler)
+                handler.close()
+                LOGGER.setLevel(level)
 
 
 # Readers. Each takes what it reads, so a test drives it over a fixture directory.
@@ -489,34 +487,28 @@ def _lifecycle(audit: list[dict[str, Any]]) -> list[str]:
     ]
 
 
+def _first_user(audit: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """The `user` audit record of the first submission in this session directory.
+
+    A session directory can hold more than one command. docs/cowork_desktop.md.
+    """
+    for record in audit:
+        if record.get("type") == "user":
+            return record
+    return None
+
+
 def _audit_prompt(audit: list[dict[str, Any]]) -> str | None:
     """The submitted prompt as the application recorded it, verbatim."""
-    for record in audit:
-        if record.get("type") != "user":
-            continue
-        message = record.get("message")
-        if not isinstance(message, dict):
-            continue
-        content = message.get("content")
-        if isinstance(content, str):
-            return content
-        if isinstance(content, list):
-            text = "\n".join(
-                block.get("text", "")
-                for block in content
-                if isinstance(block, dict) and block.get("type") == "text"
-            )
-            if text:
-                return text
-    return None
+    record = _first_user(audit)
+    return (_text_of(record) or None) if record is not None else None
 
 
 def _submitted_at(audit: list[dict[str, Any]]) -> str | None:
-    """When the prompt reached the application, from its first user record."""
-    for record in audit:
-        if record.get("type") == "user" and isinstance(record.get("timestamp"), str):
-            return record["timestamp"]
-    return None
+    """When the prompt reached the application, from that same record."""
+    record = _first_user(audit)
+    stamp = record.get("timestamp") if record is not None else None
+    return stamp if isinstance(stamp, str) else None
 
 
 def _outputs(session_dir: Path) -> list[str]:

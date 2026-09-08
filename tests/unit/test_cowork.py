@@ -54,7 +54,7 @@ def test_sessions_on_an_absent_root_is_empty(driver: CoWork, tmp_path: Path) -> 
     assert driver.sessions(tmp_path / "absent") == []
 
 
-def test_sessions_defaults_to_the_configured_root(tmp_path: Path) -> None:
+def test_sessions_defaults_to_the_configured_root() -> None:
     """A driver with no profile refuses at the call that needs one, not at construction."""
     driver = CoWork(Config())
     with pytest.raises(CoWorkError) as raised:
@@ -451,6 +451,19 @@ def test_quiescence_fires_once_the_run_has_started(tmp_path: Path) -> None:
     session = write_session(sessions_root(tmp_path), "s1", states=("queued", "started"))
     driver = stepping(tmp_path, run_timeout=5)
     assert driver.wait(session) == session
+
+
+def test_a_run_timeout_reaches_the_diagnostic_log(tmp_path: Path) -> None:
+    """`run` raises code 7 from inside the log it opened, so the log has to name it."""
+    session = write_session(sessions_root(tmp_path), "s1", states=("queued",), final=None)
+    driver = stepping(tmp_path, run_timeout=0)
+    # The raise has to leave the context manager, which is how `run` reaches it.
+    with pytest.raises(CoWorkError) as raised, driver._diagnostics() as path:
+        log = path
+        driver.wait(session)
+    assert raised.value.code == 7
+    assert log is not None
+    assert "the call failed with code 7" in log.read_text(encoding="utf-8")
 
 
 def test_a_refusal_before_firing_leaves_no_run_log_line(tmp_path: Path) -> None:

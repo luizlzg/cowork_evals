@@ -126,6 +126,13 @@ def test_sessions_root_without_a_profile_raises() -> None:
     assert raised.value.code == 2
 
 
+def test_a_wrongly_typed_field_raises_however_the_config_was_built() -> None:
+    """Conversion is `__post_init__`, so a direct build is checked like a loaded one."""
+    with pytest.raises(CoWorkError) as raised:
+        Config(max_runs="many")  # type: ignore[arg-type]
+    assert raised.value.code == 2
+
+
 def test_config_is_frozen() -> None:
     config = Config(profile="Fixture")
     with pytest.raises((AttributeError, TypeError)):
