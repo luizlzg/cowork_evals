@@ -104,10 +104,12 @@ Transcript record keys observed: `type`, `message`, `toolUseResult`, `attributio
 `isSidechain`, `cwd`, `gitBranch`. Content blocks carry `id` on a `tool_use` and
 `tool_use_id` on a `tool_result`, which is how a reader pairs them.
 
-Transcript record types observed, snapshot 2026-09-08 over five session directories:
-`user`, `assistant`, `attachment`, `queue-operation`, `atis-latch` and `last-prompt`. Only
-`user` and `assistant` carry a `message`. A reader takes turns from those two and ignores the
-rest, because the set is open.
+Transcript record types observed, snapshot 2026-09-08 over seven session directories:
+`user`, `assistant`, `attachment`, `queue-operation`, `atis-latch`, `last-prompt` and
+`mode`. Only `user` and `assistant` carry a `message`. A reader takes turns from those two
+and ignores the rest, because the set is open. `mode` was absent from the five directories
+probed earlier the same day and present in the seven probed later, which is the set being
+open in practice.
 
 `message.content` is a string or a list of blocks. Observed block types: `text`, `thinking`,
 `tool_use` and `tool_result`. A `thinking` block is not turn text.
