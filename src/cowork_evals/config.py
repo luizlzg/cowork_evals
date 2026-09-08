@@ -10,6 +10,7 @@ nothing else: no session, no process, no environment variable.
 
 from __future__ import annotations
 
+import dataclasses
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -164,6 +165,13 @@ def _read(path: Path | str | None) -> dict[str, Any]:
     if not isinstance(section, dict):
         raise CoWorkError(2, f"{file}: expected a mapping under {SECTION}:")
     return _convert(section, str(file))
+
+
+def _override(config: Config, overrides: dict[str, Any]) -> Config:
+    """Apply constructor overrides to an already-resolved configuration."""
+    if not overrides:
+        return config
+    return dataclasses.replace(config, **_convert(overrides, "override"))
 
 
 def _convert(values: dict[str, Any], source: str) -> dict[str, Any]:

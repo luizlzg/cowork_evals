@@ -1,0 +1,2 @@
+{"type":"user","uuid":"sa-1","isSidechain":true,"timestamp":"2026-09-08T12:00:31.000Z","message":{"role":"user","content":"Read every note"}}
+{"type":"assistant","uuid":"sa-2","isSidechain":true,"timestamp":"2026-09-08T12:01:45.000Z","message":{"role":"assistant","content":[{"type":"text","text":"three notes, all about the mirror"}]}}

@@ -1,0 +1,4 @@
+{"type":"user","uuid":"tu-5","timestamp":"2026-09-08T12:00:01.000Z","message":{"role":"user","content":"Summarize the notes"}}
+{"type":"assistant","uuid":"ta-4","timestamp":"2026-09-08T12:00:30.000Z","message":{"role":"assistant","content":[{"type":"tool_use","id":"task-1","name":"Task","input":{"subagent_type":"Explore"}}]}}
+{"type":"user","uuid":"tu-6","timestamp":"2026-09-08T12:01:50.000Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"task-1","content":"three notes, all about the mirror"}]}}
+{"type":"assistant","uuid":"ta-5","timestamp":"2026-09-08T12:01:55.000Z","message":{"role":"assistant","content":[{"type":"text","text":"There are three notes, all about the mirror."}]}}

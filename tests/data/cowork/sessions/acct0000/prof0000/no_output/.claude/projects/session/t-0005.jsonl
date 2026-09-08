@@ -1,0 +1,2 @@
+{"type":"user","uuid":"tu-8","timestamp":"2026-09-08T14:00:01.000Z","message":{"role":"user","content":"Read the inbox"}}
+{"type":"assistant","uuid":"ta-8","timestamp":"2026-09-08T14:00:05.000Z","message":{"role":"assistant","content":[{"type":"thinking","thinking":"still working"}]}}

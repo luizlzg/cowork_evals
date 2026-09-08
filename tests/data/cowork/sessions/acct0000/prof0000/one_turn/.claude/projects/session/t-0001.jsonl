@@ -1,0 +1,3 @@
+{"type":"user","uuid":"tu-1","sessionId":"s-0001","timestamp":"2026-09-08T10:00:01.000Z","message":{"role":"user","content":"Reply with exactly: PONG"}}
+{"type":"assistant","uuid":"ta-1","sessionId":"s-0001","timestamp":"2026-09-08T10:00:19.000Z","message":{"role":"assistant","content":[{"type":"thinking","thinking":"the marker is PONG"},{"type":"text","text":"PONG"}]}}
+{"type":"last-prompt","uuid":"tl-1","lastPrompt":"Reply with exactly: PONG"}

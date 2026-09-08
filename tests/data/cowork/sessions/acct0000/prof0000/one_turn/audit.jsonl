@@ -1,0 +1,5 @@
+{"type":"user","uuid":"u-0001","session_id":"s-0001","client_platform":"desktop_app","timestamp":"2026-09-08T10:00:00.000Z","message":{"role":"user","content":"Reply with exactly: PONG"}}
+{"type":"command_lifecycle","command_uuid":"c-0001","state":"queued","session_id":"s-0001","timestamp":"2026-09-08T10:00:00.100Z"}
+{"type":"command_lifecycle","command_uuid":"c-0001","state":"started","session_id":"s-0001","timestamp":"2026-09-08T10:00:01.000Z"}
+{"type":"result","subtype":"success","is_error":false,"num_turns":1,"total_cost_usd":0.01,"result":"PONG","stop_reason":"end_turn","session_id":"s-0001","timestamp":"2026-09-08T10:00:20.000Z"}
+{"type":"command_lifecycle","command_uuid":"c-0001","state":"completed","session_id":"s-0001","timestamp":"2026-09-08T10:00:20.100Z"}

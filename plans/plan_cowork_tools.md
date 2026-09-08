@@ -269,24 +269,24 @@ The `CoWork` object, then `sessions` and `collect` and the private readers under
 rules are the reading rules in [`../docs/cowork_driver.md`](../docs/cowork_driver.md), and
 the record shapes are `docs/cowork_desktop.md` as phase 2 leaves it.
 
-- [ ] `CoWork(config=None, *, runner=None, **overrides)` and `CoWork.from_file(path)`: hold
+- [x] `CoWork(config=None, *, runner=None, **overrides)` and `CoWork.from_file(path)`: hold
       the resolved configuration, expose it as `.config`, and validate nothing else.
-- [ ] Re-export `Config`, `CoWork` and `CoWorkError` from `__init__.py`, with `__all__`.
-- [ ] `sessions(root=None)`: every directory three levels below the root holding
+- [x] Re-export `Config`, `CoWork` and `CoWorkError` from `__init__.py`, with `__all__`.
+- [x] `sessions(root=None)`: every directory three levels below the root holding
       `audit.jsonl`, sorted. The root defaults to `config.sessions_root`.
-- [ ] Parse `audit.jsonl`, skipping an unparsable line.
-- [ ] Select the main transcript: the newest top level file by modification time under
+- [x] Parse `audit.jsonl`, skipping an unparsable line.
+- [x] Select the main transcript: the newest top level file by modification time under
       `.claude/projects/session/`. Record the rest separately, and record `subagents/*.jsonl`
       separately again.
-- [ ] Read `message.content` as either a string or a list of blocks.
-- [ ] Pair a `tool_result` to its `tool_use` by `tool_use_id`, and drop a result whose call
+- [x] Read `message.content` as either a string or a list of blocks.
+- [x] Pair a `tool_result` to its `tool_use` by `tool_use_id`, and drop a result whose call
       is absent from this transcript.
-- [ ] Take `final_text` from the last assistant text turn. A run with none raises code 8.
-- [ ] List `outputs/` relative to the session directory.
-- [ ] `collect(session_dir, prompt=None)`: the result document, every key in the design's
+- [x] Take `final_text` from the last assistant text turn. A run with none raises code 8.
+- [x] List `outputs/` relative to the session directory.
+- [x] `collect(session_dir, prompt=None)`: the result document, every key in the design's
       table except `exit_code`, plus `log_file`, and no other key. It needs no profile, so it
       reads an archived session on a machine that has no CoWork.
-- [ ] Tolerate a session directory with no transcript, which phase 2 establishes as possible.
+- [x] Tolerate a session directory with no transcript, which phase 2 establishes as possible.
 
 Gate. `tests/test_cowork.py` passes over hand-written fixtures under `tests/data/cowork/`:
 a one-turn session, a session with a tool call and its result, a session with a subagent

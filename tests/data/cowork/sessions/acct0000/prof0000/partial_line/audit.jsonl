@@ -1,0 +1,4 @@
+{"type":"user","uuid":"u-0004","session_id":"s-0004","client_platform":"desktop_app","timestamp":"2026-09-08T13:00:00.000Z","message":{"role":"user","content":"Name the guest operating system"}}
+{"type":"command_lifecycle","command_uuid":"c-0004","state":"queued","session_id":"s-0004","timestamp":"2026-09-08T13:00:00.100Z"}
+{"type":"command_lifecycle","command_uuid":"c-0004","state":"started","session_id":"s-0004","timestamp":"2026-09-08T13:00:01.000Z"}
+{"type":"command_lifecycle","command_uuid":"c-0004","stat

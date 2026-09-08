@@ -1,0 +1,2 @@
+{"type":"user","uuid":"u-0006","session_id":"s-0006","client_platform":"desktop_app","timestamp":"2026-09-08T15:00:00.000Z","message":{"role":"user","content":"Reply with exactly: PONG"}}
+{"type":"command_lifecycle","command_uuid":"c-0006","state":"queued","session_id":"s-0006","timestamp":"2026-09-08T15:00:00.100Z"}
