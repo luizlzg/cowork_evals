@@ -106,24 +106,24 @@ precedence are [`../docs/library.md`](../docs/library.md).
 `src/cowork_evals/docker/__init__.py`. A `Docker` object holding frozen configuration and
 doing no work at construction, so `Docker().digest` works on a machine with no daemon.
 
-- [ ] `Docker(*, platform=None, claude_code_version=None, login_dir=None)`. The first two
+- [x] `Docker(*, platform=None, claude_code_version=None, login_dir=None)`. The first two
       resolve through `env.py`, `login_dir` defaults to `~/.cache/cowork_evals/claude/`, and
       each falls back to the value in [`../docs/docker.md`](../docs/docker.md).
-- [ ] `digest`: the first 12 characters of the sha256 over the Dockerfile, both requirements
+- [x] `digest`: the first 12 characters of the sha256 over the Dockerfile, both requirements
       files, the resolved `CLAUDE_CODE_VERSION` and the resolved platform.
-- [ ] `tag`, `cowork-evals:<digest>`, and no second tag.
-- [ ] `DockerError`, carrying a message. No code, no taxonomy: the CLI knows preflight from
+- [x] `tag`, `cowork-evals:<digest>`, and no second tag.
+- [x] `DockerError`, carrying a message. No code, no taxonomy: the CLI knows preflight from
       run by which call it made. Nothing returns an error code or calls `sys.exit`.
-- [ ] `build_argv()`: `-f` at the Dockerfile, the context at the package data directory,
+- [x] `build_argv()`: `-f` at the Dockerfile, the context at the package data directory,
       `--platform`, the tag and the build argument.
-- [ ] `build()`: run it, stream the output, raise on a non-zero exit.
-- [ ] `check()`: the unmet conditions in order, each with the command that fixes it. The
+- [x] `build()`: run it, stream the output, raise on a non-zero exit.
+- [x] `check()`: the unmet conditions in order, each with the command that fixes it. The
       daemon reachable, the image present at the current digest, and one credential route
       available: `ANTHROPIC_API_KEY` set, or `<login_dir>/.claude/.credentials.json`
       present. An empty list means ready. It writes nothing and builds nothing.
-- [ ] `login_argv()`: the interactive container a developer logs in through once. The same
+- [x] `login_argv()`: the interactive container a developer logs in through once. The same
       two credential mounts as a run, and no plugin and no log mount.
-- [ ] `scripts/image.sh`: build the image for `EVAL_PLATFORM` through `build()`, `--check`
+- [x] `scripts/image.sh`: build the image for `EVAL_PLATFORM` through `build()`, `--check`
       verifies the current digest is present and writes nothing, `--recreate` builds with
       `--no-cache`. It is `scripts/cowork_venv.sh` for the image, and it is what a developer
       runs before the integration tier, because the CLI that would do it is `plan_cli.md`.
