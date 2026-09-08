@@ -247,15 +247,15 @@ either way, because the fallback is needed when a run stalls before its terminal
 `src/cowork_evals/config.py` and `src/cowork_evals/prompt_lint.py`. Both are pure: they read
 their own file or their argument, and nothing else.
 
-- [ ] `Config.load(path=None, **overrides)`: read `cowork_evals.yaml` with `yaml.safe_load`,
+- [x] `Config.load(path=None, **overrides)`: read `cowork_evals.yaml` with `yaml.safe_load`,
       apply the five rules in the configuration section above, and return a frozen `Config`.
-- [ ] Expand `~` and resolve a relative path against the working directory.
-- [ ] `sessions_root` derived from `profile`, as `docs/cowork_desktop.md` records it.
-- [ ] Split a prompt into sentences on `.`, `;`, `?`, `!` and newline.
-- [ ] Compile each linter rule's patterns once, case-insensitive, on word boundaries.
-- [ ] Exempt a sentence naming `outputs/`, `/sessions/`, `/tmp`, `TMPDIR` or `the session`.
-- [ ] Return the refusal reason naming the rule and the sentence, or `None`.
-- [ ] No flag, no argument and no configuration key that disables the linter.
+- [x] Expand `~` and resolve a relative path against the working directory.
+- [x] `sessions_root` derived from `profile`, as `docs/cowork_desktop.md` records it.
+- [x] Split a prompt into sentences on `.`, `;`, `?`, `!` and newline.
+- [x] Compile each linter rule's patterns once, case-insensitive, on word boundaries.
+- [x] Exempt a sentence naming `outputs/`, `/sessions/`, `/tmp`, `TMPDIR` or `the session`.
+- [x] Return the refusal reason naming the rule and the sentence, or `None`.
+- [x] No flag, no argument and no configuration key that disables the linter.
 
 Gate. `tests/test_config.py` passes: a missing file yields defaults, an unknown key inside
 `cowork:` raises, an unknown top level section is ignored, an override beats the file, and
