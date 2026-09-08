@@ -319,19 +319,19 @@ file.
 The four firing methods: `deep_link`, `submit`, `wait` and `run`. The nine steps and the code
 each failure produces are the sequence table in [`../docs/cowork_driver.md`](../docs/cowork_driver.md).
 
-- [ ] `deep_link(prompt)`: percent-encode the prompt, and omit `surface` when it is empty.
-- [ ] Record the baseline set of session directories before firing.
-- [ ] Fire the link with `open` through `runner`, sleep `settle_seconds`, then send Return
+- [x] `deep_link(prompt)`: percent-encode the prompt, and omit `surface` when it is empty.
+- [x] Record the baseline set of session directories before firing.
+- [x] Fire the link with `open` through `runner`, sleep `settle_seconds`, then send Return
       through `osascript`. A non-zero return raises code 3.
-- [ ] Poll for a session directory not in the baseline until `session_timeout`. None raises
+- [x] Poll for a session directory not in the baseline until `session_timeout`. None raises
       code 4. More than one raises code 5.
-- [ ] Keep polling for the `user` audit record after the directory appears, and compare its
+- [x] Keep polling for the `user` audit record after the directory appears, and compare its
       prompt with the submitted one. A mismatch raises code 6.
-- [ ] `wait`: block until the completion signal fires, on the terminal lifecycle state,
+- [x] `wait`: block until the completion signal fires, on the terminal lifecycle state,
       falling back to quiescence. Count quiescence only after the run has started.
       `run_timeout` raises code 7.
-- [ ] `run`: `submit`, then `wait`, then `collect`, passing the submitted prompt through.
-- [ ] Every raise from `submit`, `wait` and `run` carries `session_dir` when one is known, and
+- [x] `run`: `submit`, then `wait`, then `collect`, passing the submitted prompt through.
+- [x] Every raise from `submit`, `wait` and `run` carries `session_dir` when one is known, and
       is written to the diagnostic log before it leaves the library.
 
 Gate. `tests/test_cowork.py` passes against a `CoWork` built with a recording fake as

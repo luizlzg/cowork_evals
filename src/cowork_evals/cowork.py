@@ -12,10 +12,13 @@ import hashlib
 import json
 import logging
 import os
-from collections.abc import Iterator
+import subprocess
+import time
+from collections.abc import Callable, Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote, urlencode
 
 from .config import PROMPT_LIMIT, Config, CoWorkError, _override
 from .prompt_lint import lint
@@ -27,12 +30,31 @@ AUDIT = "audit.jsonl"
 TRANSCRIPTS = Path(".claude") / "projects" / "session"
 OUTPUTS = "outputs"
 
+# The terminal command_lifecycle state. docs/cowork_desktop.md, snapshot 2026-09-08.
+TERMINAL_STATE = "completed"
+STARTED_STATE = "started"
+
 # The rate ceiling protects one CoWork account, so its window is fixed and not configurable.
 CEILING_WINDOW = timedelta(hours=24)
 
 # The driver writes here. It never configures the root logger.
 LOGGER = logging.getLogger("cowork_evals")
 LOG_STEM = "cowork_evals"
+
+# The deep link route and the keystroke. docs/cowork_desktop.md.
+DEEP_LINK = "claude://claude.ai/new"
+OSASCRIPT = (
+    "osascript",
+    "-e",
+    'tell application "Claude" to activate',
+    "-e",
+    "delay 0.8",
+    "-e",
+    'tell application "System Events" to key code 36',
+)
+
+# How often a poll looks at the filesystem. Not configurable: the timeouts are.
+POLL_SECONDS = 1.0
 
 
 class CoWork:
@@ -102,6 +124,158 @@ class CoWork:
             "outputs": _outputs(directory),
             "log_file": None if self._log_file is None else str(self._log_file),
         }
+
+    # Firing. The nine steps and the code each failure produces are in
+    # docs/cowork_driver.md.
+
+    def deep_link(self, prompt: str) -> str:
+        """The deep link this prompt is submitted through. Pure, and fires nothing."""
+        query = {"q": prompt}
+        if self._config.surface:
+            query["surface"] = self._config.surface
+        return f"{DEEP_LINK}?{urlencode(query, quote_via=quote, safe='')}"
+
+    def run(self, prompt: str) -> dict[str, Any]:
+        """Submit, wait for the run to finish, and collect the result document."""
+        with self._diagnostics():
+            session_dir = self._submit(prompt)
+            self._wait(session_dir)
+            try:
+                return self.collect(session_dir, prompt=prompt)
+            except CoWorkError as error:
+                LOGGER.error("collection failed with code %d: %s", error.code, error)
+                raise
+
+    def submit(self, prompt: str) -> Path:
+        """Steps 1 to 7: refuse, fire, discover and attribute. Returns the session."""
+        with self._diagnostics():
+            return self._submit(prompt)
+
+    def wait(self, session_dir: Path | str) -> Path:
+        """Step 8: block until the completion signal fires."""
+        return self._wait(Path(session_dir))
+
+    def _submit(self, prompt: str) -> Path:
+        self._check(prompt)
+        try:
+            session_dir = self._fire_and_attribute(prompt)
+        except CoWorkError as error:
+            LOGGER.error("submission failed with code %d: %s", error.code, error)
+            self._record(prompt, error.session_dir, f"failed:{error.code}")
+            raise
+        self._record(prompt, session_dir, "submitted")
+        return session_dir
+
+    def _fire_and_attribute(self, prompt: str) -> Path:
+        root = self._config.sessions_root
+        baseline = set(self.sessions(root))
+        link = self.deep_link(prompt)
+
+        LOGGER.info("firing the deep link: %s", link)
+        self._fire(["open", link])
+        time.sleep(self._config.settle_seconds)
+        LOGGER.info("sending the synthetic Return")
+        self._fire(list(OSASCRIPT))
+
+        session_dir = self._discover(root, baseline)
+        LOGGER.info("discovered the session: %s", session_dir)
+        self._attribute(session_dir, prompt)
+        LOGGER.info("attributed the session to this submission")
+        return session_dir
+
+    def _fire(self, argv: list[str]) -> None:
+        """Run one command through the runner seam. A non-zero return is code 3."""
+        runner: Callable[[list[str]], int] = self._runner or _subprocess_runner
+        code = runner(argv)
+        if code != 0:
+            raise CoWorkError(3, f"{argv[0]} returned {code}")
+
+    def _discover(self, root: Path, baseline: set[Path]) -> Path:
+        """Poll for a session directory that is not in the baseline."""
+        deadline = time.monotonic() + self._config.session_timeout
+        while True:
+            new = sorted(set(self.sessions(root)) - baseline)
+            if len(new) > 1:
+                raise CoWorkError(
+                    5,
+                    f"{len(new)} session directories appeared, so this run cannot be "
+                    f"attributed: {', '.join(str(path) for path in new)}",
+                )
+            if new:
+                return new[0]
+            if time.monotonic() >= deadline:
+                raise CoWorkError(
+                    4,
+                    f"no session directory appeared under {root} within "
+                    f"{self._config.session_timeout} seconds",
+                )
+            time.sleep(POLL_SECONDS)
+
+    def _attribute(self, session_dir: Path, prompt: str) -> None:
+        """Compare the recorded prompt with the submitted one.
+
+        A session directory can exist before its user audit record is written, so this
+        keeps polling until the record appears or the discovery timeout expires.
+        """
+        deadline = time.monotonic() + self._config.session_timeout
+        while True:
+            recorded = _audit_prompt(_read_jsonl(session_dir / AUDIT))
+            if recorded is not None:
+                if recorded != prompt:
+                    raise CoWorkError(
+                        6,
+                        f"{session_dir}: the audit prompt does not match the submitted one",
+                        session_dir,
+                    )
+                return
+            if time.monotonic() >= deadline:
+                raise CoWorkError(
+                    6,
+                    f"{session_dir}: no user audit record appeared within "
+                    f"{self._config.session_timeout} seconds, so the session cannot be "
+                    "attributed",
+                    session_dir,
+                )
+            time.sleep(POLL_SECONDS)
+
+    def _wait(self, session_dir: Path) -> Path:
+        """Block until the terminal lifecycle state, or until quiescence.
+
+        Quiescence is a heuristic. It counts only after the run has demonstrably started,
+        because the idle window would otherwise accrue during VM boot and an empty session
+        would be reported as a finished run.
+        """
+        deadline = time.monotonic() + self._config.run_timeout
+        signature: object = None
+        idle_since = time.monotonic()
+        while True:
+            audit = _read_jsonl(session_dir / AUDIT)
+            if TERMINAL_STATE in _lifecycle(audit):
+                LOGGER.info("the completion signal fired: lifecycle state %s", TERMINAL_STATE)
+                return session_dir
+
+            current = _signature(session_dir)
+            if current != signature:
+                signature = current
+                idle_since = time.monotonic()
+
+            if _started(audit, session_dir) and (
+                time.monotonic() - idle_since >= self._config.idle_seconds
+            ):
+                LOGGER.warning(
+                    "the completion signal fired: quiescence, which is a heuristic and can "
+                    "fire during a long pause mid-run"
+                )
+                return session_dir
+
+            if time.monotonic() >= deadline:
+                raise CoWorkError(
+                    7,
+                    f"{session_dir}: the run did not complete within "
+                    f"{self._config.run_timeout} seconds",
+                    session_dir,
+                )
+            time.sleep(POLL_SECONDS)
 
     def history(self, run_log: Path | None = None) -> list[dict[str, Any]]:
         """The run log as one dictionary per line, oldest first."""
@@ -365,6 +539,34 @@ def _digest(prompt: str | None) -> str | None:
     if prompt is None:
         return None
     return hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+
+
+def _started(audit: list[dict[str, Any]], session_dir: Path) -> bool:
+    """Whether the run has demonstrably started: a started state, or a first assistant turn."""
+    if STARTED_STATE in _lifecycle(audit):
+        return True
+    transcript, _, _ = _transcripts(session_dir)
+    if transcript is None:
+        return False
+    return any(turn["role"] == "assistant" for turn in _turns(_read_jsonl(transcript)))
+
+
+def _signature(session_dir: Path) -> tuple[tuple[str, int, float], ...]:
+    """What quiescence compares: every file under the session, with its size and mtime."""
+    entries = []
+    for path in session_dir.rglob("*"):
+        try:
+            stat = path.stat()
+        except OSError:
+            continue
+        if path.is_file():
+            entries.append((str(path), stat.st_size, stat.st_mtime))
+    return tuple(sorted(entries))
+
+
+def _subprocess_runner(argv: list[str]) -> int:
+    """The default runner. stderr is inherited, so osascript error 1002 reaches the terminal."""
+    return subprocess.run(argv, check=False).returncode
 
 
 def _now() -> str:
