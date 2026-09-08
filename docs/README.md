@@ -25,20 +25,18 @@ part of it.
 | [`staged_runtime.md`](staged_runtime.md)         | The 3.10 runtime staged into a plugin so a sandboxed case reaches it |
 | [`plugin_eval.md`](plugin_eval.md)               | `claude plugin eval`: availability, flags, harness limits, cost |
 | [`cowork_desktop.md`](cowork_desktop.md)         | Desktop application internals: deep links, session filesystem   |
-| [`data/requirements.txt`](data/requirements.txt) | `pip freeze` from a CoWork VM, 136 pins, verbatim               |
-| [`data/requirements_installable.txt`](data/requirements_installable.txt) | The same minus the 9 pins that cannot install off the VM |
 
-Three pages are measurements: `runtime.md`, `cowork_desktop.md` and `data/`. Each carries
-its capture date, is a snapshot rather than a contract, and is re-probed when the thing it
-describes changes. `staged_runtime.md` is design carrying a dated snapshot, and says so.
+Two pages are measurements: `runtime.md` and `cowork_desktop.md`. Each carries its capture
+date, is a snapshot rather than a contract, and is re-probed when the thing it describes
+changes. So are the two requirements files, which are not here: they are package data at
+[`../src/cowork_evals/data/`](../src/cowork_evals/data/), and
+[`environments.md`](environments.md) owns the split between them. `staged_runtime.md` is
+design carrying a dated snapshot, and says so.
 
 Three pages are neither. `eval_format.md` is the authoring contract a case is written to,
 `plugin_eval.md` describes a Claude Code command this repository does not own and carries
 the CLI version it was written against, and `environments.md` marks which of its routes are
 built and which are design. Every other page is design and says so at the top.
-
-`data/` is shipped data rather than reference material. It moves into the package when the
-package is built, and [`library.md`](library.md) says so.
 
 A page here never links to a plan. Anything durable a plan establishes is written into one
 of these pages while the work happens, so no page here depends on a plan file.
@@ -48,13 +46,13 @@ of these pages while the work happens, so no page here depends on a plan file.
 Adapted from an internal marketplace repository, which is not public. Absolute paths are
 redacted, because this repository is public.
 
-| Source document             | Adapted into                             |
-| --------------------------- | ---------------------------------------- |
-| `dev/environment.md`        | [`environments.md`](environments.md)     |
-| `dev/runtime.md`            | [`runtime.md`](runtime.md)               |
-| `dev/data/requirements*`    | [`data/`](data/)                         |
-| `plan_evals_claude_code.md` | [`plugin_eval.md`](plugin_eval.md)       |
-| `plan_run_cowork.md`        | [`cowork_desktop.md`](cowork_desktop.md) |
+| Source document             | Adapted into                                             |
+| --------------------------- | -------------------------------------------------------- |
+| `dev/environment.md`        | [`environments.md`](environments.md)                     |
+| `dev/runtime.md`            | [`runtime.md`](runtime.md)                               |
+| `dev/data/requirements*`    | [`../src/cowork_evals/data/`](../src/cowork_evals/data/) |
+| `plan_evals_claude_code.md` | [`plugin_eval.md`](plugin_eval.md)                       |
+| `plan_run_cowork.md`        | [`cowork_desktop.md`](cowork_desktop.md)                 |
 
 Writing rules are in [`../CLAUDE.md`](../CLAUDE.md). The public repository rule is in
 [`../README.md`](../README.md), and it applies to every page here.

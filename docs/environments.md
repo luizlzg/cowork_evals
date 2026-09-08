@@ -99,7 +99,8 @@ This page owns the split. Every other page links here for it.
 | `requirements.txt`             | The VM `pip freeze`, verbatim            | 136  | Import checking, the image       |
 | `requirements_installable.txt` | The same minus the nine below            | 127  | `setup --venv`, `cowork_venv.sh` |
 
-Both are at `docs/data/` today and ship as package data. See [library.md](library.md).
+Both are at [`../src/cowork_evals/data/`](../src/cowork_evals/data/) and ship as package
+data. See [library.md](library.md).
 `tests/unit/test_environments.py` asserts that the second is the first minus exactly those nine,
 at identical versions.
 

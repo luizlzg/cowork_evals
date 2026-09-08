@@ -52,15 +52,15 @@ builds, and the one fixture firing at the end of it, are in [`README.md`](README
 
 A build reads them on a machine with no checkout, so they cannot stay under `docs/`.
 
-- [ ] `git mv docs/data src/cowork_evals/data`.
-- [ ] Point `scripts/cowork_venv.sh` at the new path, header comment included.
-- [ ] Point `tests/unit/test_environments.py` at the new path.
-- [ ] Add a test that both files resolve through `importlib.resources.files("cowork_evals")`,
+- [x] `git mv docs/data src/cowork_evals/data`.
+- [x] Point `scripts/cowork_venv.sh` at the new path, header comment included.
+- [x] Point `tests/unit/test_environments.py` at the new path.
+- [x] Add a test that both files resolve through `importlib.resources.files("cowork_evals")`,
       which is how a build reaches them from an installed wheel.
-- [ ] Correct `docs/environments.md`, `docs/runtime.md`, `docs/docker.md`, and
+- [x] Correct `docs/environments.md`, `docs/runtime.md`, `docs/docker.md`, and
       `docs/README.md`, which links both files, names `data/` among the three measured
       pages, and points its provenance table at `docs/data/`.
-- [ ] Confirm the wheel carries them: `uv build`, then list the wheel.
+- [x] Confirm the wheel carries them: `uv build`, then list the wheel.
 
 ## Phase 2: `.env` and the settings over it
 

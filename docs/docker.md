@@ -53,16 +53,16 @@ Both upstream sources are present for aarch64 and carry the recorded versions, c
 The two requirements files, and the split between them, are
 [environments.md](environments.md). In the image they come from two places, not one.
 
-| Pins | Source                                                 |
-| ---- | ------------------------------------------------------ |
-| 127  | `pip install -r docs/data/requirements_installable.txt` |
-| 9    | apt, as Ubuntu system packages                         |
+| Pins | Source                                        |
+| ---- | --------------------------------------------- |
+| 127  | `pip install -r requirements_installable.txt` |
+| 9    | apt, as Ubuntu system packages                |
 
 The nine live in `/usr/lib/python3/dist-packages` and are not on PyPI at those versions.
 `command-not-found==0.3` and `unattended-upgrades==0.1` are egg versions carried inside apt
 packages, unrelated to the deb version, which is the evidence that the recorded freeze came
-from a system interpreter. `pip install -r docs/data/requirements.txt` fails on them and
-must never be run.
+from a system interpreter. `pip install -r requirements.txt` fails on them and must never
+be run.
 
 | Pin                          | apt package           | jammy deb version   |
 | ---------------------------- | --------------------- | ------------------- |
@@ -247,7 +247,7 @@ There is no `latest` tag. Nothing reads one: `run` and `check` resolve the diges
 
 `scripts/parity.sh` is the development task: it runs one probe inside the container, then
 compares the JSON the probe writes against [runtime.md](runtime.md) and
-`data/requirements.txt`. It checks the OS release, the architecture, every version in the
+`requirements.txt`. It checks the OS release, the architecture, every version in the
 runtime tables, `import uno`, the font family count, and the full `pip freeze`.
 
 It is a shell script like every other task under [../scripts/](../scripts/), and the

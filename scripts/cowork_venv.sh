@@ -2,9 +2,9 @@
 #
 # Build and verify .venv_cowork, the CoWork image mirror.
 #
-# Python 3.10 plus docs/data/requirements_installable.txt: the interpreter and the
-# wheels a CoWork session provides, minus the nine pins that cannot install off the
-# VM. Code that must behave like a session runs here, never under the repo .venv.
+# Python 3.10 plus src/cowork_evals/data/requirements_installable.txt: the interpreter and
+# the wheels a CoWork session provides, minus the nine pins that cannot install off
+# the VM. Code that must behave like a session runs here, never under the repo .venv.
 #
 # It reproduces the interpreter and the wheels only. Ubuntu 22.04, aarch64,
 # LibreOffice, ImageMagick, pandoc and tesseract are not reproduced, so rendering
@@ -20,7 +20,7 @@ set -euo pipefail
 need uv
 
 PY="$COWORK/bin/python"
-REQUIREMENTS="$ROOT/docs/data/requirements_installable.txt"
+REQUIREMENTS="$ROOT/src/cowork_evals/data/requirements_installable.txt"
 PYTHON_VERSION="3.10"
 
 # Not on the CoWork image. Installed so pytest can collect and run tests under the
