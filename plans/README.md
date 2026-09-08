@@ -15,9 +15,10 @@ while the work happens.
 
 ## Plans
 
-Five plans, in build order. One is skipped. A plan is written once the one before it is
-merged or skipped, so a later plan is informed by what the earlier one measured. `status` is
-the plan's own state, not the system's: what is built and usable is
+Five plans, in build order. One is skipped. The order is the order they are built in, not a
+gate: a plan is written whenever the developer decides to write it, and a plan whose inputs
+already exist is executable whether or not the plan before it is finished. `status` is the
+plan's own state, not the system's: what is built and usable is
 [`../docs/running_evals.md`](../docs/running_evals.md).
 
 | # | Plan                     | Builds                                                                            | Status      | Branch                |
@@ -84,8 +85,8 @@ refused on this host, and every case that shells out needs that grant. The conta
 bubblewrap and runs with `seccomp=unconfined`, so it may be the only backend on this machine
 that can grant `Bash`. Measuring that early is worth more than the cheaper build.
 
-Plan 4 does not wait on plan 3. It needs `plugins/smoke/` and `src/cowork_evals/env.py`,
-both of which plan 2 builds, and it needs nothing the venv backend would have built.
+Plan 4 waits on neither. It reads `plugins/smoke/`, `src/cowork_evals/env.py` and the
+driver, all of which exist, and it needs nothing the venv backend would have built.
 
 ### The contract that keeps plan 5 last
 

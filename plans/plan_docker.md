@@ -244,7 +244,7 @@ No model is in the loop, because none of these is a question about a model.
       deltas, the font family count, `import uno`, the uid mapping option needed, the Bash
       sandbox option needed, and the installed Claude Code version. No machine name, no user
       name, no home directory path: [`../README.md`](../README.md).
-- [ ] Record whether a first launch in a fresh configuration directory blocks a
+- [x] Record whether a first launch in a fresh configuration directory blocks a
       non-interactive run. If it does, the login step seeds the state file beside the
       configuration directory and `docs/docker.md` says so. If it does not, the run mounts
       the configuration directory alone.

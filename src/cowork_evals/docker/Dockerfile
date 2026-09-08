@@ -97,6 +97,9 @@ RUN --mount=type=secret,id=extra_ca \
   set -eux; \
   if [ -s /run/secrets/extra_ca ]; then \
     cp /run/secrets/extra_ca "${EXTRA_CA_FILE}"; \
+    # cp preserves the secret mount's root-only mode, and the container runs as a
+    # different uid. Node reads this file by path and warns and continues without it.
+    chmod 0644 "${EXTRA_CA_FILE}"; \
     update-ca-certificates; \
   fi
 

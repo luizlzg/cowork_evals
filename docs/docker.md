@@ -212,6 +212,12 @@ rewrites its state file on every start. They are the only host paths a run mount
 the plugin and the log directory, and the container keeps nothing else. A run that uses the
 key mounts neither.
 
+A first launch in a fresh configuration directory does not block a non-interactive run.
+Measured 2026-09-08 on the image below: `claude -p` in a container with an empty `$HOME`
+reaches the credential check and exits 1 with `Not logged in`, rather than stopping on a
+first-run prompt. So the run mounts the configuration directory alone, and the login step
+seeds no state file beside it.
+
 - Never bake a credential into an image layer.
 - Never mount the host `~/.claude` or `~/.claude.json`. That is the developer's own live
   session, inside a container that runs author-supplied prompts. The directory above is a
