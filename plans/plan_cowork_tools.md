@@ -4,8 +4,9 @@ Branch `feat/cowork-tools`, cut from `main`. Eight phases, one commit each.
 
 **Implemented. Every box is ticked and the branch is merged.** The file stays, per
 [`README.md`](README.md). Three things below were proposed here and reversed during the
-work; the section that follows records them, and the phases are left as they were written.
-Where a phase and that section disagree, that section is what was built.
+work; the section that follows records them, and the rest of the file is left as it was
+written, scope, decisions, constraints and phases alike. Where anything below and that
+section disagree, that section is what was built.
 
 ## What changed during implementation
 

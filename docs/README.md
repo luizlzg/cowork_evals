@@ -30,7 +30,12 @@ part of it.
 
 Three pages are measurements: `runtime.md`, `cowork_desktop.md` and `data/`. Each carries
 its capture date, is a snapshot rather than a contract, and is re-probed when the thing it
-describes changes. The rest are design, and say so at the top.
+describes changes. `staged_runtime.md` is design carrying a dated snapshot, and says so.
+
+Three pages are neither. `eval_format.md` is the authoring contract a case is written to,
+`plugin_eval.md` describes a Claude Code command this repository does not own and carries
+the CLI version it was written against, and `environments.md` marks which of its routes are
+built and which are design. Every other page is design and says so at the top.
 
 `data/` is shipped data rather than reference material. It moves into the package when the
 package is built, and [`library.md`](library.md) says so.

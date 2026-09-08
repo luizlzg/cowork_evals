@@ -28,7 +28,7 @@ here.
 | `scripts/parity.sh` and `tests/unit/test_parity.py` | no | [docker.md](docker.md)                     |
 | The CoWork driver                         | yes   | [cowork_driver.md](cowork_driver.md)        |
 | The CoWork backend over it                | no    | [cowork_driver.md](cowork_driver.md)        |
-| `plugins/smoke/`, the mirror fixture      | no    | [../plugins/README.md](../plugins/README.md) |
+| `plugins/smoke/`, the staged runtime fixture | no | [../plugins/README.md](../plugins/README.md) |
 
 ## The cases it runs
 

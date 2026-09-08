@@ -287,7 +287,7 @@ prints one result per grader. It submits nothing, so it re-runs over a stored do
 
 | Grader        | Read from                                    |
 | ------------- | -------------------------------------------- |
-| `regex`       | `final_text`, or `turns` for target `trace`  |
+| `regex`       | `final_text`, or `turns` and `tool_calls` for target `trace` |
 | `tool_used`   | `tool_calls`, matched on name and input      |
 | `tool_order`  | `tool_names`, in call order                  |
 | `file_exists` | `outputs`, as a glob                         |
