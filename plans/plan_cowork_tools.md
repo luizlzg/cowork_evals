@@ -33,7 +33,7 @@ The behaviour it implements is [`../docs/cowork_driver.md`](../docs/cowork_drive
 submission sequence, the completion signal, the reading rules, the result document, the rate
 ceiling, the prompt linter and the failure taxonomy. The application internals it couples to
 are [`../docs/cowork_desktop.md`](../docs/cowork_desktop.md), which phase 2 re-probes. This
-plan adds the API and the configuration file, which those pages do not define.
+plan adds the API and the configuration file, which neither of those defines.
 
 | Builds                                              | Is                                              |
 | ---------------------------------------------------- | ------------------------------------------------ |
@@ -171,9 +171,9 @@ caller attached.
 
 [`../docs/cowork_driver.md`](../docs/cowork_driver.md) calls itself the contract the driver
 is built to. It is, for behaviour. On these six points it is stale, this plan wins, and
-phase 8 rewrites the page. Read this table before reading that page.
+phase 8 rewrites that file. Read this table before reading it.
 
-| That page says                                            | Build this instead                              |
+| That file says                                            | Build this instead                              |
 | ----------------------------------------------------------- | ------------------------------------------------ |
 | "standard library only, one module"                       | Three modules, and PyYAML                       |
 | A `COWORK_*` environment variable per setting             | `cowork_evals.yaml`, and no environment variable |
@@ -253,7 +253,7 @@ submitted.
 - [x] Confirm that discovery by structure selects sessions and nothing else: a directory
       three levels below the sessions root holding `audit.jsonl`.
 - [x] Write all of it into `docs/cowork_desktop.md` with the capture date, and extend that
-      page's coupling list with every key phase 4 reads.
+      file's coupling list with every key phase 4 reads.
 
 `docs/cowork_desktop.md` carries no row reading `not observed`, and every field the
 phase 4 reader uses appears in its coupling list. Redact identifiers, per the public
@@ -394,7 +394,7 @@ expected.
 Nothing durable may survive only in this file.
 
 - [x] `docs/cowork_driver.md`: replace the `COWORK_*` configuration table with
-      `cowork_evals.yaml`, add the API, state that the exit codes on that page are the
+      `cowork_evals.yaml`, add the API, state that the exit codes in that file are the
       taxonomy a `CoWorkError` carries rather than something the library returns, remove
       `exit_code` from the result document table and add `log_file`, and record the `CoWork`
       object, the three modules, the two log files and the completion signal as phase 2
@@ -406,9 +406,9 @@ Nothing durable may survive only in this file.
       two, and mark the driver built.
 - [x] `README.md`: add `src/` and `cowork_evals.yaml` to the layout table.
 - [x] `tests/README.md`: add a row per new test file, and the hand-written fixture rule.
-- [x] Re-read every touched page for a statement this plan made false.
+- [x] Re-read every touched file for a statement this plan made false.
 - [x] `plans/README.md`: correct the build order paragraph, which assigns the package
       skeleton to the CLI plan. This plan brings it.
 
-`scripts/test.sh` and `scripts/lint.sh` pass. No page under `docs/` links to this
+`scripts/test.sh` and `scripts/lint.sh` pass. Nothing under `docs/` links to this
 plan, and `plans/README.md` holds a row for it marked `implemented`.

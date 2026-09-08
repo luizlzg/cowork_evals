@@ -167,7 +167,7 @@ The `cowork_evals` process runs the `docker` CLI through `subprocess`. It does n
 
 | Fact                                                                                   | Consequence                                        |
 | -------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| A cross-architecture `--platform` build goes through buildx. buildx is the CLI's builder; `docker-py` drives the daemon's classic builder | The SDK is weakest on the one build this page exists for |
+| A cross-architecture `--platform` build goes through buildx. buildx is the CLI's builder; `docker-py` drives the daemon's classic builder | The SDK is weakest on the one build this file exists for |
 | `docker context` resolves which daemon to talk to and the CLI reads it. `docker-py` takes `DOCKER_HOST`, and Rancher Desktop on its containerd backend exposes no Docker API socket at all | The CLI reaches both daemons [cli.md](cli.md) names |
 
 Using the SDK for `run` and the CLI for `build` would be two mechanisms for one job.
@@ -308,9 +308,9 @@ family count, and the full `pip freeze`.
 It is a shell script like every other task under [../scripts/](../scripts/), and the
 comparison runs on the host. Nothing from this package is installed into the image to do it.
 
-No page under `docs/` is parsed. The pins come from the shipped `requirements.txt`, and the
+No file under `docs/` is parsed. The pins come from the shipped `requirements.txt`, and the
 non-Python versions are a table in `parity.py` that cites [runtime.md](runtime.md). A change
-to that page is carried into the table by hand, in the same commit.
+to that file is carried into the table by hand, in the same commit.
 
 | Delta                                          | Result                 | Why                                                            |
 | ---------------------------------------------- | ---------------------- | -------------------------------------------------------------- |

@@ -59,7 +59,7 @@ A build reads them on a machine with no checkout, so they cannot stay under `doc
       which is how a build reaches them from an installed wheel.
 - [x] Correct `docs/environments.md`, `docs/runtime.md`, `docs/docker.md`, and
       `docs/README.md`, which links both files, names `data/` among the three measured
-      pages, and points its provenance table at `docs/data/`.
+      files, and points its provenance table at `docs/data/`.
 - [x] Confirm the wheel carries them: `uv build`, then list the wheel.
 
 ## Phase 2: `.env` and the settings over it
@@ -176,7 +176,7 @@ Still `src/cowork_evals/docker/__init__.py`. It wraps phase 5's list in a contai
 Only two things are compared mechanically, because the delta table in
 [`../docs/docker.md`](../docs/docker.md) fails on only two: the pins, against
 `data/requirements.txt`, and the five tools recorded as absent. Everything else the probe
-reports is printed for a reader. No page under `docs/` is parsed.
+reports is printed for a reader. No file under `docs/` is parsed.
 
 - [x] `docker/probe.py`: one JSON document on stdout holding the OS release, the
       architecture, the version of each tool in [`../docs/runtime.md`](../docs/runtime.md),
@@ -225,7 +225,7 @@ No model is in the loop, because none of these is a question about a model.
       with `scripts/image.sh` named when it is not.
 - [x] Assert `python3 -V` in the container reports exactly the version
       [`../docs/runtime.md`](../docs/runtime.md) records. A patch bump in jammy fails here
-      first, and the fixture's grader is updated with the page in the same commit.
+      first, and the fixture's grader is updated with `docs/runtime.md` in the same commit.
 - [x] Run the probe and assert the comparison passes.
 - [x] Assert `bwrap` comes up under `--security-opt seccomp=unconfined`, by running it
       directly. This is the Bash sandbox measurement, and it needs no harness and no case.
@@ -296,6 +296,6 @@ Nothing durable may survive only in this file.
 - [x] `README.md`: correct the Contributing block, whose integration line describes that
       tier as CoWork only.
 - [x] `plans/README.md`: correct the closing sentence saying a plan will not survive, which
-      the status table on the same page contradicts.
-- [x] Re-read every touched page for a statement this plan made false.
+      the status table in the same file contradicts.
+- [x] Re-read every touched file for a statement this plan made false.
 - [ ] `plans/README.md`: mark this plan `implemented`.

@@ -92,7 +92,7 @@ interpreter and this mirror's `site-packages` into the plugin under test instead
 
 ## Two requirements files
 
-This page owns the split. Every other page links here for it.
+This file owns the split. Everything else links here for it.
 
 | File                           | Is                                       | Pins | Used by                          |
 | ------------------------------ | ---------------------------------------- | ---- | -------------------------------- |

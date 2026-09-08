@@ -1,7 +1,7 @@
 # Running evals
 
 The eval system behind the command: the mirror on `PATH`, the pinned harness flags, the
-gate, the logs, the cadence and the cost. This page is the design. It is true whether or not
+gate, the logs, the cadence and the cost. This file is the design. It is true whether or not
 a given piece is built yet.
 
 The command surface is [cli.md](cli.md) and the packaging boundary is
@@ -12,7 +12,7 @@ honours which part of it is [approaches.md](approaches.md). The harness is
 
 ## Status
 
-This table is the build status of the whole system. No other page carries one; they link
+This table is the build status of the whole system. Nothing else carries one; they link
 here.
 
 | Piece                                     | Built | Designed in                                |
@@ -20,10 +20,10 @@ here.
 | The 3.10 mirror, as a development script  | yes   | [environments.md](environments.md)          |
 | The `cowork_evals` package and CLI        | no    | [library.md](library.md), [cli.md](cli.md)  |
 | `.env` and the settings over it           | yes   | [library.md](library.md)                    |
-| The pinned harness argument list          | yes   | this page                                   |
-| The venv backend                          | no    | this page                                   |
+| The pinned harness argument list          | yes   | this file                                   |
+| The venv backend                          | no    | this file                                   |
 | The staged runtime                        | no    | [staged_runtime.md](staged_runtime.md)      |
-| The gate                                  | no    | this page                                   |
+| The gate                                  | no    | this file                                   |
 | The case validator                        | no    | [eval_format.md](eval_format.md)            |
 | The 3.10 and import check over code under test | no | nowhere yet                                 |
 | The container backend and its Dockerfile  | yes   | [docker.md](docker.md)                      |
@@ -304,7 +304,7 @@ A consumer automates it when all four of these hold, and not before:
 
 ## Cost
 
-[plugin_eval.md](plugin_eval.md) counts the model calls a suite makes. This page sets the
+[plugin_eval.md](plugin_eval.md) counts the model calls a suite makes. This file sets the
 ceilings on what they may cost.
 
 | Ceiling                   | Default | Binds                | Reached through            |

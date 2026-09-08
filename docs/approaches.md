@@ -19,8 +19,8 @@ approaches in prose and links here.
 
 An eval is written once, in the `claude plugin eval` case format: a `prompt.md` carrying
 frontmatter and the prompt body, a `graders/` directory, and an optional `case.yaml`. It is
-the only eval format in this repository, and [eval_format.md](eval_format.md) is the page
-that owns it.
+the only eval format in this repository, and [eval_format.md](eval_format.md) is what
+owns it.
 
 The same case tree runs on all three approaches. Only the backend changes.
 

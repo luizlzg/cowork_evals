@@ -4,7 +4,7 @@ This repository is not where evals are written. It is a library, distributed as 
 package. A separate repository owns the plugins and their eval cases, installs this one, and
 points it at its own tree.
 
-This page is the boundary. The command surface is [cli.md](cli.md).
+This file is the boundary. The command surface is [cli.md](cli.md).
 
 Design, except the package tree, the CoWork driver, the settings layers and the container
 backend, which are built. What is built is the status table in

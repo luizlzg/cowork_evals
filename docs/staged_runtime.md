@@ -4,7 +4,7 @@ A relocatable Python 3.10 interpreter carrying the CoWork wheel set, copied into
 directory under test before a run. The venv backend puts its `bin` first on `PATH`, so a
 bare `python3` in a granted `Bash` call resolves to 3.10 with the CoWork wheels.
 
-This page is design, and the measurements in it are a snapshot. The mirror it is built from
+This file is design, and the measurements in it are a snapshot. The mirror it is built from
 is [environments.md](environments.md). The backend that stages it is
 [running_evals.md](running_evals.md). The sandbox rules it satisfies are the "How the
 sandbox works" section of
@@ -116,6 +116,6 @@ The interpreter and the wheels, nothing else. It inherits every gap the mirror h
 under "What the mirror does not reproduce" in [environments.md](environments.md).
 
 One gap is its own. The mirror pins `3.10`, so uv resolves the newest 3.10 patch release,
-and the image carries 3.10.12. The staged interpreter was 3.10.16 when this page was
+and the image carries 3.10.12. The staged interpreter was 3.10.16 when this was
 written. See [docker.md](docker.md) for the backend that carries the image's own
 interpreter.

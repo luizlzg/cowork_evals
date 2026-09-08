@@ -120,6 +120,6 @@ plan.
 Work one box, verify it, tick it in the plan file, commit. Do not batch ticks. The plan
 file is the state, so a cleared context can resume from it.
 
-A measurement is written into the `docs/` page that owns it, not into the plan. The plan
+A measurement is written into the file under `docs/` that owns it, not into the plan. The plan
 file stays, but nothing durable may live only in it. A row in `docs/` still reading
 `not yet measured` means the box that fills it is not ticked.
