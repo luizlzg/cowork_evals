@@ -18,7 +18,10 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q --strict-markers"
+# The live marker fires a real CoWork session, so it is deselected by default.
+# Run it with: scripts/test.sh -m live
+addopts = "-q --strict-markers -m 'not live'"
+markers = ["live: submits a real CoWork run. Costs a VM boot and leaves a session"]
 timeout = 300
 
 [tool.ruff]

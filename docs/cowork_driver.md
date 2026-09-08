@@ -87,9 +87,10 @@ Rules that hold for all of them:
   different `CoWork`.
 - `sessions` and `history` default to the configured paths and take an argument to read
   somewhere else, which is what the tests use.
-- `runner` is the test seam: a callable taking one argument list, running `open` and
-  `osascript`. It defaults to a real subprocess runner, and a test passes a recording fake
-  to the constructor. Mocking and patching are not used anywhere.
+- There is no test seam. `open` and `osascript` are run directly, no mock, fake, stub or
+  patch is used anywhere in this repository, and no parameter exists to inject one. What a
+  test cannot reach without the application, the live test reaches by firing one. See
+  [../tests/README.md](../tests/README.md).
 - `collect` takes `prompt` when the caller knows what was submitted, which fills `prompt`
   and `prompt_sha256`. Without it those two come from the audit record.
 - Every public callable is fully type hinted, and the result document is JSON-serializable:

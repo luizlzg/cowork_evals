@@ -14,7 +14,7 @@ import logging
 import os
 import subprocess
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -60,16 +60,8 @@ POLL_SECONDS = 1.0
 class CoWork:
     """The driver. One instance holds one resolved configuration."""
 
-    def __init__(
-        self,
-        config: Config | None = None,
-        *,
-        runner: Any = None,
-        **overrides: Any,
-    ) -> None:
-        config = Config.load(**overrides) if config is None else _override(config, overrides)
-        self._config = config
-        self._runner = runner
+    def __init__(self, config: Config | None = None, **overrides: Any) -> None:
+        self._config = Config.load(**overrides) if config is None else _override(config, overrides)
         self._log_file: Path | None = None
 
     @classmethod
@@ -184,9 +176,11 @@ class CoWork:
         return session_dir
 
     def _fire(self, argv: list[str]) -> None:
-        """Run one command through the runner seam. A non-zero return is code 3."""
-        runner: Callable[[list[str]], int] = self._runner or _subprocess_runner
-        code = runner(argv)
+        """Run one command. A non-zero return is code 3.
+
+        stderr is inherited, so osascript error 1002 reaches the terminal.
+        """
+        code = subprocess.run(argv, check=False).returncode
         if code != 0:
             raise CoWorkError(3, f"{argv[0]} returned {code}")
 
@@ -562,11 +556,6 @@ def _signature(session_dir: Path) -> tuple[tuple[str, int, float], ...]:
         if path.is_file():
             entries.append((str(path), stat.st_size, stat.st_mtime))
     return tuple(sorted(entries))
-
-
-def _subprocess_runner(argv: list[str]) -> int:
-    """The default runner. stderr is inherited, so osascript error 1002 reaches the terminal."""
-    return subprocess.run(argv, check=False).returncode
 
 
 def _now() -> str:

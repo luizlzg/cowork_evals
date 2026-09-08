@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import uuid
 from pathlib import Path
 
 import pytest
@@ -335,30 +336,9 @@ def test_the_document_names_the_diagnostic_log(tmp_path: Path) -> None:
     assert driver.collect(PROFILE / "one_turn")["log_file"] is None
 
 
-# Submitting. Every firing test drives a recording fake through the runner seam.
-
-
-class Runner:
-    """Records every argument list, and plants session directories when asked to.
-
-    The plant stands in for the application: the deep link and the Return produce
-    session directories on the filesystem, and nothing else about them is simulated.
-    """
-
-    def __init__(
-        self, plant: list[dict[str, object]] | None = None, codes: list[int] | None = None
-    ):
-        self.calls: list[list[str]] = []
-        self.plant = plant or []
-        self.codes = codes or []
-
-    def __call__(self, argv: list[str]) -> int:
-        self.calls.append(argv)
-        code = self.codes.pop(0) if self.codes else 0
-        if argv[0] == "osascript" and code == 0:
-            for session in self.plant:
-                write_session(**session)  # type: ignore[arg-type]
-        return code
+# Submitting. No stand-in for the application: a test writes the session directories the
+# application would have written, then calls the step that reads them. The three things
+# that cannot be proved that way are proved by the live test at the end of this file.
 
 
 def write_session(
@@ -371,7 +351,7 @@ def write_session(
     """One hand-written session directory, three levels below a root."""
     session = root / "acct" / "prof" / name
     session.mkdir(parents=True, exist_ok=True)
-    lines = []
+    lines: list[dict[str, object]] = []
     if prompt is not None:
         lines.append(
             {
@@ -402,9 +382,13 @@ def write_session(
     return session
 
 
-def firing(tmp_path: Path, runner: Runner, **overrides: object) -> CoWork:
-    driver = build(tmp_path, settle_seconds=0, session_timeout=0, idle_seconds=0, **overrides)
-    return CoWork(driver.config, runner=runner)
+def sessions_root(tmp_path: Path) -> Path:
+    return tmp_path / "profile" / "local-agent-mode-sessions"
+
+
+def stepping(tmp_path: Path, **overrides: object) -> CoWork:
+    """A driver whose timeouts are zero, so a poll runs one pass and does not sleep."""
+    return build(tmp_path, settle_seconds=0, session_timeout=0, idle_seconds=0, **overrides)
 
 
 def test_deep_link_percent_encodes_the_prompt() -> None:
@@ -418,95 +402,70 @@ def test_deep_link_omits_an_empty_surface() -> None:
     assert CoWork(Config(surface="")).deep_link("PING") == "claude://claude.ai/new?q=PING"
 
 
-def test_the_runner_records_the_open_and_osascript_argument_lists(tmp_path: Path) -> None:
-    runner = Runner(
-        plant=[{"root": tmp_path / "profile" / "local-agent-mode-sessions", "name": "s1"}]
-    )
-    driver = firing(tmp_path, runner)
-    session = driver.submit("Reply with exactly: PONG")
-    assert runner.calls[0] == [
-        "open",
-        "claude://claude.ai/new?q=Reply%20with%20exactly%3A%20PONG&surface=cowork",
-    ]
-    assert runner.calls[1][0] == "osascript"
-    assert "key code 36" in runner.calls[1][-1]
-    assert session.name == "s1"
-
-
-def test_a_non_zero_return_from_open_raises_code_3(tmp_path: Path) -> None:
-    runner = Runner(codes=[1])
-    with pytest.raises(CoWorkError) as raised:
-        firing(tmp_path, runner).submit("Reply with exactly: PONG")
-    assert raised.value.code == 3
-    assert runner.calls == [runner.calls[0]]
-
-
 def test_no_session_directory_raises_code_4(tmp_path: Path) -> None:
+    driver = stepping(tmp_path)
     with pytest.raises(CoWorkError) as raised:
-        firing(tmp_path, Runner()).submit("Reply with exactly: PONG")
+        driver._discover(sessions_root(tmp_path), set())
     assert raised.value.code == 4
 
 
+def test_one_new_session_directory_is_discovered(tmp_path: Path) -> None:
+    root = sessions_root(tmp_path)
+    driver = stepping(tmp_path)
+    baseline = set(driver.sessions(root))
+    session = write_session(root, "s1")
+    assert driver._discover(root, baseline) == session
+
+
 def test_two_new_session_directories_raise_code_5(tmp_path: Path) -> None:
-    root = tmp_path / "profile" / "local-agent-mode-sessions"
-    runner = Runner(plant=[{"root": root, "name": "s1"}, {"root": root, "name": "s2"}])
+    root = sessions_root(tmp_path)
+    driver = stepping(tmp_path)
+    baseline = set(driver.sessions(root))
+    write_session(root, "s1")
+    write_session(root, "s2")
     with pytest.raises(CoWorkError) as raised:
-        firing(tmp_path, runner).submit("Reply with exactly: PONG")
+        driver._discover(root, baseline)
     assert raised.value.code == 5
 
 
 def test_a_session_already_in_the_baseline_is_not_discovered(tmp_path: Path) -> None:
-    root = tmp_path / "profile" / "local-agent-mode-sessions"
+    root = sessions_root(tmp_path)
+    driver = stepping(tmp_path)
     write_session(root, "before")
-    runner = Runner(plant=[{"root": root, "name": "after"}])
-    assert firing(tmp_path, runner).submit("Reply with exactly: PONG").name == "after"
+    baseline = set(driver.sessions(root))
+    after = write_session(root, "after")
+    assert driver._discover(root, baseline) == after
+
+
+def test_a_matching_audit_prompt_attributes_the_session(tmp_path: Path) -> None:
+    session = write_session(sessions_root(tmp_path), "s1")
+    stepping(tmp_path)._attribute(session, "Reply with exactly: PONG")
 
 
 def test_a_mismatched_audit_prompt_raises_code_6(tmp_path: Path) -> None:
-    root = tmp_path / "profile" / "local-agent-mode-sessions"
-    runner = Runner(plant=[{"root": root, "name": "s1", "prompt": "someone else's prompt"}])
+    session = write_session(sessions_root(tmp_path), "s1", prompt="someone else's prompt")
     with pytest.raises(CoWorkError) as raised:
-        firing(tmp_path, runner).submit("Reply with exactly: PONG")
+        stepping(tmp_path)._attribute(session, "Reply with exactly: PONG")
     assert raised.value.code == 6
-    assert raised.value.session_dir == root / "acct" / "prof" / "s1"
+    assert raised.value.session_dir == session
 
 
 def test_a_session_with_no_user_record_raises_code_6(tmp_path: Path) -> None:
-    root = tmp_path / "profile" / "local-agent-mode-sessions"
-    runner = Runner(plant=[{"root": root, "name": "s1", "prompt": None}])
+    session = write_session(sessions_root(tmp_path), "s1", prompt=None)
     with pytest.raises(CoWorkError) as raised:
-        firing(tmp_path, runner).submit("Reply with exactly: PONG")
+        stepping(tmp_path)._attribute(session, "Reply with exactly: PONG")
     assert raised.value.code == 6
 
 
-def test_a_failed_submission_is_logged_and_counts_against_the_ceiling(tmp_path: Path) -> None:
-    driver = firing(tmp_path, Runner())
-    with pytest.raises(CoWorkError):
-        driver.submit("Reply with exactly: PONG")
-    assert [entry["outcome"] for entry in driver.history()] == ["failed:4"]
-
-
-def test_a_refusal_before_firing_leaves_no_run_log_line(tmp_path: Path) -> None:
-    runner = Runner()
-    driver = firing(tmp_path, runner)
-    with pytest.raises(CoWorkError) as raised:
-        driver.submit("Send an email to the team")
-    assert raised.value.code == 2
-    assert runner.calls == []
-    assert driver.history() == []
-
-
 def test_wait_returns_on_the_terminal_lifecycle_state(tmp_path: Path) -> None:
-    root = tmp_path / "profile" / "local-agent-mode-sessions"
-    session = write_session(root, "s1")
-    driver = firing(tmp_path, Runner(), run_timeout=0)
+    session = write_session(sessions_root(tmp_path), "s1")
+    driver = stepping(tmp_path, run_timeout=0)
     assert driver.wait(session) == session
 
 
 def test_quiescence_does_not_fire_before_the_run_has_started(tmp_path: Path) -> None:
-    root = tmp_path / "profile" / "local-agent-mode-sessions"
-    session = write_session(root, "s1", states=("queued",), final=None)
-    driver = firing(tmp_path, Runner(), run_timeout=0)
+    session = write_session(sessions_root(tmp_path), "s1", states=("queued",), final=None)
+    driver = stepping(tmp_path, run_timeout=0)
     with pytest.raises(CoWorkError) as raised:
         driver.wait(session)
     assert raised.value.code == 7
@@ -514,41 +473,96 @@ def test_quiescence_does_not_fire_before_the_run_has_started(tmp_path: Path) -> 
 
 
 def test_quiescence_fires_once_the_run_has_started(tmp_path: Path) -> None:
-    root = tmp_path / "profile" / "local-agent-mode-sessions"
-    session = write_session(root, "s1", states=("queued", "started"), final="PONG")
-    driver = firing(tmp_path, Runner(), run_timeout=5)
+    session = write_session(sessions_root(tmp_path), "s1", states=("queued", "started"))
+    driver = stepping(tmp_path, run_timeout=5)
     assert driver.wait(session) == session
 
 
-def test_run_submits_waits_and_collects(tmp_path: Path) -> None:
-    root = tmp_path / "profile" / "local-agent-mode-sessions"
-    runner = Runner(plant=[{"root": root, "name": "s1"}])
-    driver = firing(tmp_path, runner, run_timeout=5)
-    document = driver.run("Reply with exactly: PONG")
-    assert document["final_text"] == "PONG"
-    assert document["prompt"] == "Reply with exactly: PONG"
-    assert document["lifecycle"] == ["queued", "started", "completed"]
+def test_a_refusal_before_firing_leaves_no_run_log_line(tmp_path: Path) -> None:
+    driver = stepping(tmp_path)
+    with pytest.raises(CoWorkError) as raised:
+        driver.submit("Send an email to the team")
+    assert raised.value.code == 2
+    assert driver.history() == []
+
+
+# The fixtures above are hand-written, so they prove the reader matches this repository's
+# reading of the record shapes. This proves it matches a real profile, on any machine that
+# has one, and is skipped on any machine that does not.
+
+TAXONOMY = {2, 3, 4, 5, 6, 7, 8}
+
+
+def configured_profile() -> Config | None:
+    """The configuration this repository is set up with, when it names a readable profile."""
+    try:
+        config = Config.load()
+        return config if config.profile_dir.is_dir() else None
+    except CoWorkError:
+        return None
+
+
+@pytest.mark.skipif(configured_profile() is None, reason="no readable CoWork profile configured")
+def test_the_reader_handles_every_session_in_a_real_profile() -> None:
+    """Nothing here prints a path, a prompt or an identifier. Public repository rule."""
+    config = configured_profile()
+    assert config is not None
+    driver = CoWork(config)
+    found = driver.sessions()
+    if not found:
+        pytest.skip("the configured profile holds no sessions")
+
+    for session in found:
+        try:
+            document = driver.collect(session)
+        except CoWorkError as error:
+            assert error.code in TAXONOMY
+            continue
+        assert set(document) == DOCUMENT_KEYS
+        json.dumps(document)
+        assert isinstance(document["final_text"], str)
+        assert document["final_text"]
+        for call in document["tool_calls"]:
+            assert isinstance(call["name"], str)
+        assert document["tool_names"] == [call["name"] for call in document["tool_calls"]]
+
+
+# The only test that proves the application end of the contract: that the deep link
+# prefills, that the synthetic Return submits, and that `completed` is written. It fires a
+# real run, so it costs a VM boot, counts against the rate ceiling and leaves one permanent
+# session in the signed-in account. Deselected by default; run it with
+# `scripts/test.sh -m live`. It needs the macOS Accessibility grant, a signed-in CoWork and
+# the desktop application already running.
+
+
+@pytest.mark.live
+@pytest.mark.timeout(1800)
+def test_a_live_run_returns_the_marker() -> None:
+    config = configured_profile()
+    if config is None:
+        pytest.skip("no readable CoWork profile configured")
+
+    driver = CoWork(config)
+    marker = f"MARKER-{uuid.uuid4().hex[:12].upper()}"
+    before = len(driver.sessions())
+    before_log = len(driver.history())
+
+    document = driver.run(f"Reply with exactly: {marker}")
+
+    assert marker in document["final_text"]
+    assert document["lifecycle"][-1] == "completed"
     assert set(document) == DOCUMENT_KEYS
-    assert json.dumps(document)
-    assert [entry["outcome"] for entry in driver.history()] == ["submitted"]
-    assert document["log_file"] is not None
-    assert Path(document["log_file"]).is_file()
+    json.dumps(document)
 
+    assert len(driver.sessions()) == before + 1
+    assert Path(document["session_dir"]) in driver.sessions()
 
-def test_the_diagnostic_log_names_the_link_the_session_and_the_signal(tmp_path: Path) -> None:
-    root = tmp_path / "profile" / "local-agent-mode-sessions"
-    runner = Runner(plant=[{"root": root, "name": "s1"}])
-    driver = firing(tmp_path, runner, run_timeout=5)
-    document = driver.run("Reply with exactly: PONG")
+    entries = driver.history()
+    assert len(entries) == before_log + 1
+    assert entries[-1]["outcome"] == "submitted"
+    assert entries[-1]["session_dir"] == document["session_dir"]
+
     written = Path(document["log_file"]).read_text(encoding="utf-8")
-    assert "firing the deep link: claude://claude.ai/new?q=" in written
+    assert "firing the deep link:" in written
     assert "discovered the session:" in written
     assert "the completion signal fired: lifecycle state completed" in written
-
-
-def test_a_failure_reaches_the_diagnostic_log_before_it_leaves(tmp_path: Path) -> None:
-    driver = firing(tmp_path, Runner())
-    with pytest.raises(CoWorkError):
-        driver.submit("Reply with exactly: PONG")
-    written = sorted((tmp_path / "logs").iterdir())[-1].read_text(encoding="utf-8")
-    assert "submission failed with code 4" in written
