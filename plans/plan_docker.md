@@ -155,7 +155,7 @@ Still `src/cowork_evals/docker/__init__.py`. It wraps phase 5's list in a contai
       `.claude-plugin/plugin.json`, and a raised `DockerError` when there is none. It is
       what the read-only mount is rooted at and what the container-side target is relative
       to.
-- [ ] `run_argv(target, log_dir, options)`: `docker run --rm`, the platform, the host uid
+- [ ] `run_argv(target, output_dir, options)`: `docker run --rm`, the platform, the host uid
       and gid, `HOME=/tmp/eval-home`, `--security-opt seccomp=unconfined`, and phase 5's
       list as the command, built with container paths.
 - [ ] The plugin root read-only at `/work/plugin`, the run's log directory read-write at
@@ -199,8 +199,11 @@ reports is printed for a reader. No page under `docs/` is parsed.
 so it exercises discovery. It carries no skill: whether a model activates a skill is an eval
 question, and every question this plan asks is a mechanism question.
 
-- [ ] `.claude-plugin/plugin.json` and one case under `evals/`, in the format at
-      [`../docs/eval_format.md`](../docs/eval_format.md).
+- [ ] `.claude-plugin/plugin.json`, and one case at `evals/plugin/<case>/`. A directory
+      under `evals/` is a skill name, `plugin` or `mocks`, and this plugin has no skill, so
+      the case is a `plugin` one. [`../docs/eval_format.md`](../docs/eval_format.md).
+- [ ] `tags: [plugin]`, matching that directory, and `plugins: ["../../.."]`. Both are
+      required, and the case validator checks both.
 - [ ] The prompt is one instruction: run `python3 -V` and reply with its output and nothing
       else.
 - [ ] One `regex` grader over `last_message`, `match: contains`, matching the exact string
@@ -283,7 +286,8 @@ Nothing durable may survive only in this file.
 - [ ] `docs/docker.md`: fill every measurement from phase 9.
 - [ ] `docs/library.md`: add the new modules to the ships table.
 - [ ] `docs/running_evals.md`: mark the container backend, its Dockerfile, `parity.sh` and
-      `plugins/smoke/` built.
+      `plugins/smoke/` built, and correct the row calling `smoke` the staged runtime
+      fixture, which is one of the two backends it serves.
 - [ ] `docs/approaches.md`: correct the closing line saying no backend is built.
 - [ ] `scripts/README.md`: a row for `image.sh`, and turn the `parity.sh` note into a row.
 - [ ] `tests/README.md`: a row per new test file, the integration tier's new preconditions,
