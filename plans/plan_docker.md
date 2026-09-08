@@ -196,11 +196,15 @@ reports is printed for a reader. No page under `docs/` is parsed.
 ## Phase 8: The fixture
 
 `plugins/smoke/`, per [`../plugins/README.md`](../plugins/README.md). The standard layout,
-so it exercises discovery.
+so it exercises discovery. It carries no skill: whether a model activates a skill is an eval
+question, and every question this plan asks is a mechanism question.
 
-- [ ] One skill that shells out to `python3 -V` and reports what it got.
-- [ ] One case in the format at [`../docs/eval_format.md`](../docs/eval_format.md), graded
-      structurally: the skill fired, and the reported version is 3.10.
+- [ ] `.claude-plugin/plugin.json` and one case under `evals/`, in the format at
+      [`../docs/eval_format.md`](../docs/eval_format.md).
+- [ ] The prompt is one instruction: run `python3 -V` and reply with the version and nothing
+      else.
+- [ ] One `regex` grader over `last_message`, matching `3\.10\.`. Structural, so the gate
+      reads it.
 - [ ] `runs: 1` written out.
 
 ## Phase 9: The integration tier, and the measurements
@@ -210,14 +214,19 @@ so it exercises discovery.
 never skips it. Nothing here builds: a test that builds its own subject reports a build as a
 pass, and hides a twenty-minute build inside a test run.
 
+Every box but the last is a `docker run` with a fixed command and a fixed expected output.
+No model is in the loop, because none of these is a question about a model.
+
 - [ ] Assert the daemon is reachable and the image is present at the current digest, failing
       with `scripts/image.sh` named when it is not.
+- [ ] Assert `python3 -V` in the container reports 3.10.
 - [ ] Run the probe and assert the comparison passes.
+- [ ] Assert `bwrap` comes up under `--security-opt seccomp=unconfined`, by running it
+      directly. This is the Bash sandbox measurement, and it needs no harness and no case.
+- [ ] Assert `claude --version` runs under the host uid and gid with no passwd entry. This
+      is the uid mapping measurement, and Node's `os.userInfo()` is what would raise.
 - [ ] Assert the plugin mount refuses a write, the log mount accepts one, and a file written
       into the log mount is owned by the host uid and gid.
-- [ ] Fire `plugins/smoke/` through `run()` and assert the result document says the case
-      passed, with a timeout that fits one agentic run. The 300 second default in
-      `pyproject.toml` binds every test in this file.
 - [ ] Record in `docs/docker.md`: the capture date and the host as OS, architecture and
       container runtime, then the platform, the image size, the cold and warm build times
       taken from `scripts/image.sh`, the pin mismatches, the extra packages, the non-Python
@@ -229,18 +238,28 @@ pass, and hides a twenty-minute build inside a test run.
       configuration directory and `docs/docker.md` says so. If it does not, the run mounts
       the configuration directory alone.
 
-Two facts this phase measures can change what phase 6 built, and both are fixed in this
+The last box, once every box above it passes. It is the only one that spends money and the
+only one with a model in it, so it carries `live` as well as `integration` and is deselected
+by `-m "integration and not live"`.
+
+- [ ] Widen the `live` marker in `pyproject.toml`, which today names a CoWork run only, to
+      any test that submits a real run.
+- [ ] Fire `plugins/smoke/` through `run()` and assert the result document says the case
+      passed, with a timeout that fits one agentic run. The 300 second default in
+      `pyproject.toml` binds every test in this file.
+
+Two boxes above measure a fact that can change what phase 6 built. Both are fixed in this
 phase's commit rather than left to a later one.
 
-| Measurement                                       | If it fails                                                                 |
-| ------------------------------------------------- | ---------------------------------------------------------------------------- |
-| A uid with no passwd entry runs the CLI           | `run_argv` takes the documented fallback: run as root and `chown -R` the log mount to the host uid and gid on the way out. `docs/docker.md` records which route the image needs |
-| bubblewrap comes up under `seccomp=unconfined`    | Apply the documented fallback, `--cap-add SYS_ADMIN --security-opt apparmor=unconfined`, and record which was needed |
+| Measurement                                    | If it fails                                                                 |
+| ---------------------------------------------- | ---------------------------------------------------------------------------- |
+| `claude --version` under a uid with no passwd entry | `run_argv` takes the documented fallback: run as root and `chown -R` the log mount to the host uid and gid on the way out. `docs/docker.md` records which route the image needs |
+| `bwrap` under `seccomp=unconfined`             | Apply the documented fallback, `--cap-add SYS_ADMIN --security-opt apparmor=unconfined`, and record which was needed |
 
-If both sandbox options are refused, the container cannot grant `Bash`. The smoke skill
-shells out, so the smoke box and the measurement box above it cannot be ticked, and this
-plan is not finished. Record the refusal in `docs/docker.md` and stop there: a backend that
-cannot grant `Bash` cannot run the cases this repository pins `--allow-tools Bash` for.
+If both sandbox options are refused, the container cannot grant `Bash`. The smoke case runs
+a command, so the last box cannot be ticked and this plan is not finished. Record the
+refusal in `docs/docker.md` and stop there: a backend that cannot grant `Bash` cannot run
+the cases this repository pins `--allow-tools Bash` for.
 
 ## Phase 10: Documentation
 
@@ -252,9 +271,9 @@ Nothing durable may survive only in this file.
       `plugins/smoke/` built.
 - [ ] `docs/approaches.md`: correct the closing line saying no backend is built.
 - [ ] `scripts/README.md`: a row for `image.sh`, and turn the `parity.sh` note into a row.
-- [ ] `tests/README.md`: a row per new test file, and the integration tier's new
-      preconditions.
-- [ ] `plugins/README.md`: mark `smoke` built, and say it serves both Claude Code backends.
+- [ ] `tests/README.md`: a row per new test file, the integration tier's new preconditions,
+      and the `live` marker now covering a real eval run as well as a real CoWork run.
+- [ ] `plugins/README.md`: mark `smoke` built.
 - [ ] `README.md`: correct the Contributing block, whose integration line describes that
       tier as CoWork only.
 - [ ] `plans/README.md`: correct the closing sentence saying a plan will not survive, which

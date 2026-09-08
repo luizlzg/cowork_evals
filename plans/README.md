@@ -53,8 +53,12 @@ from the integration tier, and recording what that settled.
 
 | Plan | Fires once to establish                                                              |
 | ---- | -------------------------------------------------------------------------------------- |
-| 2    | Whether bubblewrap comes up in the container, whether a uid with no passwd entry stops the CLI, and whether the two bind mounts behave |
+| 2    | Whether the harness runs end to end inside the container, and whether a case there reaches a running command |
 | 3    | Whether a staged interpreter is reachable from inside the OS sandbox, and whether a case that shells out gets 3.10 |
+
+Everything else those plans measure is a `docker run` or a subprocess with a fixed command
+and a fixed expected output, and is asserted without a model. A fact that can be established
+deterministically never costs an agentic run.
 
 One fixture case, in the integration tier, is not a suite. It never runs in the default
 selection, and nothing here runs it on a cadence. See
