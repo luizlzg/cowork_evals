@@ -201,10 +201,11 @@ question, and every question this plan asks is a mechanism question.
 
 - [ ] `.claude-plugin/plugin.json` and one case under `evals/`, in the format at
       [`../docs/eval_format.md`](../docs/eval_format.md).
-- [ ] The prompt is one instruction: run `python3 -V` and reply with the version and nothing
+- [ ] The prompt is one instruction: run `python3 -V` and reply with its output and nothing
       else.
-- [ ] One `regex` grader over `last_message`, matching `3\.10\.`. Structural, so the gate
-      reads it.
+- [ ] One `regex` grader over `last_message`, `match: contains`, matching the exact string
+      `docs/runtime.md` records: `Python 3.10.12`. No `llm` grader: the answer is one fixed
+      string, and a judge over a fixed string is a flaky way to compare two strings.
 - [ ] `runs: 1` written out.
 
 ## Phase 9: The integration tier, and the measurements
@@ -219,7 +220,9 @@ No model is in the loop, because none of these is a question about a model.
 
 - [ ] Assert the daemon is reachable and the image is present at the current digest, failing
       with `scripts/image.sh` named when it is not.
-- [ ] Assert `python3 -V` in the container reports 3.10.
+- [ ] Assert `python3 -V` in the container reports exactly the version
+      [`../docs/runtime.md`](../docs/runtime.md) records. A patch bump in jammy fails here
+      first, and the fixture's grader is updated with the page in the same commit.
 - [ ] Run the probe and assert the comparison passes.
 - [ ] Assert `bwrap` comes up under `--security-opt seccomp=unconfined`, by running it
       directly. This is the Bash sandbox measurement, and it needs no harness and no case.
