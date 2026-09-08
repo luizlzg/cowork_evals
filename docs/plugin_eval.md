@@ -7,9 +7,11 @@ This file is what the CLI does. What a case file contains is
 [eval_format.md](eval_format.md), which is the authoring contract for every backend,
 including the CoWork one that does not use this harness.
 
-Written against CLI 2.1.259. The command is in early access and is not publicly documented,
-so `claude plugin eval --help` in your own build is the authority when this and the CLI
-disagree.
+Written against CLI 2.1.259. The container backend installs 2.1.265, because 2.1.259 cannot
+run a Bash-granting case on Linux: [docker.md](docker.md) records the failure. Nothing this
+file states was re-checked against 2.1.265. The command is in early access and is not
+publicly documented, so `claude plugin eval --help` in your own build is the authority when
+this and the CLI disagree.
 
 This file is a summary. Anthropic's own full reference is vendored at
 [`claude_code/`](claude_code/) and is the authority for any detail this omits. It was

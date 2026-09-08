@@ -67,7 +67,7 @@ def test_the_platform_and_the_version_resolve_through_env(environment, working_d
     with environment(EVAL_PLATFORM=None, CLAUDE_CODE_VERSION=None), working_directory(tmp_path):
         docker = Docker()
     assert docker.platform == "linux/arm64"
-    assert docker.claude_code_version == "2.1.259"
+    assert docker.claude_code_version == "2.1.265"
 
 
 def test_an_explicit_value_beats_the_setting(environment):
@@ -219,14 +219,15 @@ def test_run_argv_mounts_the_plugin_read_only_and_the_logs_read_write(
     ]
 
 
-def test_run_argv_carries_the_uid_the_home_and_the_sandbox_option(environment, plugin, tmp_path):
+def test_run_argv_carries_the_uid_the_home_and_the_sandbox_options(environment, plugin, tmp_path):
     with environment(SSL_CERT_FILE=None, CLAUDE_CODE_WALNUT_SPIRE=None):
         argv = Docker(platform="linux/arm64").run_argv(plugin, tmp_path, run_options())
     assert argv[:3] == ["docker", "run", "--rm"]
     assert build_arg(argv, "--platform") == "linux/arm64"
     assert build_arg(argv, "--user") == f"{os.getuid()}:{os.getgid()}"
     assert f"HOME={CONTAINER_HOME}" in argv
-    assert build_arg(argv, "--security-opt") == "seccomp=unconfined"
+    options = [argv[i + 1] for i, value in enumerate(argv) if value == "--security-opt"]
+    assert options == ["seccomp=unconfined", "systempaths=unconfined"]
     assert "CLAUDE_CODE_WALNUT_SPIRE=1" in argv
 
 

@@ -214,10 +214,13 @@ class Docker:
             # export the enablement variable. docs/plugin_eval.md.
             "--env",
             f"CLAUDE_CODE_WALNUT_SPIRE={setting('CLAUDE_CODE_WALNUT_SPIRE')}",
-            # Granting Bash turns on the OS sandbox, and bubblewrap needs unprivileged
-            # user namespaces unfiltered. docs/docker.md.
+            # Granting Bash turns on the OS sandbox, and bubblewrap needs two things the
+            # default container profile denies: unprivileged user namespaces unfiltered,
+            # and a /proc it can mount over. docs/docker.md.
             "--security-opt",
             "seccomp=unconfined",
+            "--security-opt",
+            "systempaths=unconfined",
             *self.extra_ca_env_argv(),
             *self.credential_argv(),
             "-v",

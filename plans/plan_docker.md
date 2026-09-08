@@ -172,7 +172,7 @@ Still `src/cowork_evals/docker/__init__.py`. It wraps phase 5's list in a contai
       what the read-only mount is rooted at and what the container-side target is relative
       to.
 - [x] `run_argv(target, output_dir, options)`: `docker run --rm`, the platform, the host uid
-      and gid, `HOME=/tmp/eval-home`, `--security-opt seccomp=unconfined`, and phase 5's
+      and gid, `HOME=/tmp/eval-home`, both `--security-opt` values, and phase 5's
       list as the command, built with container paths.
 - [x] The plugin root read-only at `/work/plugin`, the run's log directory read-write at
       `/work/logs`, `--output-dir` at the log mount, and nothing else from the host.
@@ -244,6 +244,14 @@ No model is in the loop, because none of these is a question about a model.
 - [x] Run the probe and assert the comparison passes.
 - [x] Assert `bwrap` comes up under `--security-opt seccomp=unconfined`, by running it
       directly. This is the Bash sandbox measurement, and it needs no harness and no case.
+- [x] Assert it mounts a procfs too. The bare invocation above passes without
+      `--security-opt systempaths=unconfined`, and every sandboxed command still fails.
+      Found by the last box of this phase failing, 2026-09-08.
+- [x] Move the `CLAUDE_CODE_VERSION` default off 2.1.259, which cannot run a Bash-granting
+      case on Linux at all: its sandbox masks one path in the run's own sandbox home twice,
+      with two mount types, and `bwrap` dies on the second. 2.1.265 does not.
+      [`../docs/docker.md`](../docs/docker.md) records both. Also found by the last box of
+      this phase failing, 2026-09-08.
 - [x] Assert `claude --version` runs under the host uid and gid with no passwd entry. This
       is the uid mapping measurement, and Node's `os.userInfo()` is what would raise.
 - [x] Assert the plugin mount refuses a write, the log mount accepts one, and a file written
@@ -275,7 +283,7 @@ fault.
 - [x] `claude -p` in the container with a prompt asking for one word, asserting that word
       comes back. No plugin, no harness, no mounts. It is the minimal proof that Claude Code
       runs there and the credential is accepted, and it costs one short reply.
-- [ ] Fire `plugins/smoke/` through `run()` and assert the result document says the case
+- [x] Fire `plugins/smoke/` through `run()` and assert the result document says the case
       passed, with a timeout that fits one agentic run. The 300 second default in
       `pyproject.toml` binds every test in this file. Everything the box above does not
       cover is here: the harness, the two mounts, `--output-dir`, the `Bash` grant and the
@@ -287,7 +295,7 @@ phase's commit rather than left to a later one.
 | Measurement                                    | If it fails                                                                 |
 | ---------------------------------------------- | ---------------------------------------------------------------------------- |
 | `claude --version` under a uid with no passwd entry | `run_argv` takes the documented fallback: run as root and `chown -R` the log mount to the host uid and gid on the way out. `docs/docker.md` records which route the image needs |
-| `bwrap` under `seccomp=unconfined`             | Apply the documented fallback, `--cap-add SYS_ADMIN --security-opt apparmor=unconfined`, and record which was needed |
+| `bwrap` under `seccomp=unconfined`             | Apply the documented fallback, `--cap-add SYS_ADMIN --security-opt apparmor=unconfined`, and record which was needed. Neither was enough: the route the image needs is `seccomp=unconfined` with `systempaths=unconfined`, recorded in `docs/docker.md` |
 
 If both sandbox options are refused, the container cannot grant `Bash`. The smoke case runs
 a command, so the last box cannot be ticked and this plan is not finished. Record the

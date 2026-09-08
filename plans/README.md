@@ -82,8 +82,9 @@ harness provides for free elsewhere. See
 Docker comes before the venv, although the venv is cheaper to build.
 [`../docs/running_evals.md`](../docs/running_evals.md) records that a `Bash`-granting run is
 refused on this host, and every case that shells out needs that grant. The container installs
-bubblewrap and runs with `seccomp=unconfined`, so it may be the only backend on this machine
-that can grant `Bash`. Measuring that early is worth more than the cheaper build.
+bubblewrap and runs with `seccomp=unconfined` and `systempaths=unconfined`, so it may be the
+only backend on this machine that can grant `Bash`. Measuring that early is worth more than
+the cheaper build.
 
 Plan 4 waits on neither. It reads `plugins/smoke/`, `src/cowork_evals/env.py` and the
 driver, all of which exist, and it needs nothing the venv backend would have built.

@@ -182,10 +182,20 @@ that list is built either way. See [cli.md](cli.md).
 
 The harness is not part of the CoWork image, so it is not in the inventory above. The
 container installs it as a global npm package, `@anthropic-ai/claude-code`, at the version
-in the `CLAUDE_CODE_VERSION` build argument. The default is 2.1.259, the version
-[plugin_eval.md](plugin_eval.md) is written against, and `CLAUDE_CODE_VERSION` in the
-environment or in `.env` moves it. It is in the image digest, so two versions cannot share
-one tag.
+in the `CLAUDE_CODE_VERSION` build argument. The default is 2.1.265, and
+`CLAUDE_CODE_VERSION` in the environment or in `.env` moves it. It is in the image digest,
+so two versions cannot share one tag.
+
+Not every version runs here. 2.1.259, the version [plugin_eval.md](plugin_eval.md) is
+written against, cannot run a Bash-granting case on Linux at all. Its sandbox masks
+`<sandbox home>/.aws` six times: five as an empty directory, to block the creation of
+`.aws/sso` and the other cache paths under it, and once with `/dev/null`, for the store
+itself. `bwrap` applies them in order and dies on the `/dev/null` one with `Can't create
+file at <sandbox home>/.aws: Is a directory`, so every sandboxed command exits 1 and the
+model reports a broken sandbox rather than the command's output. The path is inside the
+sandbox home, which the harness creates fresh per run, so nothing on the host or in the
+image changes it. 2.1.265 creates those directories rather than masking a missing one, and
+the smoke case passes. Measured 2026-09-08, both versions on the same image.
 
 It is one deliberate delta against [runtime.md](runtime.md), which records corepack and npm
 as the only npm globals. Parity does not read npm globals and does not fail on it. No other
@@ -300,10 +310,24 @@ with the full pin set. The mirror rule holds unchanged here and is stated in
 Granting `Bash` turns on the OS sandbox, and a host with no sandbox backend refuses the run
 rather than running unconfined. See [plugin_eval.md](plugin_eval.md).
 
-The image installs `bubblewrap`, 0.6.1 in jammy, and the container runs with
-`--security-opt seccomp=unconfined` so unprivileged user namespaces are not filtered.
-`bwrap` comes up under it on the host measured below, so the documented fallback,
-`--cap-add SYS_ADMIN --security-opt apparmor=unconfined`, is not used.
+The image installs `bubblewrap`, 0.6.1 in jammy, and the container runs with two
+`--security-opt` values. Both are needed, and each was found by a different failure.
+
+| Option                    | Without it                                                                        |
+| ------------------------- | ---------------------------------------------------------------------------------- |
+| `seccomp=unconfined`      | `bwrap: No permissions to create new namespace`. The default profile filters the unprivileged user namespace calls |
+| `systempaths=unconfined`  | `bwrap: Can't mount proc on /newroot/proc: Operation not permitted`                 |
+
+The second is the one a bare `bwrap` invocation does not reach. Docker masks entries under
+`/proc` by default, and the kernel refuses a fresh procfs mount to a process whose own
+`/proc` is covered that way. The harness mounts one, so every sandboxed command fails while
+`bwrap --ro-bind / / --unshare-user --unshare-pid true` still succeeds.
+`tests/integration/test_docker.py` therefore asserts the `--proc` mount as well as the bare
+invocation. Measured 2026-09-08.
+
+The documented fallback, `--cap-add SYS_ADMIN --security-opt apparmor=unconfined`, is not
+used: measured on the same date it fails earlier still, with `bwrap: pivot_root: Operation
+not permitted`.
 
 A container that cannot grant `Bash` cannot run a case that shells out, which is most of
 them.
@@ -374,9 +398,9 @@ platform re-runs `scripts/parity.sh` and the integration tier rather than assumi
 | Non-Python deltas                 | Java 11.0.32 against the recorded 11.0.31, a jammy point release. `socat`, which the inventory does not record, for the shell sandbox |
 | Font families in the image        | 111 against the recorded 118                            |
 | `import uno` from system python3  | yes                                                     |
-| Bash sandbox option needed        | `--security-opt seccomp=unconfined`, and `socat` in the image. `bwrap` comes up under it |
+| Bash sandbox options needed       | `--security-opt seccomp=unconfined` and `--security-opt systempaths=unconfined`, and `socat` in the image. `bwrap` mounts a procfs under both |
 | uid mapping option needed         | `--user <uid>:<gid>`. `claude --version` runs under a uid with no passwd entry |
-| Claude Code CLI version installed | 2.1.259                                                 |
+| Claude Code CLI version installed | 2.1.265. 2.1.259 cannot run a Bash-granting case here   |
 | Extra root CA needed              | yes on this host. Three upstream hosts inspect TLS      |
 
 All 136 pins are present at the recorded version, the nine from apt included, so the

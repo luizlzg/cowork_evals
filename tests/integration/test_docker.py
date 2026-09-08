@@ -68,6 +68,8 @@ def run_argv(docker: Docker, *command: str, mounts: tuple[str, ...] = ()) -> lis
         "CLAUDE_CODE_WALNUT_SPIRE=1",
         "--security-opt",
         "seccomp=unconfined",
+        "--security-opt",
+        "systempaths=unconfined",
         *docker.extra_ca_env_argv(),
         *docker.credential_argv(),
         *mounts,
@@ -110,7 +112,7 @@ def test_the_probe_matches_the_inventory(docker):
     assert failures == [], "\n".join(failures)
 
 
-def test_bwrap_comes_up_under_seccomp_unconfined(docker):
+def test_bwrap_comes_up_under_the_sandbox_options(docker):
     """The Bash sandbox measurement. It needs no harness and no case."""
     output = container(
         docker, "bwrap", "--ro-bind", "/", "/", "--unshare-user", "--unshare-pid", "true"
@@ -135,6 +137,33 @@ def test_bwrap_mounts_a_tmpfs_where_the_harness_mounts_one(docker):
         "/run/shm",
         "--unshare-user",
         "--unshare-pid",
+        "true",
+    )
+    assert output == "", output
+
+
+def test_bwrap_mounts_proc_where_the_harness_mounts_one(docker):
+    """`seccomp=unconfined` alone is not enough, and the two tests above do not show it.
+
+    The harness mounts a fresh procfs in the sandbox. Docker's default profile masks
+    entries under `/proc`, and the kernel refuses a new procfs mount to a process whose
+    own `/proc` is covered that way, so every sandboxed command exits 1 with `bwrap:
+    Can't mount proc on /newroot/proc: Operation not permitted`. Measured 2026-09-08.
+    `systempaths=unconfined` removes the masks. docs/docker.md.
+    """
+    output = container(
+        docker,
+        "bwrap",
+        "--ro-bind",
+        "/",
+        "/",
+        "--proc",
+        "/proc",
+        "--dev",
+        "/dev",
+        "--unshare-user",
+        "--unshare-pid",
+        "--unshare-ipc",
         "true",
     )
     assert output == "", output

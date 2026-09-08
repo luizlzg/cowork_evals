@@ -89,7 +89,7 @@ def test_the_documented_defaults(environment, tmp_path):
         "EVAL_MAX_COST_USD": "5",
         "EVAL_MAX_COST_TOTAL_USD": "25",
         "EVAL_PLATFORM": "linux/arm64",
-        "CLAUDE_CODE_VERSION": "2.1.259",
+        "CLAUDE_CODE_VERSION": "2.1.265",
         "CLAUDE_CODE_WALNUT_SPIRE": "1",
     }
     with environment(**dict.fromkeys(DEFAULTS)):
