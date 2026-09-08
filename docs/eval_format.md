@@ -9,9 +9,9 @@ harness. What the CLI does with a case is [plugin_eval.md](plugin_eval.md). How 
 repository invokes it is [running_evals.md](running_evals.md). Which backend honours which
 field is [approaches.md](approaches.md). The full field-by-field reference is vendored at
 [claude_code/plugin_eval_reference.md](claude_code/plugin_eval_reference.md), and it is the
-authority where this page is silent.
+authority where this file is silent.
 
-Two rules on this page are this repository's own and not the harness's: the `<skill>` layer
+Two rules here are this repository's own and not the harness's: the `<skill>` layer
 under `evals/`, and the two addressability keys below. Everything else is the harness.
 `docs/claude_code/eval_smoke/` is deliberately outside all of it; see
 [claude_code/eval_smoke/README.md](claude_code/eval_smoke/README.md).

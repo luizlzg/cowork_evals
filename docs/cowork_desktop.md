@@ -7,7 +7,7 @@ drive it. These are the measured internals. What the driver does with them is
 Captured 2026-09-02 on a macOS development machine by direct probe, and re-probed
 2026-09-08 for section 3, which reads session directories already on disk. Application
 internals are not a public interface. Expect any release to change them, and re-probe the
-coupling list at the end of this page after an update.
+coupling list at the end of this file after an update.
 
 ## Measured facts
 
@@ -59,7 +59,7 @@ covered, and they are the two a grader reads:
 | A prompt asking for `uname -a`, `ls /sessions` and `/etc/os-release` | A tool call into the guest, and its output captured on the host  |
 | The same token prompt through `claude://cowork/new`                | The application answers and writes no session directory           |
 
-Not covered by those probes, and therefore not stated anywhere in this page: repeated runs,
+Not covered by those probes, and therefore not stated anywhere here: repeated runs,
 concurrent sessions, parallel tool calls, and attachments. The terminal lifecycle state was
 not covered either, and is established below by the 2026-09-08 re-probe.
 

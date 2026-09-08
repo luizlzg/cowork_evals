@@ -11,7 +11,7 @@ update. Do not restate them here.
 The driver is built. The CoWork backend above it is not. What is built is the status table
 in [running_evals.md](running_evals.md).
 
-This page is the contract the driver is built to: the sequence, the API, the configuration,
+This file is the contract the driver is built to: the sequence, the API, the configuration,
 the reading rules, the result document, the grader mapping and the failure taxonomy. Every
 statement is a design decision, not a measurement, except where it cites
 [cowork_desktop.md](cowork_desktop.md).

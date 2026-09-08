@@ -89,7 +89,7 @@ and a run that silently spends ten more building an image is not readable in a l
 | Backend    | Requires                                                             | Fails when                                                  |
 | ---------- | -------------------------------------------------------------------- | ----------------------------------------------------------- |
 | `--venv`   | `claude` on `PATH`, the mirror at the current digest, the uv interpreter the mirror was built from | the mirror is absent or stale, `python3 -V` is not 3.10, or the interpreter to stage is absent |
-| `--docker` | a Docker or Rancher daemon, the image at the current digest, and either `ANTHROPIC_API_KEY` or the container login | the daemon is down, the image is absent or stale, or neither credential route is available |
+| `--docker` | a Docker or Rancher daemon, the image at the current digest, and the container login | the daemon is down, the image is absent or stale, or there is no login |
 | `--cowork` | macOS, the CoWork desktop application, an Accessibility grant        | the grant is missing, so there is no headless route and no CI |
 
 A failed preflight exits 3 and prints one line naming the command that fixes it:
@@ -110,9 +110,9 @@ use.
 | `setup --all`    | both                                                                       | both                                  |
 
 `setup --docker` builds one image. Each run gets a fresh container from it, so there is no
-long-lived container to create. When `ANTHROPIC_API_KEY` is unset and no container login
-exists, it then starts one interactive container to log in. A host with no interactive
-terminal sets the key instead and `setup --docker` builds only. See [docker.md](docker.md).
+long-lived container to create. When no container login exists, it then starts one
+interactive container to log in. That step needs a terminal and a browser. See
+[docker.md](docker.md).
 
 There is no `setup --cowork`. The desktop application and the Accessibility grant are
 installed and granted by hand, and `check --cowork` reports what is missing.

@@ -85,6 +85,8 @@ of it.
 
 - Never define a term.
 - Never motivate a practice. State it.
+- A file is a file. Never call one a page, here or in conversation. `page` means a page of
+  a book or a web page, and neither is in this repository.
 - Simplified Technical English. No filler, no corporate register.
 - One idea per sentence. Tables for anything with more than two attributes.
 - State what is true of this repository, and verify before writing.

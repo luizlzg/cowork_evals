@@ -7,7 +7,7 @@ name = "cowork-evals"
 version = "0.1.0"
 description = "Run evals for Claude CoWork skills and plugins"
 requires-python = ">=3.14"
-dependencies = ["PyYAML>=6"]
+dependencies = ["PyYAML>=6", "packaging>=24", "python-dotenv>=1"]
 
 [dependency-groups]
 dev = [
@@ -25,7 +25,7 @@ testpaths = ["tests"]
 addopts = "-q --strict-markers --import-mode=importlib -m 'not integration'"
 markers = [
   "integration: needs a real CoWork profile or a real CoWork run",
-  "live: submits a real CoWork run. Costs a VM boot and leaves a session",
+  "live: submits a real run. A CoWork run costs a VM boot and leaves a session, and an eval run costs the model calls its case makes",
 ]
 timeout = 300
 
@@ -35,6 +35,16 @@ target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+# probe.py runs on the container's 3.10 interpreter, not on this package's 3.14. The UP
+# rules rewrite to the target version, and py314 syntax does not parse there. The
+# formatter rewrites to it as well, so that file is excluded from it below.
+# See docs/library.md.
+"src/cowork_evals/docker/probe.py" = ["UP"]
+
+[tool.ruff.format]
+exclude = ["src/cowork_evals/docker/probe.py"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/cowork_evals"]

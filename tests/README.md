@@ -12,7 +12,7 @@ pytest, it is not an eval.
 | Tier        | Lives in             | Selection        | Needs                                              | Cost                              |
 | ----------- | -------------------- | ---------------- | -------------------------------------------------- | --------------------------------- |
 | Unit        | `tests/unit/`        | the default      | the two built environments, nothing else           | under a second, spends nothing    |
-| Integration | `tests/integration/` | `-m integration` | a real CoWork profile named in `cowork_evals.yaml` | a VM boot and a permanent session |
+| Integration | `tests/integration/` | `-m integration` | a real CoWork profile, or a daemon and the built image | a VM boot and a permanent session, or an eval run |
 
 The directory is the tier. `tests/integration/conftest.py` marks everything under it
 `integration`, so a new file there cannot be left unmarked and cannot land in the default
@@ -36,8 +36,12 @@ A skipped test reports as a pass and hides the thing it was written to catch.
 | `unit/test_environments.py`       | Both interpreters, the two requirements files, the scripts | yes    |
 | `unit/test_config.py`             | `cowork_evals.yaml` and the `Config` it produces           | yes    |
 | `unit/test_cowork.py`             | The CoWork driver: reading, refusing, submitting, waiting  | yes    |
+| `unit/test_env.py`                | `.env` and the three settings layers                       | yes    |
+| `unit/test_harness.py`            | The `claude plugin eval` argument list                     | yes    |
+| `unit/test_docker.py`             | The image digest, and the build, login and run argument lists | yes |
+| `unit/test_parity.py`             | Recorded container probes against the image inventory      | yes    |
 | `integration/test_cowork.py`      | The same driver against a real profile and a real run      | yes    |
-| `unit/test_parity.py`             | Recorded container probes against `docs/runtime.md`        | no     |
+| `integration/test_docker.py`      | The built image, its mounts, its sandbox and one real eval run | yes |
 
 One file per unit under test, named after the unit and not after the scenario. A unit tested
 in both tiers keeps its name in both directories, which is why `pyproject.toml` sets
@@ -79,17 +83,27 @@ Everything else is real code over real files: the loader parses YAML written to 
 the readers, the discovery, the attribution, the completion signal and the run log all run
 against session directories the test writes and then reads back.
 
+### The container tier's preconditions
+
+`integration/test_docker.py` needs a reachable daemon, the image already built by
+`scripts/image.sh`, and the login already made by `scripts/login.sh`. Nothing there builds
+or logs in: a test that builds its own subject reports a build as a pass, and hides a long
+build inside a test run. Three of its tests read the credential, and a missing one fails
+them rather than skipping them.
+
 ### The live marker
 
-One integration test fires a real CoWork run. It costs a VM boot, counts against the
-driver's rate ceiling and leaves a permanent session in the signed-in account, so it carries
-`live` as well as `integration`. An integration run that must not spend selects
+Three integration tests submit a real run. The CoWork one costs a VM boot, counts against
+the driver's rate ceiling and leaves a permanent session in the signed-in account. The two
+container ones cost the model calls their case makes. All three carry `live` as well as
+`integration`. An integration run that must not spend selects
 `-m "integration and not live"`.
 
-It needs the macOS Accessibility grant, a signed-in CoWork, the desktop application already
-running, and `cowork_evals.yaml` naming the active profile. It fails, and does not skip,
-when no profile is configured. Nothing steals focus while it runs. See
-[../docs/cowork_desktop.md](../docs/cowork_desktop.md) for the authorizations.
+The CoWork one needs the macOS Accessibility grant, a signed-in CoWork, the desktop
+application already running, and `cowork_evals.yaml` naming the active profile. It fails,
+and does not skip, when no profile is configured. Nothing steals focus while it runs. See
+[../docs/cowork_desktop.md](../docs/cowork_desktop.md) for the authorizations. The two
+container ones need a credential route, and fail without one.
 
 Everything in this repository is 3.14, tests included, and ruff targets `py314`. The 3.10
 constraint belongs to the code a consumer points the command at, not to anything here. See

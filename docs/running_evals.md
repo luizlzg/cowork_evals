@@ -1,7 +1,7 @@
 # Running evals
 
 The eval system behind the command: the mirror on `PATH`, the pinned harness flags, the
-gate, the logs, the cadence and the cost. This page is the design. It is true whether or not
+gate, the logs, the cadence and the cost. This file is the design. It is true whether or not
 a given piece is built yet.
 
 The command surface is [cli.md](cli.md) and the packaging boundary is
@@ -12,23 +12,25 @@ honours which part of it is [approaches.md](approaches.md). The harness is
 
 ## Status
 
-This table is the build status of the whole system. No other page carries one; they link
+This table is the build status of the whole system. Nothing else carries one; they link
 here.
 
 | Piece                                     | Built | Designed in                                |
 | ----------------------------------------- | ----- | ------------------------------------------- |
 | The 3.10 mirror, as a development script  | yes   | [environments.md](environments.md)          |
 | The `cowork_evals` package and CLI        | no    | [library.md](library.md), [cli.md](cli.md)  |
-| The venv backend                          | no    | this page                                   |
+| `.env` and the settings over it           | yes   | [library.md](library.md)                    |
+| The pinned harness argument list          | yes   | this file                                   |
+| The venv backend                          | no    | this file                                   |
 | The staged runtime                        | no    | [staged_runtime.md](staged_runtime.md)      |
-| The gate                                  | no    | this page                                   |
+| The gate                                  | no    | this file                                   |
 | The case validator                        | no    | [eval_format.md](eval_format.md)            |
 | The 3.10 and import check over code under test | no | nowhere yet                                 |
-| The container backend and its Dockerfile  | no    | [docker.md](docker.md)                      |
-| `scripts/parity.sh` and `tests/unit/test_parity.py` | no | [docker.md](docker.md)                     |
+| The container backend and its Dockerfile  | yes   | [docker.md](docker.md)                      |
+| `scripts/parity.sh` and `tests/unit/test_parity.py` | yes | [docker.md](docker.md)                     |
 | The CoWork driver                         | yes   | [cowork_driver.md](cowork_driver.md)        |
 | The CoWork backend over it                | no    | [cowork_driver.md](cowork_driver.md)        |
-| `plugins/smoke/`, the staged runtime fixture | no | [../plugins/README.md](../plugins/README.md) |
+| `plugins/smoke/`, the fixture both Claude Code backends fire | yes | [../plugins/README.md](../plugins/README.md) |
 
 ## The cases it runs
 
@@ -176,11 +178,39 @@ The target goes before every variadic flag: `--tag` and `--allow-tools` swallow 
 target.
 
 `--ablation` and `--threshold` have no command-line option and cannot be overridden.
-`--threshold 0` is what hands pass and fail to the gate below. `--ablation none` is what
-keeps a `tool_used: Skill` grader scored: under `with-without` such a grader is demoted to an
-unscored indicator unless the case sets `arm: both`, so the gate would stop reading it. A
-baseline arm is an investigation, run by calling the harness by hand, and it is not a run of
-this command.
+`--threshold 0` is what hands pass and fail to the gate below.
+
+### The baseline arm, and `arm:` on a grader
+
+`--ablation with-without` runs every case twice. The with-arm loads the plugin under test.
+The without-arm loads no plugin. The score delta between them is the evidence that the
+plugin changed behaviour, rather than the model answering well on its own.
+
+A `tool_used: Skill` grader cannot pass in the without-arm, because no plugin is loaded and
+no skill can fire. The harness therefore drops such a grader from the score in both arms, so
+the two arms are compared on the same graders. It still reports it, as an indicator carrying
+`withOnly: true` and `scored: false`.
+
+`arm:` on a grader is the case author's control over that.
+
+| Value               | Scores in                                       |
+| ------------------- | ----------------------------------------------- |
+| `with-only`         | The with-arm only                               |
+| `both`              | Every arm that runs                             |
+| Absent, on a `tool_used: Skill` grader | The with-arm only. That is the harness default for this one grader shape |
+| Absent, on anything else | Every arm that runs                        |
+
+A case whose graders are all with-only is the exception. There is nothing left to compare,
+so the harness scores them normally in both arms.
+
+`--ablation none` runs one arm, and that arm is the with-arm. Nothing is dropped from the
+score, so a `tool_used: Skill` grader is scored and the gate reads it. That is why it is
+pinned. `arm:` then satisfies itself whichever value it carries, and a case sets it only to
+stay portable to a suite that does run the baseline arm.
+
+A baseline arm is an investigation, run by calling the harness by hand, and it is not a run
+of this command. It doubles the agent runs, and the table in
+[plugin_eval.md](plugin_eval.md) counts them.
 
 `--allow-tools` is pinned because a case cannot grant itself `Bash`, `Write`, `Edit`,
 `WebFetch` or an MCP tool. The operator grant is the only route, and an ungranted case loses
@@ -274,7 +304,7 @@ A consumer automates it when all four of these hold, and not before:
 
 ## Cost
 
-[plugin_eval.md](plugin_eval.md) counts the model calls a suite makes. This page sets the
+[plugin_eval.md](plugin_eval.md) counts the model calls a suite makes. This file sets the
 ceilings on what they may cost.
 
 | Ceiling                   | Default | Binds                | Reached through            |

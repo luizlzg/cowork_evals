@@ -14,7 +14,7 @@ under `docs/` because it is reference material, not because it came from outside
 
 ## Provenance of the two vendored documents
 
-`claude plugin eval` is in early access and has no public documentation page. The CLI
+`claude plugin eval` is in early access and has no public documentation. The CLI
 carries both documents zstd-compressed inside the executable. They were extracted from
 CLI 2.1.252 and are reproduced verbatim.
 

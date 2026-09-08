@@ -4,10 +4,11 @@ This repository is not where evals are written. It is a library, distributed as 
 package. A separate repository owns the plugins and their eval cases, installs this one, and
 points it at its own tree.
 
-This page is the boundary. The command surface is [cli.md](cli.md).
+This file is the boundary. The command surface is [cli.md](cli.md).
 
-Design, except the package tree and the CoWork driver, which are built. What is built is the
-status table in [running_evals.md](running_evals.md).
+Design, except the package tree, the CoWork driver, the settings layers and the container
+backend, which are built. What is built is the status table in
+[running_evals.md](running_evals.md).
 
 ## The two repositories
 
@@ -41,7 +42,12 @@ mirrors an old VM. See [runtime.md](runtime.md).
 | ------------------------------------------ | ----- | -------------------------------------------------- |
 | `src/cowork_evals/`                        | yes   | The CoWork driver, the CLI, the three backends, the gate, the validator |
 | `src/cowork_evals/data/requirements*.txt`  | yes   | The pins the mirror and the image are built from   |
+| `src/cowork_evals/env.py`                  | yes   | `.env`, and the three settings layers below        |
+| `src/cowork_evals/harness.py`              | yes   | The `claude plugin eval` argument list, for both Claude Code backends |
+| `src/cowork_evals/docker/`                 | yes   | The container backend: the digest, the argument lists, build, check and run |
 | `src/cowork_evals/docker/Dockerfile`       | yes   | What `setup --docker` builds                       |
+| `src/cowork_evals/docker/probe.py`         | yes   | The parity probe, the one file here that is 3.10   |
+| `src/cowork_evals/docker/parity.py`        | yes   | The comparison, run on the host                    |
 | `scripts/`                                 | no    | Development tasks for this repository only         |
 | `tests/`, `plugins/`, `docs/`, `plans/`    | no    | Development and reference material                 |
 
@@ -128,8 +134,8 @@ environment. The file is read, never applied to `os.environ`, because the proces
 environment is the layer above it. A key the CLI does not recognise is ignored, because a
 consumer's `.env` serves more than this command.
 
-`.env` is never committed. It may carry `ANTHROPIC_API_KEY`, and the public repository rule
-in [../README.md](../README.md) applies to every other value in it as well.
+`.env` is never committed, and the public repository rule in
+[../README.md](../README.md) applies to every value in it.
 
 The CoWork driver takes none of this. It is configured by `cowork_evals.yaml`, reads no
 environment variable, and reads no `.env`. See [cowork_driver.md](cowork_driver.md).
@@ -137,8 +143,7 @@ environment variable, and reads no `.env`. See [cowork_driver.md](cowork_driver.
 | Variables                                                | Named in                             |
 | ---------------------------------------------------------- | ------------------------------------ |
 | `EVAL_MODEL`, `EVAL_JUDGE_MODEL`, `EVAL_ALLOW_TOOLS`, `EVAL_MAX_COST_USD`, `EVAL_MAX_COST_TOTAL_USD` | [running_evals.md](running_evals.md) |
-| `EVAL_PLATFORM`                                          | [docker.md](docker.md)               |
-| `ANTHROPIC_API_KEY`                                      | [docker.md](docker.md)               |
+| `EVAL_PLATFORM`, `CLAUDE_CODE_VERSION`, `SSL_CERT_FILE`  | [docker.md](docker.md)               |
 | `CLAUDE_CODE_WALNUT_SPIRE`                               | [plugin_eval.md](plugin_eval.md)     |
 
 ## Where state lives

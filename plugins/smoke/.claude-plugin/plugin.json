@@ -1,0 +1,6 @@
+{
+  "name": "smoke",
+  "description": "Fixture plugin for this repository's own tests. It proves a backend reaches a running case on the interpreter that backend put there. Not for release.",
+  "version": "0.0.1",
+  "dependencies": []
+}

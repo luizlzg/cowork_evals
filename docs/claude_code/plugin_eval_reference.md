@@ -1,8 +1,8 @@
 # Claude Code plugin eval: full reference (vendored)
 
 Vendored verbatim from the Claude Code CLI binary, version 2.1.252, build
-2026-08-31T16:02:57Z. `claude plugin eval` is in early access and has no public docs
-page. The CLI carries this text zstd-compressed inside the executable.
+2026-08-31T16:02:57Z. `claude plugin eval` is in early access and is not publicly
+documented. The CLI carries this text zstd-compressed inside the executable.
 
 Do not edit. Re-extract after a `claude update` that changes the harness, and record the
 new version above. The extraction recipe is in [README.md](README.md). This repository's

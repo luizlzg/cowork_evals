@@ -9,13 +9,15 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
+from importlib.resources import files
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 VENV = ROOT / ".venv"
 COWORK = ROOT / ".venv_cowork"
-REQUIREMENTS = ROOT / "docs" / "data" / "requirements.txt"
-INSTALLABLE = ROOT / "docs" / "data" / "requirements_installable.txt"
+DATA = ROOT / "src" / "cowork_evals" / "data"
+REQUIREMENTS = DATA / "requirements.txt"
+INSTALLABLE = DATA / "requirements_installable.txt"
 
 # The nine pins that cannot install off the CoWork VM. docs/environments.md.
 NOT_INSTALLABLE = {
@@ -57,6 +59,13 @@ def interpreter(venv: Path) -> str:
 def test_requirements_files_exist():
     assert REQUIREMENTS.is_file()
     assert INSTALLABLE.is_file()
+
+
+def test_requirements_files_resolve_as_package_data():
+    """How a build reaches them from an installed wheel, with no checkout in sight."""
+    data = files("cowork_evals") / "data"
+    for name in ("requirements.txt", "requirements_installable.txt"):
+        assert (data / name).read_text().count("==") > 100
 
 
 def test_installable_is_the_freeze_minus_the_nine():

@@ -19,6 +19,7 @@ builds, and the one fixture firing at the end of it, are in [`README.md`](README
 | `src/cowork_evals/docker/probe.py`         | The parity probe, run inside the container                |
 | `src/cowork_evals/docker/parity.py`        | The comparison, run on the host                           |
 | `scripts/image.sh`                         | The development task that builds the image                |
+| `scripts/login.sh`                         | The development task that logs in                         |
 | `scripts/parity.sh`                        | The development task over the probe and the comparison    |
 | `plugins/smoke/`                           | The fixture the integration tier fires                    |
 | `tests/unit/test_env.py`, `tests/unit/test_harness.py`, `tests/unit/test_docker.py`, `tests/unit/test_parity.py`, `tests/integration/test_docker.py` | [`../tests/README.md`](../tests/README.md) |
@@ -52,33 +53,33 @@ builds, and the one fixture firing at the end of it, are in [`README.md`](README
 
 A build reads them on a machine with no checkout, so they cannot stay under `docs/`.
 
-- [ ] `git mv docs/data src/cowork_evals/data`.
-- [ ] Point `scripts/cowork_venv.sh` at the new path, header comment included.
-- [ ] Point `tests/unit/test_environments.py` at the new path.
-- [ ] Add a test that both files resolve through `importlib.resources.files("cowork_evals")`,
+- [x] `git mv docs/data src/cowork_evals/data`.
+- [x] Point `scripts/cowork_venv.sh` at the new path, header comment included.
+- [x] Point `tests/unit/test_environments.py` at the new path.
+- [x] Add a test that both files resolve through `importlib.resources.files("cowork_evals")`,
       which is how a build reaches them from an installed wheel.
-- [ ] Correct `docs/environments.md`, `docs/runtime.md`, `docs/docker.md`, and
+- [x] Correct `docs/environments.md`, `docs/runtime.md`, `docs/docker.md`, and
       `docs/README.md`, which links both files, names `data/` among the three measured
-      pages, and points its provenance table at `docs/data/`.
-- [ ] Confirm the wheel carries them: `uv build`, then list the wheel.
+      files, and points its provenance table at `docs/data/`.
+- [x] Confirm the wheel carries them: `uv build`, then list the wheel.
 
 ## Phase 2: `.env` and the settings over it
 
 `src/cowork_evals/env.py`. It reads one file and the process environment. The format and the
 precedence are [`../docs/library.md`](../docs/library.md).
 
-- [ ] Add `python-dotenv` to `dependencies` in `pyproject.toml`. No `.env` parser is
+- [x] Add `python-dotenv` to `dependencies` in `pyproject.toml`. No `.env` parser is
       written here.
-- [ ] Read the file with `dotenv_values(path, interpolate=False)`. It returns a mapping and
+- [x] Read the file with `dotenv_values(path, interpolate=False)`. It returns a mapping and
       does not touch `os.environ`, which is the layer above it.
-- [ ] `setting(name, default)`: the process environment beats `.env` beats the default. A
+- [x] `setting(name, default)`: the process environment beats `.env` beats the default. A
       missing `.env` is not an error, and an unrecognised key is kept.
-- [ ] Resolve `.env` from the working directory, and accept an explicit path.
-- [ ] Read `EVAL_PLATFORM`, default `linux/arm64`, and the `EVAL_*` names in
+- [x] Resolve `.env` from the working directory, and accept an explicit path.
+- [x] Read `EVAL_PLATFORM`, default `linux/arm64`, and the `EVAL_*` names in
       [`../docs/running_evals.md`](../docs/running_evals.md).
-- [ ] Read `CLAUDE_CODE_WALNUT_SPIRE`, default `1`, through the same three layers.
+- [x] Read `CLAUDE_CODE_WALNUT_SPIRE`, default `1`, through the same three layers.
       [`../docs/plugin_eval.md`](../docs/plugin_eval.md).
-- [ ] Never log a value and never put one in an exception message.
+- [x] Never log a value and never put one in an exception message.
 
 ## Phase 3: The Dockerfile
 
@@ -86,44 +87,59 @@ precedence are [`../docs/library.md`](../docs/library.md).
 [`../docs/runtime.md`](../docs/runtime.md) or in the four-source table in
 [`../docs/docker.md`](../docs/docker.md).
 
-- [ ] `FROM ubuntu:22.04`, with `ARG CLAUDE_CODE_VERSION` and `ARG TARGETARCH`.
-- [ ] One apt layer: the document, image, media and CLI tooling, `default-jre-headless` for
+- [x] `FROM ubuntu:22.04`, with `ARG CLAUDE_CODE_VERSION` and `ARG TARGETARCH`.
+- [x] One apt layer: the document, image, media and CLI tooling, `default-jre-headless` for
       the Java 11 the `tabula-py` pin needs, the nine dist-packages suppliers, the Ubuntu
-      font stack, and `bubblewrap`.
-- [ ] `pip install --upgrade pip==25.3`, then `pip install -r requirements_installable.txt`
+      font stack, `bubblewrap` and `socat`.
+- [x] `socat` as well as `bubblewrap`. The harness refuses a granted shell tool without
+      both, and every case here is pinned `--allow-tools Bash`. It is a second deliberate
+      delta against the inventory, recorded in [`../docs/docker.md`](../docs/docker.md).
+      Found by the last box of phase 9 failing, 2026-09-08.
+- [x] `pip install --upgrade pip==25.3`, then `pip install -r requirements_installable.txt`
       from the build context.
-- [ ] LibreOffice 26.2.5.2 from the upstream deb set, mapping `TARGETARCH` to the kernel
+- [x] LibreOffice 26.2.5.2 from the upstream deb set, mapping `TARGETARCH` to the kernel
       architecture the tarball is named by: `arm64` to `aarch64`, `amd64` to `x86-64`.
-- [ ] Put the LibreOffice `program` directory on `PYTHONPATH`, so `import uno` resolves.
-- [ ] Node.js from NodeSource `node_22.x`, pinned to `22.23.2-1nodesource1`.
-- [ ] `@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}` as the one added npm global.
-- [ ] uv 0.12.3 from the Astral installer.
-- [ ] Create `/tmp/eval-home` and `/work` world-writable, for a uid with no passwd entry.
-- [ ] Copy no source tree, install no credential, and add no `.dockerignore`.
+- [x] Put the LibreOffice `program` directory on `PYTHONPATH`, so `import uno` resolves.
+- [x] Node.js from NodeSource `node_22.x`, pinned to `22.23.2-1nodesource1`.
+- [x] `@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}` as the one added npm global.
+- [x] uv 0.12.3 from the Astral installer.
+- [x] Create `/tmp/eval-home` and `/work` world-writable, for a uid with no passwd entry.
+- [x] Copy no source tree, install no credential, and add no `.dockerignore`.
 
 ## Phase 4: The digest, the build and the check
 
 `src/cowork_evals/docker/__init__.py`. A `Docker` object holding frozen configuration and
 doing no work at construction, so `Docker().digest` works on a machine with no daemon.
 
-- [ ] `Docker(*, platform=None, claude_code_version=None, login_dir=None)`. The first two
+- [x] `Docker(*, platform=None, claude_code_version=None, login_dir=None)`. The first two
       resolve through `env.py`, `login_dir` defaults to `~/.cache/cowork_evals/claude/`, and
       each falls back to the value in [`../docs/docker.md`](../docs/docker.md).
-- [ ] `digest`: the first 12 characters of the sha256 over the Dockerfile, both requirements
+- [x] `digest`: the first 12 characters of the sha256 over the Dockerfile, both requirements
       files, the resolved `CLAUDE_CODE_VERSION` and the resolved platform.
-- [ ] `tag`, `cowork-evals:<digest>`, and no second tag.
-- [ ] `DockerError`, carrying a message. No code, no taxonomy: the CLI knows preflight from
+- [x] `tag`, `cowork-evals:<digest>`, and no second tag.
+- [x] `DockerError`, carrying a message. No code, no taxonomy: the CLI knows preflight from
       run by which call it made. Nothing returns an error code or calls `sys.exit`.
-- [ ] `build_argv()`: `-f` at the Dockerfile, the context at the package data directory,
+- [x] `build_argv()`: `-f` at the Dockerfile, the context at the package data directory,
       `--platform`, the tag and the build argument.
-- [ ] `build()`: run it, stream the output, raise on a non-zero exit.
-- [ ] `check()`: the unmet conditions in order, each with the command that fixes it. The
-      daemon reachable, the image present at the current digest, and one credential route
-      available: `ANTHROPIC_API_KEY` set, or `<login_dir>/.claude/.credentials.json`
-      present. An empty list means ready. It writes nothing and builds nothing.
-- [ ] `login_argv()`: the interactive container a developer logs in through once. The same
+- [x] `build()`: run it, stream the output, raise on a non-zero exit.
+- [x] `check()`: the unmet conditions in order, each with the command that fixes it. The
+      daemon reachable, the image present at the current digest, and
+      `<login_dir>/.claude/.credentials.json` present. An empty list means ready. It writes
+      nothing and builds nothing.
+- [x] `login_argv()`: the interactive container a developer logs in through once. The same
       two credential mounts as a run, and no plugin and no log mount.
-- [ ] `scripts/image.sh`: build the image for `EVAL_PLATFORM` through `build()`, `--check`
+- [x] `login()`: run that container with the terminal inherited, so the CLI opens the
+      browser and takes the code in its own prompt. `build_argv()` has `build()` and
+      `run_argv()` has `run()`; without this one nothing in the package ever starts a
+      login, and the only way to log in is to paste an argument list. It raises when the
+      container exits non-zero and when it wrote no credentials file.
+- [x] `seed_login_dir()`: create the configuration directory and write `{}` to the state
+      file when it is absent or empty. An empty `.claude.json` is not an absent one: the
+      CLI parses it, fails, and exits 1. Measured 2026-09-08.
+- [x] `scripts/login.sh`: log in through `login()`, `--check` reports without writing and
+      `--force` logs in over an existing login. A development task is a shell script, so a
+      developer types a script name and never a `python -c`.
+- [x] `scripts/image.sh`: build the image for `EVAL_PLATFORM` through `build()`, `--check`
       verifies the current digest is present and writes nothing, `--recreate` builds with
       `--no-cache`. It is `scripts/cowork_venv.sh` for the image, and it is what a developer
       runs before the integration tier, because the CLI that would do it is `plan_cli.md`.
@@ -134,16 +150,16 @@ doing no work at construction, so `Docker().digest` works on a machine with no d
 both Claude Code backends. The pinned flags are
 [`../docs/running_evals.md`](../docs/running_evals.md).
 
-- [ ] A frozen `RunOptions`, loaded from the `EVAL_*` settings, an explicit value beating
+- [x] A frozen `RunOptions`, loaded from the `EVAL_*` settings, an explicit value beating
       the setting.
-- [ ] `eval_argv(target, output_dir, options)`: every pinned flag, and nothing that is
+- [x] `eval_argv(target, output_dir, options)`: every pinned flag, and nothing that is
       neither pinned nor optioned. Both paths arrive already resolved for the host the
       harness runs on, so the container backend passes container paths.
-- [ ] Put the target ahead of `--tag` and `--allow-tools`, which are variadic and swallow a
+- [x] Put the target ahead of `--tag` and `--allow-tools`, which are variadic and swallow a
       trailing target.
-- [ ] Never emit `--json`. Always emit `--no-publish`, `--no-scaffold`, `--verbose`,
+- [x] Never emit `--json`. Always emit `--no-publish`, `--no-scaffold`, `--verbose`,
       `--threshold 0` and `--ablation none`, with no way to override the last two.
-- [ ] Emit `--debug-file <output_dir>/debug.txt`, the file name the log layout fixes, before
+- [x] Emit `--debug-file <output_dir>/debug.txt`, the file name the log layout fixes, before
       `plugin`, and never a bare `--debug`, which swallows the subcommand name as its
       filter.
 
@@ -151,46 +167,45 @@ both Claude Code backends. The pinned flags are
 
 Still `src/cowork_evals/docker/__init__.py`. It wraps phase 5's list in a container.
 
-- [ ] `plugin_root(target)`: the nearest ancestor of the target holding
+- [x] `plugin_root(target)`: the nearest ancestor of the target holding
       `.claude-plugin/plugin.json`, and a raised `DockerError` when there is none. It is
       what the read-only mount is rooted at and what the container-side target is relative
       to.
-- [ ] `run_argv(target, output_dir, options)`: `docker run --rm`, the platform, the host uid
-      and gid, `HOME=/tmp/eval-home`, `--security-opt seccomp=unconfined`, and phase 5's
+- [x] `run_argv(target, output_dir, options)`: `docker run --rm`, the platform, the host uid
+      and gid, `HOME=/tmp/eval-home`, both `--security-opt` values, and phase 5's
       list as the command, built with container paths.
-- [ ] The plugin root read-only at `/work/plugin`, the run's log directory read-write at
+- [x] The plugin root read-only at `/work/plugin`, the run's log directory read-write at
       `/work/logs`, `--output-dir` at the log mount, and nothing else from the host.
-- [ ] The credential, by the rule in [`../docs/docker.md`](../docs/docker.md): with
-      `ANTHROPIC_API_KEY` set, one `--env` and no credential mount; without it, the two
+- [x] The credential, by the rule in [`../docs/docker.md`](../docs/docker.md): the two
       login paths mounted read-write under `HOME`, because the CLI rewrites its state file
-      and refreshes its token on every start. `tests/unit/test_docker.py` asserts over both
-      shapes of the argument list.
-- [ ] Pass `CLAUDE_CODE_WALNUT_SPIRE` with `--env`: the process in the container is the
+      and refreshes its token on every start. `tests/unit/test_docker.py` asserts over that
+      argument list.
+- [x] Pass `CLAUDE_CODE_WALNUT_SPIRE` with `--env`: the process in the container is the
       harness itself, with no wrapper to export it.
-- [ ] `run(target, output_dir)`: run the container and return the path to the
+- [x] `run(target, output_dir)`: run the container and return the path to the
       `aggregate-result.json` it left behind. Raise when it produced none.
-- [ ] Name no run directory, write no `latest` symlink, prune nothing, decide nothing.
+- [x] Name no run directory, write no `latest` symlink, prune nothing, decide nothing.
 
 ## Phase 7: The probe, the comparison and `scripts/parity.sh`
 
 Only two things are compared mechanically, because the delta table in
 [`../docs/docker.md`](../docs/docker.md) fails on only two: the pins, against
 `data/requirements.txt`, and the five tools recorded as absent. Everything else the probe
-reports is printed for a reader. No page under `docs/` is parsed.
+reports is printed for a reader. No file under `docs/` is parsed.
 
-- [ ] `docker/probe.py`: one JSON document on stdout holding the OS release, the
+- [x] `docker/probe.py`: one JSON document on stdout holding the OS release, the
       architecture, the version of each tool in [`../docs/runtime.md`](../docs/runtime.md),
       `import uno`, `unoserver --version`, the font family count and the full `pip freeze`.
       3.10 syntax, standard library only.
-- [ ] `docker/parity.py`: apply the delta table exactly. Exit 1 on a missing or moved pin,
+- [x] `docker/parity.py`: apply the delta table exactly. Exit 1 on a missing or moved pin,
       on one of the five absent tools being present, and on `import uno` failing. Print an
       extra package or a differing tool version without failing.
-- [ ] Add `packaging` to `dependencies` in `pyproject.toml` and compare pins through
+- [x] Add `packaging` to `dependencies` in `pyproject.toml` and compare pins through
       `packaging.utils.canonicalize_name`. No PEP 503 normalisation is written here.
-- [ ] Report the platform the probe actually ran on, so an x86 run is never read as aarch64.
-- [ ] `scripts/parity.sh`: run the probe in the container with the probe bind-mounted
+- [x] Report the platform the probe actually ran on, so an x86 run is never read as aarch64.
+- [x] `scripts/parity.sh`: run the probe in the container with the probe bind-mounted
       read-only, then the comparison on the host. It installs nothing into the image.
-- [ ] `tests/unit/test_parity.py`: recorded probe documents under `tests/data/`, one per row
+- [x] `tests/unit/test_parity.py`: recorded probe documents under `tests/data/`, one per row
       of the delta table. No container starts.
 
 ## Phase 8: The fixture
@@ -199,17 +214,17 @@ reports is printed for a reader. No page under `docs/` is parsed.
 so it exercises discovery. It carries no skill: whether a model activates a skill is an eval
 question, and every question this plan asks is a mechanism question.
 
-- [ ] `.claude-plugin/plugin.json`, and one case at `evals/plugin/<case>/`. A directory
+- [x] `.claude-plugin/plugin.json`, and one case at `evals/plugin/<case>/`. A directory
       under `evals/` is a skill name, `plugin` or `mocks`, and this plugin has no skill, so
       the case is a `plugin` one. [`../docs/eval_format.md`](../docs/eval_format.md).
-- [ ] `tags: [plugin]`, matching that directory, and `plugins: ["../../.."]`. Both are
+- [x] `tags: [plugin]`, matching that directory, and `plugins: ["../../.."]`. Both are
       required, and the case validator checks both.
-- [ ] The prompt is one instruction: run `python3 -V` and reply with its output and nothing
+- [x] The prompt is one instruction: run `python3 -V` and reply with its output and nothing
       else.
-- [ ] One `regex` grader over `last_message`, `match: contains`, matching the exact string
+- [x] One `regex` grader over `last_message`, `match: contains`, matching the exact string
       `docs/runtime.md` records: `Python 3.10.12`. No `llm` grader: the answer is one fixed
       string, and a judge over a fixed string is a flaky way to compare two strings.
-- [ ] `runs: 1` written out.
+- [x] `runs: 1` written out.
 
 ## Phase 9: The integration tier, and the measurements
 
@@ -221,30 +236,38 @@ pass, and hides a twenty-minute build inside a test run.
 Every box but the last is a `docker run` with a fixed command and a fixed expected output.
 No model is in the loop, because none of these is a question about a model.
 
-- [ ] Assert the daemon is reachable and the image is present at the current digest, failing
+- [x] Assert the daemon is reachable and the image is present at the current digest, failing
       with `scripts/image.sh` named when it is not.
-- [ ] Assert `python3 -V` in the container reports exactly the version
+- [x] Assert `python3 -V` in the container reports exactly the version
       [`../docs/runtime.md`](../docs/runtime.md) records. A patch bump in jammy fails here
-      first, and the fixture's grader is updated with the page in the same commit.
-- [ ] Run the probe and assert the comparison passes.
-- [ ] Assert `bwrap` comes up under `--security-opt seccomp=unconfined`, by running it
+      first, and the fixture's grader is updated with `docs/runtime.md` in the same commit.
+- [x] Run the probe and assert the comparison passes.
+- [x] Assert `bwrap` comes up under `--security-opt seccomp=unconfined`, by running it
       directly. This is the Bash sandbox measurement, and it needs no harness and no case.
-- [ ] Assert `claude --version` runs under the host uid and gid with no passwd entry. This
+- [x] Assert it mounts a procfs too. The bare invocation above passes without
+      `--security-opt systempaths=unconfined`, and every sandboxed command still fails.
+      Found by the last box of this phase failing, 2026-09-08.
+- [x] Move the `CLAUDE_CODE_VERSION` default off 2.1.259, which cannot run a Bash-granting
+      case on Linux at all: its sandbox masks one path in the run's own sandbox home twice,
+      with two mount types, and `bwrap` dies on the second. 2.1.265 does not.
+      [`../docs/docker.md`](../docs/docker.md) records both. Also found by the last box of
+      this phase failing, 2026-09-08.
+- [x] Assert `claude --version` runs under the host uid and gid with no passwd entry. This
       is the uid mapping measurement, and Node's `os.userInfo()` is what would raise.
-- [ ] Assert the plugin mount refuses a write, the log mount accepts one, and a file written
+- [x] Assert the plugin mount refuses a write, the log mount accepts one, and a file written
       into the log mount is owned by the host uid and gid.
-- [ ] Assert `claude plugin eval` in an empty directory prints `No eval cases found`. That
+- [x] Assert `claude plugin eval` in an empty directory prints `No eval cases found`. That
       is the enablement self-test in [`../docs/plugin_eval.md`](../docs/plugin_eval.md): it
       reads the credential and the enablement variable, runs no case and spends nothing.
       `early access` there means the harness is not enabled for this credential, which is
       not something a passing eval run could tell apart from a broken image.
-- [ ] Record in `docs/docker.md`: the capture date and the host as OS, architecture and
+- [x] Record in `docs/docker.md`: the capture date and the host as OS, architecture and
       container runtime, then the platform, the image size, the cold and warm build times
       taken from `scripts/image.sh`, the pin mismatches, the extra packages, the non-Python
       deltas, the font family count, `import uno`, the uid mapping option needed, the Bash
       sandbox option needed, and the installed Claude Code version. No machine name, no user
       name, no home directory path: [`../README.md`](../README.md).
-- [ ] Record whether a first launch in a fresh configuration directory blocks a
+- [x] Record whether a first launch in a fresh configuration directory blocks a
       non-interactive run. If it does, the login step seeds the state file beside the
       configuration directory and `docs/docker.md` says so. If it does not, the run mounts
       the configuration directory alone.
@@ -255,12 +278,12 @@ deselected by `-m "integration and not live"`. Two rather than one, because a si
 end-to-end run cannot say whether the credential, the model, the mounts or the harness is at
 fault.
 
-- [ ] Widen the `live` marker in `pyproject.toml`, which today names a CoWork run only, to
+- [x] Widen the `live` marker in `pyproject.toml`, which today names a CoWork run only, to
       any test that submits a real run.
-- [ ] `claude -p` in the container with a prompt asking for one word, asserting that word
+- [x] `claude -p` in the container with a prompt asking for one word, asserting that word
       comes back. No plugin, no harness, no mounts. It is the minimal proof that Claude Code
       runs there and the credential is accepted, and it costs one short reply.
-- [ ] Fire `plugins/smoke/` through `run()` and assert the result document says the case
+- [x] Fire `plugins/smoke/` through `run()` and assert the result document says the case
       passed, with a timeout that fits one agentic run. The 300 second default in
       `pyproject.toml` binds every test in this file. Everything the box above does not
       cover is here: the harness, the two mounts, `--output-dir`, the `Bash` grant and the
@@ -272,30 +295,36 @@ phase's commit rather than left to a later one.
 | Measurement                                    | If it fails                                                                 |
 | ---------------------------------------------- | ---------------------------------------------------------------------------- |
 | `claude --version` under a uid with no passwd entry | `run_argv` takes the documented fallback: run as root and `chown -R` the log mount to the host uid and gid on the way out. `docs/docker.md` records which route the image needs |
-| `bwrap` under `seccomp=unconfined`             | Apply the documented fallback, `--cap-add SYS_ADMIN --security-opt apparmor=unconfined`, and record which was needed |
+| `bwrap` under `seccomp=unconfined`             | Apply the documented fallback, `--cap-add SYS_ADMIN --security-opt apparmor=unconfined`, and record which was needed. Neither was enough: the route the image needs is `seccomp=unconfined` with `systempaths=unconfined`, recorded in `docs/docker.md` |
 
 If both sandbox options are refused, the container cannot grant `Bash`. The smoke case runs
 a command, so the last box cannot be ticked and this plan is not finished. Record the
 refusal in `docs/docker.md` and stop there: a backend that cannot grant `Bash` cannot run
 the cases this repository pins `--allow-tools Bash` for.
 
+## Reversals
+
+| Date       | Was                                                          | Is                                       | Decided by |
+| ---------- | ------------------------------------------------------------ | ---------------------------------------- | ---------- |
+| 2026-09-08 | Two credential routes, `ANTHROPIC_API_KEY` or a mounted login | One route, the mounted login. The key is removed from the code, the tests and `docs/` | the developer |
+
 ## Phase 10: Documentation
 
 Nothing durable may survive only in this file.
 
-- [ ] `docs/docker.md`: fill every measurement from phase 9.
-- [ ] `docs/library.md`: add the new modules to the ships table.
-- [ ] `docs/running_evals.md`: mark the container backend, its Dockerfile, `parity.sh` and
+- [x] `docs/docker.md`: fill every measurement from phase 9.
+- [x] `docs/library.md`: add the new modules to the ships table.
+- [x] `docs/running_evals.md`: mark the container backend, its Dockerfile, `parity.sh` and
       `plugins/smoke/` built, and correct the row calling `smoke` the staged runtime
       fixture, which is one of the two backends it serves.
-- [ ] `docs/approaches.md`: correct the closing line saying no backend is built.
-- [ ] `scripts/README.md`: a row for `image.sh`, and turn the `parity.sh` note into a row.
-- [ ] `tests/README.md`: a row per new test file, the integration tier's new preconditions,
+- [x] `docs/approaches.md`: correct the closing line saying no backend is built.
+- [x] `scripts/README.md`: a row for `image.sh`, and turn the `parity.sh` note into a row.
+- [x] `tests/README.md`: a row per new test file, the integration tier's new preconditions,
       and the `live` marker now covering a real eval run as well as a real CoWork run.
-- [ ] `plugins/README.md`: mark `smoke` built.
-- [ ] `README.md`: correct the Contributing block, whose integration line describes that
+- [x] `plugins/README.md`: mark `smoke` built.
+- [x] `README.md`: correct the Contributing block, whose integration line describes that
       tier as CoWork only.
-- [ ] `plans/README.md`: correct the closing sentence saying a plan will not survive, which
-      the status table on the same page contradicts.
-- [ ] Re-read every touched page for a statement this plan made false.
-- [ ] `plans/README.md`: mark this plan `implemented`.
+- [x] `plans/README.md`: correct the closing sentence saying a plan will not survive, which
+      the status table in the same file contradicts.
+- [x] Re-read every touched file for a statement this plan made false.
+- [x] `plans/README.md`: mark this plan `implemented`.
