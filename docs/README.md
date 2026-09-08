@@ -22,10 +22,11 @@ part of it.
 | [`cowork_driver.md`](cowork_driver.md)           | Driving CoWork from a script: commands, sequence, result document |
 | [`runtime.md`](runtime.md)                       | What a CoWork session provides and what is on the image         |
 | [`environments.md`](environments.md)             | The two Python environments and how to build them               |
+| [`staged_runtime.md`](staged_runtime.md)         | The 3.10 runtime staged into a plugin so a sandboxed case reaches it |
 | [`plugin_eval.md`](plugin_eval.md)               | `claude plugin eval`: availability, flags, harness limits, cost |
 | [`cowork_desktop.md`](cowork_desktop.md)         | Desktop application internals: deep links, session filesystem   |
 | [`data/requirements.txt`](data/requirements.txt) | `pip freeze` from a CoWork VM, 136 pins, verbatim               |
-| `data/requirements_installable.txt`              | The same minus the 9 pins that cannot install off the VM        |
+| [`data/requirements_installable.txt`](data/requirements_installable.txt) | The same minus the 9 pins that cannot install off the VM |
 
 Three pages are measurements: `runtime.md`, `cowork_desktop.md` and `data/`. Each carries
 its capture date, is a snapshot rather than a contract, and is re-probed when the thing it

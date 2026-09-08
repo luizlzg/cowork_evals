@@ -26,10 +26,21 @@ before changing anything under it. Never restate one of these in another file; l
 - **One command.** Everything a consumer does goes through `cowork_evals`, and a consumer
   never invokes `claude plugin eval`. Never add a second entry point or a per-backend
   executable. The surface is `docs/cli.md`.
-- **Shipped code is a Python package** under `src/cowork_evals/`: standard library only, no
-  runtime dependencies, and 3.10 compatible because it is somebody else's development
-  dependency. **Development tasks are shell scripts** under `scripts/`, are never shipped,
-  and have no build system and no Makefile.
+- **Two kinds of code, two sets of rules.** This package runs on a laptop and controls
+  CoWork. The code under test runs inside the CoWork VM. What binds one does not bind the
+  other, and the two are never conflated.
+
+  | Code                                     | Runs on              | Python | May depend on                        |
+  | ---------------------------------------- | -------------------- | ------ | ------------------------------------ |
+  | This package, `src/cowork_evals/`        | a developer's laptop | 3.14   | anything, kept few and each justified |
+  | The code under test, under the eval path | the CoWork session VM | 3.10  | the image wheel set, and nothing else |
+
+  The second row is the hard one: every file under the path passed to `cowork_evals run`,
+  meaning each skill, command, agent and hook, imports only what the image carries. See
+  `docs/runtime.md`. The first row is constrained by nothing about CoWork; the rules that do
+  apply to it are in `docs/library.md`.
+- **Development tasks are shell scripts** under `scripts/`, are never shipped, and have no
+  build system and no Makefile.
 - **One case format, three backends.** Every eval is written in the `claude plugin eval`
   case format, and the same case tree runs on the mirrored venv, in Docker, and on CoWork.
   Never add a second format or a per-backend variant of a case. The format is

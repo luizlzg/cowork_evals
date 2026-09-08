@@ -3,9 +3,8 @@
 The command. One executable, four verbs, three backends. It is the whole surface a consumer
 repository sees; the boundary behind it is [library.md](library.md).
 
-## Status
-
-Not built. The design below is settled.
+Design. Nothing here is built. What is built is the status table in
+[running_evals.md](running_evals.md).
 
 ## Synopsis
 
@@ -36,6 +35,13 @@ sweep command.
 The plugin root is the parent of `evals/`, and it is accepted only when it holds
 `.claude-plugin/plugin.json`. A sweep finds plugins by that file, not by a fixed glob.
 
+A multi-plugin path is a usage error on `--cowork`. There is no sweep on that backend, for
+the reason in [running_evals.md](running_evals.md).
+
+`run --venv` writes `.cowork-runtime/` into each plugin root it runs, and removes it when
+that plugin's run ends. It is the only thing this command writes into a consumer checkout.
+See [staged_runtime.md](staged_runtime.md).
+
 A case's `plugins: ["../../.."]` frontmatter states the plugin root a second time.
 The case validator checks that the two resolve to the same directory, because the harness
 reads the frontmatter and the CoWork backend resolves the path. See
@@ -59,7 +65,11 @@ runs on two backends of three, so a pass-through would be silently ignored on th
 | `--dry-run`               | yes      | yes        | yes                               |
 
 Defaults come from the `EVAL_*` variables in [running_evals.md](running_evals.md), which
-also says which underlying flag each option maps to and why that flag is pinned.
+also says which underlying flag each option maps to and why that flag is pinned. Those
+variables are read from the environment and from `.env`, and the precedence between the two
+is [library.md](library.md). Two pinned flags have no option: `--threshold`, because the
+gate decides, and `--ablation`, because a baseline arm changes which graders are scored.
+`EVAL_MAX_COST_TOTAL_USD` has no option either; it bounds the invocation rather than a run.
 
 An option the chosen backend cannot honour is refused at parse time. That is an operator
 mistake, so it is a usage error. A *case* that needs a field the backend cannot honour is
@@ -78,7 +88,7 @@ and a run that silently spends ten more building an image is not readable in a l
 
 | Backend    | Requires                                                             | Fails when                                                  |
 | ---------- | -------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `--venv`   | `claude` on `PATH`, the mirror at the current digest                 | the mirror is absent or stale, or `python3 -V` is not 3.10  |
+| `--venv`   | `claude` on `PATH`, the mirror at the current digest, the uv interpreter the mirror was built from | the mirror is absent or stale, `python3 -V` is not 3.10, or the interpreter to stage is absent |
 | `--docker` | a Docker or Rancher daemon, the image at the current digest, `ANTHROPIC_API_KEY` | the daemon is down, the image is absent or stale, the key is unset |
 | `--cowork` | macOS, the CoWork desktop application, an Accessibility grant        | the grant is missing, so there is no headless route and no CI |
 
@@ -139,6 +149,17 @@ reclaiming space on purpose.
 | 3    | preflight failed. Nothing ran and nothing was written                       |
 | 130  | interrupted                                                                 |
 
-The exit code is the CLI's, not the harness's. `claude plugin eval` exits 2 on partial
-results; the backend turns that into a `partial: true` result document, and the gate turns
-that into exit 1. See [plugin_eval.md](plugin_eval.md).
+The exit code is the CLI's, and no backend's code reaches an operator unchanged.
+
+`claude plugin eval` exits 2 on partial results; the venv and Docker backends turn that into
+a `partial: true` result document, and the gate turns that into exit 1. See
+[plugin_eval.md](plugin_eval.md).
+
+The CoWork driver has its own taxonomy, exit 2 to 8, in
+[cowork_driver.md](cowork_driver.md). The `--cowork` backend maps it:
+
+| Driver exit                                            | Becomes                                          |
+| ------------------------------------------------------- | ------------------------------------------------ |
+| 2, for configuration or the rate ceiling               | Checked in preflight, before any case: exit 3    |
+| 2 to 8, raised while running a case                    | That case is an error in the result document, and the gate exits 1 |
+| 0                                                      | The case is graded normally                      |

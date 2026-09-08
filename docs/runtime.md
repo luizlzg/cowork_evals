@@ -15,6 +15,15 @@ because every environment and cache is re-created and left behind.
 
 ## Rules for code that runs in a session
 
+These bind every file a consumer points `cowork_evals run` at: each skill, command, agent
+and hook in the plugin. They do not bind `cowork_evals` itself, which runs on a laptop. See
+[library.md](library.md).
+
+- **Python 3.10 syntax only.** The session interpreter is 3.10.12. Match statements are
+  fine; `X | Y` in an annotation needs `from __future__ import annotations`, and anything
+  added in 3.11 or later is not available at all.
+- **Import only what the image carries.** The standard library, and the wheels in
+  [`data/requirements.txt`](data/requirements.txt). Nothing else resolves.
 - **No package installs at runtime.** No `pip install`, `uv pip install`, `npm install`,
   `apt-get install`, `conda`, `brew`, or a script that shells out to any of them, in a
   skill, a command, an agent, or a hook.
@@ -74,7 +83,7 @@ Exact Python pins: [`data/requirements.txt`](data/requirements.txt), the verbati
 | ------------ | ------------------------------------------------------------------------------------ |
 | OS           | Ubuntu 22.04.5 LTS (jammy)                                                           |
 | Architecture | aarch64 (ARM64). On an x86_64 dev machine package builds and behaviour differ        |
-| Python       | 3.10.12 (`/usr/bin/python3`, also `/usr/bin/python3.10`), mirrored by the venv backend |
+| Python       | 3.10.12 (`/usr/bin/python3`, also `/usr/bin/python3.10`). The mirror pins `3.10` and resolves a newer patch release. See [staged_runtime.md](staged_runtime.md) |
 | pip          | 25.3                                                                                 |
 | uv           | 0.12.3                                                                               |
 | Node.js      | v22.23.2                                                                             |

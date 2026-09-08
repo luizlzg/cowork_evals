@@ -7,7 +7,14 @@ backend.
 The format is `claude plugin eval`'s own, so a case needs no adapter to run under that
 harness. What the CLI does with a case is [plugin_eval.md](plugin_eval.md). How this
 repository invokes it is [running_evals.md](running_evals.md). Which backend honours which
-field is [approaches.md](approaches.md).
+field is [approaches.md](approaches.md). The full field-by-field reference is vendored at
+[claude_code/plugin_eval_reference.md](claude_code/plugin_eval_reference.md), and it is the
+authority where this page is silent.
+
+Two rules on this page are this repository's own and not the harness's: the `<skill>` layer
+under `evals/`, and the two addressability keys below. Everything else is the harness.
+`docs/claude_code/eval_smoke/` is deliberately outside all of it; see
+[claude_code/eval_smoke/README.md](claude_code/eval_smoke/README.md).
 
 ## The tree
 
@@ -30,7 +37,10 @@ Discovery is recursive, so a grouping directory that is not itself a case is sea
 through rather than run. `evals/` is the harness default, so nothing is configured.
 
 A directory directly under `evals/` is a skill name, `plugin`, or `mocks`. Nothing else.
-The case validator enforces that in both directions.
+The case validator enforces that in both directions. That layer is this repository's
+convention: the harness puts a case directly under `evals/` and recurses through anything
+that is not a case, so the layer costs nothing and one directory per skill is what makes
+`--tag` selection match the tree.
 
 Fixtures live inside the case that uses them. `context.add_dirs` refuses any entry outside
 the case directory.
@@ -48,9 +58,19 @@ Two frontmatter keys make a case addressable, and both are checked:
 
 Frontmatter, then the prompt body.
 
-Keys: `name`, `tags`, `plugins`, `runs`, `max_turns`, `timeout_seconds`, `allowed_tools`,
-`model`, `append_system_prompt`, `env`. Defaults are `runs: 3`, `max_turns: 10`,
-`timeout_seconds: 300`. Case `env` keys must start with `EVAL_`.
+| Key                                                        | Is                                                      |
+| ------------------------------------------------------------ | ------------------------------------------------------- |
+| `name`                                                     | Required                                                |
+| `description`                                              | For humans. Not read at run time and not in the results |
+| `tags`, `plugins`                                          | Addressability, above. Both required here               |
+| `runs`, `max_turns`, `timeout_seconds`                     | Defaults 3, 10, 300. Caps 50, 200, 3600                 |
+| `model`, `allowed_tools`, `append_system_prompt`, `env`    | Execution. `env` keys must start with `EVAL_`           |
+| `schema_version`, `expected_outcome`                       | Accepted by the harness. Not used here                  |
+
+Any other key is an error. `context.*` cannot be set from `prompt.md`.
+
+Writing out a key a backend cannot honour skips the case on that backend. Leaving it out
+does not, because a default is not a request. See [running_evals.md](running_evals.md).
 
 ## case.yaml
 
@@ -63,17 +83,32 @@ One grader per file under `graders/`, frontmatter then the rubric or pattern.
 
 | Type          | Asserts                                                          | Class      |
 | ------------- | ---------------------------------------------------------------- | ---------- |
-| `regex`       | `pattern`, `flags`, `match: contains \| not_contains \| count:N` | structural |
-| `tool_used`   | `tool`, `input_match`, `min` (default 1), `max`                  | structural |
+| `regex`       | `pattern`, `flags`, `match: contains \| not_contains \| count:N`, `target` | structural |
+| `tool_used`   | `tool`, `input_match`, `min` (default 1), `max` (default unlimited) | structural |
 | `tool_order`  | `before`, `after`                                                | structural |
-| `file_exists` | `path`, a glob over files the agent created                      | structural |
+| `file_exists` | `path`, a glob over files the agent created, `exists` (default true) | structural |
 | `llm`         | `criteria`, `focus`. A judge model votes 2 of 3                  | judged     |
 | `baseline`    | `baseline_file`, `criteria`                                      | judged     |
 
 The class column is what the gate reads. See [running_evals.md](running_evals.md).
 
-Grader targets: `last_message` (default), `trace`, `files` (created paths, not contents),
-`{source: file, path}` (a produced file's contents), `mock_calls`.
+Every grader also takes `name`, which defaults to the filename without `.md`, and `weight`,
+which is greater than 0 and defaults to 1. The gate reads pass and fail, not the score, so
+`weight` changes the harness summary and changes nothing here. There is no `weight: 0`:
+delete the grader, or use `arm`.
+
+**Only two graders choose what they look at, and they use different keys.** `regex` uses
+`target`, `llm` uses `focus`. `tool_used` and `tool_order` always read the trace,
+`file_exists` always reads the created file list, and `baseline` always compares against
+`baseline_file`. Setting `target` on an `llm` grader is silently ignored and it judges
+`last_message`.
+
+Values for `target` and `focus`: `last_message` (default), `trace`, `files` (created paths,
+not contents), `{source: file, path}` (a produced file's contents), `mock_calls`.
+
+`arm` selects which ablation arm scores a grader: `with-only`, or `both`. It matters only
+under `--ablation with-without`, which this repository never runs, so a case here sets it
+only to stay portable. See [running_evals.md](running_evals.md).
 
 Prefer a deterministic grader over a judged one for anything long. Judges are noisy on long
 inputs.
@@ -102,6 +137,8 @@ Each of these has a silent failure mode, and each is fixed by editing the case.
   credentials, and a 2-minute cap. Reference resources as `$(dirname "$0")/...`.
 - **`context.add_dirs` must stay inside the case directory.** Naming the eval directory, a
   sibling case, the plugin root or the case's own `graders/` refuses the run.
+- **A `target` on an `llm` grader is ignored.** That key is `focus`, and the grader judges
+  `last_message` while looking as if it judges a file.
 
 The traps that a case cannot fix, because they are the harness rather than the file, are in
 [plugin_eval.md](plugin_eval.md).

@@ -13,7 +13,15 @@ logs/
 results/
 tmp/
 
+# Runtime staged into a plugin under test for the length of a run.
+# See docs/staged_runtime.md
+.cowork-runtime/
+
 # Local machine state
 .claude/settings.local.json
 .env
+
+# Driver configuration. Names a CoWork profile, which is an identifier.
+# See README.md, the public repository rule.
+cowork_evals.yaml
 .DS_Store

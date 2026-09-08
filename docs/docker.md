@@ -8,9 +8,8 @@ The image inventory this container has to match is [runtime.md](runtime.md). The
 around it is [running_evals.md](running_evals.md) and the command that reaches it is
 [cli.md](cli.md). The cheaper alternative is [environments.md](environments.md).
 
-## Status
-
-Not built. The design below is settled; the measurements are not taken.
+Design. Nothing here is built and the measurements at the end are not taken. What is built
+is the status table in [running_evals.md](running_evals.md).
 
 ## Usage
 
@@ -51,7 +50,8 @@ Both upstream sources are present for aarch64 and carry the recorded versions, c
 
 ## The Python pins
 
-`docs/data/requirements.txt` is 136 pins. They come from two places, not one.
+The two requirements files, and the split between them, are
+[environments.md](environments.md). In the image they come from two places, not one.
 
 | Pins | Source                                                 |
 | ---- | ------------------------------------------------------ |
@@ -76,8 +76,8 @@ must never be run.
 | `ufw==0.36.1`                | `ufw`                 | 0.36.1-4ubuntu0.1   |
 | `unattended-upgrades==0.1`   | `unattended-upgrades` | 2.8ubuntu1          |
 
-`pip freeze` inside the built image reports all 136, because pip sees `dist-packages`. That
-is the fidelity gain over the mirror, which manages 127 and cannot hold the other nine.
+`pip freeze` inside the built image reports every pin, because pip sees `dist-packages`.
+That is the fidelity gain over the mirror, which cannot hold the nine.
 
 Measured on `ubuntu:22.04` `linux/arm64` on 2026-09-03, a snapshot: apt installs the nine
 above, `python3 -V` reports 3.10.12, and `pip freeze` reports all nine at the recorded pin
@@ -132,7 +132,8 @@ global is added.
 ## Credentials
 
 The container authenticates with `ANTHROPIC_API_KEY`, passed at run time with
-`--env ANTHROPIC_API_KEY`.
+`--env ANTHROPIC_API_KEY`. The value comes from the environment or from `.env`, which is
+never committed. See [library.md](library.md).
 
 - Never bake a credential into an image layer.
 - Never mount the host `~/.claude` or `~/.claude.json`. The harness copies credentials into
@@ -141,7 +142,8 @@ The container authenticates with `ANTHROPIC_API_KEY`, passed at run time with
 - API key auth cannot publish a report to claude.ai. The runner passes `--no-publish`
   anyway, so nothing changes.
 
-The runner exits 2 with that reason when `ANTHROPIC_API_KEY` is unset.
+An unset `ANTHROPIC_API_KEY` is a failed preflight, so it exits 3 and names the variable.
+See [cli.md](cli.md).
 
 `CLAUDE_CODE_WALNUT_SPIRE` is passed in with `--env` alongside the credential, because the
 process inside the container is `claude plugin eval` itself with no wrapper in the way. A
@@ -204,12 +206,13 @@ share one tag and no change can be served from a stale image.
 
 ## Parity
 
-`scripts/parity.sh` is the development task: it runs one probe inside the container and pipes
-the JSON to `scripts/parity.py`, which runs on the host under `.venv` and does the
-comparison. The
-comparison is against [runtime.md](runtime.md) and `data/requirements.txt`: the OS release,
-the architecture, every version in the runtime tables, `import uno`, the font family count,
-and the full `pip freeze`.
+`scripts/parity.sh` is the development task: it runs one probe inside the container, then
+compares the JSON the probe writes against [runtime.md](runtime.md) and
+`data/requirements.txt`. It checks the OS release, the architecture, every version in the
+runtime tables, `import uno`, the font family count, and the full `pip freeze`.
+
+It is a shell script like every other task under [../scripts/](../scripts/), and the
+comparison runs on the host. Nothing from this package is installed into the image to do it.
 
 | Delta                                          | Result                 | Why                                                            |
 | ---------------------------------------------- | ---------------------- | -------------------------------------------------------------- |
@@ -223,7 +226,7 @@ The tools recorded as not present are `wkhtmltopdf`, `weasyprint`, `exiftool`, `
 the `sqlite3` CLI.
 
 The probe writes one JSON document. `tests/test_parity.py` asserts over recorded copies of
-it, so the tests start no container.
+it under `tests/data/`, so the tests start no container.
 
 ## What the container still does not reproduce
 

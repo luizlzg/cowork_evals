@@ -12,15 +12,22 @@ honours which part of it is [approaches.md](approaches.md). The harness is
 
 ## Status
 
-| Piece                                    | Built |
-| ---------------------------------------- | ----- |
-| The 3.10 mirror, as a development script | yes   |
-| The `cowork_evals` package and CLI       | no    |
-| The venv backend                         | no    |
-| The gate                                 | no    |
-| The case validator                       | no    |
-| The container backend                    | no    |
-| The CoWork driver and its backend        | no    |
+This table is the build status of the whole system. No other page carries one; they link
+here.
+
+| Piece                                     | Built | Designed in                                |
+| ----------------------------------------- | ----- | ------------------------------------------- |
+| The 3.10 mirror, as a development script  | yes   | [environments.md](environments.md)          |
+| The `cowork_evals` package and CLI        | no    | [library.md](library.md), [cli.md](cli.md)  |
+| The venv backend                          | no    | this page                                   |
+| The staged runtime                        | no    | [staged_runtime.md](staged_runtime.md)      |
+| The gate                                  | no    | this page                                   |
+| The case validator                        | no    | [eval_format.md](eval_format.md)            |
+| The 3.10 and import check over code under test | no | nowhere yet                                 |
+| The container backend and its Dockerfile  | no    | [docker.md](docker.md)                      |
+| `scripts/parity.sh` and `tests/test_parity.py` | no | [docker.md](docker.md)                     |
+| The CoWork driver and its backend         | no    | [cowork_driver.md](cowork_driver.md)        |
+| `plugins/smoke/`, the mirror fixture      | no    | [../plugins/README.md](../plugins/README.md) |
 
 ## The cases it runs
 
@@ -33,45 +40,119 @@ case is not expressible. A path holding several plugins means every plugin's sui
 each its own harness invocation, gated once.
 
 There is no sweep on CoWork. One case there costs a VM boot plus a full agentic run and
-counts against `COWORK_MAX_RUNS`, so a sweep is a smoke set named case by case. Pointing
-`--cowork` at a path holding several plugins is a usage error.
+counts against `COWORK_MAX_RUNS`, so a sweep is a smoke set named case by case. That is why
+[cli.md](cli.md) makes a multi-plugin path a usage error on `--cowork`.
 
 The CoWork backend does not call `claude plugin eval`. It reads the same case tree, submits
 each case's prompt body through the driver, grades the driver's result document with the
-CoWork grader, and writes the same `aggregate-result.json`. It pins one run per case, and
-reports a case it cannot honour as skipped. Of the pinned flags below it uses only
-`EVAL_JUDGE_MODEL`, for judged graders. The rest configure the CLI, and the CLI is not in
-the path. See [cowork_driver.md](cowork_driver.md).
+CoWork grader, and writes the same `aggregate-result.json`. It pins one run per case. Of the
+pinned flags below it uses only `EVAL_JUDGE_MODEL`, for judged graders. The rest configure
+the CLI, and the CLI is not in the path. See [cowork_driver.md](cowork_driver.md).
 
-## The mirror on PATH
+### What counts as a case the backend cannot honour
 
-The venv backend puts the cached 3.10 mirror's `bin` first on `PATH` before calling the
-harness, so a case that shells out to a bare `python3` gets 3.10 and the CoWork wheel set.
-Where the mirror lives is [library.md](library.md), and
-[environments.md](environments.md) says why prepending it reaches child processes.
+A backend reads the keys the case file writes, never the merged defaults. `runs: 3` is the
+default for every case, so treating a default as a request would skip every case on CoWork
+and leave the gate permanently red.
+
+| In the case file                                  | On CoWork          |
+| -------------------------------------------------- | ------------------ |
+| No `runs` key                                      | Runs once          |
+| `runs: 1`                                          | Runs once          |
+| `runs: 3`, written out                             | Skipped            |
+| `max_turns` or `timeout_seconds`, written out      | Skipped            |
+| `model`, `allowed_tools`, `append_system_prompt`, `env` | Skipped       |
+| `context.*`, or a `mocks/` directory the case uses | Skipped            |
+
+The rule is the same for every backend: an explicit key is honoured when the backend's fixed
+behaviour already satisfies it, and skipped otherwise. Which key each backend can honour is
+[approaches.md](approaches.md). A skip is written into the result document with its reason
+and fails the gate, so a backend cannot go green by honouring nothing.
+
+## The staged runtime on PATH
+
+The venv backend stages a relocatable 3.10 interpreter carrying the CoWork wheels inside the
+plugin directory under test, then puts its `bin` first on `PATH` before calling the harness.
+A case that shells out to a bare `python3` gets 3.10 and the CoWork wheel set. What is
+staged, how, and what has been measured about it is
+[staged_runtime.md](staged_runtime.md).
+
+The mirror itself is never staged. It is a virtual environment, so its interpreter and
+standard library stay under the home directory, which the OS sandbox cannot read. That is
+the whole reason the runtime is staged rather than put on `PATH` where it is built.
 
 It refuses to run when the resulting `python3 -V` is not 3.10. One rule covers both hosts:
 on a laptop a missing or stale mirror fails preflight instead of running against the host
-interpreter, and in the container there is no mirror to prepend because the system
-interpreter is already 3.10. See [docker.md](docker.md).
+interpreter, and in the container there is nothing to stage because the system interpreter
+is already 3.10. See [docker.md](docker.md).
 
-Two conditions have to hold. Neither is verified against the harness yet.
+### Why the plugin directory is the only place it can go
 
-| Condition                                      | Not met when                                       |
-| ---------------------------------------------- | -------------------------------------------------- |
-| The per-run sandbox inherits `PATH`            | It replaces the environment as it replaces `HOME`  |
-| The mirror is readable from inside the sandbox | Granting `Bash` hides the rest of the home directory |
+Granting `Bash` in any form turns on Claude Code's OS-level Bash sandbox, seatbelt on macOS
+and bubblewrap on Linux. Inside it the readable set is the per-run sandbox, the plugin
+directory under test, the case's `context.add_dirs` entries, and the `PATH` directories
+inside those. The home directory and its siblings are unreadable.
 
-The OS sandbox that `Bash` turns on leaves readable the sandbox itself, the plugin
-directory, the case's `context.add_dirs` entries, and the `PATH` directories inside those.
-Everything else under the home directory is hidden. The mirror sits under
-`~/.cache/cowork_evals` and not inside a plugin, and `add_dirs` refuses any entry outside
-the case directory, so no case can expose it. Its `python3` is a symlink into the uv
-interpreter store, which is under the home directory and is not itself on `PATH`, so the
-base interpreter has to be reachable as well as the venv.
+`--allow-tools` is pinned to `Bash` because a skill that shells out needs it, so every run
+is subject to this.
 
-Until both conditions are measured, this approach is unproven and only the container
-reproduces the interpreter. See [docker.md](docker.md).
+| Candidate location                          | Usable                                                             |
+| ------------------------------------------- | ------------------------------------------------------------------ |
+| The plugin directory under test             | Yes. Readable, and `PATH` directories inside it stay readable      |
+| `~/.cache/cowork_evals/`, where it is built | No. Under the home directory                                       |
+| A `context.add_dirs` entry                  | No. [eval_format.md](eval_format.md) refuses an entry outside the case directory, and the reference refuses one naming anything but a fixture directory |
+| An operator `--allow-tools` read grant      | No. Grants a read path, not an exec path into the sandbox          |
+
+Staging into the plugin directory writes a build product into the consumer checkout. It is
+the one exception to the rule in [library.md](library.md), the backend removes it when the
+run ends, and the consumer git-ignores it.
+
+
+### A Bash-granting run is refused on a host that runs a credential process
+
+Snapshot, 2026-09-03, CLI 2.1.260, macOS. A case granted `Bash` fails before the child
+starts, so no case body runs and the run costs nothing:
+
+```
+a credentials file in this environment (the AWS config / shared credentials file, the GCP
+application-default credentials, a kubeconfig, or an Anthropic profile config) could not be
+followed (an AWS credential_process / credential_source cannot be excluded from the shell),
+so the Bash sandbox cannot exclude the files it points at - a Bash-granting evaluation
+cannot run here
+```
+
+The harness excludes credential files from the OS sandbox before it grants `Bash`. A
+`credential_process` or `credential_source` entry names a command, not a file, so there is
+nothing to exclude, and the harness refuses the run rather than leave that entry reachable
+from the shell.
+
+Three runs of one throwaway case separate the cause:
+
+| Run                                            | Result                    |
+| ---------------------------------------------- | ------------------------- |
+| `--allow-tools Bash`, mirror first on `PATH`   | refused, no child started |
+| `--allow-tools Bash`, host `PATH`              | refused, no child started |
+| No `--allow-tools`, otherwise identical        | ran, 12 s, 0.06 USD       |
+
+The `Bash` grant alone causes it. Neither the mirror nor `scripts/cowork_run.sh` is
+involved.
+
+Re-measured 2026-09-04, same CLI. Nothing lifts it on that host:
+
+| Attempt                                                     | Result                              |
+| ------------------------------------------------------------ | ------------------------------------- |
+| `AWS_CONFIG_FILE` and `AWS_SHARED_CREDENTIALS_FILE` at empty files | still refused                   |
+| `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1`                        | still refused                        |
+| Every `CLAUDE_CODE_*` and `CLAUDECODE` variable unset       | still refused, so nesting inside a session is not the cause |
+| `HOME` at an empty directory                                | refusal gone, run fails `Not logged in`. Plain `claude -p` fails the same way |
+
+The last row is why the host cannot be worked around. The configuration the sandbox cannot
+exclude is also the one that authenticates Claude Code there.
+
+It binds the venv backend, which pins `--allow-tools Bash` and runs the harness on the
+developer's host. It does not bind the container backend, which runs the harness inside the
+image, where no such configuration exists. Nothing in this repository lifts it: the host's
+AWS configuration belongs to the developer.
 
 ## Pinned flags
 
@@ -93,6 +174,13 @@ command-line option overrides, and on which backend, is [cli.md](cli.md).
 The target goes before every variadic flag: `--tag` and `--allow-tools` swallow a trailing
 target.
 
+`--ablation` and `--threshold` have no command-line option and cannot be overridden.
+`--threshold 0` is what hands pass and fail to the gate below. `--ablation none` is what
+keeps a `tool_used: Skill` grader scored: under `with-without` such a grader is demoted to an
+unscored indicator unless the case sets `arm: both`, so the gate would stop reading it. A
+baseline arm is an investigation, run by calling the harness by hand, and it is not a run of
+this command.
+
 `--allow-tools` is pinned because a case cannot grant itself `Bash`, `Write`, `Edit`,
 `WebFetch` or an MCP tool. The operator grant is the only route, and an ungranted case loses
 the tool rather than failing loudly. `Bash` is the default because a skill that shells out
@@ -113,7 +201,8 @@ covers all three backends, and it always runs in the `cowork_evals` process on t
 | --------------------------------------------------------------------- | ------------ |
 | Any `regex`, `tool_used`, `tool_order` or `file_exists` grader failed | exit 1       |
 | Any case or grader reported skipped                                   | exit 1       |
-| `partial: true`: cost ceiling, auth failure, or interrupted           | exit 1       |
+| `partial: true`: `partialReason` `cost_ceiling` or `auth_failed`      | exit 1       |
+| A CoWork case that the driver could not run or collect                | exit 1       |
 | A results document is missing or unparsable                           | exit 1       |
 | Any `llm` or `baseline` grader failed                                 | printed only |
 | Otherwise                                                             | exit 0       |
@@ -158,17 +247,14 @@ filter. `--verbose` writes to that file only and never to the terminal.
 
 ## Cadence
 
-An eval is not a commit-time check.
+An eval is not a commit-time check. `git commit` runs nothing, and there is no hook.
 
-| Moment              | What runs                                            | Enforced by           |
-| ------------------- | ---------------------------------------------------- | --------------------- |
-| `git commit`        | nothing                                              | no hook, by design    |
-| Writing a case      | `cowork_evals run --venv <case>`                     | the author            |
-| Before opening a PR | `cowork_evals run --venv <plugin>/evals` per plugin  | the PR template       |
-| Before a release    | `cowork_evals run --docker <root>`, then a CoWork smoke set | the release checklist |
+Which command runs at which moment is the table in
+[approaches.md](approaches.md). Who enforces it is the consumer repository: the author while
+writing a case, the PR template before a PR, the release checklist before a release.
 
-This is the cadence for a consumer repository. Nothing here runs against this repository's
-own fixtures except the smoke case that proves the backend reaches a running case.
+That cadence is for a consumer repository. Nothing here runs against this repository's own
+fixtures except the smoke case that proves the backend reaches a running case.
 
 ## Nothing here runs on CI
 
@@ -190,11 +276,18 @@ A consumer automates it when all four of these hold, and not before:
 [plugin_eval.md](plugin_eval.md) counts the model calls a suite makes. This page sets the
 ceilings on what they may cost.
 
-Ceilings: `EVAL_MAX_COST_USD` 5 per plugin, `EVAL_MAX_COST_TOTAL_USD` 25 per sweep. The
-total binds first: five plugins at 5 USD each is 25. A sweep sums `costUsd` from each
+| Ceiling                   | Default | Binds                | Reached through            |
+| ------------------------- | ------- | -------------------- | -------------------------- |
+| `EVAL_MAX_COST_USD`       | 5       | one plugin's suite   | `--max-cost-usd`           |
+| `EVAL_MAX_COST_TOTAL_USD` | 25      | the whole invocation | the variable only, no flag |
+
+The total binds first: five plugins at 5 USD each is 25. A sweep sums `costUsd` from each
 plugin's result document and checks the total before every plugin, the first included, so a
 ceiling of 0 stops it before it spends anything. A sweep that stops on the ceiling is a
 failure, never a pass.
+
+The total has no command-line option because it governs an invocation rather than a run, and
+[cli.md](cli.md) lists only the options a run takes.
 
 | Measurement                    | Wall clock       | costUsd          |
 | ------------------------------ | ---------------- | ---------------- |

@@ -17,6 +17,9 @@ its own header. `lib.sh` is sourced, never executed.
 | `lint.sh`        | Lint Python and shell. `--fix` applies                  |
 | `lib.sh`         | Shared `ROOT`, `VENV`, `COWORK`, `die`, `need`, `usage` |
 
+`parity.sh` is designed and not written: it probes the container and compares it against
+`docs/runtime.md`. See [`../docs/docker.md`](../docs/docker.md).
+
 The three eval backends, the gate and the case validator are not here. They are library
 code, they are reached through the `cowork_evals` command, and a row is never added below
 for one of them.

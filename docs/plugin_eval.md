@@ -12,8 +12,10 @@ page, so `claude plugin eval --help` in your own build is the authority when thi
 the CLI disagree.
 
 This page is a summary. Anthropic's own full reference is vendored at
-[`claude_code/`](claude_code/), together with `eval_smoke/`, a runnable plugin that proves
-the harness works.
+[`claude_code/`](claude_code/) and is the authority for any detail this page omits. It was
+extracted from CLI 2.1.252, seven patch versions behind the 2.1.259 this page is written
+against. That gap has not been re-checked. `docs/claude_code/eval_smoke/` is a runnable
+plugin, written here, that proves the harness works.
 
 ## Availability
 
@@ -48,8 +50,14 @@ Self-test from an empty directory:
 
 ## The cases it reads
 
-Cases live under the plugin's eval directory, `evals/` by default, and the CLI writes its
-own output to `evals/results/`. The file format is [eval_format.md](eval_format.md).
+Cases live under the plugin's eval directory, `evals/` by default. `--eval-dir` and the
+manifest's `experimental.evals` move it, and this repository moves neither. The file format
+is [eval_format.md](eval_format.md).
+
+Left alone the CLI writes `aggregate-result.json` and `report.html` to
+`<eval dir>/results/<timestamp>/`, inside the consumer's checkout. Every backend here pins
+`--output-dir` at the run's log directory instead, so nothing is written under a plugin. See
+[running_evals.md](running_evals.md).
 
 ## Running
 
@@ -59,7 +67,8 @@ claude plugin eval [target] [--case glob] [--tag t...] [--runs n] [--model m]
                    [--output-dir dir] [--json [file]] [--threshold 0..1]
                    [--allow-tools t...] [--scaffold|--no-scaffold]
                    [--ablation none|with-without] [--mocks record|off]
-                   [--keep-temp] [--verbose] [--report path] [--no-publish]
+                   [--keep-temp] [--verbose] [--report path]
+                   [--publish-report|--no-publish]
 ```
 
 The target is a path, an installed plugin name, or `name@marketplace`. Put it before

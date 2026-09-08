@@ -8,12 +8,12 @@ The measured application internals it couples to are in
 filesystem layout, the authorizations table and the coupling list to re-probe after an
 update. Do not restate them here.
 
-## Status
+Design. Nothing here is built, and neither is the CoWork backend above it. What is built is
+the status table in [running_evals.md](running_evals.md).
 
-Not built, and neither is the CoWork backend above it. This page is the contract the
-driver is built to: the sequence, the command surface, the configuration, the reading rules,
-the result document, the grader mapping and the exit codes. Every statement here is a
-design decision, not a measurement, except where it cites
+This page is the contract the driver is built to: the sequence, the command surface, the
+configuration, the reading rules, the result document, the grader mapping and the exit
+codes. Every statement is a design decision, not a measurement, except where it cites
 [cowork_desktop.md](cowork_desktop.md). The completion signal is measured on first use and
 the fallback is stated below.
 
@@ -39,9 +39,9 @@ parameters, but the driver does not send them. That is why `context.add_dirs` an
 ## The command surface
 
 The driver is `cowork_evals.cowork`, library code like the rest of the package: standard
-library only, 3.10 compatible, one module. It runs on the host and never under the CoWork
-mirror, because it drives the desktop application and reads host paths, and nothing it does
-belongs to a session.
+library only, one module. It runs on the host and never under the CoWork mirror, because it
+drives the desktop application and reads host paths, and nothing it does belongs to a
+session. It is therefore not bound to 3.10; see [library.md](library.md).
 
 It is not a verb of the consumer command. The `--cowork` backend calls it, and
 `python -m cowork_evals.cowork` reaches the three commands below directly when a run has to
@@ -120,7 +120,9 @@ pause mid-run, which is why `COWORK_IDLE_SECONDS` is raisable.
 
 ## Configuration
 
-Environment variables with defaults. No machine fact is hardcoded.
+Environment variables with defaults. No machine fact is hardcoded. They are read from the
+environment and from `.env`, like every other variable this command takes. See
+[library.md](library.md).
 
 | Variable                 | Default                | Is                                             |
 | ------------------------ | ---------------------- | ---------------------------------------------- |
@@ -212,9 +214,10 @@ session directory. `mock_calls` has no equivalent here, because the MCP servers 
 ones.
 
 Skips are recorded, never silent. A grader with no equivalent, and a case whose frontmatter
-names a field this backend cannot honour, are both written into the result document as
-skipped with the reason. The gate fails a run that reports a skip, so a suite cannot go
-green on CoWork by grading nothing. See [running_evals.md](running_evals.md).
+writes out a key this backend cannot honour, are both written into the result document as
+skipped with the reason. A key the case leaves to its default is not a skip; the rule and
+the key-by-key table are in [running_evals.md](running_evals.md). The gate fails a run that
+reports a skip, so a suite cannot go green on CoWork by grading nothing.
 
 ## Decisions
 
@@ -303,6 +306,9 @@ collapses them.
 
 A missing Accessibility grant shows as exit 3, with `osascript` error 1002 on stderr. A
 tenant that enables `disableDeepLinkRegistration` shows as exit 4. It fails closed.
+
+These are the module's codes and no operator sees them. The `--cowork` backend maps them
+onto the four codes the command exits with, and that mapping is in [cli.md](cli.md).
 
 ## Cleanup
 

@@ -9,7 +9,9 @@ into `docs/` before the plan is removed, and every plan's last phase says so exp
 
 A row is added below when a plan is written, and removed when the plan is deleted.
 
-No plan is open.
+| Plan                                             | Builds                                          | Branch             |
+| ------------------------------------------------ | ------------------------------------------------ | ------------------ |
+| [`plan_cowork_tools.md`](plan_cowork_tools.md)   | The CoWork driver library                       | `feat/cowork-tools` |
 
 Build order, when the backend plans are written: the package skeleton and the CLI first,
 because they own the command surface, the gate and the log layout. Then the venv backend,

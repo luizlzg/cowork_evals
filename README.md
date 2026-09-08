@@ -1,4 +1,4 @@
-# cowork_evals
+# CoWork Evals
 
 Run evals for Claude CoWork skills and plugins.
 
@@ -6,21 +6,21 @@ Evals are not written here. This is a library, installed by the repository that 
 plugins under test. That repository writes the cases and points this one at them.
 
 CoWork exposes no scriptable entry point, so there is no single way to run an eval against
-it. This package holds three ways, from cheapest to most accurate, and says plainly what
-each one proves and what it does not.
-
-| Approach                   | Runs on                      | Proves                                     |
-| -------------------------- | ---------------------------- | ------------------------------------------ |
-| Claude Code, mirrored venv | Local `claude`, Python 3.10  | Skill logic, activation, hook gates        |
-| Claude Code, Docker        | Local `claude`, Ubuntu 22.04 | The above plus rendering, OCR, fonts, CLIs |
-| CoWork, driven directly    | The real CoWork VM           | The deployed stack, end to end             |
+it. This package holds three, from cheapest to most accurate: Claude Code against a 3.10
+runtime mirrored from the image, Claude Code inside a container that reproduces the image,
+and the real CoWork desktop application driven directly.
 
 An eval is written once, in the `claude plugin eval` case format, and runs on any of the
 three. The backend changes, the case does not. The CoWork backend honours a subset of the
 format, because it drives a live session rather than the harness.
 
-`docs/approaches.md` explains the trade-offs, says which subset, and links each approach to
-its design.
+[`docs/approaches.md`](docs/approaches.md) says what each one proves and what it does
+not, which subset, and links each to its design.
+[`docs/running_evals.md`](docs/running_evals.md) says what is built: today, only the 3.10
+mirror.
+
+The code under test is bound to Python 3.10 and the CoWork wheel set. Nothing in this
+package is; it runs on a laptop. See [`docs/runtime.md`](docs/runtime.md).
 
 ## Using it
 
@@ -33,22 +33,22 @@ cowork_evals run --venv path/to/plugin/evals
 ```
 
 The command takes one path, and the path is the scope: a case, a skill, a plugin's suite, or
-a directory of plugins. `docs/cli.md` is the whole surface. `docs/library.md` says what
-ships, what it writes and where.
+a directory of plugins. [`docs/cli.md`](docs/cli.md) is the whole surface.
+[`docs/library.md`](docs/library.md) says what ships, what it writes and where.
 
 The caller is expected to have `claude`, and for the other two backends Docker or Rancher
 Desktop, and the CoWork desktop application. `cowork_evals check` reports what is missing.
 
 ## Layout
 
-| Path       | Holds                                                        |
-| ---------- | ------------------------------------------------------------ |
-| `docs/`    | Reference material. `docs/README.md` is the index            |
-| `plans/`   | Work in progress. A plan is deleted once implemented         |
-| `scripts/` | Development tasks for this repository. Never shipped         |
-| `plugins/` | Fixture plugins for this repository's own tests              |
-| `tests/`   | Deterministic tests for this repository's own code           |
-| `logs/`    | Eval run output. Git-ignored                                 |
+| Path                            | Holds                                                               |
+| ------------------------------- | ------------------------------------------------------------------- |
+| [`docs/`](docs/README.md)       | Reference material. [`docs/README.md`](docs/README.md) is the index |
+| [`plans/`](plans/README.md)     | Work in progress. A plan is deleted once implemented                |
+| [`scripts/`](scripts/README.md) | Development tasks for this repository. Never shipped                |
+| [`plugins/`](plugins/README.md) | Fixture plugins for this repository's own tests                     |
+| [`tests/`](tests/README.md)     | Deterministic tests for this repository's own code                  |
+| `logs/`                         | Eval run output. Git-ignored, and absent until a run creates it     |
 
 ## Public repository
 
@@ -69,8 +69,8 @@ scripts/test.sh
 scripts/lint.sh
 ```
 
-`scripts/README.md` is the task index. Every script takes `--help`. Those scripts are for
-working on this repository and are not part of the distribution.
+[`scripts/README.md`](scripts/README.md) is the task index. Every script takes `--help`.
+Those scripts are for working on this repository and are not part of the distribution.
 
-`CLAUDE.md` holds the working rules and the writing rules. Each directory has a
+[`CLAUDE.md`](CLAUDE.md) holds the working rules and the writing rules. Each directory has a
 `README.md` that indexes it and owns the rules for it.

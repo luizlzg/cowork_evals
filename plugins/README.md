@@ -17,8 +17,10 @@ The layout is the standard one, because a fixture that does not look like a real
 proves nothing about discovery. The case format is
 [../docs/eval_format.md](../docs/eval_format.md).
 
-`smoke` proves the CoWork mirror reaches a running case: its one skill reports the
-interpreter version, and its grader asserts 3.10.
+`smoke` is designed and not built. Its one skill reports the interpreter version and its
+grader asserts 3.10, so it proves the staged runtime reaches a running case. See
+[../docs/staged_runtime.md](../docs/staged_runtime.md). The status table for
+everything unbuilt is [../docs/running_evals.md](../docs/running_evals.md).
 
 Do not confuse it with `docs/claude_code/eval_smoke/`, which is vendored and proves the
 harness itself works, with nothing from this repository in the way. When a run fails, that

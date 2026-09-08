@@ -103,8 +103,8 @@ build() {
   if [ "$MODE" = "recreate" ]; then
     rm -rf "$COWORK"
   fi
-  # --no-project: the venv is standalone, so the root requires-python == 3.14 does
-  # not apply to it.
+  # --no-project: the venv is standalone, so the root requires-python and the repo
+  # .python-version do not apply to it.
   uv venv --no-project --allow-existing --python "$PYTHON_VERSION" "$COWORK"
   uv pip sync --python "$PY" "$REQUIREMENTS"
   uv pip install --python "$PY" "${TEST_ONLY_DIRECT[@]}"

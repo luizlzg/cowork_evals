@@ -7,7 +7,7 @@
 #
 # Runs ruff (lint and format) over Python, and shellcheck plus shfmt over
 # scripts/ when they are on PATH. Markdown is not formatted by a tool: see the
-# writing rules in docs/README.md.
+# writing rules in CLAUDE.md.
 set -euo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 need uv

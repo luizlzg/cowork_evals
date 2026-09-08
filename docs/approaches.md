@@ -3,11 +3,16 @@
 Three ways to run an eval against a CoWork skill. They answer different questions. None
 replaces another.
 
-| Approach                   | Runs on                      | Proves                                     | Design                                  |
-| -------------------------- | ---------------------------- | ------------------------------------------ | --------------------------------------- |
-| Claude Code, mirrored venv | Local `claude`, Python 3.10  | Skill logic, activation, hook gates        | [running_evals.md](running_evals.md)    |
-| Claude Code, Docker        | Local `claude`, Ubuntu 22.04 | The above plus rendering, OCR, fonts, CLIs | [docker.md](docker.md)                  |
-| CoWork, driven directly    | The real CoWork VM           | The deployed stack, end to end             | [cowork_driver.md](cowork_driver.md)    |
+Design. What is built is the status table in [running_evals.md](running_evals.md).
+
+| Approach                   | Runs on                      | Proves                                     | Design                               |
+| -------------------------- | ---------------------------- | ------------------------------------------ | ------------------------------------- |
+| Claude Code, mirrored venv | Local `claude`, Python 3.10  | Skill logic, activation, hook gates        | [running_evals.md](running_evals.md) |
+| Claude Code, Docker        | Local `claude`, Ubuntu 22.04 | The above plus rendering, OCR, fonts, CLIs | [docker.md](docker.md)               |
+| CoWork, driven directly    | The real CoWork VM           | The deployed stack, end to end             | [cowork_driver.md](cowork_driver.md) |
+
+This is the one copy of that table. [`../README.md`](../README.md) introduces the same three
+approaches in prose and links here.
 
 ## One case format, three backends
 
@@ -46,11 +51,18 @@ session wrote, so it honours a subset of the format.
 | `model`, `allowed_tools`, `append_system_prompt`, `env` | yes                  | no, the session decides                 |
 | `context.add_dirs`, `context.scaffold_script`           | yes                  | no, nothing stages files into the VM    |
 | `mocks/`                                                | yes                  | no, the MCP servers are the real ones   |
-| `--ablation with-without`                               | yes                  | no                                      |
+| `arm:` on a grader                                      | read, but inert      | no                                      |
 
-A case that needs a field the CoWork backend cannot honour is reported by that backend as
-skipped, never as passed. A command-line option that backend cannot honour is a usage error
-instead, and the difference is stated in [cli.md](cli.md).
+`arm:` is read on the Claude Code backends and changes nothing, because `--ablation` is
+pinned to `none` and no baseline arm runs. There is no baseline arm on any backend, so
+`--ablation with-without` is not reachable through this command at all. See
+[running_evals.md](running_evals.md).
+
+A case that writes out a key the CoWork backend cannot honour is reported by that backend as
+skipped, never as passed. A default is not a request, so a case that writes no `runs` key
+runs once rather than skipping; the exact rule is in
+[running_evals.md](running_evals.md). A command-line option a backend cannot honour is a
+usage error instead, and the difference is stated in [cli.md](cli.md).
 
 ## Claude Code as a proxy for CoWork
 
@@ -70,8 +82,14 @@ Two ways to narrow the host half of the gap:
 
 **The mirrored virtual environment.** A cached virtual environment pins Python 3.10 and the
 wheel set a session provides, and nothing else. It catches an import that does not exist on
-the image and an API that changed between versions. Cheap, fast, and the one to reach for
-first. What it leaves diverging is in [environments.md](environments.md).
+the image and an API that changed between versions. Cheap and fast. What it leaves diverging
+is in [environments.md](environments.md).
+
+The mirror is not put on `PATH` as it is built. Granting `Bash` turns on an OS sandbox that
+cannot read under the home directory, and a virtual environment leaves its interpreter and
+standard library there. The backend copies a relocatable interpreter and the mirror's
+`site-packages` into the plugin under test and puts that on `PATH`. See
+[staged_runtime.md](staged_runtime.md).
 
 **Docker.** A container from `ubuntu:22.04` with the same interpreter, wheels, document
 tooling and fonts, and on an ARM Mac the same architecture. It costs an image build and a
@@ -100,8 +118,16 @@ It is the pre-release confirmation, run by a person on purpose. It is never a co
 
 ## Which to use when
 
-| Moment              | Command                                                 |
-| ------------------- | ------------------------------------------------------- |
-| Writing a case      | `cowork_evals run --venv <plugin>/evals/<skill>/<case>` |
-| Before opening a PR | `cowork_evals run --venv <plugin>/evals`                |
-| Before a release    | `cowork_evals run --docker <root>`, then a CoWork smoke set |
+This is the cadence a consumer repository follows. It is the one copy;
+[running_evals.md](running_evals.md) links here rather than repeating it.
+
+| Moment              | Command                                                    | Enforced by           |
+| ------------------- | ----------------------------------------------------------- | --------------------- |
+| `git commit`        | nothing                                                    | no hook, by design    |
+| Writing a case      | `cowork_evals run --venv <plugin>/evals/<skill>/<case>`    | the author            |
+| Before opening a PR | `cowork_evals run --venv <plugin>/evals`, per plugin       | the PR template       |
+| Before a release    | `cowork_evals run --docker <root>`, then a CoWork smoke set | the release checklist |
+
+No backend is built yet, so no row runs today. Until one is, a case is run by calling
+`claude plugin eval` by hand under `scripts/cowork_run.sh`. See the status table in
+[running_evals.md](running_evals.md).

@@ -1,14 +1,18 @@
 # Claude Code reference
 
-Vendored reference material for `claude plugin eval`. Not written here, and not ours.
+Reference material for `claude plugin eval`. Two of the three files here are vendored.
 
-| File                                                       | Is                                                    |
-| ---------------------------------------------------------- | ----------------------------------------------------- |
-| [`plugin_eval_quickref.md`](plugin_eval_quickref.md)       | Anthropic's condensed harness reference               |
-| [`plugin_eval_reference.md`](plugin_eval_reference.md)     | Anthropic's full harness reference: every flag, grader, sandbox detail and the results JSON field by field |
-| [`eval_smoke/`](eval_smoke/)                               | A runnable throwaway plugin that proves the harness works |
+| File                                                   | Is                                          | Ours |
+| ------------------------------------------------------- | -------------------------------------------- | ---- |
+| [`plugin_eval_quickref.md`](plugin_eval_quickref.md)   | Anthropic's condensed harness reference     | no   |
+| [`plugin_eval_reference.md`](plugin_eval_reference.md) | Anthropic's full harness reference: every flag, grader, sandbox detail and the results JSON field by field | no |
+| [`eval_smoke/`](eval_smoke/)                           | A runnable throwaway plugin that proves the harness works | yes |
 
-## Provenance
+`eval_smoke/` was written here and is edited like any other file in this repository. It sits
+under `docs/` because it is reference material, not because it came from outside. See
+[`eval_smoke/README.md`](eval_smoke/README.md).
+
+## Provenance of the two vendored documents
 
 `claude plugin eval` is in early access and has no public documentation page. The CLI
 carries both documents zstd-compressed inside the executable. They were extracted from
