@@ -27,7 +27,7 @@ plan's own state, not the system's: what is built and usable is
 | 2 | `plan_docker.md`         | The image, its digest, `scripts/parity.sh`, and the harness run inside a container | written     | `feat/docker`         |
 | 3 | `plan_venv.md`           | The staged relocatable 3.10 runtime, and the harness run under it                 | skipped     |                       |
 | 4 | `plan_cowork_backend.md` | The case reader, the CoWork grader and the v1 result document over the driver     | written     | `feat/cowork-backend` |
-| 5 | `plan_cli.md`            | Scope resolution, the run directory, the gate, and the command                    | not written |                       |
+| 5 | `plan_cli.md`            | Scope resolution, the run directory, the gate, and the command                    | written     | `feat/cli`            |
 
 | Status        | Means                                                                     |
 | ------------- | --------------------------------------------------------------------------- |
