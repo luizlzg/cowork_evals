@@ -296,17 +296,17 @@ no profile configured, and the document carries exactly the documented keys.
 
 ## Phase 5: The run log, the rate ceiling and the diagnostic log
 
-- [ ] Append one line per submission to `run_log`, holding the timestamp, the prompt hash,
+- [x] Append one line per submission to `run_log`, holding the timestamp, the prompt hash,
       the session directory and the outcome. Log a failed submission too.
-- [ ] `history(run_log=None)`: the run log as a list of dictionaries, oldest first.
-- [ ] Count the entries in the trailing 24 hours and raise code 2 at `max_runs`. The window
+- [x] `history(run_log=None)`: the run log as a list of dictionaries, oldest first.
+- [x] Count the entries in the trailing 24 hours and raise code 2 at `max_runs`. The window
       is fixed. `collect` never checks it.
-- [ ] Raise code 2 for an unset or unreadable profile, for a prompt longer than 14336
+- [x] Raise code 2 for an unset or unreadable profile, for a prompt longer than 14336
       characters, and for a linted prompt, all before anything is fired.
-- [ ] Open `<log_dir>/<yyyymmdd-hhmmss>-cowork_evals.log` on the `cowork_evals` logger at the
+- [x] Open `<log_dir>/<yyyymmdd-hhmmss>-cowork_evals.log` on the `cowork_evals` logger at the
       start of a firing call, create `log_dir` if absent, and close the handler when the call
       returns or raises. `log_dir: null` turns it off. The root logger is never touched.
-- [ ] Put the log path in the result document as `log_file`.
+- [x] Put the log path in the result document as `log_file`.
 
 Gate. `tests/test_cowork.py` covers each refusal over a temporary run log and a temporary
 profile: no profile, prompt too long, ceiling reached, a linted prompt. Each raises

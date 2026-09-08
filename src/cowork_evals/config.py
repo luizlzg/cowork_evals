@@ -109,8 +109,11 @@ class Config:
             object.__setattr__(self, "log_dir", _path("log_dir", self.log_dir))
 
     @property
-    def sessions_root(self) -> Path:
-        """Where the application writes sessions. docs/cowork_desktop.md.
+    def profile_dir(self) -> Path:
+        """The profile directory. A bare name resolves under Application Support.
+
+        An absolute path is taken as it stands, which is how a test and a developer point
+        the driver at a profile that is not in the default location.
 
         Raises when `profile` is unset, which is how a missing profile is refused at the
         first call that needs one rather than at construction.
@@ -119,13 +122,15 @@ class Config:
             raise CoWorkError(
                 2, f"no CoWork profile configured: set {SECTION}.profile in {CONFIG_FILENAME}"
             )
-        return (
-            Path.home()
-            / "Library"
-            / "Application Support"
-            / self.profile
-            / "local-agent-mode-sessions"
-        )
+        named = Path(self.profile).expanduser()
+        if named.is_absolute():
+            return named
+        return Path.home() / "Library" / "Application Support" / self.profile
+
+    @property
+    def sessions_root(self) -> Path:
+        """Where the application writes sessions. docs/cowork_desktop.md."""
+        return self.profile_dir / "local-agent-mode-sessions"
 
     @classmethod
     def load(cls, path: Path | str | None = None, **overrides: Any) -> Config:

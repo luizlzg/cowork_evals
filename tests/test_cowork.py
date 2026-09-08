@@ -198,3 +198,138 @@ def test_an_unknown_constructor_override_raises() -> None:
     with pytest.raises(CoWorkError) as raised:
         CoWork(Config(), nonsense=1)
     assert raised.value.code == 2
+
+
+# The run log, the rate ceiling and the diagnostic log.
+
+
+def build(tmp_path: Path, **overrides: object) -> CoWork:
+    """A driver over a temporary profile, run log and log directory."""
+    profile = tmp_path / "profile"
+    (profile / "local-agent-mode-sessions").mkdir(parents=True, exist_ok=True)
+    values: dict[str, object] = {
+        "profile": str(profile),
+        "run_log": str(tmp_path / "runs.jsonl"),
+        "log_dir": str(tmp_path / "logs"),
+    }
+    values.update(overrides)
+    return CoWork(Config(**values))  # type: ignore[arg-type]
+
+
+def test_an_unset_profile_is_refused_before_anything_fires(tmp_path: Path) -> None:
+    driver = CoWork(Config(run_log=tmp_path / "runs.jsonl"))
+    with pytest.raises(CoWorkError) as raised:
+        driver._check("Reply with exactly: PONG")
+    assert raised.value.code == 2
+    assert driver.history() == []
+
+
+def test_an_unreadable_profile_is_refused(tmp_path: Path) -> None:
+    driver = CoWork(Config(profile=str(tmp_path / "absent"), run_log=tmp_path / "runs.jsonl"))
+    with pytest.raises(CoWorkError) as raised:
+        driver._check("Reply with exactly: PONG")
+    assert raised.value.code == 2
+
+
+def test_a_prompt_above_the_cap_is_refused(tmp_path: Path) -> None:
+    driver = build(tmp_path)
+    with pytest.raises(CoWorkError) as raised:
+        driver._check("x" * 14337)
+    assert raised.value.code == 2
+    assert "14336" in str(raised.value)
+
+
+def test_a_prompt_at_the_cap_is_allowed(tmp_path: Path) -> None:
+    build(tmp_path)._check("x" * 14336)
+
+
+def test_a_linted_prompt_is_refused(tmp_path: Path) -> None:
+    driver = build(tmp_path)
+    with pytest.raises(CoWorkError) as raised:
+        driver._check("Send an email to the team")
+    assert raised.value.code == 2
+    assert "rule send" in str(raised.value)
+
+
+def test_the_rate_ceiling_is_refused(tmp_path: Path) -> None:
+    driver = build(tmp_path, max_runs=3)
+    for _ in range(3):
+        driver._record("Reply with exactly: PONG", None, "submitted")
+    with pytest.raises(CoWorkError) as raised:
+        driver._check("Reply with exactly: PONG")
+    assert raised.value.code == 2
+    assert "rate ceiling" in str(raised.value)
+
+
+def test_the_ceiling_counts_only_the_trailing_24_hours(tmp_path: Path) -> None:
+    driver = build(tmp_path, max_runs=2)
+    old = {"timestamp": "2020-01-01T00:00:00+00:00", "outcome": "submitted"}
+    driver.config.run_log.write_text(json.dumps(old) + "\n", encoding="utf-8")
+    driver._record("Reply with exactly: PONG", None, "submitted")
+    driver._check("Reply with exactly: PONG")
+
+
+def test_a_failed_submission_leaves_a_line_history_reads_back(tmp_path: Path) -> None:
+    driver = build(tmp_path)
+    driver._record("first", None, "failed:4")
+    driver._record("second", tmp_path / "session", "submitted")
+    entries = driver.history()
+    assert [entry["outcome"] for entry in entries] == ["failed:4", "submitted"]
+    assert entries[0]["session_dir"] is None
+    assert entries[1]["session_dir"] == str(tmp_path / "session")
+    assert set(entries[0]) == {"timestamp", "prompt_sha256", "session_dir", "outcome"}
+
+
+def test_history_reads_a_named_run_log(tmp_path: Path) -> None:
+    other = tmp_path / "other.jsonl"
+    other.write_text('{"outcome":"submitted"}\n{"outcome":"fail\n', encoding="utf-8")
+    assert build(tmp_path).history(other) == [{"outcome": "submitted"}]
+
+
+def test_history_of_an_absent_run_log_is_empty(tmp_path: Path) -> None:
+    assert build(tmp_path).history() == []
+
+
+def test_two_calls_leave_two_log_files_and_no_duplicated_handler(tmp_path: Path) -> None:
+    from cowork_evals.cowork import LOGGER
+
+    driver = build(tmp_path)
+    before = len(LOGGER.handlers)
+    paths = []
+    for _ in range(2):
+        with driver._diagnostics() as path:
+            assert len(LOGGER.handlers) == before + 1
+            paths.append(path)
+    assert len(LOGGER.handlers) == before
+    assert paths[0] != paths[1]
+    assert all(path is not None and path.is_file() for path in paths)
+    assert sorted(p.name for p in (tmp_path / "logs").iterdir()) == sorted(p.name for p in paths)
+
+
+def test_the_handler_is_closed_when_the_call_raises(tmp_path: Path) -> None:
+    from cowork_evals.cowork import LOGGER
+
+    driver = build(tmp_path)
+    before = len(LOGGER.handlers)
+    with pytest.raises(RuntimeError), driver._diagnostics():
+        raise RuntimeError("the call failed")
+    assert len(LOGGER.handlers) == before
+
+
+def test_log_dir_null_writes_no_file(tmp_path: Path) -> None:
+    from cowork_evals.cowork import LOGGER
+
+    driver = build(tmp_path, log_dir=None)
+    before = len(LOGGER.handlers)
+    with driver._diagnostics() as path:
+        assert path is None
+        assert len(LOGGER.handlers) == before
+    assert not (tmp_path / "logs").exists()
+
+
+def test_the_document_names_the_diagnostic_log(tmp_path: Path) -> None:
+    driver = build(tmp_path)
+    with driver._diagnostics() as path:
+        document = driver.collect(PROFILE / "one_turn")
+    assert document["log_file"] == str(path)
+    assert driver.collect(PROFILE / "one_turn")["log_file"] is None

@@ -7,13 +7,18 @@ under the CoWork profile.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
-from datetime import UTC, datetime
+import logging
+import os
+from collections.abc import Iterator
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from .config import Config, CoWorkError, _override
+from .config import PROMPT_LIMIT, Config, CoWorkError, _override
+from .prompt_lint import lint
 
 # A session directory is exactly three levels below the sessions root and holds an
 # audit.jsonl. docs/cowork_desktop.md.
@@ -21,6 +26,13 @@ SESSION_DEPTH = 3
 AUDIT = "audit.jsonl"
 TRANSCRIPTS = Path(".claude") / "projects" / "session"
 OUTPUTS = "outputs"
+
+# The rate ceiling protects one CoWork account, so its window is fixed and not configurable.
+CEILING_WINDOW = timedelta(hours=24)
+
+# The driver writes here. It never configures the root logger.
+LOGGER = logging.getLogger("cowork_evals")
+LOG_STEM = "cowork_evals"
 
 
 class CoWork:
@@ -90,6 +102,91 @@ class CoWork:
             "outputs": _outputs(directory),
             "log_file": None if self._log_file is None else str(self._log_file),
         }
+
+    def history(self, run_log: Path | None = None) -> list[dict[str, Any]]:
+        """The run log as one dictionary per line, oldest first."""
+        path = Path(run_log) if run_log is not None else self._config.run_log
+        return _read_jsonl(path)
+
+    # Refusal, the run log and the diagnostic log. All of it happens before anything fires.
+
+    def _check(self, prompt: str) -> None:
+        """Step 1 of the sequence. Every failure here is code 2, and nothing has fired."""
+        directory = self._config.profile_dir
+        if not directory.is_dir() or not os.access(directory, os.R_OK):
+            raise CoWorkError(2, f"{directory}: the configured CoWork profile is not readable")
+
+        recent = self._recent()
+        if recent >= self._config.max_runs:
+            raise CoWorkError(
+                2,
+                f"rate ceiling reached: {recent} submissions in the last 24 hours, "
+                f"max_runs is {self._config.max_runs}",
+            )
+
+        if len(prompt) > PROMPT_LIMIT:
+            raise CoWorkError(
+                2,
+                f"prompt is {len(prompt)} characters, above the {PROMPT_LIMIT} deep link cap, "
+                "and the application would truncate it silently",
+            )
+
+        refusal = lint(prompt)
+        if refusal is not None:
+            raise CoWorkError(2, f"prompt refused by the linter: {refusal}")
+
+    def _recent(self) -> int:
+        """Submissions in the trailing 24 hours, counted from the run log."""
+        cutoff = datetime.now(UTC) - CEILING_WINDOW
+        count = 0
+        for entry in self.history():
+            stamp = _parse_timestamp(entry.get("timestamp"))
+            if stamp is not None and stamp >= cutoff:
+                count += 1
+        return count
+
+    def _record(self, prompt: str, session_dir: Path | None, outcome: str) -> None:
+        """Append one line to the run log. A failed submission is logged too."""
+        entry = {
+            "timestamp": _now(),
+            "prompt_sha256": _digest(prompt),
+            "session_dir": None if session_dir is None else str(session_dir),
+            "outcome": outcome,
+        }
+        path = self._config.run_log
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(entry) + "\n")
+        LOGGER.info("run log: %s", entry)
+
+    @contextlib.contextmanager
+    def _diagnostics(self) -> Iterator[Path | None]:
+        """Open one diagnostic log for the length of one firing call.
+
+        `log_dir: null` turns the file off, and the logger then carries whatever handler
+        the caller attached. The root logger is never touched.
+        """
+        directory = self._config.log_dir
+        if directory is None:
+            self._log_file = None
+            yield None
+            return
+
+        directory.mkdir(parents=True, exist_ok=True)
+        path = _log_path(directory)
+        handler = logging.FileHandler(path, encoding="utf-8")
+        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+        level = LOGGER.level
+        LOGGER.addHandler(handler)
+        LOGGER.setLevel(logging.INFO)
+        self._log_file = path
+        try:
+            yield path
+        finally:
+            LOGGER.removeHandler(handler)
+            handler.close()
+            LOGGER.setLevel(level)
+            self._log_file = None
 
 
 # Readers. Each takes what it reads, so a test drives it over a fixture directory.
@@ -272,3 +369,27 @@ def _digest(prompt: str | None) -> str | None:
 
 def _now() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def _parse_timestamp(value: Any) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        stamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return stamp if stamp.tzinfo is not None else stamp.replace(tzinfo=UTC)
+
+
+def _log_path(directory: Path) -> Path:
+    """`<log_dir>/<yyyymmdd-hhmmss>-cowork_evals.log`, suffixed when that name is taken.
+
+    Two calls in the same second would otherwise share one file.
+    """
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    path = directory / f"{stamp}-{LOG_STEM}.log"
+    attempt = 2
+    while path.exists():
+        path = directory / f"{stamp}-{LOG_STEM}-{attempt}.log"
+        attempt += 1
+    return path
