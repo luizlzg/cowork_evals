@@ -67,18 +67,18 @@ A build reads them on a machine with no checkout, so they cannot stay under `doc
 `src/cowork_evals/env.py`. It reads one file and the process environment. The format and the
 precedence are [`../docs/library.md`](../docs/library.md).
 
-- [ ] Add `python-dotenv` to `dependencies` in `pyproject.toml`. No `.env` parser is
+- [x] Add `python-dotenv` to `dependencies` in `pyproject.toml`. No `.env` parser is
       written here.
-- [ ] Read the file with `dotenv_values(path, interpolate=False)`. It returns a mapping and
+- [x] Read the file with `dotenv_values(path, interpolate=False)`. It returns a mapping and
       does not touch `os.environ`, which is the layer above it.
-- [ ] `setting(name, default)`: the process environment beats `.env` beats the default. A
+- [x] `setting(name, default)`: the process environment beats `.env` beats the default. A
       missing `.env` is not an error, and an unrecognised key is kept.
-- [ ] Resolve `.env` from the working directory, and accept an explicit path.
-- [ ] Read `EVAL_PLATFORM`, default `linux/arm64`, and the `EVAL_*` names in
+- [x] Resolve `.env` from the working directory, and accept an explicit path.
+- [x] Read `EVAL_PLATFORM`, default `linux/arm64`, and the `EVAL_*` names in
       [`../docs/running_evals.md`](../docs/running_evals.md).
-- [ ] Read `CLAUDE_CODE_WALNUT_SPIRE`, default `1`, through the same three layers.
+- [x] Read `CLAUDE_CODE_WALNUT_SPIRE`, default `1`, through the same three layers.
       [`../docs/plugin_eval.md`](../docs/plugin_eval.md).
-- [ ] Never log a value and never put one in an exception message.
+- [x] Never log a value and never put one in an exception message.
 
 ## Phase 3: The Dockerfile
 
