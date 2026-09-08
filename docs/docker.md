@@ -40,13 +40,14 @@ Four things do not come from jammy apt, and each has one source:
 
 | Component        | Recorded | jammy apt | Source                                                             |
 | ---------------- | -------- | --------- | ------------------------------------------------------------------ |
-| LibreOffice      | 26.2.5.2 | 7.3       | `LibreOffice_26.2.5.2_Linux_<arch>_deb.tar.gz`, upstream archive   |
+| LibreOffice      | 26.2.5.2 | 7.3       | `LibreOffice_26.2.5_Linux_<arch>_deb.tar.gz`, upstream archive     |
 | Node.js          | 22.23.2  | 12        | NodeSource `node_22.x`, pinned to `22.23.2-1nodesource1`           |
 | pip              | 25.3     | 22.0.2    | `pip install --upgrade pip==25.3`                                  |
 | uv               | 0.12.3   | absent    | The Astral installer, pinned to 0.12.3                             |
 
 Both upstream sources are present for aarch64 and carry the recorded versions, checked
-2026-09-03.
+2026-09-08. The upstream release is named `26.2.5` in the path and the file name, and
+`soffice --version` reports the fourth component: 26.2.5.2.
 
 ## The Python pins
 
@@ -104,9 +105,15 @@ and needs qemu emulation elsewhere, which is correct but several times slower.
 The build takes `--platform` from `EVAL_PLATFORM`, default `linux/arm64`. The parity report
 records the platform actually used, so an x86 run is never mistaken for an aarch64 one.
 
-The upstream LibreOffice tarball is named by the kernel architecture, not by Docker's. The
-Dockerfile maps `TARGETARCH`: `arm64` to `aarch64`, `amd64` to `x86-64`. NodeSource and the
-uv installer detect the architecture themselves and need no mapping.
+The upstream LibreOffice archive is named by the kernel architecture, not by Docker's, and
+spells `amd64` two ways. The Dockerfile maps `TARGETARCH` to both.
+
+| `TARGETARCH` | Archive directory | File name |
+| ------------ | ----------------- | --------- |
+| `arm64`      | `aarch64`         | `aarch64` |
+| `amd64`      | `x86_64`          | `x86-64`  |
+
+NodeSource and the uv installer detect the architecture themselves and need no mapping.
 
 ## The build context
 
@@ -117,6 +124,34 @@ installed into the image.
 
 A two-file context needs no `.dockerignore`, transfers nothing, and cannot put a working
 tree into a public image layer. See [library.md](library.md).
+
+## A host whose network inspects TLS
+
+Three of the four upstream sources are fetched over HTTPS by the build:
+`download.documentfoundation.org`, `deb.nodesource.com` and `astral.sh`. On a host behind
+a TLS-inspecting proxy the container has no issuer for any of them and the build fails at
+the first fetch. PyPI and the npm registry were not intercepted on the host measured below,
+so the pins and the CLI install either way.
+
+The build takes an extra root CA from `SSL_CERT_FILE`, which such a host already sets for
+its own tooling. It is passed as a BuildKit secret, never through the build context, and
+the Dockerfile installs it into the image CA store. Both the fetches above and the Claude
+Code CLI inside the container then trust it: `claude.ai` is intercepted on that host too, so
+the login route needs it as much as the build does.
+
+| Layer                     | Reads it from                                    |
+| ------------------------- | ------------------------------------------------ |
+| `build_argv`              | `--secret id=extra_ca,src=$SSL_CERT_FILE`        |
+| The Dockerfile            | `/run/secrets/extra_ca`, once, into the CA store |
+| `run_argv`, `login_argv`  | `--env NODE_EXTRA_CA_CERTS`, because Node carries its own root store |
+
+`SSL_CERT_FILE` unset, or naming a file that is not there, is a host that does not
+intercept, and nothing is passed. The certificate itself never enters this repository: the
+public repository rule in [../README.md](../README.md) covers it, and a corporate root names
+the employer.
+
+The image digest does not cover it. It is a property of the host that built the image, not
+of the inventory the image reproduces.
 
 ## How Docker is driven
 

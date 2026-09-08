@@ -86,20 +86,20 @@ precedence are [`../docs/library.md`](../docs/library.md).
 [`../docs/runtime.md`](../docs/runtime.md) or in the four-source table in
 [`../docs/docker.md`](../docs/docker.md).
 
-- [ ] `FROM ubuntu:22.04`, with `ARG CLAUDE_CODE_VERSION` and `ARG TARGETARCH`.
-- [ ] One apt layer: the document, image, media and CLI tooling, `default-jre-headless` for
+- [x] `FROM ubuntu:22.04`, with `ARG CLAUDE_CODE_VERSION` and `ARG TARGETARCH`.
+- [x] One apt layer: the document, image, media and CLI tooling, `default-jre-headless` for
       the Java 11 the `tabula-py` pin needs, the nine dist-packages suppliers, the Ubuntu
       font stack, and `bubblewrap`.
-- [ ] `pip install --upgrade pip==25.3`, then `pip install -r requirements_installable.txt`
+- [x] `pip install --upgrade pip==25.3`, then `pip install -r requirements_installable.txt`
       from the build context.
-- [ ] LibreOffice 26.2.5.2 from the upstream deb set, mapping `TARGETARCH` to the kernel
+- [x] LibreOffice 26.2.5.2 from the upstream deb set, mapping `TARGETARCH` to the kernel
       architecture the tarball is named by: `arm64` to `aarch64`, `amd64` to `x86-64`.
-- [ ] Put the LibreOffice `program` directory on `PYTHONPATH`, so `import uno` resolves.
-- [ ] Node.js from NodeSource `node_22.x`, pinned to `22.23.2-1nodesource1`.
-- [ ] `@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}` as the one added npm global.
-- [ ] uv 0.12.3 from the Astral installer.
-- [ ] Create `/tmp/eval-home` and `/work` world-writable, for a uid with no passwd entry.
-- [ ] Copy no source tree, install no credential, and add no `.dockerignore`.
+- [x] Put the LibreOffice `program` directory on `PYTHONPATH`, so `import uno` resolves.
+- [x] Node.js from NodeSource `node_22.x`, pinned to `22.23.2-1nodesource1`.
+- [x] `@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}` as the one added npm global.
+- [x] uv 0.12.3 from the Astral installer.
+- [x] Create `/tmp/eval-home` and `/work` world-writable, for a uid with no passwd entry.
+- [x] Copy no source tree, install no credential, and add no `.dockerignore`.
 
 ## Phase 4: The digest, the build and the check
 
