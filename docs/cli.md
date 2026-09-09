@@ -9,6 +9,9 @@ repository sees; the boundary behind it is [library.md](library.md).
   proves what is [approaches.md](approaches.md).
 - **The path is the scope.** One path argument decides whether a case, a skill, a plugin or a
   whole tree runs. There is no separate sweep command.
+- **A verb names its object only when that object is not an eval.** `run` runs evals, which
+  is what this command is. `test` runs pytest, so it says so. `setup`, `check` and `prune`
+  act on a backend and carry no object at all.
 - **Options are named.** Nothing is forwarded raw to `claude plugin eval`. `test` is the one
   verb that takes a raw tail, because pytest is the only thing behind it.
 - **`run` verifies and never builds.** A failed preflight exits 3 and names the command that
