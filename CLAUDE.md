@@ -76,6 +76,13 @@ before changing anything under it. Never restate one of these in another file; l
 - **Never delete a plan.** The developer decides when a plan goes, and says so. A plan is
   also the record of who decided what, which is the first thing anyone needs when a design
   decision is questioned later.
+- **`plans/done/` is history. Never read it, never update it.** A plan moves there when it
+  is finished, and from then on it states what was true and what was decided at that time,
+  not what is true now. Never read one to learn how the system works, and never cite one as
+  a source. Never correct one, however wrong it has become: it is meant to go stale, and
+  editing it destroys the record. A sweep that fixes statements across the repository skips
+  `plans/done/` entirely. What is true now is in `docs/`. `plans/README.md` holds when a
+  plan moves and what it is named.
 - **Nothing durable lives only in a plan.** A plan links to `docs/`. Documentation never
   links to a plan. Anything a plan establishes that outlives the work is written into
   `docs/` while the work happens, not as a step before removing the file.

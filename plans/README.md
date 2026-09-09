@@ -147,13 +147,8 @@ is the date it was merged, so `plan_docker.md` merged on 2026-09-08 becomes
 is in the name because two plans over the same subject are told apart by when they ran, and
 because the name then says how old the account is without opening it.
 
-**A plan in `done/` is never edited again**, by Claude or by anyone. It records how the work
-was done at the time and which decisions the developer asked for. It is not documentation.
-It is not maintained, and it is allowed to go stale: a statement in it that later work made
-false stays as written, because correcting it would destroy the record of what was believed
-when the decision was made. What is currently true is in `docs/`, and a reader who wants
-that reads `docs/`.
+What a file in `done/` then is, and why it is neither read nor updated, is in
+[`../CLAUDE.md`](../CLAUDE.md).
 
-Two consequences follow. A sweep that corrects false statements across the repository skips
-`done/` entirely. And nothing outside `done/` may depend on a file inside it: `docs/` never
-links to a plan at all, and the table above is the only route in.
+Nothing outside `done/` may depend on a file inside it. `docs/` never links to a plan at
+all, and the table above is the only route in.
