@@ -1,11 +1,24 @@
 # claude plugin eval
 
-Claude Code's own eval harness. It loads one plugin into a fresh isolated `claude -p`
-session, runs each case several times, and scores the result with graders.
+## Summary
 
-This file is what the CLI does. What a case file contains is
-[eval_format.md](eval_format.md), which is the authoring contract for every backend,
-including the CoWork one that does not use this harness.
+Claude Code's own eval harness. It loads one plugin into a fresh isolated `claude -p` session,
+runs each case several times, and scores the result with graders. This repository does not own
+it, and a consumer never invokes it.
+
+- **Early access, enabled per organization.** A gated build prints that and exits 1. The
+  command exists either way.
+- **Only the plugin under test loads.** No user or project settings, no `CLAUDE.md`, no other
+  plugins, no personal MCP servers.
+- **Tools are gated.** `Bash`, `Write`, `Edit`, `WebFetch`, `WebSearch` and `mcp__*` need an
+  explicit operator grant.
+- **Its defaults would bite**, which is why [running_evals.md](running_evals.md) pins a flag
+  list rather than accepting them.
+- **The limits in this file cannot be fixed by editing a case.** The ones that can are in
+  [eval_format.md](eval_format.md).
+
+What a case file contains is [eval_format.md](eval_format.md), which is the authoring contract
+for both backends, including the CoWork one that does not use this harness.
 
 Written against CLI 2.1.259. The container backend installs 2.1.265, because 2.1.259 cannot
 run a Bash-granting case on Linux: [docker.md](docker.md) records the failure. Nothing this

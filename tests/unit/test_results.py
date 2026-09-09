@@ -2,7 +2,7 @@
 
 Every expected value is a literal, and nothing here runs a case or asks a judge. The
 contract is docs/claude_code/plugin_eval_reference.md, and what this backend adds to it is
-docs/cowork_driver.md. See ../README.md.
+docs/cowork_backend.md. See ../README.md.
 """
 
 from __future__ import annotations

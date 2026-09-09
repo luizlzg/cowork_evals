@@ -1,10 +1,20 @@
 # CoWork runtime
 
-What a CoWork session provides, what it forbids, and what is on the image. This is the
-target that every eval in this repository tries to reproduce or reach.
+## Summary
 
-Captured 2026-08-28 and 2026-09-01 by direct probe from a session. A snapshot, not a
-contract: re-capture it when the base image changes.
+What a CoWork session provides, what it forbids, and what is on the image. This is the target
+that every eval in this repository tries to reproduce or reach.
+
+- **Every session starts a fresh VM.** Nothing installed during a session survives it.
+- **The code under test is bound to Python 3.10 and the image wheel set.** No runtime install,
+  no virtualenv, no package that is not already there.
+- **The host gives a skill less than a laptop does**: no plugin `bin/` on `PATH`, no working
+  directory at the skill, no shell state between `Bash` calls.
+- **The whole inventory below is measured**, not chosen. It is a snapshot and not a contract.
+
+Captured 2026-08-28 and 2026-09-01 by direct probe from a session. Re-capture it when the base
+image changes. What reproduces this inventory is [docker.md](docker.md); what a consumer's
+package pins may not exceed is [environments.md](environments.md).
 
 ## The deployment model
 
@@ -83,7 +93,7 @@ verbatim `pip freeze`.
 | ------------ | ------------------------------------------------------------------------------------ |
 | OS           | Ubuntu 22.04.5 LTS (jammy)                                                           |
 | Architecture | aarch64 (ARM64). On an x86_64 dev machine package builds and behaviour differ        |
-| Python       | 3.10.12 (`/usr/bin/python3`, also `/usr/bin/python3.10`). The mirror pins `3.10` and resolves a newer patch release. See [staged_runtime.md](staged_runtime.md) |
+| Python       | 3.10.12 (`/usr/bin/python3`, also `/usr/bin/python3.10`). The development mirror pins `3.10` and resolves a newer patch release. See [environments.md](environments.md) |
 | pip          | 25.3                                                                                 |
 | uv           | 0.12.3                                                                               |
 | Node.js      | v22.23.2                                                                             |

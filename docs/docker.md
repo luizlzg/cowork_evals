@@ -1,16 +1,44 @@
 # Docker
 
+## Summary
+
 A container that reproduces the CoWork image, so an eval run exercises the OS, the
 architecture, LibreOffice, ImageMagick, pandoc, tesseract, the CLI utilities and the font
 stack, not only the Python interpreter and its wheels.
 
+- **Jammy is the base**, and almost every recorded version is the version jammy ships. Four
+  components come from upstream instead, each with one source.
+- **One image, one tag.** `cowork-evals:<digest>`, where the digest covers every build input.
+  There is no `latest`.
+- **One credential route**: a login this package owns, mounted read-write. Never the
+  developer's own `~/.claude`, and never an API key.
+- **Read-only everywhere except the log directory** and the two credential paths.
+- **Granting `Bash` turns on the OS sandbox**, so the container needs bubblewrap and two
+  `--security-opt` values.
+- **Parity is how the image is proved.** `scripts/parity.sh` runs one probe inside the
+  container and compares what it wrote against [runtime.md](runtime.md).
+- **This package is never installed into the image.** The `cowork_evals` process stays on the
+  host and builds the argument lists.
+
 The image inventory this container has to match is [runtime.md](runtime.md). The eval system
 around it is [running_evals.md](running_evals.md) and the command that reaches it is
-[cli.md](cli.md). The cheaper alternative is [environments.md](environments.md).
+[cli.md](cli.md).
 
 What of this is built is the status table in [running_evals.md](running_evals.md). Until the
 command reaches the container, `scripts/image.sh` builds the image and a run goes through
 `cowork_evals.docker.Docker.run`.
+
+## Configuration
+
+The `docker:` section of `cowork_evals.yaml`. The file, and the ladder over it, is
+[library.md](library.md).
+
+| Key                    | Default                        | Is                                                  |
+| ---------------------- | ------------------------------ | ---------------------------------------------------- |
+| `platform`             | `linux/arm64`                  | The build and run platform. In the image digest      |
+| `claude_code_version`  | `2.1.265`                      | The npm version of the CLI installed. In the digest  |
+| `login_dir`            | `~/.cache/cowork_evals/claude` | Where the login this package owns is kept            |
+| `extra_ca_file`        | none                           | An extra root CA for a host whose network inspects TLS |
 
 ## Usage
 
@@ -59,8 +87,9 @@ Both upstream sources are present for aarch64 and carry the recorded versions, c
 
 ## The Python pins
 
-The two requirements files, and the split between them, are
-[environments.md](environments.md). In the image they come from two places, not one.
+The requirements files, and the split between them, are
+[environments.md](environments.md). This image reads one of the three,
+`requirements_installable.txt`. In the image the pins come from two places, not one.
 
 | Pins | Source                                        |
 | ---- | --------------------------------------------- |
@@ -129,12 +158,13 @@ NodeSource and the uv installer detect the architecture themselves and need no m
 
 ## The build context
 
-The build context is the package's data directory, the two requirements files and nothing
-else, and the Dockerfile is passed with `-f`. Nothing else is copied into a layer: the
-plugins and the logs are mounts, made at run time, and no code from this package is ever
-installed into the image.
+The build context is the package's data directory, the three requirements files and
+nothing else, and the Dockerfile is passed with `-f`. This image copies one of the three;
+the third is copied by the layer in [cowork_test.md](cowork_test.md), which builds from the
+same context. Nothing else is copied into a layer: the plugins and the logs are mounts, made
+at run time, and no code from this package is ever installed into the image.
 
-A two-file context needs no `.dockerignore`, transfers nothing, and cannot put a working
+A three-file context needs no `.dockerignore`, transfers nothing, and cannot put a working
 tree into a public image layer. See [library.md](library.md).
 
 ## A host whose network inspects TLS
@@ -145,9 +175,9 @@ a TLS-inspecting proxy the container has no issuer for any of them and the build
 the first fetch. PyPI and the npm registry were not intercepted on the host measured below,
 so the pins and the CLI install either way.
 
-The build takes an extra root CA from `docker.extra_ca_file`, which such a host names in
-`cowork_evals.yaml`. It is passed as a BuildKit secret, never through the build context, and
-the Dockerfile installs it into the image CA store. Both the fetches above and the Claude
+The build takes an extra root CA from `docker.extra_ca_file`. It is passed as a BuildKit
+secret, never through the build context, and the Dockerfile installs it into the image CA
+store. Both the fetches above and the Claude
 Code CLI inside the container then trust it: `claude.ai` is intercepted on that host too, so
 the login route needs it as much as the build does.
 
@@ -238,10 +268,10 @@ that has one and carries the two paths below.
 The login happens once, in an interactive container that `setup --docker` starts when the
 login is absent, and it writes a configuration directory this package owns:
 
-| Host path                                   | Holds                                                |
-| ------------------------------------------- | ---------------------------------------------------- |
-| `~/.cache/cowork_evals/claude/.claude/`     | the configuration directory, including `.credentials.json` |
-| `~/.cache/cowork_evals/claude/.claude.json` | the CLI state file                                   |
+| Host path, under `docker.login_dir` | Holds                                                      |
+| ----------------------------------- | ------------------------------------------------------------ |
+| `.claude/`                          | the configuration directory, including `.credentials.json` |
+| `.claude.json`                      | the CLI state file                                         |
 
 The container carries no browser, so the CLI prints a URL and reads an authorization code
 back. That prompt masks its input, so a pasted code is not echoed. Measured 2026-09-08.
@@ -286,12 +316,12 @@ container by hand must export it. See [plugin_eval.md](plugin_eval.md).
 
 ## Mounts
 
-| Host path                                   | Container path        | Mode | Why                                            |
-| ------------------------------------------- | --------------------- | ---- | ---------------------------------------------- |
-| the plugin root                             | `/work/plugin`        | ro   | The plugin under test                          |
-| the run's log dir                           | `/work/logs`          | rw   | The only path the run may write outside `/tmp` |
-| `~/.cache/cowork_evals/claude/.claude/`     | `$HOME/.claude`       | rw   | The login, above                               |
-| `~/.cache/cowork_evals/claude/.claude.json` | `$HOME/.claude.json`  | rw   | The login, above                               |
+| Host path                     | Container path       | Mode | Why                                            |
+| ----------------------------- | -------------------- | ---- | ---------------------------------------------- |
+| the plugin root               | `/work/plugin`       | ro   | The plugin under test                          |
+| the run's log dir             | `/work/logs`         | rw   | The only path the run may write outside `/tmp` |
+| `<login_dir>/.claude/`        | `$HOME/.claude`      | rw   | The login, above                               |
+| `<login_dir>/.claude.json`    | `$HOME/.claude.json` | rw   | The login, above                               |
 
 The plugin root is the nearest ancestor of the path argument holding
 `.claude-plugin/plugin.json`, and the target the harness is given inside the container is
@@ -306,7 +336,7 @@ plugin directory and the read-only mount does not fail a correct run.
 The container holds nothing from this package. The `cowork_evals` process stays on the host,
 builds this argument list, names the run directory, writes the `latest` symlink, prunes old
 runs, records `env.txt` and runs the gate over the result document the container leaves
-behind. One place does all of that for all three backends. See [library.md](library.md).
+behind. One place does all of that for both backends. See [library.md](library.md).
 
 Only the run's own log directory is mounted, not the whole log root, because the host owns
 every other path under it.
@@ -320,9 +350,9 @@ A uid with no passwd entry is the one thing here that can stop the CLI: Node's
 below, so `--user <uid>:<gid>` is what the backend passes and the documented fallback, root
 plus a `chown -R` of `/work/logs` on the way out, is not used.
 
-The CoWork mirror is neither mounted nor built in the image: system `python3` is already 3.10
-with the full pin set. The mirror rule holds unchanged here and is stated in
-[staged_runtime.md](staged_runtime.md).
+Nothing is staged into the container to supply an interpreter: system `python3` is already
+3.10 with the full pin set. The 3.10 mirror in [environments.md](environments.md) is a
+development environment on the host and is neither mounted nor built here.
 
 ## The Bash sandbox
 
@@ -354,8 +384,8 @@ them.
 ## Image tagging
 
 The image is tagged `cowork-evals:<digest>`, where `<digest>` is the first 12 characters of
-the sha256 of the Dockerfile, both requirements files, every build argument and the resolved
-`docker.platform`. Without the platform an `arm64` and an `amd64` image share one tag.
+the sha256 of the Dockerfile, `requirements.txt`, `requirements_installable.txt`, every
+build argument and the resolved `docker.platform`. Without the platform an `arm64` and an `amd64` image share one tag.
 
 The build arguments are `Docker.build_args`: the resolved `docker.claude_code_version` and
 the five container paths, which are `CONTAINER_HOME`, `CONTAINER_WORK`, `CONTAINER_PLUGIN`,

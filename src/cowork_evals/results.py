@@ -10,7 +10,7 @@ Additive-only is what permits the three fields this backend adds and the one it 
 `skipped` and `skipReason` on a case and on a grader result, `cowork` on a run, and
 `scored`, which is `not skipped` here rather than `not withOnly`. Every one of them, and the
 one behavioural departure in `casesPassed`, is recorded in
-[docs/cowork_driver.md](../../docs/cowork_driver.md).
+[docs/cowork_backend.md](../../docs/cowork_backend.md).
 """
 
 from __future__ import annotations
@@ -213,7 +213,7 @@ def build(
     `costUsd` is the judge spend and nothing else. A CoWork run is billed to the account and
     is not observable from the host, and it is never estimated. `claudeVersion` is the host
     `claude` rather than a CLI that ran the suite, because none did. Both are recorded in
-    docs/cowork_driver.md.
+    docs/cowork_backend.md.
 
     `partial` is always false: this backend never stops a suite part way, and the ceiling
     refusal happens before the first submission.

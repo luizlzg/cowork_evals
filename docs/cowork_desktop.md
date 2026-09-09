@@ -1,13 +1,26 @@
 # CoWork desktop internals
 
+## Summary
+
 How the desktop application starts a session, where it writes, and what a script needs to
 drive it. These are the measured internals. What the driver does with them is
 [cowork_driver.md](cowork_driver.md).
 
-Captured 2026-09-02 on a macOS development machine by direct probe, and re-probed
-2026-09-08 for section 3, which reads session directories already on disk. Application
-internals are not a public interface. Expect any release to change them, and re-probe the
-coupling list at the end of this file after an update.
+- **Input is a deep link.** The application registers the `claude` URL scheme and takes a
+  prompt in `q`. No query parameter submits.
+- **Submission is a synthetic Return**, which needs the macOS Accessibility grant. No
+  supported method avoids that gate.
+- **Output is on the host filesystem.** Nothing reads the screen: a session writes a
+  transcript, a signed audit log and an `outputs/` directory under the profile.
+- **Never write anywhere under the profile.** Those directories are application managed.
+- **Five authorizations are needed**, none discoverable from the code. A second machine needs
+  all of them.
+- **Nothing here is a public interface.** The coupling list at the end is the checklist to
+  re-probe after an application update.
+
+Captured 2026-09-02 on a macOS development machine by direct probe, and re-probed 2026-09-08
+for section 3, which reads session directories already on disk. Expect any release to change
+these.
 
 ## Measured facts
 

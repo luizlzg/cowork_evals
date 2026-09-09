@@ -1,15 +1,24 @@
 # The test command
 
-A consumer's Python tests, run inside the CoWork image. No model, no harness, no case tree,
-no grader, no result document and no gate. pytest collects, runs and reports, and this
-package supplies only the runtime it runs in.
+## Summary
 
-It is not an eval. An eval needs a model in the loop, and there is none here. Code destined
-for a skill is exercised on the CoWork runtime before an eval is written over it.
+A consumer's Python tests, run inside the CoWork image. No model, no harness, no case tree, no
+grader, no result document and no gate. pytest collects, runs and reports, and this package
+supplies only the runtime it runs in.
+
+- **It is not an eval.** An eval needs a model in the loop, and there is none here. Code
+  destined for a skill is exercised on the CoWork runtime before an eval is written over it.
+- **Transparency is the requirement.** Once the container starts, this package adds nothing
+  and interprets nothing, and pytest's exit code is returned unchanged.
+- **Two images, one layer apart.** The eval image never carries pytest, so the inventory stays
+  exact.
+- **One mount, read-write.** pytest writes beside a suite, and the container runs as the host
+  uid.
+- **One backend.** `--docker` is the only one, and there is no `test --cowork`.
 
 The image this one is built over is [docker.md](docker.md), and the inventory that image
-reproduces is [runtime.md](runtime.md). Neither is restated here. What of this is built is
-the status table in [running_evals.md](running_evals.md).
+reproduces is [runtime.md](runtime.md). Neither is restated here. What of this is built is the
+status table in [running_evals.md](running_evals.md).
 
 ## Usage
 
@@ -164,15 +173,16 @@ raises before any container starts.
 
 ## The one backend
 
-There is no `test --venv` and no `test --cowork`. The mirror reproduces the interpreter and
-the wheels only, so a suite that touches LibreOffice, pandoc, tesseract or a font passes
-there and fails in a session. CoWork exposes no route to run a process that is not an agent
-turn. See [environments.md](environments.md) and [approaches.md](approaches.md).
+`--docker` is the only backend, and there is no `test --cowork`. CoWork exposes no route to
+run a process that is not an agent turn. Running a suite on the host under the 3.10 mirror is
+not offered either: the mirror reproduces the interpreter and the wheels only, so a suite that
+touches LibreOffice, pandoc, tesseract or a font passes there and fails in a session. See
+[environments.md](environments.md) and [approaches.md](approaches.md).
 
 The backend flag is still required and still has no default, so the surface reads the same
 on every verb.
 
-`test` is not a fourth backend. A backend runs an eval and returns a result document; this
+`test` is not a third backend. A backend runs an eval and returns a result document; this
 returns an exit code.
 
 ## What the consumer provides

@@ -115,9 +115,9 @@ The inventory in [`../docs/runtime.md`](../docs/runtime.md) already carries
 - [x] `src/cowork_evals/data/requirements_test.txt`: `pytest` and every package the previous
       box says is absent from the image, each pinned to an exact version. A package already
       in the inventory is never listed, whatever version pytest would prefer.
-- [ ] The measurement, with its capture date, goes into `docs/cowork_test.md` in phase 7 as
+- [x] The measurement, with its capture date, goes into `docs/cowork_test.md` in phase 7 as
       a snapshot.
-- [ ] **If the measurement fails**, meaning no pytest version is satisfied by the inventory's
+- [x] **If the measurement fails**, meaning no pytest version is satisfied by the inventory's
       `packaging` and `attrs`, the pin is still not moved. What ships instead is a virtual
       environment at `/opt/pytest`, built `--system-site-packages`, holding pytest and its
       needs and invoked by absolute path. The image's own `site-packages` is then untouched,
@@ -245,39 +245,39 @@ it.
 
 One commit. Every decision above lands in a file that owns it, and nothing is restated.
 
-- [ ] `docs/cowork_test.md`, new. What the verb is for, the two images and the rule that
+- [x] `docs/cowork_test.md`, new. What the verb is for, the two images and the rule that
       splits them, the pinned list and the phase 1 snapshot with its capture date, the
       container's mounts and what is deliberately absent from them, the exit codes, and the
       rule that keeps the mirror and CoWork out of it. It links
       [`../docs/docker.md`](../docs/docker.md) for the base image and
       [`../docs/runtime.md`](../docs/runtime.md) for the inventory, and restates neither.
-- [ ] `docs/README.md`: a row for `cowork_test.md` in the index table, and a sentence in
+- [x] `docs/README.md`: a row for `cowork_test.md` in the index table, and a sentence in
       "The run, and the mechanisms" placing it as a mechanism file. The opening paragraph
       says this repository runs evals; it gains the second thing it runs.
-- [ ] `docs/cli.md` is not touched here. The verb's surface is written by
+- [x] `docs/cli.md` is not touched here. The verb's surface is written by
       [`plan_cli.md`](plan_cli.md)'s phase 8, which owns that file, and the statements it
       writes are the `test` rows of this plan's decision table.
-- [ ] `docs/docker.md`: one sentence saying the eval image carries no pytest and why, linking
+- [x] `docs/docker.md`: one sentence saying the eval image carries no pytest and why, linking
       `cowork_test.md`. The parity section is unchanged and says so.
-- [ ] `docs/environments.md`: "Two requirements files" becomes three, and the table gains
+- [x] `docs/environments.md`: "Two requirements files" becomes three, and the table gains
       `requirements_test.txt` with what it pins and what reads it. That section owns the
       split, so the rule deciding which of the three a new pin goes in is written there and
       nowhere else.
-- [ ] `docs/approaches.md`: one sentence saying `test` is not a fourth backend, and why.
-- [ ] `docs/running_evals.md`: two rows in the status table, for the test image and for the
+- [x] `docs/approaches.md`: one sentence saying `test` is not a fourth backend, and why.
+- [x] `docs/running_evals.md`: two rows in the status table, for the test image and for the
       `test` verb, the second reading `no` until `plan_cli.md` builds it.
-- [ ] `docs/library.md`: `requirements_test.txt`, `Dockerfile.pytest` and `pytest_image.py`
+- [x] `docs/library.md`: `requirements_test.txt`, `Dockerfile.pytest` and `pytest_image.py`
       in the "What ships" table, and a row in "Where state lives" for the test image tag.
       The "Where the restrictions are" table gains the consumer's `tests/`, which the wheel
       set does not bind.
-- [ ] `CLAUDE.md`: the "Two kinds of code, two sets of rules" table gains a third row for a
+- [x] `CLAUDE.md`: the "Two kinds of code, two sets of rules" table gains a third row for a
       consumer's `tests/`, which runs in the test image on 3.10 and may import pytest. The
       "Two tiers of test" rule is about this repository's own tests and gains one sentence
       saying so, because the new verb runs a consumer's.
-- [ ] `../README.md`, the repository index: the opening line and the "Using it" block. The
+- [x] `../README.md`, the repository index: the opening line and the "Using it" block. The
       package runs evals and runs a consumer's tests in the same runtime, and both go
       through one command.
-- [ ] [`README.md`](README.md), the plan index: its row, its section and the renumbering are
+- [x] [`README.md`](README.md), the plan index: its row, its section and the renumbering are
       already written, ahead of this plan, so the index says what is being built while it is
       built. What is left here is the link to `docs/cowork_test.md`, which that file
       describes without linking until this phase creates it. The status becomes
