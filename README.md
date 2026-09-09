@@ -32,19 +32,23 @@ them.
 Python 3.10 or later. The package is not on PyPI yet, so it installs from this repository.
 
 ```bash
-uv add --dev "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.2.0"
+uv add --dev "cowork-evals @ git+https://github.com/pcingola/cowork_evals"
 ```
 
 ```bash
-pip install "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.2.0"
+pip install "cowork-evals @ git+https://github.com/pcingola/cowork_evals"
 ```
 
 ```bash
-uv tool install "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.2.0"
+uv tool install "cowork-evals @ git+https://github.com/pcingola/cowork_evals"
 ```
 
-The last line installs the command on its own, outside any project. The reference after `@` is
-a tag, a branch or a commit, and it is the pin. Drop it to track the default branch.
+The last line installs the command on its own, outside any project.
+
+Those three track the default branch. Appending `@<reference>`, a tag, a branch or a commit,
+pins instead. Pin in a repository that gates CI on evals: `run` decides pass and fail, so a
+change to the gate or the skip rules moves that verdict without the consumer's cases changing.
+`cowork_evals --version` prints what is installed, and every run records it in `env.txt`.
 
 The distribution is `cowork-evals`. The command it installs is `cowork_evals`.
 

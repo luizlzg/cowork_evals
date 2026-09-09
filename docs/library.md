@@ -37,15 +37,20 @@ hatchling, so a git reference builds the same wheel `scripts/build.sh` builds. I
 a package index yet, so a consumer installs from the repository:
 
 ```sh
-uv add --dev "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.2.0"
-pip install "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.2.0"
-uv tool install "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.2.0"
+uv add --dev "cowork-evals @ git+https://github.com/pcingola/cowork_evals"
+pip install "cowork-evals @ git+https://github.com/pcingola/cowork_evals"
+uv tool install "cowork-evals @ git+https://github.com/pcingola/cowork_evals"
 ```
 
-The reference after `@` is a tag, a branch or a commit, and it is the pin. Dropping it tracks
-the default branch. The third line installs the command outside any project, which is how a
-consumer that runs the command but does not import it holds the pin. `README.md` carries the
-same three lines, and it is what a consumer reads. Once the package is on an index they become
+Those track the default branch. Appending `@<reference>`, a tag, a branch or a commit, pins
+instead. No version is written into either file: a number here goes stale on the next release,
+and `README.md` carries the same three lines. The third line installs the command outside any
+project, which is how a consumer that runs the command but does not import it holds a pin.
+
+Pinning is the consumer's call and this repository states when it is worth making: `run`
+decides pass and fail, so a change to the gate or the skip rules moves that verdict with no
+change to the consumer's cases. A repository that gates CI on evals pins. One that runs them
+by hand need not. Once the package is on an index they become
 the name alone:
 
 ```sh
