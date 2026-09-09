@@ -15,10 +15,13 @@ while the work happens.
 
 ## Plans
 
-Five plans, in build order. One is skipped. The order is the order they are built in, not a
-gate: a plan is written whenever the developer decides to write it, and a plan whose inputs
-already exist is executable whether or not the plan before it is finished. `status` is the
-plan's own state, not the system's: what is built and usable is
+Six plans. Five build something and are numbered in build order, and one of those five is
+skipped. `plan_fix.md` builds nothing, so it carries no number: it corrects what the others
+wrote, and it ran before `plan_cowork_backend.md` because it changes what that plan and
+`plan_cli.md` both read. The order is the order they are built in, not a gate: a plan is
+written whenever the developer decides to write it, and a plan whose inputs already exist is
+executable whether or not the plan before it is finished. `status` is the plan's own state,
+not the system's: what is built and usable is
 [`../docs/running_evals.md`](../docs/running_evals.md).
 
 | # | Plan                     | Builds                                                                            | Status      | Branch                |
@@ -28,6 +31,7 @@ plan's own state, not the system's: what is built and usable is
 | 3 | `plan_venv.md`           | The staged relocatable 3.10 runtime, and the harness run under it                 | skipped     |                       |
 | 4 | `plan_cowork_backend.md` | The case reader, the CoWork grader and the v1 result document over the driver     | written     | `feat/cowork-backend` |
 | 5 | `plan_cli.md`            | Scope resolution, the run directory, the gate, and the command                    | written     | `feat/cli`            |
+| - | `plan_fix.md`            | Nothing. One configuration file, one name per artifact, and the false statements  | implemented | `feat/fix-consistency` |
 
 | Status        | Means                                                                     |
 | ------------- | --------------------------------------------------------------------------- |

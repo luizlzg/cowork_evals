@@ -469,4 +469,7 @@ Each item below names the one file that should own the fact.
       against `docs/runtime.md` while `:24` calls `socat` one too; and `README.md:63` tells a
       writer to redact an account as the environment variable that supplies it, which no
       longer names anything this package reads.
-- [ ] `plans/README.md`: add this plan to the table and mark it `implemented`.
+- [x] `plans/README.md`: add this plan to the table and mark it `implemented`.
+      It carries no number, because the numbers there are build order and this plan builds
+      nothing. Every other box in this file is ticked. The merge into `main` is the
+      developer's, and `implemented` in that table means the merge has happened.
