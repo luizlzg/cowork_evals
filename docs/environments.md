@@ -89,9 +89,9 @@ holds, and [docker.md](docker.md) for the container that does reproduce them.
 The mirror does not itself reach an eval case. `scripts/cowork_run.sh` puts it on `PATH` for
 a command you run yourself, and that works. Inside a run the OS sandbox that a `Bash` grant
 turns on cannot read it, because a virtual environment leaves its interpreter and standard
-library under the home directory. The venv backend therefore copies a relocatable
-interpreter and this mirror's `site-packages` into the plugin under test instead. See
-[staged_runtime.md](staged_runtime.md).
+library outside that sandbox's readable set. The venv backend therefore copies a relocatable
+interpreter and this mirror's `site-packages` into the plugin under test instead. The
+readable set and the copy are both [staged_runtime.md](staged_runtime.md).
 
 ## Two requirements files
 

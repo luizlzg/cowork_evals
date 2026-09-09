@@ -254,10 +254,14 @@ Each item below names the one file that should own the fact.
 - [x] `docs/running_evals.md:21` bundles the package and the CLI into one `no` row. The
       package exists on disk; only `[project.scripts]` is missing, which
       `docs/library.md:30` states correctly. Split the row in two.
-- [ ] The Bash sandbox readable set is stated near-verbatim in `docs/running_evals.md:94-97`,
+- [x] The Bash sandbox readable set is stated near-verbatim in `docs/running_evals.md:94-97`,
       `docs/staged_runtime.md:15-17`, `docs/environments.md:86-91` and
       `docs/approaches.md:89-93`. Keep it in `docs/staged_runtime.md`, which
       `docs/README.md:25` assigns that subject, and link from the other three.
+      Near-verbatim in two of the four. `docs/environments.md` and `docs/approaches.md`
+      restated one clause of the set, that the home directory is unreadable, rather than the
+      set; both now name the set and link. `seatbelt on macOS and bubblewrap on Linux` was
+      only in `docs/running_evals.md` and moved to the owner with the rest of the sentence.
 - [ ] The `.cowork-runtime/` staging exception is stated in `docs/running_evals.md:109-111`,
       `docs/library.md:159-163`, `docs/staged_runtime.md:71-75` and `docs/cli.md:41-43`.
       Keep it in `docs/library.md`, which owns where state lives, and link from the rest.

@@ -92,10 +92,8 @@ is already 3.10. See [docker.md](docker.md).
 
 ### Why the plugin directory is the only place it can go
 
-Granting `Bash` in any form turns on Claude Code's OS-level Bash sandbox, seatbelt on macOS
-and bubblewrap on Linux. Inside it the readable set is the per-run sandbox, the plugin
-directory under test, the case's `context.add_dirs` entries, and the `PATH` directories
-inside those. The home directory and its siblings are unreadable.
+Granting `Bash` in any form turns on Claude Code's OS-level Bash sandbox, whose readable set
+is in [staged_runtime.md](staged_runtime.md). Every candidate below is decided by it.
 
 `--allow-tools` is pinned to `Bash` because a skill that shells out needs it, so every run
 is subject to this.

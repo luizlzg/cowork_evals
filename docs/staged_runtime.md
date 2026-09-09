@@ -12,9 +12,10 @@ the "How the sandbox works" section of
 
 ## Why the mirror is not staged directly
 
-Granting `Bash` turns on Claude Code's OS-level sandbox. Inside it the readable set is the
-per-run sandbox, the plugin directory under test, the case's `context.add_dirs` entries, and
-the `PATH` directories inside those. The home directory and its siblings are unreadable.
+Granting `Bash` in any form turns on Claude Code's OS-level sandbox, seatbelt on macOS and
+bubblewrap on Linux. Inside it the readable set is the per-run sandbox, the plugin directory
+under test, the case's `context.add_dirs` entries, and the `PATH` directories inside those.
+The home directory and its siblings are unreadable. This is the one copy of that set.
 
 A virtual environment is a pointer, not an installation. The mirror at `.venv_cowork` holds
 no interpreter and no standard library. Measured 2026-09-04:

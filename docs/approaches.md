@@ -86,10 +86,10 @@ wheel set a session provides, and nothing else. It catches an import that does n
 the image and an API that changed between versions. Cheap and fast. What it leaves diverging
 is in [environments.md](environments.md).
 
-The mirror is not put on `PATH` as it is built. Granting `Bash` turns on an OS sandbox that
-cannot read under the home directory, and a virtual environment leaves its interpreter and
-standard library there. The backend copies a relocatable interpreter and the mirror's
-`site-packages` into the plugin under test and puts that on `PATH`. See
+The mirror is not put on `PATH` as it is built. Granting `Bash` turns on an OS sandbox whose
+readable set leaves out a virtual environment's interpreter and standard library. The backend
+copies a relocatable interpreter and the mirror's `site-packages` into the plugin under test
+and puts that on `PATH`. That set, and the copy, are
 [staged_runtime.md](staged_runtime.md).
 
 **Docker.** A container from `ubuntu:22.04` with the same interpreter, wheels, document
