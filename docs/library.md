@@ -86,7 +86,8 @@ mirrors an old VM. See [runtime.md](runtime.md).
 | `src/cowork_evals/logs.py`                | yes   | The run directory, `env.txt`, `latest`, pruning and the tee        |
 | `src/cowork_evals/gate.py`                | yes   | The gate over `aggregate-result.json`                              |
 | `src/cowork_evals/preflight.py`           | yes   | Each backend's unmet conditions, for `check` and for `run`         |
-| `src/cowork_evals/cli.py`                 | yes   | The parser, the five verbs, the dispatch and the exit codes        |
+| `src/cowork_evals/resources.py`           | yes   | Where the shipped documentation and data are, in either layout     |
+| `src/cowork_evals/cli.py`                 | yes   | The parser, the seven verbs, the dispatch and the exit codes       |
 | `src/cowork_evals/docker/`                | yes   | The container backend: the digest, the argument lists, build, check and run |
 | `src/cowork_evals/docker/Dockerfile`      | yes   | What `setup --docker` builds                                       |
 | `src/cowork_evals/docker/Dockerfile.pytest` | yes | One layer over it, carrying pytest                                 |

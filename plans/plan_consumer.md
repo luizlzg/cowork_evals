@@ -120,10 +120,10 @@ report, and this is the phase that makes the claim true.
 
 ### Phase 7: the documentation sweep
 
-- [ ] `README.md`: `init` in the quickstart, the two new verbs in "The command", and the Documentation table saying the files ship
-- [ ] `docs/README.md`: the reading order carries no change of content, and the summary states that this tree ships
-- [ ] `docs/cli.md`: the verb table carries seven verbs
-- [ ] No file outside `plans/` links to this plan
+- [x] `README.md`: `init` in the quickstart, the two new verbs in "The command", and the Documentation table saying the files ship
+- [x] `docs/README.md`: the reading order carries no change of content, and the summary states that this tree ships
+- [x] `docs/cli.md`: the verb table carries seven verbs
+- [x] No file outside `plans/` links to this plan
 
 ### Phase 8: tests
 

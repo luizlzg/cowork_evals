@@ -14,6 +14,9 @@ you are about to change, and link to it rather than restating it.
 - Every file states what is true of this repository now. A measured fact carries its capture
   date and is called a snapshot.
 - No file here carries a build status of its own, and no file here links to a plan.
+- This tree ships inside the package. `cowork_evals docs` prints where it landed, and a
+  reference that leaves this tree is named rather than linked. Both rules are in
+  [`library.md`](library.md).
 
 The table below is in reading order. The first six files are the system; the next four are
 the mechanisms under it; the next two are measurements of things this repository does not
