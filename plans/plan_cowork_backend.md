@@ -1,6 +1,6 @@
 # Plan: the CoWork backend
 
-Branch `feat/cowork-backend`. Eight phases, one commit each.
+Branch `feat/cowork-backend`. Eight phases.
 
 Everything this plan reads already exists: `plugins/smoke/`, `src/cowork_evals/config.py`,
 `src/cowork_evals/cowork.py` and `src/cowork_evals/docker/__init__.py`. It waits on nothing.
@@ -75,9 +75,7 @@ document. Phase 8 records the absence in the log layout.
 - A fixture carries no account identifier, profile identifier, session identifier or real
   prompt. [`../README.md`](../README.md).
 - One exception type is added, `CaseError` in `cases.py`. The ceiling refusal reuses
-  `CoWorkError(2, ...)`. [`../docs/cli.md`](../docs/cli.md) maps a code 2 raised while
-  running a case onto exit 1 and only a preflight code 2 onto exit 3, so a refusal raised
-  before any case submits is not covered by that table today. Phase 8 corrects the row.
+  `CoWorkError(2, ...)`, which [`../docs/cli.md`](../docs/cli.md) already maps onto exit 3.
   Nothing returns an error code, calls `sys.exit` or prints.
 
 ## Phase 1: The case reader
@@ -102,7 +100,7 @@ so both backends see the same case set.
       in `plan_cli.md` phase 1, which cannot report what the reader refused to build.
       `CaseError` is for a tree that cannot be read at all: unparsable YAML, or no plugin
       root.
-- [ ] A grader file with empty metadata is ignored. The harness ignores it, and
+- [ ] A grader file with empty metadata is ignored, as the harness ignores it.
       [`../docs/eval_format.md`](../docs/eval_format.md) records the trap.
 - [ ] Read `case.yaml` when present, and keep the `context.*` keys it wrote.
 - [ ] `discover(root, *, tags=(), case_glob=None)`: recurse, a directory holding `prompt.md`
@@ -114,10 +112,10 @@ so both backends see the same case set.
       directory name.
 - [ ] `plugin_root(target)`: the nearest ancestor holding `.claude-plugin/plugin.json`, and
       `CaseError` when there is none.
-- [ ] Move `plugin_root` here from `src/cowork_evals/docker/__init__.py:60` and point the
-      container backend at this one. It raises `CaseError` here, so the container backend
-      wraps it and still raises `DockerError`, which leaves `tests/unit/test_docker.py`
-      unchanged.
+- [ ] Move `plugin_root` here from `src/cowork_evals/docker/__init__.py:95`. The docker
+      module keeps a wrapper of the same name, which catches `CaseError` and raises
+      `DockerError`, so `tests/unit/test_docker.py:217-229` still imports it from there and
+      still asserts `DockerError`.
 - [ ] `tests/unit/test_cases.py` over hand-written trees under `tests/data/cases/`: every
       frontmatter key, no optional key, a `prompt.md` with no `---` block, a grader with no
       `---` block, a `case.yaml`, a grouping directory that is not a case, a tag filter, a
@@ -137,16 +135,21 @@ grader from the score. Phases 5 and 6 both read the difference.
 this backend's behaviour already satisfies it, and skipped otherwise. It reads written keys,
 never merged defaults.
 
-| Written in the case                             | On CoWork                                       |
-| ------------------------------------------------- | ------------------------------------------------- |
-| `runs: N`                                       | Honoured. Submit the prompt N times            |
-| `timeout_seconds`                               | Honoured as that case's driver `run_timeout`   |
-| `arm: with-only` or `arm: both`                 | Honoured. One arm runs, it is the with-arm, and it is scored |
-| `max_turns`                                     | The case is skipped. No turn cap reaches a session |
-| `model`, `allowed_tools`, `append_system_prompt`, `env` | The case is skipped. The session decides |
-| Any `context.*` in `case.yaml`                  | The case is skipped. Nothing stages files into the VM |
-| An `evals/mocks/` directory in the plugin root  | Every case in that plugin is skipped. The harness applies stand-ins suite-wide and the MCP servers here are real |
-| A grader with `target` or `focus` of `mock_calls` | That grader is skipped, and the case still runs |
+| Written out                                             | Level  | On CoWork                                       |
+| --------------------------------------------------------- | ------ | ------------------------------------------------- |
+| `runs: N`                                               | case   | Honoured. Submit the prompt N times             |
+| `timeout_seconds`                                       | case   | Honoured as that case's driver `run_timeout`    |
+| `arm: with-only` or `arm: both`                         | grader | Honoured. One arm runs, it is the with-arm, and every grader is scored in it |
+| `max_turns`                                             | case   | The case is skipped. No turn cap reaches a session |
+| `model`, `allowed_tools`, `append_system_prompt`, `env` | case   | The case is skipped. The session decides        |
+| Any `context.*` in `case.yaml`                          | case   | The case is skipped. Nothing stages files into the VM |
+| A `mocks/` directory at or above the case, from `evals/` down | suite, group or case | The case is skipped. Stand-ins are the harness's, and the MCP servers here are real |
+| `target` or `focus` of `mock_calls`                     | grader | That grader is skipped, and the case still runs |
+
+The `mocks/` row reads the three layers
+[`../docs/claude_code/plugin_eval_reference.md`](../docs/claude_code/plugin_eval_reference.md)
+defines, so `evals/mocks/` skips every case in the plugin and a case's own `mocks/` skips
+that case alone.
 
 The last row is the only grader skip this function decides. The other one, an `llm` grader
 whose focus turns out to be an image, is read from the file's bytes, which exist only after
@@ -154,12 +157,14 @@ the run, so phase 4 decides it and records it the same way.
 
 - [ ] Implement the table. A skipped grader is excluded from the run's `score`, so a case
       does not fail for a grader that was never asked.
-- [ ] Correct the four statements that pin one run per case: the skip table in
+- [ ] Correct every statement that pins one run per case: the skip table in
       [`../docs/running_evals.md`](../docs/running_evals.md), the sentence `It pins one run
-      per case` in the same file, the `runs`, `timeout_seconds` and `arm:` rows in
-      [`../docs/approaches.md`](../docs/approaches.md), and the `--runs N` row in
-      [`../docs/cli.md`](../docs/cli.md), which refuses the option today. Skipping `arm:`
-      would leave the gate red for every case that carries it for portability.
+      per case` in the same file, the row in
+      [`../docs/approaches.md`](../docs/approaches.md) that lumps `runs`, `max_turns` and
+      `timeout_seconds` together, which splits because `max_turns` still skips, and the
+      `--runs N` row in [`../docs/cli.md`](../docs/cli.md), which refuses the option today.
+      The `arm:` row in `approaches.md` becomes honoured: skipping it would leave the gate
+      red for every case that carries it for portability.
 - [ ] Add a `--timeout-seconds N` row to the option table in
       [`../docs/cli.md`](../docs/cli.md): accepted on `--cowork`, refused on `--venv` and
       `--docker`. `claude plugin eval` has no timeout flag, so there is nothing to map it
@@ -196,13 +201,17 @@ and matching them exactly is what makes a case portable between backends.
       host. The session directory is a field of the document. It returns text every time,
       because `regex` and the judge both read text and the reference makes `files`
       newline-separated. `file_exists` is the one grader that does not go through it: it
-      reads the stripped list. An unreadable file is a failed grader carrying the reason,
-      never an exception.
+      reads the stripped list. An unreadable file, and a `path` that resolves outside
+      `outputs/`, are each a failed grader carrying the reason, never an exception. The
+      reference confines a file target to the workspace, and `outputs/` is the workspace
+      here.
 - [ ] `regex`: the pattern is a JavaScript RegExp source. Compile it with `re`, mapping
       `i`, `m` and `s` onto `re.I`, `re.M` and `re.S`, adding `re.ASCII` unless the flags
       carry `u` or `v`, and ignoring `d`, `g` and `y`. `re.ASCII` is what makes `\d` and
       `\w` ASCII-only as they are in JavaScript. A pattern `re` cannot compile is a failed
-      grader naming the error. Record the divergence in `docs/` in phase 8.
+      grader naming the error. Every pattern in the format compiles through this one
+      function, `input_match` on `tool_used` and `tool_order` included. Phase 8 records the
+      divergence.
 - [ ] `regex` `match`: `contains` (default), `not_contains`, and `count:N` which requires
       **exactly** N matches.
 - [ ] `tool_used`: count calls in `tool_calls` whose `name` is `tool` and whose input,
@@ -216,20 +225,19 @@ and matching them exactly is what makes a case portable between backends.
 - [ ] `file_exists`: match `path` against each stripped `outputs` entry with
       `pathlib.PurePath.full_match`, which is the harness's glob semantics, `**/` at any
       depth and `*` within a segment. `exists` defaults to true.
-- [ ] A run with no scored graders scores 0, which is the reference's rule. That covers a
-      case whose graders were all skipped and a case with no grader file at all. Neither is
-      refused here.
 - [ ] `explanation` is mechanical, in the harness's register: `matched Alex`,
       `Skill called 1x (expected 1 or more)`.
-- [ ] That trace rendering is this backend's and is not the harness's `trace.jsonl`, so a
-      `regex` grader on `target: trace` is not portable between backends. Every other
-      target is. Record it in `docs/` in phase 8.
 - [ ] An unknown grader type is a failed grader naming the type, not an exception.
 - [ ] `tests/unit/test_grader.py` over hand-written session documents under
       `tests/data/documents/`: every grader type, every target, all three `match` values,
       the `min: 0, max: 0` idiom, the `{tool, input_match}` form of `tool_order`, a `**/`
       glob, a bare file name with no `**/`, which matches because the prefix is stripped, an
-      unreadable file, an uncompilable pattern, and an unknown type.
+      unreadable file, a `path` escaping `outputs/`, an uncompilable pattern, and an unknown
+      type.
+
+The trace rendering is this backend's and is not the harness's `trace.jsonl`, so a `regex`
+grader on `target: trace` is not portable between backends. Every other target is. Phase 8
+records it.
 
 ## Phase 4: The judge
 
@@ -245,7 +253,8 @@ caller's `judge_model` where one was given, and `eval.judge_model` from
       text vote. The composed text goes on stdin, so a long trace never reaches the
       argument list.
 - [ ] Compose one text: the rubric, the material, and a closing instruction to answer with
-      exactly `PASS` or `FAIL`. Send the same text three times.
+      exactly `PASS` or `FAIL`. Send the same text three times. The material is truncated to
+      100000 characters, head and tail kept, which is what the harness shows a judge.
 - [ ] Take the reply and the spend from the `--output-format json` document. The spend fills
       `judgeCostUsd`.
 - [ ] The grader passes on two or more `PASS` votes. A reply that is neither word is a lost
@@ -269,8 +278,7 @@ caller's `judge_model` where one was given, and `eval.judge_model` from
       pass and one that must fail. It proves the stdin invocation and the reply parsing. Six
       short calls, no CoWork session, no ceiling entry. Neither marker needs a change:
       `tests/integration/conftest.py` marks the directory `integration`, and
-      `pyproject.toml`'s `live` marker already reads `submits a real run` and covers an
-      eval run as well as a CoWork one.
+      `pyproject.toml`'s `live` marker already reads `submits a real run`.
 
 ## Phase 5: The v1 result document
 
@@ -281,7 +289,9 @@ It is additive-only, which is what permits the three added fields and the one wi
 one.
 
 - [ ] Canonical camelCase, `schemaVersion: 1`, `partial: false`, `startedAt`,
-      `durationSeconds` and `costUsd` for the suite.
+      `durationSeconds` and `costUsd` for the suite. `partial` is always false: this backend
+      never stops a suite part way, and the ceiling refusal in phase 6 happens before the
+      first submission.
 - [ ] `claudeVersion` is the host `claude --version`. No CLI ran the suite on this backend,
       and that version is the judge's. Phase 8 says so.
 - [ ] `costUsd` is the judge spend and nothing else. A CoWork run is billed to the account
@@ -290,13 +300,20 @@ one.
       `plugins` from `.claude-plugin/plugin.json` with the folder basename as the `name`
       fallback, and `caseFilter` and `tagFilters` when given.
 - [ ] Per case: `name`, `dir` relative to `suite.root`, `source`, `promptMarkdown`,
-      `runsPerCase`, `timeoutSeconds` and `maxTurns` as the case's declared values and never
-      an override, absent where the case declares none, the grader definitions, `arms.with`
-      with one entry per run, and `aggregates`. No `arms.without`. One rule for all three:
-      the reference makes them what the case asked for, and what actually ran is read from
-      `arms.with` and from the run's `cowork` object below.
-- [ ] Per run: `score` as the weighted fraction of scored graders that passed, `passed` when
-      `score` is 1.0, `turns` from the session document's assistant turns, `costUsd` and
+      `model`, `runsPerCase`, `timeoutSeconds` and `maxTurns` as the case's declared values
+      and never an override, absent where the case declares none, the grader definitions,
+      `arms.with` with one entry per run, and `aggregates`. No `arms.without`. One rule for
+      all four: the reference makes them what the case asked for, and what actually ran is
+      read from `arms.with` and from the run's `cowork` object.
+- [ ] A grader definition carries `name`, `type`, `weight`, `graderMarkdown` on a judged
+      grader, and `config` as the author wrote it with the defaults phase 3 applies filled
+      in. `Grader.config` from phase 1 is the authored keys alone, so the filling in happens
+      here.
+- [ ] Per run: `score` is the weighted fraction of scored graders that passed, and 0 when
+      there were none to score, which is the reference's rule and covers a case whose
+      graders were all skipped and a case with no grader file at all. `passed` when `score`
+      is 1.0.
+- [ ] The rest of a run: `turns` from the session document's assistant turns, `costUsd` and
       `judgeCostUsd` both the judge spend, `startedAt` from `submitted_at`,
       `durationSeconds` from `collected_at` minus `submitted_at`, `error`, `tracePath` at
       the session transcript, and `skippedPaidGraders: false`.
@@ -314,15 +331,17 @@ one.
       `cowork: {sessionDir, timeoutSeconds}` on a run, and `scored: false` on a skipped
       grader result. `cowork.timeoutSeconds` is the timeout that run ran under, which is the
       override where one was given, and it is the one place an effective value is recorded.
-      The gate in `plan_cli.md` reads `skipped`.
+      `cowork.sessionDir` is what re-grades a stored run without submitting again. The gate
+      in `plan_cli.md` reads `skipped`.
 - [ ] A skipped case carries `skipped: true`, `skipReason`, an empty `arms.with`, and
-      `aggregates` of `score` 0 and `passRate` 0, and is never counted in
-      `aggregates.casesPassed`. A case has no `score` and no `passed` of its own in v1;
-      those two are run fields.
+      `aggregates` of `score` 0 and `passRate` 0. A case has no `score` and no `passed` of
+      its own in v1; those two are run fields.
 - [ ] A run the driver raised on carries `error` as the code and message, `score` 0 and no
       graders.
 - [ ] Suite `aggregates`: `casesTotal`, `casesPassed`, `overallScore`, `overallPassRate`.
-      No `meanDelta`: there is no baseline arm.
+      No `meanDelta`: there is no baseline arm. A mean over nothing is 0, so a selection
+      that matched no case writes `casesTotal: 0` and three zeros rather than dividing by
+      zero. Whether an empty selection passes is the gate's, in `plan_cli.md`.
 - [ ] `casesPassed` is the reference's rule, a case scoring at or above `threshold`, minus
       every skipped case. `threshold` is 0 here, so without that subtraction a skipped case
       would count as passed. It is the one behavioural departure beside the four above, and
@@ -330,7 +349,7 @@ one.
       reads the grader results and `skipped`.
 - [ ] `tests/unit/test_results.py`: build a result document from hand-written cases and
       session documents and assert every field. One case passed, one failed, one skipped,
-      one errored, and one with `runs: 2` where the two runs disagree.
+      one errored, one with `runs: 2` where the two runs disagree, and an empty selection.
 
 ## Phase 6: The backend function
 
@@ -343,22 +362,22 @@ and returns the path to the `aggregate-result.json` it wrote. That contract is
       cases, run each, write the result document, return its path.
 - [ ] `judge_model` replaces `eval.judge_model` for every judged grader in the suite, and
       reaches phase 4 and `suite.judgeModel`. It is `--judge-model M` in
-      [`../docs/cli.md`](../docs/cli.md), which accepts that option on this backend. Without
-      the parameter the option has no route: `judge.py` reads the setting from the loaded
-      `Config`, and nothing writes it back. `plan_cli.md` calls both signatures and nothing
-      else on this backend.
+      [`../docs/cli.md`](../docs/cli.md), and the parameter is the only route that option
+      has on this backend.
 - [ ] `runs` and `timeout_seconds` replace every case's declared value, and are `--runs N`
       and `--timeout-seconds N` in [`../docs/cli.md`](../docs/cli.md). Neither multiplies
       what the case declared. The result document records the declared value on the case, as
       phase 5 sets it, so the case says what it asked for while `arms.with` says how many
       runs there were and each run's `cowork.timeoutSeconds` says what it ran under.
 - [ ] `plan(target, *, config=None, runs=None, timeout_seconds=None, judge_model=None,
-      tags=(), case_glob=None)`: the same resolution and the same arithmetic, returning per
-      case its name, its `Skips`, its effective run count and its effective timeout, with
-      the ceiling numbers. It submits nothing, so it carries the case skips and the grader
-      skips phase 2 decides and not the image-focus skip phase 4 decides after a run. `run`
-      calls it, and so does `--dry-run --cowork` in `plan_cli.md` phase 6, which prints
-      exactly those and would otherwise re-derive them.
+      tags=(), case_glob=None)`: the same resolution and the same arithmetic, returning a
+      frozen `Plan`: one entry per case carrying its name, its `Skips`, its effective run
+      count and its effective timeout, and three numbers, the submissions the suite will
+      make, `CoWork.recent()` and `max_runs`.
+      It submits nothing, so it carries the case skips and the grader skips phase 2 decides
+      and not the image-focus skip phase 4 decides after a run. `run` calls it, and so does
+      `--dry-run --cowork` in `plan_cli.md` phase 6, which prints exactly those and would
+      otherwise re-derive them.
 - [ ] A target covering more than one plugin root raises `CaseError`.
       [`../docs/cli.md`](../docs/cli.md) makes that a usage error, and the CLI is what exits.
 - [ ] Rename `_recent` to `recent()` in `src/cowork_evals/cowork.py` and make it public. It
@@ -372,14 +391,14 @@ and returns the path to the `aggregate-result.json` it wrote. That contract is
       one, and 1 otherwise, because a case that writes no `runs` key runs once here.
       [`../docs/running_evals.md`](../docs/running_evals.md) is where that rule lives. Raise
       `CoWorkError(2, ...)` when that total plus `CoWork.recent()` is above `max_runs`. A
-      suite that stops halfway has already spent what it spent.
-- [ ] A skipped case submits nothing and costs no ceiling entry.
+      skipped case submits nothing and costs no ceiling entry.
 - [ ] Per run: `CoWork.run(case.prompt)`, then phase 3, then phase 4 for judged graders.
-      Each run is its own session and its own session document.
+      Each run is its own session and its own session document. Cases run in sequence, and
+      the runs of a case run in sequence: there is one desktop application and one composer.
 - [ ] The `CoWork` for a case carries that case's effective `timeout_seconds` as
-      `run_timeout`, which is the override where one was given.
-      `Config` is frozen, so a differing timeout is a differing `CoWork`. The ceiling and the
-      run log are files and still count across instances.
+      `run_timeout`, which is the override where one was given. `Config` is frozen, so a
+      differing timeout is a differing `CoWork`. The ceiling and the run log are files and
+      still count across instances.
 - [ ] A `CoWorkError` is caught per run and becomes that run's `error`. The remaining runs of
       that case still fire, and the suite continues.
 - [ ] Code 7, the run timeout, is caught and then collected. The error carries
@@ -388,10 +407,9 @@ and returns the path to the `aggregate-result.json` it wrote. That contract is
       The CoWork session is not stopped and keeps running in the VM. A `collect` that then
       raises code 8, meaning the session wrote no assistant text before the timeout, leaves
       the run with `error` naming the timeout, `score` 0 and no graders.
-- [ ] Cases run in sequence, and the runs of a case run in sequence. There is one desktop
-      application and one composer.
-- [ ] Write `<output_dir>/aggregate-result.json`. Name no run directory, write no `latest`
-      symlink, write no `env.txt`, prune nothing, print nothing, decide no pass or fail.
+- [ ] Write `<output_dir>/aggregate-result.json`. The caller created that directory, as it
+      does for `Docker.run`. Name no run directory, write no `latest` symlink, write no
+      `env.txt`, prune nothing, print nothing, decide no pass or fail.
 - [ ] `tests/unit/test_cowork_backend.py`: the multi-plugin refusal, `plan()` over a
       hand-written case tree with and without each override, the ceiling arithmetic against
       a hand-written run log, the result document a suite of skipped cases produces, and
@@ -404,31 +422,30 @@ and returns the path to the `aggregate-result.json` it wrote. That contract is
 application running, the macOS Accessibility grant, and `cowork_evals.yaml` naming the
 active profile. A missing precondition fails the test and never skips it.
 
-The fixture is `plugins/smoke/evals/plugin/python-version/`, which exists. It
-carries no skill, writes `runs: 1`, and its prompt asks for `python3 -V`, so it is
-answerable by a session with no plugin loaded, which is the situation this backend is always
-in. Its one `regex` grader matches `Python 3\.10\.12`, the string
+The fixture is `plugins/smoke/evals/plugin/python-version/`, which exists. It carries no
+skill, writes `runs: 1`, and its prompt asks for `python3 -V`, so it is answerable by a
+session with no plugin loaded, which is the situation this backend is always in. Its one
+`regex` grader matches `Python 3\.10\.12`, the string
 [`../docs/runtime.md`](../docs/runtime.md) records for the session interpreter and the
 string the container asserts too. Nothing about the fixture changes here.
 
 Nothing here asserts over the reader or the skip rule. Neither needs a profile or a session,
-so both are phase 6's unit boxes. [`../tests/README.md`](../tests/README.md) puts in this
-tier only what a real profile or a real run is needed for.
+so both are phase 6's unit boxes.
 
-Two facts about the grader mapping cannot be read from a file. Both are measured against the
-sessions already in the profile before anything is fired, because that costs nothing.
+Two facts about the grader mapping cannot be read from a file: whether a CoWork transcript
+records a `Skill` `tool_use`, and whether a session writes files under `outputs/`. Both are
+measured against the sessions already in the profile before anything is fired, because that
+costs nothing.
 
 - [ ] Assert `claude --version` is reachable, naming the reason when it is not. The judge
       and `claudeVersion` both need it.
-- [ ] Walk every session in the configured profile through `collect`, and record whether any
-      transcript carries a `Skill` `tool_use` record and whether any session holds files
-      under `outputs/`. A session with no assistant text raises code 8, which the walk
-      catches and steps over, as `tests/integration/test_cowork.py:37` already does. Marked
-      `integration`, not `live`: it submits nothing.
-- [ ] For each of the two that the profile has no example of, fire one case that provokes
-      it: a prompt asking the session to use any skill it has, and a prompt asking it to
-      write a named file. Marked `live`. A profile that already shows both costs nothing
-      here.
+- [ ] Walk every session in the configured profile through `collect`, and record both facts.
+      A session with no assistant text raises code 8, which the walk catches and steps over,
+      as `tests/integration/test_cowork.py:37` already does. Marked `integration`, not
+      `live`: it submits nothing.
+- [ ] Where the profile does not already show both, fire one prompt that provokes them:
+      use any skill the session has, then write a named file. One run, marked `live`. A
+      profile that shows both costs nothing here.
 - [ ] Fire `plugins/smoke/` through `run()` and assert the result document says the case
       passed. Marked `live`. One VM boot, one ceiling entry, one permanent session.
 
@@ -445,35 +462,36 @@ sessions already in the profile before anything is fired, because that costs not
 
 Nothing durable may survive only in this file.
 
-- [ ] `docs/cowork_driver.md`: the precondition that the plugin under test is already
-      deployed, the three added fields and the widened `scored`, the judge through
-      `claude -p`, the JavaScript to Python regex divergence, the `target: trace` rendering
-      and that a regex over it is not portable, `recent()` in the API table, what
-      `claudeVersion` and `costUsd` mean here, the corrected `tool_order` row, the corrected
-      `{source: file, path}` row, which names the session directory today and not
-      `outputs/`, the stripped `outputs/` prefix that makes a produced-file path mean the
-      same here as under the harness, `casesPassed` excluding a skipped case, and the
-      phase 7 measurements.
-- [ ] `docs/approaches.md`: the same precondition, the rows phase 2 corrected, and the `llm`
-      and `baseline` row, which says both are honoured and does not say an image focus is
-      skipped.
+- [ ] `docs/cowork_driver.md`, what this backend does that the reference does not: the
+      precondition that the plugin under test is already deployed, the three added fields
+      and the widened `scored`, `casesPassed` excluding a skipped case, the judge through
+      `claude -p`, what `claudeVersion` and `costUsd` mean here, and the JavaScript to
+      Python regex divergence.
+- [ ] `docs/cowork_driver.md`, the rows phase 3 made false: `tool_order`, which names
+      `tool_names`; `{source: file, path}`, which names the session directory and not
+      `outputs/`; the stripped `outputs/` prefix that makes a produced-file path mean the
+      same here as under the harness; and that `target: trace` renders this backend's way,
+      so a regex over it is not portable. The same section says the grader prints one result
+      per grader, and nothing here prints. Add `recent()` to the API table.
+- [ ] `docs/approaches.md`: the same deployment precondition, the rows phase 2 corrected,
+      and the `llm` and `baseline` row, which says both are honoured and does not say an
+      image focus is skipped.
 - [ ] `docs/cli.md`: `--runs N` accepted on `--cowork`, the `--timeout-seconds N` row phase 2
-      added, which is accepted on `--cowork` and refused on `--venv` and `--docker` because
-      `claude plugin eval` has no timeout flag and `harness.eval_argv` emits none, `claude`
-      on `PATH` added to the `--cowork` preflight row because the judge and `claudeVersion`
-      both need it, the
-      driver-code mapping row corrected so a code 2 raised before any case submits is exit 3
-      and not exit 1, the ceiling arithmetic that refuses a suite too large for `max_runs`,
-      and that host spend here is the judge alone while the account's own spend is unbounded
-      from this side.
-- [ ] `docs/running_evals.md`: mark the CoWork backend built, and record that a CoWork run
-      writes `aggregate-result.json` and no `report.html`.
-- [ ] `docs/library.md`: the five new modules, and `python-frontmatter` in the dependency
-      list.
+      added, `claude` on `PATH` added to the `--cowork` preflight row because the judge and
+      `claudeVersion` both need it, and that host spend here is the judge alone while the
+      account's own spend is unbounded from this side.
+- [ ] `docs/running_evals.md`: mark the CoWork backend built, record that a CoWork run
+      writes `aggregate-result.json` and no `report.html`, and correct the `plugins/smoke/`
+      status row, which calls the fixture the container backend's alone.
+- [ ] `docs/library.md`: one row per new module in the ships table, `python-frontmatter`
+      named beside `PyYAML` as a runtime dependency, and the `eval:` section's reader row,
+      which names the `claude plugin eval` argument list alone and now also feeds this
+      backend's judge.
 - [ ] `docs/eval_format.md`: `--case` globs the case name, not the case directory name,
       which is what the harness does and what phase 1 built. The two differ only for a case
-      whose `name` is not its directory name. And, only if phase 7 dropped the skill-fired
-      idiom or `file_exists` on this backend, a pointer at `docs/cowork_driver.md`.
+      whose `name` is not its directory name. And, only where phase 7 dropped the
+      skill-fired idiom or `file_exists` on this backend, a pointer at
+      `docs/cowork_driver.md`.
 - [ ] `tests/README.md`: a row per new test file, and the integration tier's preconditions.
 - [ ] `plugins/README.md`: `smoke` serves this backend as well.
 - [ ] Re-read every touched file for a statement this plan made false.
