@@ -353,10 +353,14 @@ Each item below names the one file that should own the fact.
       `normalize_pins` the two other lists use. `TEST_ONLY_ALL` is gone. The derived closure
       is a superset of the hand-written one: it adds `packaging`, `pygments` and
       `typing-extensions`, which are pins and so were already expected.
-- [ ] `docs/claude_code/eval_smoke/run.sh` is shell and is linted by nothing:
+- [x] `docs/claude_code/eval_smoke/run.sh` is shell and is linted by nothing:
       `scripts/lint.sh:28` and `tests/unit/test_environments.py:96` both glob `scripts/*.sh`
       only. Widen both globs, or write the exemption into
       `docs/claude_code/README.md`.
+      Widened, both to every `*.sh` in the repository outside a dot directory, which is the
+      one rule that also excludes the vendored one under `.venv_cowork/`. `run.sh` had one
+      shfmt finding, padding before a trailing comment, and it is fixed rather than
+      exempted. shellcheck was already clean on it.
 - [ ] `src/cowork_evals/docker/__init__.py:9` links a module docstring to `plan_cli.md`.
       Documentation never links to a plan. Point it at `docs/cli.md`.
 - [ ] Four files call a file a "page", against the writing rules:

@@ -4,7 +4,7 @@
 #   ./run.sh --case "capital-*"    one case or a glob
 set -euo pipefail
 
-export CLAUDE_CODE_WALNUT_SPIRE=1        # plugin eval is early access
+export CLAUDE_CODE_WALNUT_SPIRE=1 # plugin eval is early access
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
