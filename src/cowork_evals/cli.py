@@ -1,4 +1,4 @@
-"""The command: the parser, the five verbs, the dispatch and the exit codes.
+"""The command: the parser, the seven verbs, the dispatch and the exit codes.
 
 The surface is docs/cli.md, and this module is the whole of it. There is no second entry point
 and no per-backend executable.
@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from . import cowork_backend, docker, gate, logs, preflight, results, validate
+from . import cowork_backend, docker, gate, logs, preflight, resources, results, validate
 from .cases import CaseError, discover, plugin_name, plugin_roots
 from .config import Config, CoWorkError
 from .docker import Docker, DockerError, pytest_image
@@ -86,6 +86,7 @@ def build_parser() -> argparse.ArgumentParser:
     _setup_parser(verbs)
     _check_parser(verbs)
     _prune_parser(verbs)
+    _docs_parser(verbs)
     return parser
 
 
@@ -186,6 +187,16 @@ def _prune_parser(verbs: Any) -> None:
     verb.add_argument("--out", help="the log root, replacing logs/evals")
 
 
+def _docs_parser(verbs: Any) -> None:
+    """`docs` takes no backend. It reads the shipped tree and writes nothing."""
+    verb = verbs.add_parser("docs", help="print where the shipped documentation is")
+    verb.add_argument(
+        "name",
+        nargs="?",
+        help="one document, with or without .md. Omitted, every name is listed",
+    )
+
+
 # The refusals.
 
 
@@ -247,6 +258,8 @@ def _dispatch(args: argparse.Namespace, config: Config) -> int:
         return _setup(config)
     if args.verb == "check":
         return _check(args, config)
+    if args.verb == "docs":
+        return _docs(args)
     return _prune(args, config)
 
 
@@ -544,6 +557,33 @@ def _check(args: argparse.Namespace, config: Config) -> int:
         print("ready")
         return OK
     return _refuse(unmet, PREFLIGHT_FAILED)
+
+
+def _docs(args: argparse.Namespace) -> int:
+    """Print where the shipped documentation is, or the path of one document.
+
+    It reads nothing but the filesystem, writes nothing, and needs no configuration and no
+    backend. A consumer's Claude Code session runs it to find the authoring contract, so
+    what it prints is paths and names and never prose. docs/cli.md.
+    """
+    names = resources.documents()
+    if not names:
+        return _refuse(["no documentation in this installation"], PREFLIGHT_FAILED)
+
+    if args.name is None:
+        print(resources.docs_dir())
+        for name in names:
+            print(name)
+        return OK
+
+    path = resources.document(args.name)
+    if path is None:
+        return _refuse(
+            [f"no document named {args.name!r}", "the names are:", *names],
+            USAGE,
+        )
+    print(path)
+    return OK
 
 
 def _prune(args: argparse.Namespace, config: Config) -> int:

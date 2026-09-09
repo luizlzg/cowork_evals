@@ -22,8 +22,9 @@ clean 3.14 venv and a consumer repository holding one plugin.
 | `docs/*.md` references inside shipped `.py` files                      | 134, of which 26 are links  |
 | Links inside `docs/` that escape `docs/`                               | 16, of which 11 leave the shipped tree |
 | `cowork_evals.example.yaml` in the wheel or sdist                      | no, and README says to copy it |
-| `check --all` on a clean repository                                    | exit 3, names only the CoWork profile, never reports Docker |
+| `check --all` on a clean repository                                    | exit 3, one unlabelled line about the CoWork profile |
 | `check --docker` on the same machine                                   | `ready`, exit 0             |
+| Backends `check --all` actually probes                                 | both. `preflight.checks_all` iterates them, and Docker contributed no line because it was ready |
 | README quickstart followed verbatim in a clean repository              | `run --docker --dry-run` exit 0 |
 
 The last row is why this plan changes no case format and no grader: what is written works.
@@ -88,9 +89,9 @@ reason the requirements files are: `init` reads it at run time on a machine with
 
 ### Phase 3: the docs verb
 
-- [ ] `cowork_evals docs` with no argument lists every shipped document name and prints the directory holding them
-- [ ] `cowork_evals docs <name>` prints the absolute path of one document, and exits 2 with the list when the name is unknown
-- [ ] `docs/cli.md`: the verb, its two forms and its exit codes
+- [x] `cowork_evals docs` with no argument lists every shipped document name and prints the directory holding them
+- [x] `cowork_evals docs <name>` prints the absolute path of one document, and exits 2 with the list when the name is unknown
+- [x] `docs/cli.md`: the verb, its two forms and its exit codes
 
 ### Phase 4: the example file and the init verb
 
@@ -107,9 +108,15 @@ reason the requirements files are: `init` reads it at run time on a machine with
 
 ### Phase 6: check --all
 
-- [ ] `check --all` reports every backend and exits on the worst finding, instead of aborting on the first
-- [ ] Each finding names the command that supplies what is missing, which is what `README.md` already claims
-- [ ] `docs/cli.md`: the corrected behaviour
+`--all` probes both backends already. What it does not do is say so: a ready backend
+contributes no line, so its output is indistinguishable from a backend that was never
+reached, and no line says which backend it belongs to. `README.md` claims a per-backend
+report, and this is the phase that makes the claim true.
+
+- [ ] `check --all` prints one section per backend, each naming the backend and then `ready` or its unmet lines
+- [ ] `check --docker` and `check --cowork` keep the output they have, which is `ready` or the lines alone
+- [ ] The exit code is unchanged: 0 when nothing is unmet, 3 otherwise
+- [ ] `docs/cli.md`: the per-backend report, and that a ready backend is stated rather than silent
 
 ### Phase 7: the documentation sweep
 

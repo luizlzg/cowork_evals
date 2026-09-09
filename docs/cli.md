@@ -2,16 +2,17 @@
 
 ## Summary
 
-The command. One executable, five verbs, two backends. It is the whole surface a consumer
+The command. One executable, seven verbs, two backends. It is the whole surface a consumer
 repository sees; the boundary behind it is [library.md](library.md).
 
-- **The backend is required on every verb but `prune`** and has no default. Which backend
-  proves what is [approaches.md](approaches.md).
+- **The backend is required on every verb but `prune`, `docs` and `init`** and has no
+  default. Which backend proves what is [approaches.md](approaches.md).
 - **The path is the scope.** One path argument decides whether a case, a skill, a plugin or a
   whole tree runs. There is no separate sweep command.
 - **A verb names its object only when that object is not an eval.** `run` runs evals, which
   is what this command is. `test` runs pytest, so it says so. `setup`, `check` and `prune`
-  act on a backend and carry no object at all.
+  act on a backend and carry no object at all. `docs` and `init` act on neither: they read
+  what the package ships and write into the working directory.
 - **Options are named.** Nothing is forwarded raw to `claude plugin eval`. `test` is the one
   verb that takes a raw tail, because pytest is the only thing behind it.
 - **`run` verifies and never builds.** A failed preflight exits 3 and names the command that
@@ -34,14 +35,17 @@ cowork_evals test  --docker <path> [--build-missing] [--dry-run] [-- PYTEST_ARGS
 cowork_evals setup --docker
 cowork_evals check (--docker | --cowork | --all)
 cowork_evals prune [--docker] [--logs] [--older-than DAYS] [--out DIR]
+cowork_evals docs  [<name>]
+cowork_evals init  [--force]
 cowork_evals --version
 ```
 
 `setup` takes `--docker` alone. It is the only backend with anything to build, and there is
 no `setup --all`.
 
-`prune` is the one verb that takes no backend. It requires at least one selection flag, and
-none is a usage error.
+`prune`, `docs` and `init` are the three verbs that take no backend. `prune` requires at
+least one selection flag, and none is a usage error. `docs` and `init` take no backend
+because neither reaches one: `docs` reads the shipped tree, and `init` writes files.
 
 ## The path is the scope
 
@@ -277,6 +281,40 @@ by a modification time, which a later read moves.
 `run` prunes log directories older than 30 days on its own, so `prune --logs` is for
 reclaiming space on purpose. `prune --docker` leaves the container login alone: it is a
 credential, not a build product, and deleting it forces an interactive login.
+
+## docs
+
+`docs` prints where the documentation this package ships landed. It reads the filesystem,
+writes nothing, needs no configuration and reaches no backend.
+
+```
+cowork_evals docs            # the directory, then every document name
+cowork_evals docs cli        # the path of one document
+cowork_evals docs cli.md     # the same document. The extension is optional
+```
+
+With no argument the first line is the directory holding the tree and every line after it is
+a document name. With a name it prints one absolute path and nothing else, which is what
+makes it usable from a script and from an agent that will then read the file.
+
+A name is the path inside the tree without the extension, so a nested document is
+`claude_code/plugin_eval_reference`. Two directories hold a `README.md`, so a bare basename
+would not identify one.
+
+The tree carries one worked example as a real plugin, at `claude_code/eval_smoke/`. Its
+`prompt.md` and its graders are cases, not documents, so they are not listed. They still
+ship, and `docs claude_code/README` says what they are.
+
+| Condition                            | Prints                                     | Exit |
+| ------------------------------------ | ------------------------------------------ | ---- |
+| no argument                          | the directory, then every name             | 0    |
+| a known name                         | one absolute path                          | 0    |
+| an unknown name                      | the refusal, then every name, on stderr    | 2    |
+| a package built without the tree     | one line saying so, on stderr              | 3    |
+
+Where the tree sits differs between an install and a checkout, which is why a document is
+found through this verb rather than by a relative path. That rule, and the two reference
+rules that follow from it, are in [library.md](library.md).
 
 ## Exit codes
 
