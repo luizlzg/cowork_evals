@@ -68,14 +68,13 @@ written without an identifier does not go in the repository.
 ```bash
 scripts/init.sh                 # builds .venv (3.14, tooling) and the 3.10 CoWork mirror
 scripts/test.sh                 # the unit tests
-scripts/image.sh                # builds the container image the integration tier needs
-scripts/parity.sh               # probes that image against the CoWork inventory
-scripts/test.sh -m integration  # the real-system tests. Boots a CoWork VM, and spends on two eval runs
-scripts/lint.sh
+scripts/lint.sh                 # --fix applies
 ```
 
-[`scripts/README.md`](scripts/README.md) is the task index. Every script takes `--help`.
-Those scripts are for working on this repository and are not part of the distribution.
+That is a first clone. [`scripts/README.md`](scripts/README.md) is the task index and lists
+every other script, the integration tier's preconditions included. Every script takes
+`--help`. Those scripts are for working on this repository and are not part of the
+distribution.
 
 [`CLAUDE.md`](CLAUDE.md) holds the working rules and the writing rules. Each directory has a
 `README.md` that indexes it and owns the rules for it.

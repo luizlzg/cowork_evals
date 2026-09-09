@@ -284,7 +284,7 @@ Each item below names the one file that should own the fact.
       holds the box that removes it, `Correct the four statements that pin one run per
       case`, and that box is not ticked. Nothing is edited here, because the correct wording
       is what phase 2 decides.
-- [ ] `README.md:68-75` restates the script index and omits `scripts/login.sh`, which
+- [x] `README.md:68-75` restates the script index and omits `scripts/login.sh`, which
       `scripts/README.md:24` and `tests/README.md:88-92` both call a precondition of the
       integration tier. Replace the block with the commands a first clone needs and a link.
       `scripts/README.md` owns the task list.
