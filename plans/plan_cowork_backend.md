@@ -155,9 +155,9 @@ The last row is the only grader skip this function decides. The other one, an `l
 whose focus turns out to be an image, is read from the file's bytes, which exist only after
 the run, so phase 4 decides it and records it the same way.
 
-- [ ] Implement the table. A skipped grader is excluded from the run's `score`, so a case
+- [x] Implement the table. A skipped grader is excluded from the run's `score`, so a case
       does not fail for a grader that was never asked.
-- [ ] Correct every statement that pins one run per case: the skip table in
+- [x] Correct every statement that pins one run per case: the skip table in
       [`../docs/running_evals.md`](../docs/running_evals.md), the sentence `It pins one run
       per case` in the same file, the row in
       [`../docs/approaches.md`](../docs/approaches.md) that lumps `runs`, `max_turns` and
@@ -165,13 +165,13 @@ the run, so phase 4 decides it and records it the same way.
       `--runs N` row in [`../docs/cli.md`](../docs/cli.md), which refuses the option today.
       The `arm:` row in `approaches.md` becomes honoured: skipping it would leave the gate
       red for every case that carries it for portability.
-- [ ] Add a `--timeout-seconds N` row to the option table in
+- [x] Add a `--timeout-seconds N` row to the option table in
       [`../docs/cli.md`](../docs/cli.md): accepted on `--cowork`, refused on `--venv` and
       `--docker`. `claude plugin eval` has no timeout flag, so there is nothing to map it
       onto there, and only this backend sets a per-case `run_timeout` itself. It is the
       sibling of `--runs N`, and `plan_cli.md` phase 5 already reads the table expecting
       both.
-- [ ] `tests/unit/test_cowork_backend.py`: one assertion per row above.
+- [x] `tests/unit/test_cowork_backend.py`: one assertion per row above.
 
 ## Phase 3: The structural graders
 
