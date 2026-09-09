@@ -274,10 +274,16 @@ Each item below names the one file that should own the fact.
       All three held. A fourth copy of the cap was in the sequence table at
       `docs/cowork_driver.md:114` and went with them. Of the eight reading rules, three
       restated a measured shape; the other five are decisions and stay.
-- [ ] `docs/approaches.md:51` says the CoWork backend honours no `runs` value, while
+- [x] `docs/approaches.md:51` says the CoWork backend honours no `runs` value, while
       `docs/running_evals.md:62-65` says `runs: 1` and an absent key both run once. The
       smoke fixture writes `runs: 1`. `plan_cowork_backend.md` phase 2 rewrites both rows
       anyway, so this item is a check that it did, not a separate edit.
+      Checked, and the contradiction is still there. `docs/approaches.md` still reads `no,
+      one run per case` for `runs`, `docs/running_evals.md` still reads `runs: 1` as run
+      once, and the smoke fixture still writes `runs: 1`. `plan_cowork_backend.md` phase 2
+      holds the box that removes it, `Correct the four statements that pin one run per
+      case`, and that box is not ticked. Nothing is edited here, because the correct wording
+      is what phase 2 decides.
 - [ ] `README.md:68-75` restates the script index and omits `scripts/login.sh`, which
       `scripts/README.md:24` and `tests/README.md:88-92` both call a precondition of the
       integration tier. Replace the block with the commands a first clone needs and a link.
