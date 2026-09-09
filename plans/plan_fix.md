@@ -344,10 +344,15 @@ Each item below names the one file that should own the fact.
       every other script in `scripts/` does.
       Both `--check` arms now hold the `exec` and set nothing. Neither script dispatches on
       `$1` a second time, and `NO_CACHE` and `FORCE` are only ever `True` or `False`.
-- [ ] `scripts/cowork_venv.sh:29-30` keeps `TEST_ONLY_DIRECT` and `TEST_ONLY_ALL`, the
+- [x] `scripts/cowork_venv.sh:29-30` keeps `TEST_ONLY_DIRECT` and `TEST_ONLY_ALL`, the
       second being the hand-written transitive closure of the first. A pytest release that
       gains a dependency makes `--check` report a spurious extra package. Derive the closure
       or drop that half of the check.
+      Derived. `test_only_closure` reads it from the metadata already in the mirror through
+      `uv pip tree --package`, so it needs no network, and pipes it through the same
+      `normalize_pins` the two other lists use. `TEST_ONLY_ALL` is gone. The derived closure
+      is a superset of the hand-written one: it adds `packaging`, `pygments` and
+      `typing-extensions`, which are pins and so were already expected.
 - [ ] `docs/claude_code/eval_smoke/run.sh` is shell and is linted by nothing:
       `scripts/lint.sh:28` and `tests/unit/test_environments.py:96` both glob `scripts/*.sh`
       only. Widen both globs, or write the exemption into

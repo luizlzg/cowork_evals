@@ -31,7 +31,6 @@ PYTHON_VERSION="3.10"
 # mirror. Code under test must not import one of these: it would pass here and fail
 # in a session.
 TEST_ONLY_DIRECT=(pytest pytest-timeout)
-TEST_ONLY_ALL="pytest pytest-timeout pluggy iniconfig exceptiongroup tomli"
 
 MODE="sync"
 case "${1-}" in
@@ -56,6 +55,22 @@ for name, version in pins(sys.stdin.read()).items():
 '
 }
 
+# The transitive closure of TEST_ONLY_DIRECT, read from the metadata already installed in
+# the mirror. Hand-writing the closure means a pytest release that gains a dependency
+# reports that dependency as a package on neither list.
+test_only_closure() {
+  local package
+  local args=()
+  for package in "${TEST_ONLY_DIRECT[@]}"; do
+    args+=(--package "$package")
+  done
+  uv pip tree --python "$PY" "${args[@]}" 2> /dev/null \
+    | sed -nE 's/^[^A-Za-z0-9]*([A-Za-z0-9._-]+) v([^ ]+).*$/\1==\2/p' \
+    | normalize_pins \
+    | cut -d= -f1 \
+    | sort -u
+}
+
 fail() {
   echo "FAIL: $*" >&2
   DRIFT=1
@@ -75,7 +90,7 @@ verify() {
     fail "interpreter is $actual_version, expected $PYTHON_VERSION"
   fi
 
-  local expected actual missing extra absent
+  local expected actual missing extra absent test_only
   expected="$(normalize_pins < "$REQUIREMENTS" | sort -u)"
   actual="$(uv pip freeze --python "$PY" | normalize_pins | sort -u)"
 
@@ -87,10 +102,11 @@ verify() {
 
   # An extra is anything installed that is neither a pin nor a test-only package, at
   # any version.
+  test_only="$(test_only_closure)"
   extra="$(
     comm -13 <(echo "$expected") <(echo "$actual") \
       | cut -d= -f1 \
-      | grep -vxF -e "${TEST_ONLY_ALL// /$'\n'}" || true
+      | grep -vxF -e "$test_only" || true
   )"
   if [ -n "$extra" ]; then
     fail "$(echo "$extra" | wc -l | tr -d ' ') packages installed that are on neither list:"
@@ -98,7 +114,7 @@ verify() {
   fi
 
   # Without this a package added to TEST_ONLY_DIRECT is never installed: it is not a
-  # pin, so it cannot be missing, and it is on TEST_ONLY_ALL, so it is not an extra.
+  # pin, so it cannot be missing, and it is in the closure, so it is not an extra.
   absent="$(
     printf '%s\n' "${TEST_ONLY_DIRECT[@]}" \
       | grep -vxF -e "$(echo "$actual" | cut -d= -f1)" || true
