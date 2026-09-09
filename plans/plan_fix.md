@@ -320,9 +320,12 @@ Each item below names the one file that should own the fact.
 
 ## Phase 6: Smaller items
 
-- [ ] `src/cowork_evals/cowork.py:63` chooses between `Config.load(**overrides)` and the
+- [x] `src/cowork_evals/cowork.py:63` chooses between `Config.load(**overrides)` and the
       private `_override(config, overrides)` imported from `config.py`, two mechanisms for
       one rule that `docs/cowork_driver.md:191` states once. Make it one function.
+      not a defect: phase 1 removed `Config.load(**overrides)` when `CoWork` started taking
+      a `CoWorkSection`. `__init__` resolves the base section, then `_override` applies the
+      overrides on both branches, so there is one function already.
 - [ ] `CoWork.from_file` at `src/cowork_evals/cowork.py:66-69` has no caller and no test,
       and is a third route to the same two lines. It is documented at
       `docs/cowork_driver.md:187`, so it is a designed surface. Add a test or ask the
