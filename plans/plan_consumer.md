@@ -127,14 +127,14 @@ report, and this is the phase that makes the claim true.
 
 ### Phase 8: tests
 
-- [ ] `docs` verb: every name it lists resolves to a file that exists
-- [ ] `init`: writes three targets into an empty directory, and a second run changes none of them
-- [ ] `init`: the `cowork_evals.yaml` it writes loads through `Config`
-- [ ] R1 enforced: no markdown link under `src/cowork_evals/` targets a path outside the package
-- [ ] R2 enforced: no markdown link under `docs/` targets a path outside `docs/`
-- [ ] `check --all` reports both backends when one is unconfigured
-- [ ] Every document named in `README.md`'s Documentation table exists
-- [ ] `scripts/test.sh` passes
+- [x] `docs` verb: every name it lists resolves to a file that exists
+- [x] `init`: writes three targets into an empty directory, and a second run changes none of them
+- [x] `init`: the `cowork_evals.yaml` it writes loads through `Config`
+- [x] R1 enforced: no markdown link under `src/cowork_evals/` targets a path outside the package
+- [x] R2 enforced: no markdown link under `docs/` targets a path outside `docs/`
+- [x] `check --all` reports both backends when one is unconfigured
+- [x] Every document named in `README.md`'s Documentation table exists
+- [x] `scripts/test.sh` passes
 
 ### Phase 9: the install test
 

@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from cowork_evals import cli, logs, results
+from cowork_evals import cli, logs, preflight, results
 from cowork_evals.cases import plugin_name, plugin_roots
 from cowork_evals.cli import USAGE, build_parser, main
 from cowork_evals.config import Config
@@ -491,6 +491,33 @@ def test_check_returns_three_and_names_every_unmet_condition(tmp_path, capsys) -
     args = parse("check", "--cowork")
     assert cli._check(args, config) == 3
     assert "no readable sessions root" in capsys.readouterr().err
+
+
+def test_check_all_names_every_backend_and_states_a_ready_one(tmp_path, capsys) -> None:
+    """A ready backend is stated. Silence is what made a report indistinguishable from a
+    backend that was never reached.
+
+    The whole report goes to stdout in backend order, so it cannot interleave. Which backend
+    is ready on the machine running this is not asserted: that is the integration tier's.
+    """
+    config = settings(tmp_path, "cowork:\n  profile: /nowhere-at-all\n")
+    args = parse("check", "--all")
+    code = cli._check(args, config)
+    printed = capsys.readouterr()
+    assert code == 3
+    for backend in preflight.BACKENDS:
+        assert f"{backend}: " in printed.out
+    assert "no readable sessions root" in printed.out
+    assert printed.err == ""
+
+
+def test_a_named_backend_keeps_its_unmet_lines_on_stderr(tmp_path, capsys) -> None:
+    """One backend is a refusal, not a report, and neither names a backend in its output."""
+    config = settings(tmp_path, "cowork:\n  profile: /nowhere-at-all\n")
+    assert cli._check(parse("check", "--cowork"), config) == 3
+    printed = capsys.readouterr()
+    assert "no readable sessions root" in printed.err
+    assert printed.out == ""
 
 
 def test_prune_with_no_selection_flag_returns_two(capsys) -> None:

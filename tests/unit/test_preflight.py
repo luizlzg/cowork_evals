@@ -47,6 +47,22 @@ def test_checks_all_covers_both_backends_in_order() -> None:
     ) + preflight.checks(preflight.COWORK, config)
 
 
+def test_report_all_keeps_the_backend_each_line_belongs_to() -> None:
+    """`checks_all` flattens and loses the pairing. `report_all` is what `check --all` prints."""
+    config = Config()
+    report = preflight.report_all(config)
+    assert [backend for backend, _ in report] == list(preflight.BACKENDS)
+    for backend, unmet in report:
+        assert unmet == preflight.checks(backend, config)
+
+
+def test_report_all_and_checks_all_never_disagree_about_pass() -> None:
+    """The exit code comes from one and the report from the other, so they must agree."""
+    config = Config()
+    report = preflight.report_all(config)
+    assert any(unmet for _, unmet in report) == bool(preflight.checks_all(config))
+
+
 def test_the_test_verb_preflight_never_names_the_container_login() -> None:
     """There is no model call in that path, so there is nothing to authenticate."""
     lines = preflight.checks(preflight.TEST, Config())
