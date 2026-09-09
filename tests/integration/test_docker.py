@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from cowork_evals.docker import CONTAINER_HOME, Docker, probe
+from cowork_evals.docker import Docker, probe
 from cowork_evals.docker.parity import REQUIREMENTS, compare, pins
 from cowork_evals.harness import RunOptions
 
@@ -53,29 +53,12 @@ def credentialled(docker: Docker) -> Docker:
 
 
 def run_argv(docker: Docker, *command: str, mounts: tuple[str, ...] = ()) -> list[str]:
-    """One container, the run's own options, one fixed command in place of the harness."""
-    return [
-        "docker",
-        "run",
-        "--rm",
-        "--platform",
-        docker.platform,
-        "--user",
-        f"{os.getuid()}:{os.getgid()}",
-        "--env",
-        f"HOME={CONTAINER_HOME}",
-        "--env",
-        "CLAUDE_CODE_WALNUT_SPIRE=1",
-        "--security-opt",
-        "seccomp=unconfined",
-        "--security-opt",
-        "systempaths=unconfined",
-        *docker.extra_ca_env_argv(),
-        *docker.credential_argv(),
-        *mounts,
-        docker.tag,
-        *command,
-    ]
+    """The backend's own run preamble, its own mounts, one fixed command in place of the harness.
+
+    Written this way rather than as a second argument list: a preamble copied here would
+    let every sandbox test below pass over options the backend no longer passes.
+    """
+    return [*docker.run_preamble(), *mounts, docker.tag, *command]
 
 
 def container(docker: Docker, *command: str, mounts: tuple[str, ...] = ()) -> str:

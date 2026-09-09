@@ -187,7 +187,7 @@ belongs in `aggregate-result.json`, which `docs/running_evals.md:228` and
 
 Five findings that can produce a wrong result rather than a wrong reading.
 
-- [ ] `tests/integration/test_docker.py:55-78` builds its own container argument list,
+- [x] `tests/integration/test_docker.py:55-78` builds its own container argument list,
       copying the preamble from `src/cowork_evals/docker/__init__.py:203-232`: `--platform`,
       `--user`, `HOME`, `CLAUDE_CODE_WALNUT_SPIRE`, both `--security-opt` values. The tests
       that prove bubblewrap starts and the mounts behave therefore assert against argv the
@@ -195,6 +195,10 @@ Five findings that can produce a wrong result rather than a wrong reading.
       any test fails. If none does, factor the shared preamble into one method that both
       `run_argv` and the test call. [`../tests/README.md`](../tests/README.md) forbids a
       stand-in.
+      The shared preamble is now `Docker.run_preamble`, which both call. The named check
+      answers differently: deleting `systempaths=unconfined` fails
+      `tests/unit/test_docker.py`, and none of the integration tests that prove bubblewrap
+      starts, which is the half of the claim that holds.
 - [ ] `src/cowork_evals/docker/__init__.py:42-53` sets `CONTAINER_HOME`, `CONTAINER_PLUGIN`,
       `CONTAINER_LOGS`, `EXTRA_CA_SECRET` and `CONTAINER_EXTRA_CA`, and
       `docker/Dockerfile:101`, `:102` and `:167-168` write the same five literals again.

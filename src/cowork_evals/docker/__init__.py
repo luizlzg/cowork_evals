@@ -176,20 +176,14 @@ class Docker:
             "--claudeai",
         ]
 
-    def run_argv(
-        self, target: Path | str, output_dir: Path | str, options: RunOptions
-    ) -> list[str]:
-        """One run, as a container. The harness command line is harness.eval_argv.
+    def run_preamble(self) -> list[str]:
+        """One run's container, up to the mounts, the tag and the command.
 
-        The plugin root goes in read-only and the run's log directory read-write. Nothing
-        else from the host is mounted, and the harness writes its output into the log
-        mount rather than under the plugin. docs/docker.md.
+        The one place the run's platform, uid, home, enablement variable, sandbox options
+        and credential mounts are written. `run_argv` adds the two mounts and the harness;
+        tests/integration/test_docker.py adds its own mounts and a fixed command, so what
+        that tier proves about the sandbox it proves about this list.
         """
-        root = plugin_root(target)
-        relative = Path(target).resolve().relative_to(root)
-        container_target = CONTAINER_PLUGIN
-        if relative != Path("."):
-            container_target = f"{CONTAINER_PLUGIN}/{relative.as_posix()}"
         return [
             "docker",
             "run",
@@ -213,6 +207,24 @@ class Docker:
             "systempaths=unconfined",
             *self.extra_ca_env_argv(),
             *self.credential_argv(),
+        ]
+
+    def run_argv(
+        self, target: Path | str, output_dir: Path | str, options: RunOptions
+    ) -> list[str]:
+        """One run, as a container. The harness command line is harness.eval_argv.
+
+        The plugin root goes in read-only and the run's log directory read-write. Nothing
+        else from the host is mounted, and the harness writes its output into the log
+        mount rather than under the plugin. docs/docker.md.
+        """
+        root = plugin_root(target)
+        relative = Path(target).resolve().relative_to(root)
+        container_target = CONTAINER_PLUGIN
+        if relative != Path("."):
+            container_target = f"{CONTAINER_PLUGIN}/{relative.as_posix()}"
+        return [
+            *self.run_preamble(),
             "-v",
             f"{root}:{CONTAINER_PLUGIN}:ro",
             "-v",
