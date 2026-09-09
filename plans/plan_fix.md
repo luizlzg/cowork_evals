@@ -288,7 +288,7 @@ Each item below names the one file that should own the fact.
       `scripts/README.md:24` and `tests/README.md:88-92` both call a precondition of the
       integration tier. Replace the block with the commands a first clone needs and a link.
       `scripts/README.md` owns the task list.
-- [ ] `docs/library.md:162` says the consumer git-ignores "`logs/`, `.cowork-runtime/` and
+- [x] `docs/library.md:162` says the consumer git-ignores "`logs/`, `.cowork-runtime/` and
       `.env`, and nothing else". `cowork_evals.yaml` names a profile, which is an
       identifier, and this repository's own `.gitignore:29` ignores it. After phase 1 every
       consumer has one. Correct the list. `.env` comes out of it in phase 1.

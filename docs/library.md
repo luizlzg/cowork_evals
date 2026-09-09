@@ -168,8 +168,8 @@ public repository rule in [../README.md](../README.md) applies to every value in
 Nothing writes into the installed package. One thing writes a build product into the
 consumer checkout: the venv backend stages a runtime inside the plugin under test for the
 length of a run, and removes it when the run ends. See
-[staged_runtime.md](staged_runtime.md). The consumer git-ignores `logs/` and
-`.cowork-runtime/`, and nothing else.
+[staged_runtime.md](staged_runtime.md). The consumer git-ignores `logs/`,
+`.cowork-runtime/` and `cowork_evals.yaml`, and nothing else.
 
 Both digests cover every input that changes the artefact, so a changed input produces a
 different path or tag rather than a stale hit. The mirror digest is the sha256 of
