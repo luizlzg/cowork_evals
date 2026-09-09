@@ -8,7 +8,7 @@ Which of the three is built is the status table in
 
 | Approach                   | Runs on                      | Proves                                     | Design                               |
 | -------------------------- | ---------------------------- | ------------------------------------------ | ------------------------------------- |
-| Claude Code, mirrored venv | Local `claude`, Python 3.10  | Skill logic, activation, hook gates        | [running_evals.md](running_evals.md) |
+| Claude Code, mirrored venv | Local `claude`, Python 3.10  | Skill logic, activation, hook gates        | [staged_runtime.md](staged_runtime.md) |
 | Claude Code, Docker        | Local `claude`, Ubuntu 22.04 | The above plus rendering, OCR, fonts, CLIs | [docker.md](docker.md)               |
 | CoWork, driven directly    | The real CoWork VM           | The deployed stack, end to end             | [cowork_driver.md](cowork_driver.md) |
 

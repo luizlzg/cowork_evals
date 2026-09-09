@@ -1,8 +1,8 @@
 # Running evals
 
-The eval system behind the command: the mirror on `PATH`, the pinned harness flags, the
-gate, the logs, the cadence and the cost. This file is the design. It is true whether or not
-a given piece is built yet.
+The eval system behind the command: what is built, the pinned harness flags, the gate, the
+logs, the cadence and the cost. This file is the design. It is true whether or not a given
+piece is built yet.
 
 The command surface is [cli.md](cli.md) and the packaging boundary is
 [library.md](library.md). A case is written once, in the format at
@@ -22,7 +22,7 @@ here.
 | The `cowork_evals` executable and its verbs | no  | [cli.md](cli.md)                           |
 | `cowork_evals.yaml` and the `Config` over it | yes | [library.md](library.md)                    |
 | The pinned harness argument list          | yes   | this file                                   |
-| The venv backend                          | no    | this file                                   |
+| The venv backend                          | no    | [staged_runtime.md](staged_runtime.md)      |
 | The staged runtime                        | no    | [staged_runtime.md](staged_runtime.md)      |
 | The gate                                  | no    | this file                                   |
 | The case validator                        | no    | [eval_format.md](eval_format.md)            |
@@ -72,89 +72,6 @@ The rule is the same for every backend: an explicit key is honoured when the bac
 behaviour already satisfies it, and skipped otherwise. Which key each backend can honour is
 [approaches.md](approaches.md). A skip is written into the result document with its reason
 and fails the gate, so a backend cannot go green by honouring nothing.
-
-## The staged runtime on PATH
-
-The venv backend stages a relocatable 3.10 interpreter carrying the CoWork wheels inside the
-plugin directory under test, then puts its `bin` first on `PATH` before calling the harness.
-A case that shells out to a bare `python3` gets 3.10 and the CoWork wheel set. What is
-staged, how, and what has been measured about it is
-[staged_runtime.md](staged_runtime.md).
-
-The mirror itself is never staged. It is a virtual environment, so its interpreter and
-standard library stay under the home directory, which the OS sandbox cannot read. That is
-the whole reason the runtime is staged rather than put on `PATH` where it is built.
-
-It refuses to run when the resulting `python3 -V` is not 3.10. One rule covers both hosts:
-on a laptop a missing or stale mirror fails preflight instead of running against the host
-interpreter, and in the container there is nothing to stage because the system interpreter
-is already 3.10. See [docker.md](docker.md).
-
-### Why the plugin directory is the only place it can go
-
-Granting `Bash` in any form turns on Claude Code's OS-level Bash sandbox, whose readable set
-is in [staged_runtime.md](staged_runtime.md). Every candidate below is decided by it.
-
-`--allow-tools` is pinned to `Bash` because a skill that shells out needs it, so every run
-is subject to this.
-
-| Candidate location                          | Usable                                                             |
-| ------------------------------------------- | ------------------------------------------------------------------ |
-| The plugin directory under test             | Yes. Readable, and `PATH` directories inside it stay readable      |
-| `~/.cache/cowork_evals/`, where it is built | No. Under the home directory                                       |
-| A `context.add_dirs` entry                  | No. [eval_format.md](eval_format.md) refuses an entry outside the case directory, and the reference refuses one naming anything but a fixture directory |
-| An operator `--allow-tools` read grant      | No. Grants a read path, not an exec path into the sandbox          |
-
-Staging into the plugin directory writes a build product into the consumer checkout.
-[library.md](library.md) says why that is allowed, when it is removed, and what the consumer
-git-ignores.
-
-
-### A Bash-granting run is refused on a host that runs a credential process
-
-Snapshot, 2026-09-03, CLI 2.1.260, macOS. A case granted `Bash` fails before the child
-starts, so no case body runs and the run costs nothing:
-
-```
-a credentials file in this environment (the AWS config / shared credentials file, the GCP
-application-default credentials, a kubeconfig, or an Anthropic profile config) could not be
-followed (an AWS credential_process / credential_source cannot be excluded from the shell),
-so the Bash sandbox cannot exclude the files it points at - a Bash-granting evaluation
-cannot run here
-```
-
-The harness excludes credential files from the OS sandbox before it grants `Bash`. A
-`credential_process` or `credential_source` entry names a command, not a file, so there is
-nothing to exclude, and the harness refuses the run rather than leave that entry reachable
-from the shell.
-
-Three runs of one throwaway case separate the cause:
-
-| Run                                            | Result                    |
-| ---------------------------------------------- | ------------------------- |
-| `--allow-tools Bash`, mirror first on `PATH`   | refused, no child started |
-| `--allow-tools Bash`, host `PATH`              | refused, no child started |
-| No `--allow-tools`, otherwise identical        | ran, 12 s, 0.06 USD       |
-
-The `Bash` grant alone causes it. Neither the mirror nor `scripts/cowork_run.sh` is
-involved.
-
-Re-measured 2026-09-04, same CLI. Nothing lifts it on that host:
-
-| Attempt                                                     | Result                              |
-| ------------------------------------------------------------ | ------------------------------------- |
-| `AWS_CONFIG_FILE` and `AWS_SHARED_CREDENTIALS_FILE` at empty files | still refused                   |
-| `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1`                        | still refused                        |
-| Every `CLAUDE_CODE_*` and `CLAUDECODE` variable unset       | still refused, so nesting inside a session is not the cause |
-| `HOME` at an empty directory                                | refusal gone, run fails `Not logged in`. Plain `claude -p` fails the same way |
-
-The last row is why the host cannot be worked around. The configuration the sandbox cannot
-exclude is also the one that authenticates Claude Code there.
-
-It binds the venv backend, which pins `--allow-tools Bash` and runs the harness on the
-developer's host. It does not bind the container backend, which runs the harness inside the
-image, where no such configuration exists. Nothing in this repository lifts it: the host's
-AWS configuration belongs to the developer.
 
 ## Pinned flags
 

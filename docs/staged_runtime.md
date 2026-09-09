@@ -5,8 +5,8 @@ directory under test before a run. The venv backend puts its `bin` first on `PAT
 bare `python3` in a granted `Bash` call resolves to 3.10 with the CoWork wheels.
 
 The measurements in this file are a snapshot. The mirror it is built from is
-[environments.md](environments.md). The backend that stages it, and whether that backend is
-built, are both in [running_evals.md](running_evals.md). The sandbox rules it satisfies are
+[environments.md](environments.md), and whether the venv backend that stages it is built is
+the status table in [running_evals.md](running_evals.md). The sandbox rules it satisfies are
 the "How the sandbox works" section of
 [claude_code/plugin_eval_reference.md](claude_code/plugin_eval_reference.md).
 
@@ -33,6 +33,18 @@ cannot read them.
 
 Staging the interpreter itself removes the pointer. uv installs
 python-build-standalone, which is relocatable, so the copy runs from its new path.
+
+## Why the plugin directory is the only place it can go
+
+The readable set above decides every candidate below. Every run is subject to it, because
+`--allow-tools` is pinned to `Bash`, and [running_evals.md](running_evals.md) says why.
+
+| Candidate location                          | Usable                                                             |
+| ------------------------------------------- | ------------------------------------------------------------------ |
+| The plugin directory under test             | Yes. Readable, and `PATH` directories inside it stay readable      |
+| `~/.cache/cowork_evals/`, where it is built | No. Under the home directory                                       |
+| A `context.add_dirs` entry                  | No. [eval_format.md](eval_format.md) refuses an entry outside the case directory, and the reference refuses one naming anything but a fixture directory |
+| An operator `--allow-tools` read grant      | No. Grants a read path, not an exec path into the sandbox          |
 
 ## Layout
 
@@ -75,6 +87,11 @@ The backend stages `.cowork-runtime/` before the harness starts and removes it w
 ends. [library.md](library.md) says why a build product inside the consumer checkout is
 allowed here and what the consumer git-ignores.
 
+The backend refuses to run when the resulting `python3 -V` is not 3.10. One rule covers both
+hosts: on a laptop a missing or stale mirror fails preflight instead of running against the
+host interpreter, and in the container there is nothing to stage because the system
+interpreter is already 3.10. See [docker.md](docker.md).
+
 ## Measurements
 
 Snapshot 2026-09-04. macOS 26.6.2 aarch64, uv 0.11.3, interpreter
@@ -97,6 +114,52 @@ a directory outside the home, with `PATH` pointing at `.cowork-runtime/python/bi
 The compiled wheels are the load-bearing ones. They carry native extensions with embedded
 library paths, and they resolve them relative to the staged tree.
 
+## A Bash-granting run is refused on a host that runs a credential process
+
+Snapshot, 2026-09-03, CLI 2.1.260, macOS. A case granted `Bash` fails before the child
+starts, so no case body runs and the run costs nothing:
+
+```
+a credentials file in this environment (the AWS config / shared credentials file, the GCP
+application-default credentials, a kubeconfig, or an Anthropic profile config) could not be
+followed (an AWS credential_process / credential_source cannot be excluded from the shell),
+so the Bash sandbox cannot exclude the files it points at - a Bash-granting evaluation
+cannot run here
+```
+
+The harness excludes credential files from the OS sandbox before it grants `Bash`. A
+`credential_process` or `credential_source` entry names a command, not a file, so there is
+nothing to exclude, and the harness refuses the run rather than leave that entry reachable
+from the shell.
+
+Three runs of one throwaway case separate the cause:
+
+| Run                                            | Result                    |
+| ---------------------------------------------- | ------------------------- |
+| `--allow-tools Bash`, mirror first on `PATH`   | refused, no child started |
+| `--allow-tools Bash`, host `PATH`              | refused, no child started |
+| No `--allow-tools`, otherwise identical        | ran, 12 s, 0.06 USD       |
+
+The `Bash` grant alone causes it. Neither the mirror nor `scripts/cowork_run.sh` is
+involved.
+
+Re-measured 2026-09-04, same CLI. Nothing lifts it on that host:
+
+| Attempt                                                     | Result                              |
+| ------------------------------------------------------------ | ------------------------------------- |
+| `AWS_CONFIG_FILE` and `AWS_SHARED_CREDENTIALS_FILE` at empty files | still refused                   |
+| `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1`                        | still refused                        |
+| Every `CLAUDE_CODE_*` and `CLAUDECODE` variable unset       | still refused, so nesting inside a session is not the cause |
+| `HOME` at an empty directory                                | refusal gone, run fails `Not logged in`. Plain `claude -p` fails the same way |
+
+The last row is why the host cannot be worked around. The configuration the sandbox cannot
+exclude is also the one that authenticates Claude Code there.
+
+It binds the venv backend, which pins `--allow-tools Bash` and runs the harness on the
+developer's host. It does not bind the container backend, which runs the harness inside the
+image, where no such configuration exists. Nothing in this repository lifts it: the host's
+AWS configuration belongs to the developer.
+
 ## What is not measured
 
 One condition remains untested: whether the OS sandbox permits execution from the staged
@@ -106,10 +169,8 @@ still run, which is this case. That is the reference's wording and not a measure
 
 The test that settles it is a case granting `Bash` whose prompt asks for `python3 -V`,
 `which -a python3` and `echo $PATH`, run against a plugin with the runtime already staged.
-It did not run on the host it was attempted on, for the reason in the "A Bash-granting run
-is refused on a host that runs a credential process" section of
-[running_evals.md](running_evals.md). That refusal is a property of that host and not of
-this design.
+It did not run on the host it was attempted on, for the reason in the section above. That
+refusal is a property of that host and not of this design.
 
 ## What it does not reproduce
 

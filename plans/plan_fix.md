@@ -411,12 +411,27 @@ Each item below names the one file that should own the fact.
       The row now reads `nowhere. Not designed, and no plan builds it`. No design was
       written: a design for an unasked check is a new feature, which this plan's "Out of
       scope" sends to nobody. `docs/library.md` already points at this row for the answer.
-- [ ] Nothing states which subjects belong to `docs/running_evals.md` and which to
+- [x] Nothing states which subjects belong to `docs/running_evals.md` and which to
       `docs/staged_runtime.md`. `running_evals.md:4` calls itself design that is "true
       whether or not a given piece is built", yet it holds the sole record of what is built,
       the staged runtime reasoning at `:75-111`, and a host measurement at `:114-158`.
       `docs/README.md:25` assigns the staged runtime subject to `staged_runtime.md`. Move
       `:75-111` and `:114-158` there. Then decide where build status lives and write that
       rule into `docs/README.md`. This is the same defect as phase 1, in the documents.
+      The rule is in `docs/README.md` under "The run, and the mechanisms":
+      `running_evals.md` holds the run, meaning what the command does with a case tree
+      whichever backend it chose, and a file that covers one backend or one mechanism holds
+      how that thing works and everything measured about it. Build status is the one fact
+      that goes the other way, which is what phase 5 already made true of every file.
+      Three of the moved paragraphs were dropped rather than moved, because
+      `staged_runtime.md` already carried the same statement: the section's opening
+      paragraph against the file's own opening, "The mirror itself is never staged" against
+      "Why the mirror is not staged directly", and the build product paragraph against
+      "Lifecycle". The two snapshots moved verbatim, capture dates included. The move broke
+      four inbound references, now repaired: `docs/docker.md:305` and `plans/README.md:86`
+      pointed at `running_evals.md` for content that is no longer there,
+      `docs/approaches.md:11` named it as the venv backend's design file, and the status row
+      for the venv backend said `this file`. `staged_runtime.md`'s own forward reference to
+      the refusal section is now a reference to a section of itself.
 - [ ] Re-read every file this plan touched for a statement it made false.
 - [ ] `plans/README.md`: add this plan to the table and mark it `implemented`.

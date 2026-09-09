@@ -83,7 +83,7 @@ harness provides for free elsewhere. See
 [`../docs/cowork_driver.md`](../docs/cowork_driver.md).
 
 Docker comes before the venv, although the venv is cheaper to build.
-[`../docs/running_evals.md`](../docs/running_evals.md) records that a `Bash`-granting run is
+[`../docs/staged_runtime.md`](../docs/staged_runtime.md) records that a `Bash`-granting run is
 refused on this host, and every case that shells out needs that grant. The container installs
 bubblewrap and runs with `seccomp=unconfined` and `systempaths=unconfined`, so it may be the
 only backend on this machine that can grant `Bash`. Measuring that early is worth more than

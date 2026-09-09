@@ -302,7 +302,7 @@ plus a `chown -R` of `/work/logs` on the way out, is not used.
 
 The CoWork mirror is neither mounted nor built in the image: system `python3` is already 3.10
 with the full pin set. The mirror rule holds unchanged here and is stated in
-[running_evals.md](running_evals.md).
+[staged_runtime.md](staged_runtime.md).
 
 ## The Bash sandbox
 
