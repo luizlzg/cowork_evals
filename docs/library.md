@@ -37,13 +37,16 @@ hatchling, so a git reference builds the same wheel `scripts/build.sh` builds. I
 a package index yet, so a consumer installs from the repository:
 
 ```sh
-uv add --dev git+https://github.com/<owner>/cowork_evals@v0.1.0
-pip install "cowork-evals @ git+https://github.com/<owner>/cowork_evals@v0.1.0"
+uv add --dev "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.1.0"
+pip install "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.1.0"
+uv tool install "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.1.0"
 ```
 
-The reference after `@` is a tag, a branch or a commit, and it is the pin. `<owner>` and the
-tag are placeholders until the repository exists on GitHub and the first version is tagged.
-Once the package is on an index the two lines become the name alone:
+The reference after `@` is a tag, a branch or a commit, and it is the pin. Dropping it tracks
+the default branch. The third line installs the command outside any project, which is how a
+consumer that runs the command but does not import it holds the pin.
+[../README.md](../README.md) carries the same three lines, and it is what a consumer reads.
+Once the package is on an index they become the name alone:
 
 ```sh
 uv add --dev cowork-evals

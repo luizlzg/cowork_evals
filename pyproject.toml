@@ -21,6 +21,12 @@ classifiers = [
 requires-python = ">=3.14"
 dependencies = ["PyYAML>=6", "packaging>=24", "python-frontmatter>=1.1"]
 
+[project.urls]
+Homepage = "https://github.com/pcingola/cowork_evals"
+Repository = "https://github.com/pcingola/cowork_evals"
+Documentation = "https://github.com/pcingola/cowork_evals/blob/main/docs/README.md"
+Issues = "https://github.com/pcingola/cowork_evals/issues"
+
 [project.scripts]
 cowork_evals = "cowork_evals.cli:console_main"
 
