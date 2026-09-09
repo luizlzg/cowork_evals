@@ -105,9 +105,9 @@ is subject to this.
 | A `context.add_dirs` entry                  | No. [eval_format.md](eval_format.md) refuses an entry outside the case directory, and the reference refuses one naming anything but a fixture directory |
 | An operator `--allow-tools` read grant      | No. Grants a read path, not an exec path into the sandbox          |
 
-Staging into the plugin directory writes a build product into the consumer checkout. It is
-the one exception to the rule in [library.md](library.md), the backend removes it when the
-run ends, and the consumer git-ignores it.
+Staging into the plugin directory writes a build product into the consumer checkout.
+[library.md](library.md) says why that is allowed, when it is removed, and what the consumer
+git-ignores.
 
 
 ### A Bash-granting run is refused on a host that runs a credential process

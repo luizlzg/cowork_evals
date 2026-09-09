@@ -262,7 +262,7 @@ Each item below names the one file that should own the fact.
       restated one clause of the set, that the home directory is unreadable, rather than the
       set; both now name the set and link. `seatbelt on macOS and bubblewrap on Linux` was
       only in `docs/running_evals.md` and moved to the owner with the rest of the sentence.
-- [ ] The `.cowork-runtime/` staging exception is stated in `docs/running_evals.md:109-111`,
+- [x] The `.cowork-runtime/` staging exception is stated in `docs/running_evals.md:109-111`,
       `docs/library.md:159-163`, `docs/staged_runtime.md:71-75` and `docs/cli.md:41-43`.
       Keep it in `docs/library.md`, which owns where state lives, and link from the rest.
 - [ ] `docs/cowork_driver.md:6-9` says the measured application internals are in

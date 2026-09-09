@@ -71,9 +71,9 @@ Their versions are not the image's, and [runtime.md](runtime.md) holds the image
 
 ## Lifecycle
 
-`.cowork-runtime/` is a build product inside the consumer checkout, and it is the one
-exception to the rule in [library.md](library.md). The backend stages it before the harness
-starts and removes it when the run ends. A consumer git-ignores it.
+The backend stages `.cowork-runtime/` before the harness starts and removes it when the run
+ends. [library.md](library.md) says why a build product inside the consumer checkout is
+allowed here and what the consumer git-ignores.
 
 ## Measurements
 

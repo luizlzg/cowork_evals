@@ -39,8 +39,8 @@ A multi-plugin path is a usage error on `--cowork`. There is no sweep on that ba
 the reason in [running_evals.md](running_evals.md).
 
 `run --venv` writes `.cowork-runtime/` into each plugin root it runs, and removes it when
-that plugin's run ends. It is the only thing this command writes into a consumer checkout.
-See [staged_runtime.md](staged_runtime.md).
+that plugin's run ends. [library.md](library.md) says why that is the one write into a
+consumer checkout, and [staged_runtime.md](staged_runtime.md) says what is in it.
 
 A case's `plugins: ["../../.."]` frontmatter states the plugin root a second time.
 The case validator checks that the two resolve to the same directory, because the harness
