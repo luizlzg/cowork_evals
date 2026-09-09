@@ -28,7 +28,9 @@ def real_profile() -> CoWorkSection:
 
 
 @pytest.mark.integration
-def test_the_reader_handles_every_session_in_a_real_profile(document_keys: set[str]) -> None:
+def test_the_reader_handles_every_session_in_a_real_profile(
+    session_document_keys: set[str],
+) -> None:
     """Nothing here prints a path, a prompt or an identifier. Public repository rule."""
     driver = CoWork(real_profile())
     found = driver.sessions()
@@ -40,7 +42,7 @@ def test_the_reader_handles_every_session_in_a_real_profile(document_keys: set[s
         except CoWorkError as error:
             assert error.code in TAXONOMY
             continue
-        assert set(document) == document_keys
+        assert set(document) == session_document_keys
         json.dumps(document)
         assert isinstance(document["final_text"], str)
         assert document["final_text"]
@@ -60,7 +62,7 @@ def test_the_reader_handles_every_session_in_a_real_profile(document_keys: set[s
 @pytest.mark.integration
 @pytest.mark.live
 @pytest.mark.timeout(1800)
-def test_a_live_run_returns_the_marker(document_keys: set[str]) -> None:
+def test_a_live_run_returns_the_marker(session_document_keys: set[str]) -> None:
     driver = CoWork(real_profile())
     marker = f"MARKER-{uuid.uuid4().hex[:12].upper()}"
     before = len(driver.sessions())
@@ -70,7 +72,7 @@ def test_a_live_run_returns_the_marker(document_keys: set[str]) -> None:
 
     assert marker in document["final_text"]
     assert document["lifecycle"][-1] == "completed"
-    assert set(document) == document_keys
+    assert set(document) == session_document_keys
     json.dumps(document)
 
     assert len(driver.sessions()) == before + 1

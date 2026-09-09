@@ -62,15 +62,15 @@ def test_sessions_defaults_to_the_configured_root() -> None:
     assert raised.value.code == 2
 
 
-def test_the_document_carries_exactly_the_documented_keys(
-    driver: CoWork, document_keys: set[str]
+def test_the_session_document_carries_exactly_the_documented_keys(
+    driver: CoWork, session_document_keys: set[str]
 ) -> None:
     document = driver.collect(PROFILE / "one_turn")
-    assert set(document) == document_keys
+    assert set(document) == session_document_keys
     assert "exit_code" not in document
 
 
-def test_the_document_is_json_serializable_with_no_profile(driver: CoWork) -> None:
+def test_the_session_document_is_json_serializable_with_no_profile(driver: CoWork) -> None:
     assert driver.config.profile is None
     text = json.dumps(driver.collect(PROFILE / "one_turn"))
     assert json.loads(text)["final_text"] == "PONG"
@@ -305,7 +305,7 @@ def test_log_dir_null_writes_no_file(tmp_path: Path) -> None:
     assert not (tmp_path / "logs").exists()
 
 
-def test_the_document_names_the_diagnostic_log(tmp_path: Path) -> None:
+def test_the_session_document_names_the_diagnostic_log(tmp_path: Path) -> None:
     driver = build(tmp_path)
     with driver._diagnostics() as path:
         document = driver.collect(PROFILE / "one_turn")

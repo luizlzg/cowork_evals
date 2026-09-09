@@ -1,4 +1,4 @@
-"""What both tiers share: the result document contract, and the working directory helper."""
+"""What both tiers share: the session document contract, and the working directory helper."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ from collections.abc import Callable, Iterator
 
 import pytest
 
-# Every key the result document carries, and no other.
-DOCUMENT_KEYS = {
+# Every key the session document carries, and no other.
+SESSION_DOCUMENT_KEYS = {
     "prompt",
     "prompt_sha256",
     "session_dir",
@@ -30,8 +30,8 @@ DOCUMENT_KEYS = {
 
 
 @pytest.fixture
-def document_keys() -> set[str]:
-    return DOCUMENT_KEYS
+def session_document_keys() -> set[str]:
+    return SESSION_DOCUMENT_KEYS
 
 
 @pytest.fixture

@@ -89,7 +89,7 @@ class CoWork:
         return _read_jsonl(path)
 
     def collect(self, session_dir: Path | str, *, prompt: str | None = None) -> dict[str, Any]:
-        """Build the result document from one session directory already on disk."""
+        """Build the session document from one session directory already on disk."""
         directory = Path(session_dir)
         audit = _read_jsonl(directory / AUDIT)
         transcript, other, subagents = _transcripts(directory)
@@ -133,7 +133,7 @@ class CoWork:
         return f"{DEEP_LINK}?{urlencode(query, quote_via=quote, safe='')}"
 
     def run(self, prompt: str) -> dict[str, Any]:
-        """Submit, wait for the run to finish, and collect the result document."""
+        """Submit, wait for the run to finish, and collect the session document."""
         with self._diagnostics():
             session_dir = self._submit(prompt)
             self._wait(session_dir)
