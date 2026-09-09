@@ -134,7 +134,7 @@ acts on them.
       `docs/cowork_driver.md:40` already says the driver has no console script, and
       `plans/README.md` lists no such plan. Delete the sentence. The driver is reached
       through `cowork_evals run --cowork`, which `docs/cowork_driver.md:27` already says.
-- [ ] `docs/library.md:155` says the container login applies "when no API key is set".
+- [x] `docs/library.md:155` says the container login applies "when no API key is set".
       `docs/docker.md:224` says there is no API key route and records the developer's
       decision of 2026-09-08. Delete the clause. `docs/docker.md` owns credentials.
 - [ ] `plans/README.md` marks `plan_docker.md` implemented, while

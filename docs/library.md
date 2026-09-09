@@ -162,7 +162,7 @@ public repository rule in [../README.md](../README.md) applies to every value in
 | ---------------- | ------------------------------------------------ | ---------------- |
 | CoWork mirror    | `~/.cache/cowork_evals/venv-<digest>/`           | `setup --venv`   |
 | Container image  | tag `cowork-evals:<digest>`                      | `setup --docker` |
-| Container login  | `~/.cache/cowork_evals/claude/`, when no API key is set | `setup --docker` |
+| Container login  | `~/.cache/cowork_evals/claude/`                  | `setup --docker` |
 | Run logs         | `./logs/evals/<yyyymmdd-hhmmss>-<scope>/`        | `run`            |
 | Staged runtime   | `<plugin>/.cowork-runtime/`, for the length of a run | `run --venv` |
 
