@@ -162,6 +162,13 @@ The image digest does not cover the certificate. It is a property of the host th
 image, not of the inventory the image reproduces. The path it is installed at is a build
 argument and is covered.
 
+Adding a certificate to a host that has already built the image therefore needs
+`scripts/image.sh --recreate`. The digest is unchanged, so the tag is unchanged, and BuildKit
+does not key a `--mount=type=secret` layer on the secret's contents, so the layer that
+installed no certificate is reused and every later fetch fails exactly as it did before.
+Measured on 2026-09-09: two builds failed at the LibreOffice fetch with `curl` exit 60, the
+certificate correctly named in `cowork_evals.yaml` throughout, and `--recreate` built clean.
+
 ## How Docker is driven
 
 The `cowork_evals` process runs the `docker` CLI through `subprocess`. It does not use
