@@ -32,15 +32,15 @@ them.
 Python 3.10 or later. The package is not on PyPI yet, so it installs from this repository.
 
 ```bash
-uv add --dev "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.1.1"
+uv add --dev "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.2.0"
 ```
 
 ```bash
-pip install "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.1.1"
+pip install "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.2.0"
 ```
 
 ```bash
-uv tool install "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.1.1"
+uv tool install "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.2.0"
 ```
 
 The last line installs the command on its own, outside any project. The reference after `@` is

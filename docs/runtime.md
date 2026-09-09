@@ -92,7 +92,7 @@ Exact Python pins: `src/cowork_evals/data/requirements.txt`, the verbatim `pip f
 | ------------ | ------------------------------------------------------------------------------------ |
 | OS           | Ubuntu 22.04.5 LTS (jammy)                                                           |
 | Architecture | aarch64 (ARM64). On an x86_64 dev machine package builds and behaviour differ        |
-| Python       | 3.10.12 (`/usr/bin/python3`, also `/usr/bin/python3.10`). Both development environments are built on that exact version. See [environments.md](environments.md) |
+| Python       | 3.10.12 (`/usr/bin/python3`, also `/usr/bin/python3.10`). Every development environment here is built on that exact version. See [environments.md](environments.md) |
 | pip          | 25.3                                                                                 |
 | uv           | 0.12.3                                                                               |
 | Node.js      | v22.23.2                                                                             |

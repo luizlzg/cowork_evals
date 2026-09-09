@@ -9,9 +9,9 @@ its own header. `lib.sh` is sourced, never executed.
 
 | Script           | Does                                                    |
 | ---------------- | ------------------------------------------------------- |
-| `init.sh`        | Build both environments. Run once after cloning         |
+| `init.sh`        | Build `.venv`. Run once after cloning                    |
 | `venv.sh`        | Build or update `.venv`, the repository tooling env     |
-| `cowork_venv.sh` | Build or verify the CoWork image mirror                 |
+| `cowork_venv.sh` | Build or verify the CoWork image mirror, on demand      |
 | `cowork_run.sh`  | Run one command under the mirror                        |
 | `image.sh`       | Build or verify the container image                     |
 | `cowork_pytest.sh` | Build or verify the test image, and run a pytest suite in it |

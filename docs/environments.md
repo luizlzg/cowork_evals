@@ -3,12 +3,14 @@
 ## Summary
 
 Two Python environments in this repository. They are not reconciled, and neither replaces the
-other.
+other. One is built on clone and the other on demand.
 
 - `.venv` is repository tooling. It runs `scripts/` and `tests/`, never a CoWork session,
-  and its dependencies are unconstrained.
+  and its dependencies are unconstrained. `scripts/init.sh` builds it.
 - `.venv_cowork` is the CoWork mirror. It pins the wheel set a session provides, and nothing
-  else.
+  else. Nothing in the package reads it and only `scripts/cowork_run.sh` uses it, so
+  `init.sh` does not build it and no test requires it. Build it with
+  `scripts/cowork_venv.sh` when you need it, and that script verifies it.
 - Both are Python 3.10.12, the exact interpreter a session runs. The wheel set is what
   separates them, not the interpreter.
 - Both are development environments. Neither is shipped, and `cowork_evals setup` creates
@@ -18,10 +20,16 @@ other.
 - This file owns the split between the three requirements files, and the rule that decides
   which one a new pin goes in. Everything else links here for it.
 
-| Environment   | Path           | Python   | Defined by                         | Runs                 |
-| ------------- | -------------- | -------- | ---------------------------------- | -------------------- |
-| Repo tooling  | `.venv`        | 3.10.12  | `pyproject.toml` dependency groups | `scripts/`, `tests/` |
-| CoWork mirror | `.venv_cowork` | 3.10.12  | `requirements_installable.txt`     | Code that must behave like a session |
+| Environment   | Path           | Python   | Built by            | Runs                 |
+| ------------- | -------------- | -------- | ------------------- | -------------------- |
+| Repo tooling  | `.venv`        | 3.10.12  | `init.sh`, on clone | `scripts/`, `tests/` |
+| CoWork mirror | `.venv_cowork` | 3.10.12  | `cowork_venv.sh`, on demand | Code that must behave like a session |
+
+The mirror costs 604 MB, snapshot 2026-09-09, and the interpreter is no longer a reason to
+build it: both environments are the same one. The wheel set is the only thing that separates
+them, so build the mirror when an import has to be checked against a session's packages
+without a container, and not otherwise. `cowork_evals test --docker` answers the same
+question against the real image.
 
 `.python-version` holds that version, and it is the only place on the development side that
 does. `scripts/venv.sh`, `scripts/cowork_venv.sh` and `scripts/build.sh` all read it, so no

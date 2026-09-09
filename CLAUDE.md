@@ -74,10 +74,13 @@ before changing anything under it. Never restate one of these in another file; l
   per-backend variant of a case. The format is `docs/eval_format.md`. Which backend honours
   which field is `docs/approaches.md`. A third backend, Claude Code against a 3.10 mirror on
   the host, is designed and deliberately not built: `docs/staged_runtime.md`.
-- **Two environments, never mixed.** `.venv` is repository tooling. Code that must behave
-  like a CoWork session runs under the CoWork mirror through `scripts/cowork_run.sh`. Both
-  are Python 3.10, so the wheel set is what separates them, not the interpreter. Never run
-  `uv run` under the mirror. See `docs/environments.md`.
+- **Two environments, never mixed.** `.venv` is repository tooling and is what `init.sh`
+  builds. The CoWork mirror, `.venv_cowork`, is optional, costs 604 MB, is built on demand by
+  `scripts/cowork_venv.sh`, and nothing in the package reads it. Both are Python 3.10, so the
+  wheel set is what separates them, not the interpreter. Code that must behave like a session
+  runs under the mirror through `scripts/cowork_run.sh`, and `cowork_evals test --docker`
+  answers the same question against the real image. Never run `uv run` under the mirror. See
+  `docs/environments.md`.
 - **A plan is the state while it exists.** Tick a box only when it is verified, then
   commit. Do not batch ticks. A cleared context resumes from the plan file.
 - **Never delete a plan.** The developer decides when a plan goes, and says so. A plan is

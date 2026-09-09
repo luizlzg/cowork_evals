@@ -1,7 +1,11 @@
 """The two environments are what docs/environments.md says they are.
 
-These tests read the environments on disk. An unbuilt environment fails them. Build both
-with scripts/init.sh before running the suite.
+`.venv` is read from disk and an unbuilt one fails these. `scripts/init.sh` builds it.
+
+Nothing here requires `.venv_cowork`. The mirror is 604 MB, no module reads it, and only
+`scripts/cowork_run.sh` uses it, so it is built on demand by `scripts/cowork_venv.sh` and
+that script is what verifies it. A test asserting it exists would make a developer who never
+runs `cowork_run.sh` carry it. docs/environments.md.
 """
 
 from __future__ import annotations
@@ -16,7 +20,6 @@ from cowork_evals.requirements import pins as read_pins
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 VENV = ROOT / ".venv"
-COWORK = ROOT / ".venv_cowork"
 DATA = ROOT / "src" / "cowork_evals" / "data"
 REQUIREMENTS = DATA / "requirements.txt"
 INSTALLABLE = DATA / "requirements_installable.txt"
@@ -101,17 +104,13 @@ def test_repo_venv_is_the_pinned_interpreter():
     assert interpreter(VENV) == PINNED
 
 
-def test_cowork_mirror_is_the_pinned_interpreter():
-    built = (COWORK / "bin" / "python").exists()
-    assert built, ".venv_cowork not built. Run scripts/cowork_venv.sh"
-    assert interpreter(COWORK) == PINNED
-
-
 def test_tests_run_under_the_repo_venv_not_the_mirror():
-    """Both environments are the same interpreter, so the prefix is what tells them apart.
+    """The two environments are the same interpreter, so the prefix is what tells them apart.
 
     A run under the mirror would carry the CoWork wheel set and not the dev group, so the
-    suite would collect against the wrong dependencies. docs/environments.md.
+    suite would collect against the wrong dependencies. It holds whether or not the mirror
+    is built, because what it asserts is which environment this suite is under.
+    docs/environments.md.
     """
     assert Path(sys.prefix).resolve() == VENV.resolve(), f"suite ran under {sys.prefix}"
 
@@ -127,7 +126,8 @@ def test_every_script_is_executable_and_parses():
     """Every `*.sh` in the repository, outside a dot directory.
 
     `scripts/lint.sh` selects by the same rule, so no shell file is checked here and
-    unlinted there. The rule excludes `.venv_cowork/`, which carries a vendored one.
+    unlinted there. The rule excludes every dot directory, `.venv_cowork/` among them when
+    it is built, because that one carries a vendored shell file.
     """
     scripts = sorted(
         path

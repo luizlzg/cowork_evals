@@ -8,8 +8,10 @@
 # It puts the mirror first on PATH and sets VIRTUAL_ENV, so a child process that
 # calls bare python3 resolves to 3.10, as it does on the VM.
 #
-# NEVER run `uv run` through this: uv resolves against the project and will use or
-# create the 3.14 .venv, ignoring VIRTUAL_ENV. See docs/environments.md.
+# NEVER run `uv run` through this: uv resolves against the project and will use or create
+# .venv, ignoring VIRTUAL_ENV. Both are the same interpreter, so nothing errors; the command
+# would simply run against the repository's 13 packages instead of the session's wheel set,
+# which is the whole point of the mirror. See docs/environments.md.
 set -euo pipefail
 # shellcheck source=lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"

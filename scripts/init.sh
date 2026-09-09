@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 #
-# Build both environments: .venv and .venv_cowork.
+# Build .venv, the repository tooling environment.
 #
-# Run once after cloning. Pass any argument through to both builders, so
-# `init.sh --recreate` rebuilds both from scratch. See docs/environments.md.
+# Run once after cloning. Pass any argument through, so `init.sh --recreate` rebuilds it
+# from scratch.
+#
+# It does not build .venv_cowork. That mirror is 604 MB, nothing in the package reads it,
+# and only `cowork_run.sh` uses it. Build it with `cowork_venv.sh` when you need it. See
+# docs/environments.md.
 set -euo pipefail
 # shellcheck source=lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
@@ -13,4 +17,3 @@ case "${1-}" in
 esac
 
 "$ROOT/scripts/venv.sh" "$@"
-"$ROOT/scripts/cowork_venv.sh" "$@"
