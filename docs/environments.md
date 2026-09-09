@@ -9,7 +9,8 @@ other.
   and its dependencies are unconstrained.
 - `.venv_cowork` is the CoWork mirror. It pins the wheel set a session provides, and nothing
   else.
-- Both are Python 3.10. The wheel set is what separates them, not the interpreter.
+- Both are Python 3.10.12, the exact interpreter a session runs. The wheel set is what
+  separates them, not the interpreter.
 - Both are development environments. Neither is shipped, and `cowork_evals setup` creates
   neither.
 - The mirror reproduces the interpreter and the wheels only. Not the OS, not the architecture,
@@ -17,10 +18,16 @@ other.
 - This file owns the split between the three requirements files, and the rule that decides
   which one a new pin goes in. Everything else links here for it.
 
-| Environment   | Path           | Python | Defined by                         | Runs                 |
-| ------------- | -------------- | ------ | ---------------------------------- | -------------------- |
-| Repo tooling  | `.venv`        | 3.10   | `pyproject.toml` dependency groups | `scripts/`, `tests/` |
-| CoWork mirror | `.venv_cowork` | 3.10   | `requirements_installable.txt`     | Code that must behave like a session |
+| Environment   | Path           | Python   | Defined by                         | Runs                 |
+| ------------- | -------------- | -------- | ---------------------------------- | -------------------- |
+| Repo tooling  | `.venv`        | 3.10.12  | `pyproject.toml` dependency groups | `scripts/`, `tests/` |
+| CoWork mirror | `.venv_cowork` | 3.10.12  | `requirements_installable.txt`     | Code that must behave like a session |
+
+`.python-version` holds that version, and it is the only place on the development side that
+does. `scripts/venv.sh`, `scripts/cowork_venv.sh` and `scripts/build.sh` all read it, so no
+two of them can disagree. `docker/parity.py` carries the same version a second time, because
+it ships in the wheel and cannot read a checkout file; `tests/unit/test_environments.py`
+asserts the two agree.
 
 Repo tooling never runs on a CoWork VM, so its dependencies are unconstrained. Code that must
 behave like a session is pinned to what the VM has. Both interpreters are 3.10, so a file that

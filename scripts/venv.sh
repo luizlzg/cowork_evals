@@ -2,8 +2,9 @@
 #
 # Build or update .venv, the repository tooling environment.
 #
-# Python 3.10 plus the dev dependency group in pyproject.toml. Never runs on a
-# CoWork VM, so it is unconstrained. See docs/environments.md.
+# The interpreter in .python-version plus the dev dependency group in pyproject.toml.
+# Never runs on a CoWork VM, so its dependencies are unconstrained. See
+# docs/environments.md.
 #
 #   (no args)   sync .venv from pyproject.toml
 #   --recreate  delete and rebuild from scratch

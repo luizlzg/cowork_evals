@@ -193,7 +193,7 @@ refusal is a property of that host and not of this design.
 The interpreter and the wheels, nothing else. It inherits every gap the mirror has, listed
 under "What the mirror does not reproduce" in [environments.md](environments.md).
 
-One gap is its own. The mirror pins `3.10`, so uv resolves the newest 3.10 patch release,
-and the image carries 3.10.12. The staged interpreter was 3.10.16 when this was
-written. See [docker.md](docker.md) for the backend that carries the image's own
-interpreter.
+That gap is closed: the mirror pins 3.10.12 through `.python-version`, which is the version
+the image carries. It was 3.10.16 when this was written, because the mirror then pinned
+`3.10` and uv resolved the newest patch release. See [docker.md](docker.md) for the backend
+that carries the image's own interpreter.

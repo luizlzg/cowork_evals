@@ -2,7 +2,7 @@
 #
 # Build and verify .venv_cowork, the CoWork image mirror.
 #
-# Python 3.10 plus src/cowork_evals/data/requirements_installable.txt: the interpreter and
+# The exact session interpreter plus src/cowork_evals/data/requirements_installable.txt:
 # the wheels a CoWork session provides, minus the nine pins that cannot install off
 # the VM. Code that must behave like a session runs here, never under the repo .venv.
 #
@@ -25,7 +25,9 @@ need uv
 
 PY="$COWORK/bin/python"
 REQUIREMENTS="$ROOT/src/cowork_evals/data/requirements_installable.txt"
-PYTHON_VERSION="3.10"
+# The exact session interpreter, and the one home for it on the development side.
+# docs/environments.md.
+PYTHON_VERSION="$(cat "$ROOT/.python-version")"
 
 # Not on the CoWork image. Installed so pytest can collect and run tests under the
 # mirror. Code under test must not import one of these: it would pass here and fail
@@ -85,7 +87,7 @@ verify() {
   fi
 
   local actual_version
-  actual_version="$("$PY" -c 'import sys; print("%d.%d" % sys.version_info[:2])')"
+  actual_version="$("$PY" -c 'import sys; print("%d.%d.%d" % sys.version_info[:3])')"
   if [ "$actual_version" != "$PYTHON_VERSION" ]; then
     fail "interpreter is $actual_version, expected $PYTHON_VERSION"
   fi
