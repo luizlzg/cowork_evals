@@ -166,3 +166,28 @@ The developer chose to drop the gate on `--dry-run` rather than add an eighth ve
 - [x] `eval_smoke/README.md`: `max_turns` and `allowed_tools` are named as the second way those cases diverge, because both skip a case on the CoWork backend and a skip fails the gate
 - [x] `docs/eval_format.md`: whether a `regex` anchor is string-anchored or line-anchored, measured and dated
 - [x] Tests for the two behaviours, and `scripts/test.sh` passes
+
+### Phase 11: what the second blind test found
+
+A second independent session, a different plugin, a fresh wheel, and one extra condition: no
+Docker, and the eval had to run on both backends. Captured 2026-09-09. It reached the format
+at its seventh command with no wandering, validated with the daemon down, wrote a case live on
+both backends, and quoted the regex snapshot phase 10 added as what answered the hard part. It
+found three more things.
+
+- [x] A dry run reports the code the run would reach. On `--cowork` a suite whose every case is skipped plans no submission, would fail the gate, and now exits 1 instead of passing a portability check in CI while the run goes red
+- [x] `--docker` is unchanged: the harness decides its skips at run time, so a dry run there cannot know them
+- [x] Each `eval_smoke/prompt.md` carries the warning inside its own frontmatter, as YAML comments. The README said it and the file a reader copies did not
+- [x] `grader.py` pointed at `docs/cowork_backend.md` for "the divergence between the two engines", and that file says it under "The two engines are not the same". The pointer was right and unfindable by grep; the wording now matches
+- [x] `docs/cli.md`: the two exit codes a dry run can reach, and why they differ per backend
+- [x] Tests, and `scripts/test.sh` passes
+
+Not fixed, and deliberately. `cowork_evals docs` lists document names without the extension,
+so `cat <dir>/<name>` fails and `cowork_evals docs <name>` is the way. The names are the
+argument vocabulary, the unknown-name refusal prints the same list, and printing paths there
+would make the two disagree. It costs a reader one command.
+
+One thing no static check settles, raised by the session and left open: whether a live CoWork
+session emits a `Skill` entry shaped the way the skill-fired idiom's `input_match` expects.
+`docs/cowork_backend.md` says `tool_used` matches on the name and the JSON-encoded input, and
+nothing offline proves the key name. The live integration tier is what settles it.

@@ -199,6 +199,17 @@ preflight, and a dry run on `--cowork` prints the same arithmetic instead of ref
 That is what makes `run --dry-run` the way to check a case without spending anything. There
 is no separate validate verb.
 
+A dry run reports the code the run would reach, so it is not always 0.
+
+| On         | Exits 1 when                                                        |
+| ---------- | -------------------------------------------------------------------- |
+| `--cowork` | every selected case is skipped, so the suite plans no submission     |
+| `--docker` | never. The harness decides its skips at run time, and a dry run cannot know them |
+
+A skipped case fails the gate, so a suite that is dead on CoWork would fail a real run. A dry
+run that exited 0 on it would pass a portability check in CI while the run went red. An empty
+selection is a different thing and is refused earlier, with exit 2.
+
 `claude` is a `--cowork` precondition because the judge behind an `llm` or `baseline` grader
 is `claude -p`, and because `claudeVersion` in the result document is the host
 `claude --version`. The signed-in CLI is the one credential route; there is no second one.

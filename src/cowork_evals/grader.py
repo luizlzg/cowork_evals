@@ -180,8 +180,8 @@ def compile_pattern(pattern: Any, flags: Any = "") -> re.Pattern[str]:
 
     `re.ASCII` is what makes `\\d` and `\\w` ASCII-only as they are in JavaScript, so it is
     on unless the flags ask for Unicode. Every pattern in the format compiles through this
-    one function, `input_match` on `tool_used` and `tool_order` included. The divergence
-    between the two engines is docs/cowork_backend.md.
+    one function, `input_match` on `tool_used` and `tool_order` included. The two engines are
+    not the same, and docs/cowork_backend.md says how under that heading.
     """
     written = flags if isinstance(flags, str) else ""
     compiled = re.ASCII if not set(written) & set(UNICODE_FLAGS) else 0

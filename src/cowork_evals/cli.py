@@ -132,7 +132,9 @@ def _run_parser(verbs: Any) -> None:
         action="store_true",
         help="fail the preflight when a skill has no eval directory",
     )
-    verb.add_argument("--dry-run", action="store_true", help="print what would run, and exit 0")
+    verb.add_argument(
+        "--dry-run", action="store_true", help="print what would run, and the code it would reach"
+    )
 
 
 def _test_parser(verbs: Any) -> None:
@@ -392,24 +394,41 @@ def _dry_run(
     targets: list[tuple[Path, Path]],
     tags: tuple,
 ) -> int:
-    """What would run, and no run directory. Pruning already happened above."""
+    """What would run, and no run directory. Pruning already happened above.
+
+    A dry run reports the exit code the run would reach, so it is not always 0. On `--cowork`
+    a suite whose every case is skipped would fail the gate, and this returns the gate's code
+    rather than a pass: a dry run wired into CI as a portability check has to go red on a
+    suite that is dead on that backend. The container backend's skips are the harness's and
+    are decided at run time, so a dry run there cannot know them and reports nothing.
+    docs/cli.md.
+    """
+    dead = False
     for plugin, target in targets:
         name = plugin_name(plugin)
         print(f"# {name}")
         if args.backend == COWORK:
-            _dry_run_cowork(args, config, target, tags)
+            dead = _dry_run_cowork(args, config, target, tags) or dead
             continue
         would_be = root / logs.run_dir_name(logs.scope_name(target, [plugin])) / logs.slug(name)
         for argument in Docker(config).run_argv(target, would_be, _options(args, config, tags)):
             print(argument)
+    if dead:
+        return _refuse(
+            ["every selected case is skipped on this backend, so the gate would fail"],
+            GATE_FAILED,
+        )
     return OK
 
 
-def _dry_run_cowork(args: argparse.Namespace, config: Config, target: Path, tags: tuple) -> None:
+def _dry_run_cowork(args: argparse.Namespace, config: Config, target: Path, tags: tuple) -> bool:
     """One line per case, then the ceiling arithmetic. This backend builds no command line.
 
     The skips are the point: a skipped case fails the gate, so an operator reads which ones
     before spending a VM boot on the rest.
+
+    It returns whether the suite is dead here, meaning it planned no submission at all
+    because every case was skipped. An empty selection is not that: it is refused earlier.
     """
     prepared = cowork_backend.plan(
         target,
@@ -426,6 +445,7 @@ def _dry_run_cowork(args: argparse.Namespace, config: Config, target: Path, tags
         for grader, reason in sorted(entry.skips.graders.items()):
             print(f"  grader skip {grader}: {reason}")
     print(prepared.arithmetic)
+    return prepared.submissions == 0
 
 
 def _options(args: argparse.Namespace, config: Config, tags: tuple) -> RunOptions:

@@ -494,16 +494,41 @@ def test_check_returns_three_and_names_every_unmet_condition(tmp_path, capsys) -
     assert "no readable sessions root" in capsys.readouterr().err
 
 
+def _plugin(root: Path, *, portable: bool) -> Path:
+    """One plugin, one skill, one case, one grader. `portable` decides one frontmatter key.
+
+    `allowed_tools` is honoured by the container backend and not by CoWork, so writing it out
+    is what makes the case skipped there and the suite dead. Nothing else differs.
+    """
+    plugin = root / "one"
+    case = plugin / "evals" / "greeter" / "only"
+    (case / "graders").mkdir(parents=True)
+    (plugin / ".claude-plugin").mkdir()
+    (plugin / ".claude-plugin" / "plugin.json").write_text('{"name": "one"}')
+    (plugin / "skills" / "greeter").mkdir(parents=True)
+    (plugin / "skills" / "greeter" / "SKILL.md").write_text("---\nname: greeter\n---\n")
+    unhonoured = "" if portable else "allowed_tools: [Skill]\n"
+    (case / "prompt.md").write_text(
+        f"---\nname: only\ntags: [greeter]\nplugins: ['../../..']\n{unhonoured}---\n\nSay hello.\n"
+    )
+    (case / "graders" / "said.md").write_text(
+        "---\ntype: regex\ntarget: last_message\npattern: 'hello'\n---\n"
+    )
+    return plugin
+
+
 def test_a_dry_run_validates_with_no_backend_reachable(tmp_path, capsys) -> None:
     """Nothing behind the preflight is reached by a dry run, so nothing gates it.
 
     The profile names a directory that is not there, which is what an unconfigured consumer
-    has. A dry run still reports what would run and exits 0.
+    has. The case still validates and the dry run still reports what would run.
     """
+    plugin = _plugin(tmp_path, portable=True)
     config = settings(tmp_path, "cowork:\n  profile: /nowhere-at-all\n")
-    args = parse("run", "--cowork", str(VALIDATE / "clean"), "--dry-run")
-    assert cli._run(args, config) == 0
-    assert "no readable sessions root" not in capsys.readouterr().err
+    assert cli._run(parse("run", "--cowork", str(plugin), "--dry-run"), config) == 0
+    printed = capsys.readouterr()
+    assert "1 submissions planned" in printed.out
+    assert "no readable sessions root" not in printed.err
 
 
 def test_a_dry_run_still_refuses_a_malformed_case(tmp_path, capsys) -> None:
@@ -512,6 +537,25 @@ def test_a_dry_run_still_refuses_a_malformed_case(tmp_path, capsys) -> None:
     args = parse("run", "--cowork", str(VALIDATE / "broken"), "--dry-run")
     assert cli._run(args, config) == 3
     assert capsys.readouterr().err.strip()
+
+
+def test_a_dry_run_fails_when_every_case_is_skipped_on_cowork(tmp_path, capsys) -> None:
+    """A suite dead on this backend would fail the gate, so the dry run says so."""
+    plugin = _plugin(tmp_path, portable=False)
+    config = settings(tmp_path, "cowork:\n  profile: /nowhere-at-all\n")
+    assert cli._run(parse("run", "--cowork", str(plugin), "--dry-run"), config) == 1
+    printed = capsys.readouterr()
+    assert "skip: allowed_tools" in printed.out
+    assert "0 submissions planned" in printed.out
+    assert "the gate would fail" in printed.err
+
+
+def test_the_same_dead_suite_is_not_a_failure_on_docker(tmp_path, capsys) -> None:
+    """That backend honours the key, and its skips are the harness's own at run time."""
+    plugin = _plugin(tmp_path, portable=False)
+    config = settings(tmp_path, "cowork:\n  profile: /nowhere-at-all\n")
+    assert cli._run(parse("run", "--docker", str(plugin), "--dry-run"), config) == 0
+    assert "the gate would fail" not in capsys.readouterr().err
 
 
 def test_an_uncovered_skill_prints_once_and_on_one_stream(tmp_path, capsys) -> None:
