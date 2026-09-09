@@ -26,12 +26,13 @@ part of it.
 | [`plugin_eval.md`](plugin_eval.md)               | `claude plugin eval`: availability, flags, harness limits, cost |
 | [`cowork_desktop.md`](cowork_desktop.md)         | Desktop application internals: deep links, session filesystem   |
 
-Two files here are measurements: `runtime.md` and `cowork_desktop.md`. Each carries its capture
-date, is a snapshot rather than a contract, and is re-probed when the thing it describes
-changes. So are the two requirements files, which are not here: they are package data at
+A measured fact here carries its capture date and is called a snapshot. A snapshot is not a
+contract, and it is re-probed when the thing it describes changes. `runtime.md` and
+`cowork_desktop.md` are measurements throughout. Every other file carries a snapshot wherever
+it cites a measured fact. The two requirements files are measurements too and are
+not here: they are package data at
 [`../src/cowork_evals/data/`](../src/cowork_evals/data/), and
-[`environments.md`](environments.md) owns the split between them. `staged_runtime.md` is
-design carrying a dated snapshot, and says so.
+[`environments.md`](environments.md) owns the split between them.
 
 Three are neither. `eval_format.md` is the authoring contract a case is written to,
 `plugin_eval.md` describes a Claude Code command this repository does not own and carries
