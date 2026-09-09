@@ -369,9 +369,17 @@ to that file is carried into the table by hand, in the same commit.
 | A non-Python tool version differs              | printed, does not fail | A jammy point release moves a patch version and must not block |
 | A tool recorded as not present is present      | exit 1                 | A skill can call it here and not in a session                  |
 | `import uno` fails                             | exit 1                 | unoserver and headless conversion are broken                   |
+| A tool the probe probes that no table records  | exit 1                 | Its result is compared against nothing and read by nobody      |
+| A tool recorded present with no version is absent | printed, does not fail | There is no version to compare it against                   |
 
 The tools recorded as not present are `wkhtmltopdf`, `weasyprint`, `exiftool`, `docker` and
-the `sqlite3` CLI.
+the `sqlite3` CLI. The three recorded present with no version are `ssh`, which
+[runtime.md](runtime.md) lists without one, and `bwrap` and `socat`, the two deltas above,
+which it does not record at all.
+
+Every tool `probe.py` probes is in exactly one of the three tables in `parity.py`. Which
+table a new one goes in is decided by what is recorded for it: a version, presence alone, or
+absence.
 
 The probe writes one JSON document. `tests/unit/test_parity.py` asserts over recorded copies
 of it under `tests/data/docker/`, one per row of the table above, so the tests start no

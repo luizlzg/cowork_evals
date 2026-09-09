@@ -216,11 +216,15 @@ Five findings that can produce a wrong result rather than a wrong reading.
       `check_image()` and `check_credential()`.
       Pairs, over a `Condition` enum. A split into two functions would have left the
       remedy per condition with no condition to key on.
-- [ ] `src/cowork_evals/docker/probe.py:42-44` probes `ssh`, `bwrap` and `socat`, and
+- [x] `src/cowork_evals/docker/probe.py:42-44` probes `ssh`, `bwrap` and `socat`, and
       `parity.compare()` iterates `EXPECTED_VERSIONS` and `ABSENT` only, so those three
       results are discarded. `docker/Dockerfile:24-27` says `bwrap` and `socat` are what the
       Bash sandbox needs. Assert in `compare()` that the probed key set equals
       `EXPECTED_VERSIONS | ABSENT`, and add the three somewhere they are read.
+      The three are now `parity.PRESENT`, recorded present with no version, and an absent
+      one is a note. The assertion is over `probe.VERSION_COMMANDS` and not over the
+      document's `tools`: `tests/data/docker/probe_clean.json` predates the probe's `socat`
+      row, and only a real probe of the image could add it.
 - [ ] Three implementations of PEP 503 name normalisation disagree:
       `docker/parity.py:60-68` uses `packaging.canonicalize_name`,
       `tests/unit/test_environments.py:36-47` uses a local `re.sub`, and
