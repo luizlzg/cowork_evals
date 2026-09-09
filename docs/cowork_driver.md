@@ -12,17 +12,17 @@ The driver is built. The CoWork backend above it is not. What is built is the st
 in [running_evals.md](running_evals.md).
 
 This file is the contract the driver is built to: the sequence, the API, the configuration,
-the reading rules, the result document, the grader mapping and the failure taxonomy. Every
+the reading rules, the session document, the grader mapping and the failure taxonomy. Every
 statement is a design decision, not a measurement, except where it cites
 [cowork_desktop.md](cowork_desktop.md).
 
 ## Scope
 
-The driver is the transport. One prompt in, one JSON document out. It holds no case format,
-no graders and no pass or fail.
+The driver is the transport. One prompt in, one session document out. It holds no case
+format, no graders and no pass or fail.
 
 The CoWork backend is the layer above it and holds all three. It reads the same case tree as
-every other backend, submits each case's prompt body through this driver, grades the result
+every other backend, submits each case's prompt body through this driver, grades the session
 document with the CoWork grader below, and writes the same `aggregate-result.json` v1
 document into the same log directory. It is reached as `cowork_evals run --cowork <path>`;
 see [cli.md](cli.md), [running_evals.md](running_evals.md), and
@@ -68,10 +68,10 @@ doc = cw.run("Reply with exactly: PONG")  # submit, wait, collect
 | Method                              | Does                                        | Returns                          | Fires |
 | ----------------------------------- | --------------------------------------------- | --------------------------------- | ----- |
 | `from_file(path, **overrides)`      | Builds from a named configuration file      | A `CoWork`                       | no    |
-| `run(prompt)`                       | `submit`, then `wait`, then `collect`       | The result document              | yes   |
+| `run(prompt)`                       | `submit`, then `wait`, then `collect`       | The session document             | yes   |
 | `submit(prompt)`                    | Steps 1 to 7 of the sequence                | The attributed session directory | yes   |
 | `wait(session_dir)`                 | Step 8, the completion signal               | The same directory               | no    |
-| `collect(session_dir, prompt=None)` | Step 9, reading one session already on disk | The result document              | no    |
+| `collect(session_dir, prompt=None)` | Step 9, reading one session already on disk | The session document             | no    |
 | `sessions(root=None)`               | Every session directory under a root        | Paths, sorted                    | no    |
 | `history(run_log=None)`             | The run log                                 | One dictionary per line, oldest first | no |
 | `deep_link(prompt)`                 | Builds the URL, percent-encoding the prompt | The URL                          | no    |
@@ -95,7 +95,7 @@ Rules that hold for all of them:
   [../tests/README.md](../tests/README.md).
 - `collect` takes `prompt` when the caller knows what was submitted, which fills `prompt`
   and `prompt_sha256`. Without it those two come from the audit record.
-- Every public callable is fully type hinted, and the result document is JSON-serializable:
+- Every public callable is fully type hinted, and the session document is JSON-serializable:
   dictionaries, lists, strings, numbers and `None`, with every path a string.
 
 `collect` is the only method that needs no authorization beyond read access to the profile.
@@ -119,7 +119,7 @@ for the length of an agentic run. Everything else uses `run`.
 | 6 | Discover            | Poll for a session directory that is not in the baseline                            | 4, 5     |
 | 7 | Attribute           | Compare the recorded prompt with the submitted one                                  | 6        |
 | 8 | Wait                | Block until the completion signal fires                                             | 7        |
-| 9 | Collect             | Build the result document from the session directory                                | 8        |
+| 9 | Collect             | Build the session document from the session directory                               | 8        |
 
 Step 5 sends the keystroke to the frontmost application. Nothing may steal focus between
 steps 3 and 5.
@@ -249,7 +249,7 @@ Rules the reader follows. The record shapes they act on are in
 - A session directory with no transcript directory yet is tolerated, and raises code 8 for
   the same reason.
 
-## The result document
+## The session document
 
 One dictionary, and it holds exactly these keys.
 
@@ -272,12 +272,13 @@ One dictionary, and it holds exactly these keys.
 | `outputs`               | Files under `outputs/`, relative to the session directory              |
 | `log_file`              | The diagnostic log of the call that produced it, or `null`             |
 
-## Grading the result document
+## Grading the session document
 
 The CoWork grader evaluates a case's graders, defined in
-[eval_format.md](eval_format.md), against the document above. It takes the result document
+[eval_format.md](eval_format.md), against the document above. It takes the session document
 and the case directory as arguments, runs on the host inside the `cowork_evals` process, and
-prints one result per grader. It submits nothing, so it re-runs over a stored document for free.
+prints one result per grader. It submits nothing, so it re-runs over a stored session
+document for free.
 
 | Grader        | Read from                                    |
 | ------------- | -------------------------------------------- |
@@ -288,10 +289,10 @@ prints one result per grader. It submits nothing, so it re-runs over a stored do
 | `llm`         | a judge call on the same target, 2 of 3      |
 | `baseline`    | a judge call against `baseline_file`, 2 of 3 |
 
-Grader targets map onto the document as `last_message` to `final_text`, `trace` to `turns`
-and `tool_calls`, `files` to `outputs`, and `{source: file, path}` to that file under the
-session directory. `mock_calls` has no equivalent here, because the MCP servers are the real
-ones.
+Grader targets map onto the session document as `last_message` to `final_text`, `trace` to
+`turns` and `tool_calls`, `files` to `outputs`, and `{source: file, path}` to that file
+under the session directory. `mock_calls` has no equivalent here, because the MCP servers
+are the real ones.
 
 Skips are recorded, never silent. A grader with no equivalent, and a case whose frontmatter
 writes out a key this backend cannot honour, are both written into the result document as
