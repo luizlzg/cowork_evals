@@ -30,7 +30,7 @@ A Python library that drives the CoWork desktop application: submit one prompt, 
 run to finish, and return what the session produced. It manages CoWork and nothing else.
 
 The behaviour it implements is [`../docs/cowork_driver.md`](../docs/cowork_driver.md): the
-submission sequence, the completion signal, the reading rules, the result document, the rate
+submission sequence, the completion signal, the reading rules, the session document, the rate
 ceiling, the prompt linter and the failure taxonomy. The application internals it couples to
 are [`../docs/cowork_desktop.md`](../docs/cowork_desktop.md), which phase 2 re-probes. This
 plan adds the API and the configuration file, which neither of those defines.
@@ -92,10 +92,10 @@ class CoWorkError(Exception):
 
 | Method      | Does                                          | Returns                          | Fires |
 | ----------- | ----------------------------------------------- | --------------------------------- | ----- |
-| `run`       | `submit`, then `wait`, then `collect`         | The result document              | yes   |
+| `run`       | `submit`, then `wait`, then `collect`         | The session document             | yes   |
 | `submit`    | Steps 1 to 7 of the sequence                  | The attributed session directory | yes   |
 | `wait`      | Step 8, the completion signal                 | The same directory               | no    |
-| `collect`   | Step 9, reading one session already on disk   | The result document              | no    |
+| `collect`   | Step 9, reading one session already on disk   | The session document             | no    |
 | `sessions`  | Every session directory under a root          | Paths, sorted                    | no    |
 | `history`   | The run log                                   | One dictionary per line, oldest first | no |
 | `deep_link` | Builds the URL, percent-encoding the prompt   | The URL                          | no    |
@@ -116,7 +116,7 @@ Rules that hold for all of them:
   real subprocess runner, and a test passes a recording fake to the constructor.
 - `collect` takes `prompt` when the caller knows what was submitted, which fills `prompt` and
   `prompt_sha256`. Without it those two come from the audit record.
-- Every public callable is fully type hinted, and the result document is JSON-serializable:
+- Every public callable is fully type hinted, and the session document is JSON-serializable:
   dictionaries, lists, strings, numbers and `None`, with every path a string.
 
 Only `Config`, `CoWork` and `CoWorkError` are exported from `cowork_evals`. There are no
@@ -179,7 +179,7 @@ phase 8 rewrites that file. Read this table before reading it.
 | A `COWORK_*` environment variable per setting             | `cowork_evals.yaml`, and no environment variable |
 | "The exit code is the failure taxonomy, on every command" | A raised `CoWorkError` carrying that code       |
 | Three commands and a flag table under `python -m`         | Methods on `CoWork`. No command line at all     |
-| `exit_code` in the result document                        | No `exit_code`, and a `log_file` key            |
+| `exit_code` in the session document                       | No `exit_code`, and a `log_file` key            |
 | Every reading function takes a path argument              | Methods default to the configured path and accept an override |
 
 [`../docs/library.md`](../docs/library.md) is stale in one place with the same cause: it
@@ -199,7 +199,7 @@ Phase 8 writes each of these into the document that owns it.
 | PyYAML is the first dependency of this package, and `dependencies` stops being empty  | `docs/library.md`       |
 | A per-run diagnostic log, separate from the run log the ceiling counts                | `docs/cowork_driver.md` |
 | `deep_link` is public and pure, which is what a dry run is built from later           | `docs/cowork_driver.md` |
-| The result document drops `exit_code` and gains `log_file`                            | `docs/cowork_driver.md` |
+| The session document drops `exit_code` and gains `log_file`                           | `docs/cowork_driver.md` |
 | Three modules, not one: `config.py`, `prompt_lint.py`, `cowork.py`                    | `docs/cowork_driver.md` |
 | `[tool.uv] package = false` is removed when `src/cowork_evals/` appears, not when `[project.scripts]` appears | `docs/library.md` |
 
@@ -305,7 +305,7 @@ the record shapes are `docs/cowork_desktop.md` as phase 2 leaves it.
       is absent from this transcript.
 - [x] Take `final_text` from the last assistant text turn. A run with none raises code 8.
 - [x] List `outputs/` relative to the session directory.
-- [x] `collect(session_dir, prompt=None)`: the result document, every key in the design's
+- [x] `collect(session_dir, prompt=None)`: the session document, every key in the design's
       table except `exit_code`, plus `log_file`, and no other key. It needs no profile, so it
       reads an archived session on a machine that has no CoWork.
 - [x] Tolerate a session directory with no transcript, which phase 2 establishes as possible.
@@ -328,7 +328,7 @@ no profile configured, and the document carries exactly the documented keys.
 - [x] Open `<log_dir>/<yyyymmdd-hhmmss>-cowork_evals.log` on the `cowork_evals` logger at the
       start of a firing call, create `log_dir` if absent, and close the handler when the call
       returns or raises. `log_dir: null` turns it off. The root logger is never touched.
-- [x] Put the log path in the result document as `log_file`.
+- [x] Put the log path in the session document as `log_file`.
 
 `tests/test_cowork.py` covers each refusal over a temporary run log and a temporary
 profile: no profile, prompt too long, ceiling reached, a linted prompt. Each raises
@@ -396,7 +396,7 @@ Nothing durable may survive only in this file.
 - [x] `docs/cowork_driver.md`: replace the `COWORK_*` configuration table with
       `cowork_evals.yaml`, add the API, state that the exit codes in that file are the
       taxonomy a `CoWorkError` carries rather than something the library returns, remove
-      `exit_code` from the result document table and add `log_file`, and record the `CoWork`
+      `exit_code` from the session document table and add `log_file`, and record the `CoWork`
       object, the three modules, the two log files and the completion signal as phase 2
       measured it.
 - [x] `docs/library.md`: add PyYAML to the dependency table, correct the

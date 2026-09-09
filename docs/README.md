@@ -58,6 +58,11 @@ desktop driver, [`environments.md`](environments.md) the two Python environments
 measured during a run belongs with the mechanism it binds and not with the run, so the host
 that refuses a `Bash`-granting run is in `staged_runtime.md`.
 
+[`runtime.md`](runtime.md) and [`cowork_desktop.md`](cowork_desktop.md) measure what this
+repository does not build, the session image and the desktop application. A mechanism file
+cites a value from either and never restates it, so `cowork_driver.md` states the driver's
+design and links the application shape it reads.
+
 Build status is the one fact that goes the other way. No file here carries a build status of
 its own. Every piece has a row in `running_evals.md`'s status table whatever mechanism it
 belongs to, and the files whose subjects have a row link there.

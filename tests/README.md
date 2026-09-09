@@ -4,7 +4,7 @@ Tests for this repository's own code. Python 3.14 under `.venv`, run by `scripts
 Scope as each piece is built: the environments, the configuration file, the harness
 argument list, the container image and its parity probe, the CoWork driver, the CLI's option
 surface and backend mapping, the result gate, the case validator and the CoWork grader. The
-table below says which of those has a file today.
+table below lists the files that exist today.
 
 These are not evals. An eval needs a model in the loop. If a failure can be caught by
 pytest, it is not an eval.

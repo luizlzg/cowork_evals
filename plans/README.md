@@ -89,7 +89,7 @@ bubblewrap and runs with `seccomp=unconfined` and `systempaths=unconfined`, so i
 only backend on this machine that can grant `Bash`. Measuring that early is worth more than
 the cheaper build.
 
-Plan 4 waits on neither. It reads `plugins/smoke/`, `src/cowork_evals/env.py` and the
+Plan 4 waits on neither. It reads `plugins/smoke/`, `src/cowork_evals/config.py` and the
 driver, all of which exist, and it needs nothing the venv backend would have built.
 
 ### The contract that keeps plan 5 last

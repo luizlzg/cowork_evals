@@ -15,8 +15,8 @@
 #   --check       verify only, no writes, non-zero exit on drift
 #
 # Shell, not Python: it builds the environment that the 3.10 code runs under, and does not
-# run under it. Verifying it calls .venv once, for the PEP 503 name normalization in
-# cowork_evals.requirements, so the shell and the package cannot disagree on what
+# run under it. Verifying it calls .venv through uv run for the PEP 503 name normalization
+# in cowork_evals.requirements, so the shell and the package cannot disagree on what
 # `foo__bar` normalizes to. scripts/init.sh builds .venv first.
 set -euo pipefail
 # shellcheck source=lib.sh

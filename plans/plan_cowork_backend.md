@@ -2,7 +2,7 @@
 
 Branch `feat/cowork-backend`. Eight phases, one commit each.
 
-Everything this plan reads already exists: `plugins/smoke/`, `src/cowork_evals/env.py`,
+Everything this plan reads already exists: `plugins/smoke/`, `src/cowork_evals/config.py`,
 `src/cowork_evals/cowork.py` and `src/cowork_evals/docker/__init__.py`. It waits on nothing.
 
 ## Scope
@@ -68,8 +68,7 @@ document. Phase 8 records the absence in the log layout.
   `case.yaml`, `re` matches patterns, `pathlib.PurePath.full_match` matches file globs, and
   `subprocess` runs `claude`. Nothing in this plan writes a parser, a glob engine or an HTTP
   client.
-- `python-frontmatter` is the one dependency added. `PyYAML` and `python-dotenv` are already
-  in `pyproject.toml`.
+- `python-frontmatter` is the one dependency added. `PyYAML` is already in `pyproject.toml`.
 - Judged graders call `claude -p`. No SDK, and no second credential route.
 - No mock, fake, stub, patch or injected seam. The unit tier reads hand-written case trees
   and hand-written session documents from disk and asserts over literals.
@@ -235,8 +234,8 @@ and matching them exactly is what makes a case portable between backends.
 ## Phase 4: The judge
 
 `src/cowork_evals/judge.py`. `llm` and `baseline`, three votes, majority. The model is the
-caller's `judge_model` where one was given, and `EVAL_JUDGE_MODEL` through
-`src/cowork_evals/env.py` otherwise. [`../docs/cli.md`](../docs/cli.md) accepts
+caller's `judge_model` where one was given, and `eval.judge_model` from
+`src/cowork_evals/config.py` otherwise. [`../docs/cli.md`](../docs/cli.md) accepts
 `--judge-model M` on this backend, so phase 6 carries it down and phase 5 records it as
 `suite.judgeModel`. A judged grader never gates, which is the gate table in
 [`../docs/running_evals.md`](../docs/running_evals.md), so nothing here raises.
@@ -342,12 +341,12 @@ and returns the path to the `aggregate-result.json` it wrote. That contract is
 - [ ] `run(target, output_dir, *, config=None, runs=None, timeout_seconds=None,
       judge_model=None, tags=(), case_glob=None)`: resolve the plugin root, discover the
       cases, run each, write the result document, return its path.
-- [ ] `judge_model` replaces `EVAL_JUDGE_MODEL` for every judged grader in the suite, and
+- [ ] `judge_model` replaces `eval.judge_model` for every judged grader in the suite, and
       reaches phase 4 and `suite.judgeModel`. It is `--judge-model M` in
       [`../docs/cli.md`](../docs/cli.md), which accepts that option on this backend. Without
-      the parameter the option has no route: `judge.py` reads the setting and `env.py` never
-      writes to `os.environ`. `plan_cli.md` calls both signatures and nothing else on this
-      backend.
+      the parameter the option has no route: `judge.py` reads the setting from the loaded
+      `Config`, and nothing writes it back. `plan_cli.md` calls both signatures and nothing
+      else on this backend.
 - [ ] `runs` and `timeout_seconds` replace every case's declared value, and are `--runs N`
       and `--timeout-seconds N` in [`../docs/cli.md`](../docs/cli.md). Neither multiplies
       what the case declared. The result document records the declared value on the case, as

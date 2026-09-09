@@ -180,8 +180,9 @@ belongs in `aggregate-result.json`, which `docs/running_evals.md:228` and
 - [x] `src/cowork_evals/cowork.py` docstrings and `tests/` follow the same rename.
 - [x] `plans/plan_cowork_backend.md` follows it too. That plan reads the driver's output on
       every second line and currently inherits the ambiguity.
-      `plans/plan_cowork_tools.md` still calls the driver's output the result document.
-      It is the implemented plan that built the driver, and no box here covers it.
+      `plans/plan_cowork_tools.md` still called the driver's output the result document.
+      It is the implemented plan that built the driver, and no box here covers it. Phase 7's
+      sweep renamed it there, and changed nothing else in that file.
 
 ## Phase 4: The code defects
 
@@ -433,5 +434,39 @@ Each item below names the one file that should own the fact.
       `docs/approaches.md:11` named it as the venv backend's design file, and the status row
       for the venv backend said `this file`. `staged_runtime.md`'s own forward reference to
       the refusal section is now a reference to a section of itself.
-- [ ] Re-read every file this plan touched for a statement it made false.
+- [x] Re-read every file this plan touched for a statement it made false.
+      Nine statements this plan made false, now corrected. `plans/README.md` and
+      `plans/plan_cowork_backend.md` said plan 4 reads `src/cowork_evals/env.py`, which
+      phase 1 deleted. `plans/plan_cowork_backend.md` also read `EVAL_JUDGE_MODEL` through
+      `env.py` in two places and counted `python-dotenv` as a dependency.
+      `plans/plan_cli.md` said `docs/cli.md` still names the `EVAL_*` variables, said
+      `Docker.check` returns lines when phase 4 made it return `(Condition, message)` pairs,
+      and read `profile_dir` off `Config` rather than off its `cowork:` section.
+      `plans/plan_cowork_tools.md` called the driver's output the result document, which
+      phase 3 renamed everywhere else. `docs/plugin_eval.md` exported the enablement
+      variable as `${CLAUDE_CODE_WALNUT_SPIRE:-1}`, which reads the process environment that
+      phase 1 stopped reading. `docs/claude_code/eval_smoke/README.md` called
+      `plugins/smoke/` the case that proves the staged runtime, which phase 6 recorded as
+      the container backend's alone. `docker.remedy`'s docstring, written in phase 5, named
+      `scripts/image.sh` as a direct caller when it reads the messages `check` builds.
+      `scripts/cowork_venv.sh` and `docs/environments.md`, written in phase 4, said
+      verifying calls `.venv` once, and phase 6's derived closure made it three.
+
+      Nine more false statements were found in files this plan touched and were left alone,
+      because no phase here made them false and no box covers them. They are pre-existing
+      defects and are reported to the developer: `docs/docker.md:250` says a run mounts the
+      configuration directory alone and the login seeds no state file, which its own file
+      contradicts twice; `docs/plugin_eval.md:123` calls `run.sh` a plugin and counts four
+      grader types where `docs/claude_code/eval_smoke/README.md` counts three types in four
+      shapes; `tests/README.md:52` says `--dry-run` is how a command line is asserted over,
+      and no test passes it; `tests/README.md:99` says both container live tests cost the
+      model calls their case makes, and one of the two runs no case;
+      `tests/README.md:109` says everything here is 3.14 while `docker/probe.py` is 3.10 by
+      design; `tests/unit/test_cowork.py:344` points at a live test at the end of that file,
+      and the live test is in `tests/integration/test_cowork.py`;
+      `src/cowork_evals/__init__.py`'s docstring describes only the driver;
+      `src/cowork_evals/docker/Dockerfile:9` calls the CLI version the one deliberate delta
+      against `docs/runtime.md` while `:24` calls `socat` one too; and `README.md:63` tells a
+      writer to redact an account as the environment variable that supplies it, which no
+      longer names anything this package reads.
 - [ ] `plans/README.md`: add this plan to the table and mark it `implemented`.

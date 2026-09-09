@@ -235,7 +235,9 @@ invocation. The conditions are the gate table in
 
 `src/cowork_evals/preflight.py`. One function per backend, each returning the unmet
 conditions in order, each line naming the command that fixes it. It writes nothing and
-builds nothing. `Docker.check` already has this shape and is reused unchanged.
+builds nothing. `Docker.check` already returns the unmet conditions, one
+`(Condition, message)` pair each, with the fixing command in every message, and it is reused
+unchanged.
 
 | Backend    | Conditions                                                                       |
 | ---------- | ---------------------------------------------------------------------------------- |
@@ -246,7 +248,8 @@ builds nothing. `Docker.check` already has this shape and is reused unchanged.
 - [ ] `checks(backend) -> list[str]`, and `checks_all()` covering all three. Each takes the
       loaded `Config`, so `cowork_evals.yaml` is read once per invocation and every verb and
       every backend sees the same one.
-- [ ] The CoWork profile condition comes from `Config.load()` and then `config.profile_dir`.
+- [ ] The CoWork profile condition comes from `Config.load()` and then `profile_dir` on its
+      `cowork:` section.
       Construction validates only the file, and a missing `profile` is refused by the first
       property that needs one, so both calls are made here. `CoWorkError` code 2 becomes one
       line carrying its message. [`../docs/cli.md`](../docs/cli.md) already maps that code
@@ -434,10 +437,10 @@ Nothing durable may survive only in this file.
       `--build-missing` does and does not build, that `check` requires a backend, and the
       exit-3 row, which keeps `Nothing ran and nothing was written` because the CoWork
       ceiling moved into preflight.
-- [ ] [`../docs/cli.md`](../docs/cli.md), the paragraph under the option table: it says
-      defaults are the `EVAL_*` variables, read from the environment and from `.env`, with
-      the precedence in `library.md`. They come from `cowork_evals.yaml`. The sentence
-      naming `EVAL_MAX_COST_TOTAL_USD` as a variable with no option goes the same way.
+- [ ] [`../docs/cli.md`](../docs/cli.md), the paragraph under the option table: confirm the
+      defaults read the `eval:` section of `cowork_evals.yaml` rather than the `EVAL_*`
+      variables, and that the sentence naming the total ceiling names
+      `eval.max_cost_total_usd`. The settings change already landed both.
 - [ ] [`../docs/running_evals.md`](../docs/running_evals.md): mark the package and CLI, the
       gate and the case validator built; correct the `partial` row, which misses
       `interrupted`; correct the `error` row, which names only the CoWork case; correct the

@@ -73,10 +73,11 @@ class Condition(StrEnum):
 def remedy(condition: Condition) -> str:
     """The one command that fixes each condition.
 
-    Every caller reads it here: `check` below, `scripts/image.sh`, `scripts/login.sh` and
-    the integration tier. It names a development script under `scripts/`, because
-    `cowork_evals setup --docker` is not built. docs/cli.md holds the command that replaces
-    it, and `scripts/README.md` holds the scripts.
+    Every caller reads it here: `check` below, `scripts/login.sh` and the integration
+    tier. `scripts/image.sh` reads it through the messages `check` builds. It names a
+    development script under `scripts/`, because `cowork_evals setup --docker` is not
+    built. docs/cli.md holds the command that replaces it, and `scripts/README.md` holds
+    the scripts.
     """
     match condition:
         case Condition.DAEMON:
