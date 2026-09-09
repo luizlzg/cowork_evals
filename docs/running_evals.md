@@ -18,7 +18,8 @@ here.
 | Piece                                     | Built | Designed in                                |
 | ----------------------------------------- | ----- | ------------------------------------------- |
 | The 3.10 mirror, as a development script  | yes   | [environments.md](environments.md)          |
-| The `cowork_evals` package and CLI        | no    | [library.md](library.md), [cli.md](cli.md)  |
+| The `cowork_evals` package, as a distribution | yes | [library.md](library.md)                 |
+| The `cowork_evals` executable and its verbs | no  | [cli.md](cli.md)                           |
 | `cowork_evals.yaml` and the `Config` over it | yes | [library.md](library.md)                    |
 | The pinned harness argument list          | yes   | this file                                   |
 | The venv backend                          | no    | this file                                   |

@@ -251,7 +251,7 @@ Each item below names the one file that should own the fact.
       `docs/library.md:100` said the 3.10 and import check is "not designed and not built",
       which is a row of that table, and it is now a link too. `docs/README.md:37-40` had to
       follow, because it named `environments.md` as a file that marks its own routes built.
-- [ ] `docs/running_evals.md:21` bundles the package and the CLI into one `no` row. The
+- [x] `docs/running_evals.md:21` bundles the package and the CLI into one `no` row. The
       package exists on disk; only `[project.scripts]` is missing, which
       `docs/library.md:30` states correctly. Split the row in two.
 - [ ] The Bash sandbox readable set is stated near-verbatim in `docs/running_evals.md:94-97`,
