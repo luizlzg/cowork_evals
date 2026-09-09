@@ -21,13 +21,8 @@ need docker
 case "${1-}" in
   "") FORCE="False" ;;
   --force) FORCE="True" ;;
-  --check) FORCE="" ;;
-  -h | --help) usage ;;
-  *) die "unknown argument '$1' (expected --check, --force or none)" ;;
-esac
-
-if [ "${1-}" = "--check" ]; then
-  exec uv run --project "$ROOT" python3 -c '
+  --check)
+    exec uv run --project "$ROOT" python3 -c '
 import sys
 
 from cowork_evals.docker import Condition, Docker, remedy
@@ -38,7 +33,10 @@ if not docker.has_credential():
     sys.exit(1)
 print(f"OK: logged in at {docker.credentials_file}")
 '
-fi
+    ;;
+  -h | --help) usage ;;
+  *) die "unknown argument '$1' (expected --check, --force or none)" ;;
+esac
 
 # The login is an OAuth flow: the CLI opens a browser and reads a code back. Without a
 # terminal `docker run -it` refuses, so refuse first and say why.

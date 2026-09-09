@@ -20,14 +20,9 @@ need docker
 case "${1-}" in
   "") NO_CACHE="False" ;;
   --recreate) NO_CACHE="True" ;;
-  --check) NO_CACHE="" ;;
-  -h | --help) usage ;;
-  *) die "unknown argument '$1' (expected --check, --recreate or none)" ;;
-esac
-
-if [ "${1-}" = "--check" ]; then
-  # The credential is not a property of the image, so --check does not read it.
-  exec uv run --project "$ROOT" python3 -c '
+  --check)
+    # The credential is not a property of the image, so --check does not read it.
+    exec uv run --project "$ROOT" python3 -c '
 import sys
 
 from cowork_evals.docker import Condition, Docker
@@ -44,7 +39,10 @@ if unmet:
     sys.exit(1)
 print(f"OK: {docker.tag} is present")
 '
-fi
+    ;;
+  -h | --help) usage ;;
+  *) die "unknown argument '$1' (expected --check, --recreate or none)" ;;
+esac
 
 exec uv run --project "$ROOT" python3 -c "
 from cowork_evals.docker import Docker

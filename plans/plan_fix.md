@@ -337,11 +337,13 @@ Each item below names the one file that should own the fact.
       `tests/unit/test_config.py:15-22`, with the module-level one shadowing the fixture.
       Delete the local one.
       The four tests that used it now take the `tests/conftest.py` fixture as an argument.
-- [ ] `scripts/image.sh:19-27` and `scripts/login.sh:20-28` dispatch on `$1` twice, and the
+- [x] `scripts/image.sh:19-27` and `scripts/login.sh:20-28` dispatch on `$1` twice, and the
       `--check` arms setting `NO_CACHE=""` and `FORCE=""` are unreachable because the second
       `if` execs. Those values are interpolated into a `python3 -c` heredoc, so an empty one
       would generate `docker.build(no_cache=)`. Move `--check` into the single `case`, as
       every other script in `scripts/` does.
+      Both `--check` arms now hold the `exec` and set nothing. Neither script dispatches on
+      `$1` a second time, and `NO_CACHE` and `FORCE` are only ever `True` or `False`.
 - [ ] `scripts/cowork_venv.sh:29-30` keeps `TEST_ONLY_DIRECT` and `TEST_ONLY_ALL`, the
       second being the hand-written transitive closure of the first. A pytest release that
       gains a dependency makes `--check` report a spurious extra package. Derive the closure
