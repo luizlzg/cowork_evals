@@ -15,7 +15,7 @@ import json
 import os
 import subprocess
 from datetime import datetime
-from enum import StrEnum
+from enum import Enum
 from pathlib import Path
 
 from ..cases import CaseError
@@ -57,7 +57,7 @@ EXTRA_CA_SECRET = "extra_ca"
 CONTAINER_EXTRA_CA = "/usr/local/share/ca-certificates/extra_ca.crt"
 
 
-class Condition(StrEnum):
+class Condition(Enum):
     """What `Docker.check` reports unmet.
 
     The condition is what a caller selects on, and the message beside it is for a person to
@@ -460,7 +460,7 @@ class Docker:
         """
         try:
             content = json.loads(self.credentials_file.read_text(encoding="utf-8"))
-        except OSError, ValueError:
+        except (OSError, ValueError):
             return False
         if not isinstance(content, dict):
             return False

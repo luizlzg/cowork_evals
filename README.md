@@ -29,7 +29,7 @@ them.
 
 ## Install
 
-Python 3.14 or later. The package is not on PyPI yet, so it installs from this repository.
+Python 3.10 or later. The package is not on PyPI yet, so it installs from this repository.
 
 ```bash
 uv add --dev "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.1.1"
@@ -203,7 +203,7 @@ Then widen it:
 `cowork_evals test` is the other half, and it is not an eval. It runs the plugin's own pytest
 suite inside the CoWork image: Python 3.10, the image wheel set, no model, no case tree, no
 grader and no gate. That is what says a plugin's Python behaves in a session, which a suite
-passing on a 3.14 laptop does not.
+passing against a laptop's own wheels does not.
 
 ```bash
 cowork_evals test --docker plugins/notes/tests

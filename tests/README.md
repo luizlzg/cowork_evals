@@ -1,6 +1,6 @@
 # tests
 
-Tests for this repository's own code. Python 3.14 under `.venv`, run by `scripts/test.sh`.
+Tests for this repository's own code. Python 3.10 under `.venv`, run by `scripts/test.sh`.
 Scope as each piece is built: the environments, the configuration file, the harness
 argument list, the container image and its parity probe, the test image over it, the CoWork
 driver, the CLI's option surface and backend mapping, the result gate, the case validator
@@ -161,6 +161,8 @@ and do not skip, when no profile is configured. Nothing steals focus while one r
 [../docs/cowork_desktop.md](../docs/cowork_desktop.md) for the authorizations. The three
 container ones need a credential route, and fail without one.
 
-Everything in this repository is 3.14, tests included, and ruff targets `py314`. The 3.10
-constraint belongs to the code a consumer points the command at, not to anything here. See
+Everything in this repository is 3.10, tests included, and ruff targets `py310`, so a file
+here parses on the runtime as well. What still belongs to the code a consumer points the
+command at, and to nothing here, is the wheel set: this package imports what it declares, and
+the code under test imports only what the image carries. See
 [../docs/library.md](../docs/library.md).

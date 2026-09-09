@@ -13,7 +13,7 @@ a request and is not a skip, which is why this reads `Case.frontmatter_keys` and
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -247,13 +247,13 @@ def run(
         raise CoWorkError(2, prepared.refusal)
 
     model = resolve_model(judge_model, resolved)
-    started = datetime.now(UTC)
+    started = datetime.now(timezone.utc)
     results = [_run_case(entry, resolved, model) for entry in prepared.entries]
     document = build(
         root=prepared.root,
         cases=results,
         started_at=started.isoformat(),
-        duration_seconds=(datetime.now(UTC) - started).total_seconds(),
+        duration_seconds=(datetime.now(timezone.utc) - started).total_seconds(),
         judge_model=model,
         case_filter=case_glob,
         tag_filters=tags,

@@ -80,9 +80,9 @@ def test_the_test_layer_adds_packages_and_moves_none():
     assert set(pins(TEST_ONLY)) & set(pins(REQUIREMENTS)) == set()
 
 
-def test_repo_venv_is_python_314():
+def test_repo_venv_is_python_310():
     assert (VENV / "bin" / "python").exists(), ".venv not built. Run scripts/venv.sh"
-    assert interpreter(VENV) == "3.14"
+    assert interpreter(VENV) == "3.10"
 
 
 def test_cowork_mirror_is_python_310():
@@ -92,8 +92,12 @@ def test_cowork_mirror_is_python_310():
 
 
 def test_tests_run_under_the_repo_venv_not_the_mirror():
-    """A 3.10 interpreter here means the suite was launched through cowork_run.sh."""
-    assert sys.version_info[:2] >= (3, 14)
+    """Both environments are 3.10, so the prefix is what tells them apart, not the version.
+
+    A run under the mirror would carry the CoWork wheel set and not the dev group, so the
+    suite would collect against the wrong dependencies. docs/environments.md.
+    """
+    assert Path(sys.prefix).resolve() == VENV.resolve(), f"suite ran under {sys.prefix}"
 
 
 def test_scripts_readme_carries_a_row_for_every_script():

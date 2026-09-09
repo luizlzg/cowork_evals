@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 
 from cowork_evals.cases import Grader
-from cowork_evals.grader import created, grade, resolve_target
+from cowork_evals.grader import _full_match, created, grade, resolve_target
 
 DATA = Path(__file__).resolve().parent.parent / "data" / "documents"
 
@@ -250,3 +250,48 @@ def test_a_grader_file_with_no_type_names_that(answered: dict[str, Any]) -> None
 
 def test_a_grader_result_carries_its_weight(answered: dict[str, Any]) -> None:
     assert grade(grader("regex", weight=2, pattern="Alex"), answered).weight == 2
+
+
+# The glob translation.
+#
+# `PurePath.full_match` is Python 3.13 and this package runs on 3.10, so `_full_match`
+# translates the glob itself. These rows are the reference behaviour, captured from
+# `PurePath.full_match` on 3.14 over the cross product of these patterns and paths.
+# docs/library.md.
+
+
+@pytest.mark.parametrize(
+    ("glob", "path", "matches"),
+    [
+        ("*.pptx", "report.pptx", True),
+        ("*.pptx", "a/report.pptx", False),
+        ("**/*.pptx", "report.pptx", True),
+        ("**/*.pptx", "a/report.pptx", True),
+        ("**/*.pptx", "a/b/report.pptx", True),
+        ("**/*.pptx", "a/b.txt", False),
+        ("report.pptx", "report.pptx", True),
+        ("a/**/b.txt", "a/b.txt", True),
+        ("a/**/b.txt", "a/x/b.txt", True),
+        ("a/**/b.txt", "b.txt", False),
+        ("a/**", "a/b", True),
+        ("a/**", "a/b/c", True),
+        ("a/**", "a", False),
+        ("**", "a", True),
+        ("**", "a/b/c", True),
+        ("**/a/*.md", "q/a/n.md", True),
+        ("**/a/*.md", "notes.md", False),
+        ("?.txt", "x.txt", True),
+        ("?.txt", "ab/b", False),
+        ("[ab].txt", "b.txt", True),
+        ("[ab].txt", "c.txt", False),
+        ("[!ab].txt", "c.txt", True),
+        ("[!ab].txt", "b.txt", False),
+        ("a*/b", "ab/b", True),
+        ("out/**/*.csv", "out/x/y/z.csv", True),
+        ("out/**/*.csv", "out/z.csv", True),
+        ("*/*.txt", "a/x.txt", True),
+        ("*/*.txt", "x.txt", False),
+    ],
+)
+def test_the_glob_translation_is_full_match(glob: str, path: str, matches: bool) -> None:
+    assert _full_match(path, glob) is matches

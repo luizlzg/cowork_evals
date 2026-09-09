@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
-from pathlib import Path, PurePath
+from pathlib import Path
 from typing import Any
 
 from .cases import Grader
@@ -272,17 +272,62 @@ def _tool_order(grader: Grader, document: dict[str, Any]) -> GraderResult:
     )
 
 
+def _full_match(entry: str, glob: str) -> bool:
+    """`PurePath.full_match` semantics: `**` at any depth, `*` within one segment.
+
+    `PurePath.full_match` itself is Python 3.13. This package runs on 3.10, so the glob is
+    translated here. `tests/unit/test_grader.py` pins the translation against a matrix of
+    patterns and paths. docs/library.md.
+    """
+    parts = []
+    segments = glob.split("/")
+    for index, segment in enumerate(segments):
+        last = index == len(segments) - 1
+        if segment == "**":
+            # `**` matches any number of segments, none included, so it carries the
+            # separator that follows it. A trailing one carries the separator before it.
+            parts.append("(?:[^/]+/)*" if not last else "(?:/?[^/]+)*")
+            continue
+        parts.append(_glob_segment(segment) + ("" if last else "/"))
+    return re.fullmatch("".join(parts), entry) is not None
+
+
+def _glob_segment(segment: str) -> str:
+    """One segment of a glob as a regular expression. `*` and `?` never cross a separator."""
+    out = []
+    index = 0
+    while index < len(segment):
+        char = segment[index]
+        if char == "*":
+            out.append("[^/]*")
+        elif char == "?":
+            out.append("[^/]")
+        elif char == "[":
+            close = segment.find("]", index + 1)
+            if close < 0:
+                out.append(re.escape(char))
+            else:
+                body = segment[index + 1 : close].replace("\\", "\\\\")
+                out.append("[" + ("^" + body[1:] if body.startswith("!") else body) + "]")
+                index = close + 1
+                continue
+        else:
+            out.append(re.escape(char))
+        index += 1
+    return "".join(out)
+
+
 def _file_exists(grader: Grader, document: dict[str, Any]) -> GraderResult:
     """`path` as a glob over the produced files, with the harness's glob semantics.
 
-    `PurePath.full_match` is `**/` at any depth and `*` within a segment, which is what the
-    reference defines.
+    `**/` is any depth and `*` is within a segment, which is what the reference defines.
+    `_full_match` is that comparison.
     """
     path = grader.config.get("path")
     if not isinstance(path, str) or not path:
         return failed(grader, "file_exists grader has no path")
     wants = grader.config.get("exists", True)
-    matched = next((entry for entry in created(document) if PurePath(entry).full_match(path)), None)
+    matched = next((entry for entry in created(document) if _full_match(entry, path)), None)
     hit = f"created {matched}"
     miss = f"no created file matches {path}"
     if wants:

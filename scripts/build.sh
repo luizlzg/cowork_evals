@@ -69,7 +69,7 @@ done
 
 BUILD_VENV="$(mktemp -d)"
 trap 'rm -rf "$BUILD_VENV"' EXIT
-uv venv --python 3.14 "$BUILD_VENV/venv" > /dev/null
+uv venv --python 3.10 "$BUILD_VENV/venv" > /dev/null
 VIRTUAL_ENV="$BUILD_VENV/venv" uv pip install --quiet "$WHEEL"
 "$BUILD_VENV/venv/bin/cowork_evals" --version
 

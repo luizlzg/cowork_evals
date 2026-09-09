@@ -226,16 +226,35 @@ def refusal(args: argparse.Namespace) -> str | None:
 # The entry points.
 
 
+def parse_args(argv: list[str] | None = None) -> Any:
+    """The command line, with the tail after `--` handed to the verb that takes one.
+
+    `argparse` only routes a `--` into a variadic positional from Python 3.13, and this
+    package runs on 3.10, so the split is done here. It is the same rule on every version:
+    the tail begins at the first `--`, `argparse` never sees it, and a verb that declares
+    no `pytest_args` refuses one.
+    """
+    parser = build_parser()
+    argv = sys.argv[1:] if argv is None else argv
+    cut = argv.index("--") if "--" in argv else len(argv)
+    head, tail = argv[:cut], argv[cut + 1 :]
+    args = parser.parse_args(head)
+    if tail:
+        if not hasattr(args, "pytest_args"):
+            parser.error(f"{getattr(args, 'verb', None) or 'cowork_evals'} takes no -- tail")
+        args.pytest_args = list(args.pytest_args) + tail
+    return args
+
+
 def main(argv: list[str] | None = None) -> int:
     """Parse, refuse, dispatch, and return an exit code. Nothing here calls `sys.exit`."""
-    parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parse_args(argv)
 
     if args.version:
         print(logs.distribution_version())
         return OK
     if args.verb is None:
-        parser.print_usage(sys.stderr)
+        build_parser().print_usage(sys.stderr)
         print("cowork_evals: a verb is required", file=sys.stderr)
         return USAGE
 

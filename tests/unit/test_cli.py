@@ -14,7 +14,7 @@ import pytest
 
 from cowork_evals import cli, logs, preflight, results
 from cowork_evals.cases import plugin_name, plugin_roots
-from cowork_evals.cli import USAGE, build_parser, main
+from cowork_evals.cli import USAGE, main, parse_args
 from cowork_evals.config import Config
 from cowork_evals.docker import Docker
 from cowork_evals.docker.pytest_image import PytestImage
@@ -22,7 +22,7 @@ from cowork_evals.harness import RESULT_NAME
 
 
 def parse(*argv: str):
-    return build_parser().parse_args(list(argv))
+    return parse_args(list(argv))
 
 
 # Each verb's parse tree.

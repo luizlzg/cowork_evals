@@ -5,10 +5,11 @@
 Two Python environments in this repository. They are not reconciled, and neither replaces the
 other.
 
-- `.venv` is Python 3.14 repository tooling. It runs `scripts/` and `tests/`, never a CoWork
-  session, and is unconstrained.
-- `.venv_cowork` is the 3.10 CoWork mirror. It pins the interpreter and the wheel set a
-  session provides, and nothing else.
+- `.venv` is repository tooling. It runs `scripts/` and `tests/`, never a CoWork session,
+  and its dependencies are unconstrained.
+- `.venv_cowork` is the CoWork mirror. It pins the wheel set a session provides, and nothing
+  else.
+- Both are Python 3.10. The wheel set is what separates them, not the interpreter.
 - Both are development environments. Neither is shipped, and `cowork_evals setup` creates
   neither.
 - The mirror reproduces the interpreter and the wheels only. Not the OS, not the architecture,
@@ -18,11 +19,12 @@ other.
 
 | Environment   | Path           | Python | Defined by                         | Runs                 |
 | ------------- | -------------- | ------ | ---------------------------------- | -------------------- |
-| Repo tooling  | `.venv`        | 3.14   | `pyproject.toml` dependency groups | `scripts/`, `tests/` |
+| Repo tooling  | `.venv`        | 3.10   | `pyproject.toml` dependency groups | `scripts/`, `tests/` |
 | CoWork mirror | `.venv_cowork` | 3.10   | `requirements_installable.txt`     | Code that must behave like a session |
 
-Repo tooling never runs on a CoWork VM, so it is unconstrained. Code that must behave like a
-session is pinned to what the VM has.
+Repo tooling never runs on a CoWork VM, so its dependencies are unconstrained. Code that must
+behave like a session is pinned to what the VM has. Both interpreters are 3.10, so a file that
+runs under one parses under the other, and only an import can tell them apart.
 
 ## Building it
 
@@ -61,9 +63,10 @@ scripts/cowork_run.sh pytest tests/
 That is what activation does, scoped to one command. It matters for child processes: a script
 that shells out to bare `python3` then resolves to 3.10, as it does on the VM.
 
-**Never run `uv run` through it.** uv resolves against the project and will use or create the
-3.14 `.venv`, ignoring `VIRTUAL_ENV`. `cowork_run.sh` refuses a `uv` command line for that
-reason.
+**Never run `uv run` through it.** uv resolves against the project and will use or create
+`.venv`, ignoring `VIRTUAL_ENV`. The command would then run against the dev dependency group
+rather than the CoWork wheel set, which is the whole point of the mirror. `cowork_run.sh`
+refuses a `uv` command line for that reason.
 
 ## The test-only packages
 

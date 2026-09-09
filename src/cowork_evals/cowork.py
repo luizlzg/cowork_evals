@@ -14,7 +14,7 @@ import os
 import subprocess
 import time
 from collections.abc import Iterator
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote, urlencode
@@ -299,7 +299,7 @@ class CoWork:
         It owns `CEILING_WINDOW` and the timestamp parsing, so the CoWork backend calls it
         rather than re-deriving the window over `history()`.
         """
-        cutoff = datetime.now(UTC) - CEILING_WINDOW
+        cutoff = datetime.now(timezone.utc) - CEILING_WINDOW
         count = 0
         for entry in self.history():
             stamp = _parse_timestamp(entry.get("timestamp"))
@@ -552,17 +552,18 @@ def _signature(session_dir: Path) -> tuple[tuple[str, int, float], ...]:
 
 
 def _now() -> str:
-    return datetime.now(UTC).isoformat()
+    return datetime.now(timezone.utc).isoformat()
 
 
 def _parse_timestamp(value: Any) -> datetime | None:
     if not isinstance(value, str):
         return None
     try:
-        stamp = datetime.fromisoformat(value)
+        # `fromisoformat` accepts a `Z` suffix from Python 3.11. This package runs on 3.10.
+        stamp = datetime.fromisoformat(value[:-1] + "+00:00" if value.endswith("Z") else value)
     except ValueError:
         return None
-    return stamp if stamp.tzinfo is not None else stamp.replace(tzinfo=UTC)
+    return stamp if stamp.tzinfo is not None else stamp.replace(tzinfo=timezone.utc)
 
 
 def _log_path(directory: Path) -> Path:

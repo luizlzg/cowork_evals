@@ -18,7 +18,7 @@ import dataclasses
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any, ClassVar, TypeVar
 
 import yaml
 
@@ -233,7 +233,8 @@ class Config:
 
 # A section field of `Config` is named for its section key, so a new section is one
 # dataclass and one line in `Config`.
-type _Sections = CoWorkSection | EvalSection | DockerSection
+_Sections = CoWorkSection | EvalSection | DockerSection
+_S = TypeVar("_S", bound=_Sections)
 
 
 def _read(path: Path | str | None) -> tuple[dict[str, Any], str]:
@@ -256,7 +257,7 @@ def _read(path: Path | str | None) -> tuple[dict[str, Any], str]:
     return document, str(file)
 
 
-def _section[S: _Sections](document: dict[str, Any], source: str, kind: type[S]) -> S:
+def _section(document: dict[str, Any], source: str, kind: type[_S]) -> _S:
     """One section of the document. An unknown top level section is ignored, not read."""
     values = document.get(kind._NAME)
     if values is None:
@@ -266,7 +267,7 @@ def _section[S: _Sections](document: dict[str, Any], source: str, kind: type[S])
     return kind(**_checked(values, source, kind))
 
 
-def _override[S: _Sections](section: S, overrides: dict[str, Any]) -> S:
+def _override(section: _S, overrides: dict[str, Any]) -> _S:
     """Apply constructor overrides to an already-resolved section."""
     if not overrides:
         return section

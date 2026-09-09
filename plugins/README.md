@@ -52,8 +52,9 @@ in a session. It is a syntax error on the interpreter it runs on, so it cannot b
 alongside another file, and running the directory as a whole exits 2 for that reason alone.
 
 All four are outside `testpaths`, so `scripts/test.sh` collects none of them, and all four
-run on the container's 3.10 interpreter. See
-[../docs/cowork_test.md](../docs/cowork_test.md).
+run on the container's 3.10 interpreter. `test_needs_311.py` is also the one file ruff does
+not read, named in `[tool.ruff] extend-exclude`: ruff targets `py310` and the file exists in
+order not to parse there. See [../docs/cowork_test.md](../docs/cowork_test.md).
 
 One plugin root carries both `evals/` and `tests/`, so target resolution reaches each
 without a rule of its own.

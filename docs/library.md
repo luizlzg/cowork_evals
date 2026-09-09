@@ -92,7 +92,7 @@ mirrors an old VM. See [runtime.md](runtime.md).
 | `src/cowork_evals/docker/Dockerfile`      | yes   | What `setup --docker` builds                                       |
 | `src/cowork_evals/docker/Dockerfile.pytest` | yes | One layer over it, carrying pytest                                 |
 | `src/cowork_evals/docker/pytest_image.py` | yes   | `PytestImage`: the test image's digest, build, check and run       |
-| `src/cowork_evals/docker/probe.py`        | yes   | The parity probe, the one file here that is 3.10                   |
+| `src/cowork_evals/docker/probe.py`        | yes   | The parity probe, the one file here that runs inside the container |
 | `src/cowork_evals/docker/parity.py`       | yes   | The comparison, run on the host                                    |
 | `src/cowork_evals/data/cowork_evals.example.yaml` | yes | Every key and every default, and what `init` writes          |
 | `src/cowork_evals/data/skill/SKILL.md`    | yes   | The eval-authoring skill, and what `init` installs                 |
@@ -181,9 +181,9 @@ consumer has none of them, and this repository's own reader can still find them.
 
 | Constraint            | Value    | In `pyproject.toml` | Reason                                                        |
 | --------------------- | -------- | ------------------- | -------------------------------------------------------------- |
-| `requires-python`     | `>=3.14` | yes                 | This package runs on a developer's laptop, never in a session |
+| `requires-python`     | `>=3.10` | yes                 | The floor a consumer's development environment must clear     |
 | `dependencies`        | any      | yes                 | Nothing about CoWork constrains what this package imports     |
-| ruff `target-version` | `py314`  | yes                 | The same. It lints this package, not the code under test      |
+| ruff `target-version` | `py310`  | yes                 | Matches `requires-python`, so the lint is the floor           |
 | `[tool.uv] package`   | removed  | yes                 | Removing it makes uv build a distribution                     |
 | `license`             | `MIT`    | yes                 | A public repository with no license grants nothing            |
 | `readme`              | `README.md` | yes              | It is the description an index renders                        |
@@ -197,8 +197,16 @@ because `uv sync` fails against a package with no package tree. `[project.script
 later commit and is unrelated to it.
 
 `requires-python` is a floor, so it also sets the interpreter a consumer's development
-environment needs. Lower it when a consumer on an older one asks. Nothing about CoWork forces
-a value here.
+environment needs. It is `3.10`, the version a CoWork session runs, so one interpreter covers
+this package, the mirror and the container. Nothing about CoWork forces that: the package
+never runs in a session, and the value is a floor, not a ceiling. It is set there so a
+consumer is never made to install a newer interpreter than the runtime it targets.
+
+Three constructs are what 3.10 costs, and each has a replacement in the tree. `except A, B:`
+is parenthesized. A `type` alias and a `def f[T]` parameter are a plain assignment and a
+`TypeVar`. `PurePath.full_match` is 3.13 and is translated in `grader.py`, pinned against the
+3.14 result in `tests/unit/test_grader.py`. `argparse` routes a `--` into a variadic
+positional only from 3.13, so `cli.parse_args` splits the tail itself, on every version.
 
 ## Where the restrictions are
 
@@ -206,11 +214,15 @@ Two kinds of code, and one of them is unconstrained. This package runs on a lapt
 controls CoWork. The code under test runs inside the CoWork VM, on that VM's interpreter and
 that VM's wheels. A rule for one is never applied to the other.
 
+Every row is 3.10, so the interpreter is no longer what separates them. The wheel set is: this
+package may import anything it declares, and the code under test may import only what the
+image carries.
+
 | Restriction                                  | Binds                              | Written in                         |
 | -------------------------------------------- | ---------------------------------- | ---------------------------------- |
 | Python 3.10 syntax and standard library      | The code under test                | [runtime.md](runtime.md)           |
 | The CoWork wheel set, and nothing outside it | The code under test                | [runtime.md](runtime.md)           |
-| Python 3.14, and any dependency it justifies | This package, `scripts/`, `tests/` | [environments.md](environments.md) |
+| Any dependency, at any version               | This package, `scripts/`, `tests/` | [environments.md](environments.md) |
 | Python 3.10, and pytest beside the wheel set | A consumer's own `tests/`          | [cowork_test.md](cowork_test.md)   |
 
 The code under test is every file under the path a consumer passes to `cowork_evals run`,
