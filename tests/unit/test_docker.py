@@ -22,9 +22,11 @@ from cowork_evals.docker import (
     DATA,
     DOCKERFILE,
     EXTRA_CA_SECRET,
+    Condition,
     Docker,
     DockerError,
     plugin_root,
+    remedy,
 )
 from cowork_evals.harness import RunOptions
 
@@ -392,3 +394,24 @@ def test_seed_login_dir_keeps_a_state_file_the_cli_already_wrote(tmp_path):
     docker.state_file.write_text('{"kept": true}')
     docker.seed_login_dir()
     assert docker.state_file.read_text() == '{"kept": true}'
+
+
+# The remedy. Every caller reads it here, and it names what a consumer runs.
+
+
+def test_the_remedy_for_a_missing_image_is_the_setup_verb():
+    assert remedy(Condition.IMAGE) == "run cowork_evals setup --docker"
+
+
+def test_the_remedy_for_a_missing_login_is_the_same_verb():
+    """`setup --docker` builds the image and then logs in, so one command fixes both."""
+    assert remedy(Condition.CREDENTIAL) == "run cowork_evals setup --docker"
+
+
+def test_the_remedy_for_an_unreachable_daemon_names_no_command_of_this_package():
+    assert remedy(Condition.DAEMON) == "start Docker Desktop or Rancher Desktop"
+
+
+def test_no_remedy_names_a_development_script():
+    """A consumer never sees `scripts/`. docs/library.md."""
+    assert not [condition for condition in Condition if "scripts/" in remedy(condition)]

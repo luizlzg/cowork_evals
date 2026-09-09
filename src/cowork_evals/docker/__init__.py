@@ -73,19 +73,18 @@ class Condition(StrEnum):
 def remedy(condition: Condition) -> str:
     """The one command that fixes each condition.
 
-    Every caller reads it here: `check` below, `scripts/login.sh` and the integration
-    tier. `scripts/image.sh` reads it through the messages `check` builds. It names a
-    development script under `scripts/`, because `cowork_evals setup --docker` is not
-    built. docs/cli.md holds the command that replaces it, and `scripts/README.md` holds
-    the scripts.
+    Every caller reads it here: `check` below, `preflight.py`, `scripts/login.sh` and the
+    integration tier. `scripts/image.sh` reads it through the messages `check` builds. It
+    names what a consumer runs, and never a development script under `scripts/`, which a
+    consumer never sees. docs/cli.md.
     """
     match condition:
         case Condition.DAEMON:
             return "start Docker Desktop or Rancher Desktop"
         case Condition.IMAGE:
-            return "run scripts/image.sh"
+            return "run cowork_evals setup --docker"
         case Condition.CREDENTIAL:
-            return "run scripts/login.sh"
+            return "run cowork_evals setup --docker"
 
 
 class DockerError(Exception):

@@ -285,33 +285,33 @@ builds nothing.
 | `--cowork` | macOS, `claude` on `PATH`, a loadable `cowork_evals.yaml` naming a profile, a readable sessions root, and the Accessibility grant |
 | `test`     | `PytestImage.check()`. The same daemon condition, the test image, and never the container login |
 
-- [ ] `remedy()` in `src/cowork_evals/docker/__init__.py` names `cowork_evals setup --docker`
+- [x] `remedy()` in `src/cowork_evals/docker/__init__.py` names `cowork_evals setup --docker`
       for both `IMAGE` and `CREDENTIAL`, and its docstring loses the sentence saying that
       command is not built. It names `scripts/image.sh` and `scripts/login.sh` today, and a
       consumer never sees `scripts/`. `tests/unit/test_docker.py` asserts the new strings,
       and `scripts/image.sh --check` and `scripts/login.sh --check` still read `remedy()`.
-- [ ] `checks(backend) -> list[str]`, and `checks_all()` covering both. Each takes the
+- [x] `checks(backend) -> list[str]`, and `checks_all()` covering both. Each takes the
       loaded `Config`, so `cowork_evals.yaml` is read once per invocation and every verb and
       every backend sees the same one. `Docker.check()` already returns one
       `(Condition, message)` pair per unmet condition and is reused as it stands.
-- [ ] The CoWork profile condition comes from `Config.load()` and then `profile_dir` on its
+- [x] The CoWork profile condition comes from `Config.load()` and then `profile_dir` on its
       `cowork:` section. Construction validates only the file, and a missing `profile` is
       refused by the first property that needs one, so both calls are made here.
       `CoWorkError` code 2 becomes one line carrying its message.
-- [ ] The Accessibility grant is probed with
+- [x] The Accessibility grant is probed with
       `osascript -e 'tell application "System Events" to get the name of the first process'`.
       It submits nothing and starts no session. A non-zero exit, or error 1002 on stderr, is
       the missing grant, which is what
       [`../docs/cowork_driver.md`](../docs/cowork_driver.md) records for it.
-- [ ] `cowork_ceiling(target, **overrides) -> list[str]`, called by `run` and not by
+- [x] `cowork_ceiling(target, **overrides) -> list[str]`, called by `run` and not by
       `check`. It calls `cowork_backend.plan`, which submits nothing, and returns one line
       when the plan's submission count plus `CoWork.recent()` is above `max_runs`. The
       arithmetic is `plan()`'s; this compares its three numbers. `cowork_backend.run` raises
       `CoWorkError(2, ...)` on the same condition, which is that backend's own guard and is
       unreachable behind this check.
-- [ ] `validate.violations` is not called here. Case validation needs a resolved target, so
+- [x] `validate.violations` is not called here. Case validation needs a resolved target, so
       `run` calls it after scope resolution, in phase 6.
-- [ ] `tests/unit/test_preflight.py`: the shape of each returned list, the CoWork lines
+- [x] `tests/unit/test_preflight.py`: the shape of each returned list, the CoWork lines
       against a configuration file written to `tmp_path`, and the ceiling line against a
       hand-written case tree and run log. Nothing here starts a daemon or a session.
 

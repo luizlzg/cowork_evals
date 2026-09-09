@@ -40,9 +40,8 @@ REQUIREMENTS_TEST = DATA / "requirements_test.txt"
 REPOSITORY = "cowork-evals-test"
 
 # The one command that builds this image, as `remedy` in `__init__.py` is the one command
-# that builds the base. It names a development script, because `cowork_evals setup
-# --docker` is not built. docs/cli.md holds the command that replaces it.
-BUILD_REMEDY = "run scripts/cowork_pytest.sh"
+# that builds the base. `setup --docker` builds both, in that order. docs/cli.md.
+BUILD_REMEDY = "run cowork_evals setup --docker"
 
 
 def digest_of(*parts: bytes) -> str:
