@@ -2,9 +2,9 @@
 
 Tests for this repository's own code. Python 3.14 under `.venv`, run by `scripts/test.sh`.
 Scope as each piece is built: the environments, the configuration file, the harness
-argument list, the container image and its parity probe, the CoWork driver, the CLI's option
-surface and backend mapping, the result gate, the case validator and the CoWork grader. The
-table below lists the files that exist today.
+argument list, the container image and its parity probe, the test image over it, the CoWork
+driver, the CLI's option surface and backend mapping, the result gate, the case validator
+and the CoWork grader. The table below lists the files that exist today.
 
 These are not evals. An eval needs a model in the loop. If a failure can be caught by
 pytest, it is not an eval.
@@ -19,7 +19,7 @@ real ones.
 | Tier        | Lives in             | Selection        | Needs                                              | Cost                              |
 | ----------- | -------------------- | ---------------- | -------------------------------------------------- | --------------------------------- |
 | Unit        | `tests/unit/`        | the default      | the two built environments, nothing else           | under a second, spends nothing    |
-| Integration | `tests/integration/` | `-m integration` | a real CoWork profile, or a daemon and the built image | a VM boot and a permanent session, or an eval run |
+| Integration | `tests/integration/` | `-m integration` | a real CoWork profile, or a daemon and the built images | a VM boot and a permanent session, or an eval run |
 
 The directory is the tier. `tests/integration/conftest.py` marks everything under it
 `integration`, so a new file there cannot be left unmarked and cannot land in the default
@@ -51,10 +51,12 @@ A skipped test reports as a pass and hides the thing it was written to catch.
 | `unit/test_judge.py`              | The composed text, and vote counting over recorded reply documents | yes |
 | `unit/test_results.py`            | The v1 result document, field by field                     | yes    |
 | `unit/test_cowork_backend.py`     | The skip rule, `plan()`, and the document a skipped suite writes | yes |
+| `unit/test_pytest_image.py`       | The test image digest, and the build and run argument lists | yes    |
 | `integration/test_cowork.py`      | The same driver against a real profile and a real run      | yes    |
 | `integration/test_docker.py`      | The built image, its mounts, its sandbox and one real eval run | yes |
 | `integration/test_judge.py`       | The judge against the real `claude -p`                     | yes    |
 | `integration/test_cowork_backend.py` | The backend against a real profile, and one real suite   | yes    |
+| `integration/test_pytest_image.py` | The built test image, its exit codes, and what it writes | yes    |
 
 One file per unit under test, named after the unit and not after the scenario. A unit tested
 in both tiers keeps its name in both directories, which is why `pyproject.toml` sets
@@ -103,6 +105,14 @@ against session directories the test writes and then reads back.
 or logs in: a test that builds its own subject reports a build as a pass, and hides a long
 build inside a test run. Three of its tests read the credential, and a missing one fails
 them rather than skipping them.
+
+### The test image tier's preconditions
+
+`integration/test_pytest_image.py` needs a reachable daemon, the eval image already built
+by `scripts/image.sh`, and the test image already built by `scripts/cowork_pytest.sh`.
+Nothing there builds either. It reads no credential and calls no model, so none of its
+tests is `live` and none of them spends. It runs `plugins/smoke/tests/`, which
+[../plugins/README.md](../plugins/README.md) describes.
 
 ### The CoWork backend tier's preconditions
 

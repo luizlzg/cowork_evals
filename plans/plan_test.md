@@ -227,18 +227,18 @@ already built by `scripts/cowork_pytest.sh`. It builds nothing, and a missing pr
 fails it rather than skipping it. It spends nothing and is not `live`: there is no model in
 it.
 
-- [ ] The passing fixture returns 0, and its output names the three assertions.
-- [ ] The failing fixture returns 1.
-- [ ] A path that collects no test returns 5, pytest's own code for it, and not 1.
-- [ ] `python3 -V` inside the container reports the version
+- [x] The passing fixture returns 0, and its output names the three assertions.
+- [x] The failing fixture returns 1.
+- [x] A path that collects no test returns 5, pytest's own code for it, and not 1.
+- [x] `python3 -V` inside the container reports the version
       [`../docs/runtime.md`](../docs/runtime.md) records.
-- [ ] A test that writes a file into the tree succeeds, and the file is on the host owned by
+- [x] A test that writes a file into the tree succeeds, and the file is on the host owned by
       the developer, not by root.
-- [ ] `-- --junitxml=report.xml` in the tail leaves the report in the plugin root on the
+- [x] `-- --junitxml=report.xml` in the tail leaves the report in the plugin root on the
       host. Nothing in this package arranged for it.
-- [ ] The test image's `pip freeze`, minus exactly the names in `requirements_test.txt`,
+- [x] The test image's `pip freeze`, minus exactly the names in `requirements_test.txt`,
       equals the eval image's `pip freeze`. This is the assertion the whole plan rests on.
-- [ ] A row for the file in [`../tests/README.md`](../tests/README.md)'s table, and its
+- [x] A row for the file in [`../tests/README.md`](../tests/README.md)'s table, and its
       preconditions in the section that holds the container tier's.
 
 ## Phase 7: Documentation
