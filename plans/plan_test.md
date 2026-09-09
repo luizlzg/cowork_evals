@@ -209,15 +209,15 @@ route for a consumer the moment the verb exists. It stays as a development task.
 `plugins/smoke/tests/`. It is what the integration tier runs, and it exists to prove the
 container is the CoWork image and not a plain Python container.
 
-- [ ] `plugins/smoke/tests/test_runtime.py`: `sys.version_info[:2] == (3, 10)`, an import of
+- [x] `plugins/smoke/tests/test_runtime.py`: `sys.version_info[:2] == (3, 10)`, an import of
       `uno`, which resolves only from the LibreOffice deb set's own program directory, and an
       import of one wheel from `requirements.txt` that no plain image carries.
-- [ ] `plugins/smoke/tests/test_fails.py`: one test that fails on purpose, used by the
+- [x] `plugins/smoke/tests/test_fails.py`: one test that fails on purpose, used by the
       integration tier to prove exit 1. It is outside `testpaths`, so `scripts/test.sh` never
       collects it.
-- [ ] The directory sits in the plugin that already holds `evals/`, so one plugin root
+- [x] The directory sits in the plugin that already holds `evals/`, so one plugin root
       carries both and the target resolution reaches each without a rule of its own.
-- [ ] A line in [`../plugins/README.md`](../plugins/README.md) saying what the directory is
+- [x] A line in [`../plugins/README.md`](../plugins/README.md) saying what the directory is
       and that it is a fixture, not a suite.
 
 ## Phase 6: The integration tier
