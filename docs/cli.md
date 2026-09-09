@@ -377,6 +377,28 @@ own heading is the marker, so an edited block is recognised and never appended t
 Regenerating a target means deleting it first. That is the operator's act, and there is no
 option here that overwrites a file.
 
+### Upgrading the package does not refresh what init wrote
+
+`init` overwrites nothing, so a target written by an older version stays as it is. The skill
+is the one where that matters: it carries the case format, and a stale copy teaches an
+out-of-date one to every session that reads it. Nothing detects the drift and nothing warns
+about it.
+
+After upgrading `cowork-evals`, take the new skill:
+
+```sh
+rm .claude/skills/cowork-evals/SKILL.md
+cowork_evals init
+```
+
+The other two targets hold a consumer's own values, so leaving them alone is right.
+`cowork_evals.yaml` gains a key only when a release adds one, and every key has a built-in
+default, so an old file keeps working. The `CLAUDE.md` block is prose a consumer edits.
+
+The skill is a copy and not a link, so deleting it is the only way it changes. That is
+deliberate: a consumer edits the file after `init` writes it, and a refresh that overwrote
+would destroy those edits without asking.
+
 | Condition                                | Prints                                 | Exit |
 | ---------------------------------------- | -------------------------------------- | ---- |
 | a target was written                     | one `wrote` line per target            | 0    |

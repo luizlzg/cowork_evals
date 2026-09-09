@@ -115,6 +115,30 @@ a CoWork VM and recorded once. What they hold, and how they differ, is
 [environments.md](environments.md). `cowork_evals.example.yaml` and `SKILL.md` are shipped
 data for the same reason: `init` writes both on a machine with no checkout.
 
+## The skill
+
+`src/cowork_evals/data/skill/SKILL.md` is a Claude Code skill, and it is the one shipped file
+whose reader is a model rather than a person. `cowork_evals init` copies it to
+`.claude/skills/cowork-evals/SKILL.md` in the consumer's repository, which is where a Claude
+Code session picks up a project skill. Its frontmatter carries the triggers: writing or fixing
+a case, a `prompt.md` or a grader, a failing command, the configuration file, and plugin code
+that has to run inside a session.
+
+It holds the case tree, the two addressability keys, the six grader types, the three grader
+idioms, the seven authoring traps, the exit codes and the runtime constraint. That is a
+condensed [eval_format.md](eval_format.md) and [cli.md](cli.md), and it is condensed on
+purpose: a skill is read into a context window every time it fires, and the full documents are
+one `cowork_evals docs` away for anything it does not carry.
+
+This file and the documents it condenses are the one place in this repository where the same
+fact is written twice. The rule that keeps them from drifting apart is that the skill states
+no fact of its own: every rule in it is in a document, the skill carries the short form, and a
+change to a rule is made in the document first. A rule that exists only in the skill is a
+defect.
+
+Where the verb writes it, and why upgrading the package does not refresh it, is
+[cli.md](cli.md).
+
 ## Why the documentation ships
 
 A consumer writes cases, writes plugin code and runs the command. The authoring contract is

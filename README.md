@@ -57,6 +57,14 @@ cowork_evals docs    # where the documentation went, and every document name
 
 `init` overwrites nothing. It reports every target it kept.
 
+That means upgrading this package does not refresh what `init` already wrote. The skill is
+the one where that matters, because it carries the case format and a stale copy teaches an
+out-of-date one. After an upgrade, delete it and run `init` again:
+
+```bash
+rm .claude/skills/cowork-evals/SKILL.md && cowork_evals init
+```
+
 ## What you need
 
 | Backend                    | You need                                                       |
@@ -232,6 +240,22 @@ Every option has a default in `cowork_evals.yaml`, in the working directory. Tha
 only configuration route: nothing is read from the process environment, and there is no `.env`.
 `cowork_evals init` writes it with every key and every default. Runs write to `logs/` under the
 working directory.
+
+## The skill
+
+`cowork_evals init` installs a Claude Code skill at `.claude/skills/cowork-evals/SKILL.md`, and
+a session in your repository picks it up from there. It fires on writing or fixing a case, a
+`prompt.md` or a grader, on a failing `cowork_evals` command, on the configuration file, and
+on plugin code that has to run inside a CoWork session.
+
+It carries the case tree, the two required frontmatter keys, the six grader types, three
+copy-paste grader idioms, the seven authoring traps, the exit codes and the 3.10 runtime
+constraint. It is the short form of the two documents below, and it sends a reader to
+`cowork_evals docs` for everything it does not carry.
+
+The file is yours once `init` writes it. Edit it, commit it, and refresh it after an upgrade
+with the two commands above. What it holds and why it is a copy is
+[`docs/library.md`](docs/library.md); where `init` puts it is [`docs/cli.md`](docs/cli.md).
 
 ## Documentation
 
