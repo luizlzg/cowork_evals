@@ -518,33 +518,33 @@ The fixture is `plugins/smoke/evals`, unchanged. Nothing new is added to `plugin
 
 Nothing durable may survive only in this file.
 
-- [ ] [`../docs/cli.md`](../docs/cli.md), the venv removal: the synopsis, the `--venv`
+- [x] [`../docs/cli.md`](../docs/cli.md), the venv removal: the synopsis, the `--venv`
       column of the option table, the `--venv` preflight row, the `setup --venv` and
       `setup --all` rows, the `prune --venv` row, and the sentence saying `run --venv`
       writes `.cowork-runtime/` into each plugin root. One sentence replaces them: the venv
       backend is designed in
       [`../docs/staged_runtime.md`](../docs/staged_runtime.md) and has no flag until a plan
       builds it.
-- [ ] [`../docs/cli.md`](../docs/cli.md), the `test` verb: the synopsis line, "four verbs"
+- [x] [`../docs/cli.md`](../docs/cli.md), the `test` verb: the synopsis line, "four verbs"
       becoming five, a `test` section holding its options and its preflight row, the clause
       allowing a raw tail there beside the sentence forbidding one on `run`, the second
       image in the `setup --docker` and `prune` rows, and the one exception to "the exit
       code is the CLI's" in the exit table. The mechanism behind it is
       [`../docs/cowork_test.md`](../docs/cowork_test.md), which `plan_test.md` wrote, and it
       is linked and not restated.
-- [ ] [`../docs/cli.md`](../docs/cli.md): write in every row of the decisions table above.
+- [x] [`../docs/cli.md`](../docs/cli.md): write in every row of the decisions table above.
       That includes `--require-coverage`, the empty selection, the `--older-than` and
       `--out` scopes, what `--build-missing` does and does not build, that `check` requires
       a backend, and the exit-3 row, which keeps `Nothing ran and nothing was written`
       because the CoWork ceiling moved into preflight and pruning moved behind it.
-- [ ] [`../docs/cli.md`](../docs/cli.md), the two tables phase 2 and phase 4 made
+- [x] [`../docs/cli.md`](../docs/cli.md), the two tables phase 2 and phase 4 made
       incomplete: the scope table, which tabulates four shapes and not the fifth, a path
       inside a plugin root that is neither a case, a skill nor `evals/`; and the `--cowork`
       preflight row, which names the desktop application where phase 4 checks a configured
       profile and a readable sessions root.
-- [ ] [`../docs/cli.md`](../docs/cli.md), the `--dry-run` paragraph, which says the command
+- [x] [`../docs/cli.md`](../docs/cli.md), the `--dry-run` paragraph, which says the command
       line is printed on every backend.
-- [ ] [`../docs/running_evals.md`](../docs/running_evals.md): mark the executable and its
+- [x] [`../docs/running_evals.md`](../docs/running_evals.md): mark the executable and its
       verbs, the gate and the case validator built; correct the `partial` row, which misses
       `interrupted`; correct the `error` row, which names only the CoWork case; record that
       an empty document passes the gate and that an empty selection is refused before the
@@ -552,32 +552,32 @@ Nothing durable may survive only in this file.
       rather than `logs/evals` under it; add the `backend` and `image` lines to `env.txt` in
       the log layout; and state that coverage, its fourth automation precondition, is
       reported by `run` and enforced by `--require-coverage`.
-- [ ] [`../docs/approaches.md`](../docs/approaches.md): the `cowork_evals run --venv` row of
+- [x] [`../docs/approaches.md`](../docs/approaches.md): the `cowork_evals run --venv` row of
       the command table and the two `--venv` rows of the cadence table, which tell an author
       to run a flag that does not parse. The three approaches stay; the cadence moves to
       `--docker` until the venv backend is built. And the sentence saying `docker.md` says
       what reaches the container until the `--docker` command is built.
-- [ ] [`../docs/library.md`](../docs/library.md): the five new modules in the ships table,
+- [x] [`../docs/library.md`](../docs/library.md): the five new modules in the ships table,
       `[project.scripts]` now present, which removes the sentence saying it is not in
       `pyproject.toml` yet, the two rows of the state table naming `setup --venv` and
       `run --venv`, and the sentence saying the two requirements files are read at run time
       by `setup --venv`.
-- [ ] [`../docs/docker.md`](../docs/docker.md): the sentence saying that until the command
+- [x] [`../docs/docker.md`](../docs/docker.md): the sentence saying that until the command
       reaches the container a run goes through `cowork_evals.docker.Docker.run`, and the
       `remedy()` change, which makes `setup --docker` the command a failed check names.
-- [ ] [`../docs/eval_format.md`](../docs/eval_format.md): which rules the validator
+- [x] [`../docs/eval_format.md`](../docs/eval_format.md): which rules the validator
       enforces, and that a skill with no eval directory is reported and is not a violation.
-- [ ] [`../docs/environments.md`](../docs/environments.md): the usage block offering
+- [x] [`../docs/environments.md`](../docs/environments.md): the usage block offering
       `setup --venv` and `check --venv` as the shipped route, and the row of the
       requirements table naming `setup --venv`. The design stays; the commands become what a
       plan that builds it would add. [`../docs/staged_runtime.md`](../docs/staged_runtime.md)
       names no `--venv` command and needs no change.
-- [ ] [`../README.md`](../README.md): check the usage block against the built surface.
+- [x] [`../README.md`](../README.md): check the usage block against the built surface.
       `check --all` now returns 0 on a ready machine, so it stays.
-- [ ] [`../tests/README.md`](../tests/README.md): a row per new test file, and the new tier
+- [x] [`../tests/README.md`](../tests/README.md): a row per new test file, and the new tier
       preconditions.
-- [ ] [`../docs/cowork_test.md`](../docs/cowork_test.md): the sentence naming
+- [x] [`../docs/cowork_test.md`](../docs/cowork_test.md): the sentence naming
       `scripts/cowork_pytest.sh` as the route until the verb exists, which the verb now
       replaces. The script stays as a development task.
-- [ ] Re-read every touched file for a statement this plan made false.
+- [x] Re-read every touched file for a statement this plan made false.
 - [ ] [`README.md`](README.md): mark this plan `implemented`.

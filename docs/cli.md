@@ -2,17 +2,23 @@
 
 ## Summary
 
-The command. One executable, four verbs, two backends. It is the whole surface a consumer
+The command. One executable, five verbs, two backends. It is the whole surface a consumer
 repository sees; the boundary behind it is [library.md](library.md).
 
-- **The backend is required on `run`** and has no default. Which backend proves what is
-  [approaches.md](approaches.md).
+- **The backend is required on every verb but `prune`** and has no default. Which backend
+  proves what is [approaches.md](approaches.md).
 - **The path is the scope.** One path argument decides whether a case, a skill, a plugin or a
   whole tree runs. There is no separate sweep command.
-- **Options are named.** Nothing is forwarded raw to `claude plugin eval`.
+- **Options are named.** Nothing is forwarded raw to `claude plugin eval`. `test` is the one
+  verb that takes a raw tail, because pytest is the only thing behind it.
 - **`run` verifies and never builds.** A failed preflight exits 3 and names the command that
   fixes it.
-- **The exit code is the CLI's.** No backend's code reaches an operator unchanged.
+- **The exit code is the CLI's.** No backend's code reaches an operator unchanged. `test` is
+  the one exception, and it returns pytest's.
+
+The venv backend has no flag on any verb. `--venv` is an unknown option and `argparse` exits
+2. Its design stays in [staged_runtime.md](staged_runtime.md), and a plan that builds it adds
+the flag.
 
 What of this command is built is the status table in
 [running_evals.md](running_evals.md).
@@ -21,14 +27,18 @@ What of this command is built is the status table in
 
 ```
 cowork_evals run   (--docker | --cowork) <path> [options]
-cowork_evals setup (--docker | --all)
+cowork_evals test  --docker <path> [--build-missing] [--dry-run] [-- PYTEST_ARGS]
+cowork_evals setup --docker
 cowork_evals check (--docker | --cowork | --all)
-cowork_evals prune [--docker] [--logs] [--older-than DAYS]
+cowork_evals prune [--docker] [--logs] [--older-than DAYS] [--out DIR]
 cowork_evals --version
 ```
 
-`setup --all` is `setup --docker` today, and stays in the surface so the three verbs that
-take a backend read the same.
+`setup` takes `--docker` alone. It is the only backend with anything to build, and there is
+no `setup --all`.
+
+`prune` is the one verb that takes no backend. It requires at least one selection flag, and
+none is a usage error.
 
 ## The path is the scope
 
@@ -40,9 +50,19 @@ take a backend read the same.
 | `evals/<skill>/`                    | that skill's cases              | `<plugin>-<skill>`              |
 | `evals/`                            | that plugin's whole suite       | `<plugin>`                      |
 | a directory holding several plugins | each plugin in turn, gated once | `all`                           |
+| anything else inside one root       | that plugin's whole suite       | `<plugin>`                      |
+
+The last row is the plugin root itself, a `skills/` directory, and any other path inside one
+root. The run is that plugin's, and the scope name says so.
 
 The plugin root is the parent of `evals/`, and it is accepted only when it holds
-`.claude-plugin/plugin.json`. A sweep finds plugins by that file, not by a fixed glob.
+`.claude-plugin/plugin.json`. A sweep finds plugins by that file with a sibling `evals/`, not
+by a fixed glob, so a directory carrying a manifest and no `evals/` is not swept.
+
+The plugin name in a scope name is `.claude-plugin/plugin.json`'s `name`, and the folder
+basename when that file names none. Every character outside `[A-Za-z0-9._-]` becomes `-`. Two
+plugins in one sweep whose manifests carry the same name get two directories, the second
+suffixed `-2`, so neither result document overwrites the other and the gate reads both.
 
 A multi-plugin path is a usage error on `--cowork`. There is no sweep on that backend, for
 the reason in [running_evals.md](running_evals.md).
@@ -67,11 +87,20 @@ runs on one backend of two, so a pass-through would be silently ignored on the o
 | `--max-cost-usd N`       | yes        | refused, the driver's `max_runs` binds |
 | `--tag T`, `--case GLOB` | yes        | yes                                    |
 | `--out DIR`              | yes        | yes                                    |
+| `--require-coverage`     | yes        | yes                                    |
 | `--build-missing`        | yes        | refused, nothing to build              |
 | `--dry-run`              | yes        | yes                                    |
 
 `--timeout-seconds N` is refused on the Docker backend because `claude plugin eval` has no
 timeout flag to map it onto. Only the CoWork backend sets a per-case `run_timeout` itself.
+
+`--require-coverage` reads the tree and not a backend, so no backend refuses it. It is off by
+default.
+
+`--out DIR` replaces the whole `logs/evals` root, so the run directory is
+`<out>/<stamp>-<scope>`. It is accepted on `prune` too, which otherwise resolves
+`<cwd>/logs/evals`. `--older-than DAYS` is a `prune` flag only: `run` prunes at a fixed 30
+days.
 
 Defaults come from the `eval:` section of `cowork_evals.yaml`, in
 [running_evals.md](running_evals.md), which also says which underlying flag each option maps
@@ -85,11 +114,19 @@ An option the chosen backend cannot honour is refused at parse time. That is an 
 mistake, so it is a usage error. A *case* that needs a field the backend cannot honour is
 reported skipped and fails the gate. The two are different and are never conflated.
 
-`--dry-run` prints the command line it would run, one argument per line, and exits 0 without
-running anything or creating a run directory. Pruning of old run directories happens before
-that exit, so it is exercised too. The tests assert over this, so the option surface, the
-backend mapping and the target's position ahead of the variadic flags are covered without a
-live run.
+`--dry-run` exits 0 without running anything and without creating a run directory. What it
+prints differs per backend, because only one of them builds a command line.
+
+| Backend    | Prints                                                                        |
+| ---------- | ------------------------------------------------------------------------------- |
+| `--docker` | the `docker run` command line, one argument per line                          |
+| `--cowork` | one line per case with its run count, its timeout and its skips, then the rate ceiling arithmetic |
+
+The skips are the point of the CoWork dry run: a skipped case fails the gate, so an operator
+reads which ones before spending. Pruning of old run directories happens before the exit, so
+an unattended dry run still reclaims space. The tests assert over both, so the option surface,
+the backend mapping and the target's position ahead of the variadic flags are covered without
+a live run.
 
 ## Preflight
 
@@ -99,16 +136,51 @@ a run that silently spends ten more building an image is not readable in a log.
 | Backend    | Requires                                                             | Fails when                                                  |
 | ---------- | -------------------------------------------------------------------- | ----------------------------------------------------------- |
 | `--docker` | a Docker or Rancher daemon, the image at the current digest, and the container login | the daemon is down, the image is absent or stale, or there is no login |
-| `--cowork` | macOS, the CoWork desktop application, an Accessibility grant, `claude` on `PATH`, and the suite inside the driver's `max_runs` | the grant is missing, so there is no headless route and no CI, or `claude` is absent, or the suite would exceed the ceiling |
+| `--cowork` | macOS, `claude` on `PATH`, a `cowork_evals.yaml` naming a profile, a readable sessions root under it, an Accessibility grant, and the suite inside the driver's `max_runs` | the grant is missing, so there is no headless route and no CI, or `claude` is absent, or no profile is configured, or the suite would exceed the ceiling |
+| `test`     | a Docker or Rancher daemon, the eval image, and the test image over it        | the daemon is down, or either image is absent or stale |
+
+The desktop application itself is not probed. What the backend reads is the profile directory
+the application writes sessions into, and an unreadable one is the condition that matters. See
+[cowork_desktop.md](cowork_desktop.md).
+
+`test` has a preflight of its own because it starts a container. It never reads the container
+login: there is no model call in that path. It is not a backend, and the row is here because
+it is selected the way one is. See [cowork_test.md](cowork_test.md).
 
 A failed preflight exits 3 and prints one line naming the command that fixes it:
 
 ```
-image is stale: run `cowork_evals setup --docker`
+image cowork-evals:<digest> is absent: run cowork_evals setup --docker
 ```
 
-`--build-missing` builds instead of failing. It is off by default and exists for unattended
-use.
+`--build-missing` builds the container image instead of failing. It is off by default and
+exists for unattended use. A missing container login still fails the preflight, because that
+login is interactive. On `test` it builds the test image, and the eval image first when that
+is absent too.
+
+`run` also refuses three things a backend cannot report. Each happens before anything is
+created and before anything is deleted, so exit 2 and exit 3 leave the log root untouched.
+
+| Refusal                                                    | Exits |
+| ---------------------------------------------------------- | ----- |
+| A case that violates the format, in any selected plugin root | 3   |
+| An uncovered skill, under `--require-coverage`             | 3     |
+| A selection that matches no case at all                    | 2     |
+
+`run` validates every selected plugin root, not only the target, so a malformed sibling case
+blocks a single-case run. There is no option to skip validation. The rules are
+[eval_format.md](eval_format.md).
+
+A skill under `skills/` with no directory of that name under `evals/` is always reported.
+`--require-coverage` turns that report into a preflight failure. Coverage is not a rule of the
+format, which is why it is a flag and not a violation.
+
+A selection matching no case at all is an operator mistake: a mistyped `--tag` must not read
+as a pass, and the refusal catches it before a container starts. One plugin of a sweep
+matching none is normal under `--tag` and is not a failure.
+
+The order is preflight, then validation, then the selection count, then pruning, then the
+`--dry-run` exit.
 
 `claude` is a `--cowork` precondition because the judge behind an `llm` or `baseline` grader
 is `claude -p`, and because `claudeVersion` in the result document is the host
@@ -119,17 +191,47 @@ signed-in account and is not observable from the host, so `--max-cost-usd` is re
 and the ceiling that binds is the driver's `max_runs`. See
 [cowork_driver.md](cowork_driver.md).
 
+## test
+
+`test` runs a consumer's pytest suite inside the CoWork image. No model, no harness, no case
+tree, no grader, no result document and no gate. The mechanism is
+[cowork_test.md](cowork_test.md), and it is not restated here.
+
+| Option            | Is                                                                  |
+| ----------------- | --------------------------------------------------------------------- |
+| `--docker`        | the only backend. There is no `test --cowork`                       |
+| `<path>`          | a path inside one plugin root. A path covering several is a usage error, because pytest takes one rootdir |
+| `--build-missing` | build the test image, and the eval image first when that is absent too |
+| `--dry-run`       | print the container argument list, one argument per line, and return 0 |
+| `-- PYTEST_ARGS`  | the pytest tail                                                     |
+
+It takes no other option. Every option it does not carry configures a harness run, and `test`
+runs no harness.
+
+The pytest tail begins at `--`. Every token after it reaches pytest in order and unmodified,
+and this command claims none of them: `-- --dry-run` is pytest's argument and never this
+verb's. A raw tail is forbidden on `run`, because the harness runs on two backends and a
+pass-through would be silently ignored on the other. It is allowed here because pytest is the
+only thing behind this verb.
+
+`test` creates nothing on the host: no run directory, no `env.txt`, no `latest`, no pruning
+and no gate. Those five exist for `aggregate-result.json`, which pytest does not produce. It
+validates no case and reads no `evals/` either, so a malformed case never blocks a test run.
+
+`test --dry-run` prints before the preflight, unlike `run --dry-run`, which prunes the log
+root and so must not act behind a failed one. A dry run here does nothing at all beyond
+printing, so there is nothing for a preflight to guard.
+
 ## setup
 
-| Command          | Builds                                                                             | Idempotent                   |
-| ---------------- | ---------------------------------------------------------------------------------- | ---------------------------- |
-| `setup --docker` | the image tagged `cowork-evals:<digest>`, then the container login if one is needed | prints `current` and exits 0 |
-| `setup --all`    | the same                                                                            | the same                     |
+| Command          | Builds                                                                                                     | Idempotent                   |
+| ---------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------- |
+| `setup --docker` | `cowork-evals:<digest>`, then `cowork-evals-test:<digest>` over it, then the container login if one is needed | prints `current` and exits 0 |
 
-`setup --docker` builds one image. Each run gets a fresh container from it, so there is no
-long-lived container to create. When no container login exists, it then starts one
+`setup --docker` builds two images. Each run gets a fresh container from one of them, so there
+is no long-lived container to create. When no container login exists, it then starts one
 interactive container to log in. That step needs a terminal and a browser. See
-[docker.md](docker.md).
+[docker.md](docker.md) and [cowork_test.md](cowork_test.md).
 
 There is no `setup --cowork`. The desktop application and the Accessibility grant are
 installed and granted by hand, and `check --cowork` reports what is missing.
@@ -140,18 +242,34 @@ Where each artefact lives, and how the digest is computed, is [library.md](libra
 
 `check` verifies the same conditions as the preflight table above, writes nothing, and never
 builds. It exits 0 when every named backend is ready and 3 otherwise, listing each unmet
-condition and its fix. `check --all` includes `--cowork`, so it reports the Accessibility
-grant on a machine that has no CoWork installed rather than failing the whole invocation.
+condition and its fix. The backend is required, so `check` with none is a usage error.
+
+`check --docker` reports both images and the container login. The login is unmet for `run` and
+is not read by `test`'s preflight, and `check` reports the condition either way.
+
+`check --all` covers `--docker` and `--cowork`, so it reports the Accessibility grant on a
+machine that has no CoWork installed rather than failing the whole invocation. It returns 0 on
+a machine where both are ready.
+
+`check` never reads the rate ceiling. That condition needs a target and `check` takes none, so
+it is `run`'s alone.
 
 ## prune
 
 Deletes artefacts this CLI created and nothing else.
 
-| Flag                | Deletes                                                   |
-| ------------------- | --------------------------------------------------------- |
-| `--docker`          | images tagged `cowork-evals:*`, except the current digest |
-| `--logs`            | run directories under the resolved log root               |
-| `--older-than DAYS` | restricts every selection above. Default 30               |
+| Flag                | Deletes                                                                             |
+| ------------------- | ------------------------------------------------------------------------------------- |
+| `--docker`          | images tagged `cowork-evals:*` and `cowork-evals-test:*`, except the current digest of each |
+| `--logs`            | run directories under the resolved log root                                         |
+| `--older-than DAYS` | restricts every selection above. Default 30                                         |
+| `--out DIR`         | the log root `--logs` resolves, replacing `<cwd>/logs/evals`                        |
+
+At least one selection flag is required. `prune` with none is a usage error. The two are not
+exclusive: pruning images and logs in one invocation is ordinary.
+
+An image is selected by its creation date and a run directory by the stamp in its name, never
+by a modification time, which a later read moves.
 
 `run` prunes log directories older than 30 days on its own, so `prune --logs` is for
 reclaiming space on purpose. `prune --docker` leaves the container login alone: it is a
@@ -167,7 +285,14 @@ credential, not a build product, and deleting it forces an interactive login.
 | 3    | preflight failed. Nothing ran and nothing was written                       |
 | 130  | interrupted                                                                 |
 
-The exit code is the CLI's, and no backend's code reaches an operator unchanged.
+The exit code is the CLI's, and no backend's code reaches an operator unchanged. `test` is the
+one exception: once the container starts it returns pytest's code, unchanged and
+uninterpreted, and [cowork_test.md](cowork_test.md) lists those. Every code in the table above
+is still reachable on that verb before the container starts, on a parse failure or a failed
+preflight.
+
+Exit 3 means nothing ran and nothing was written on every path. The CoWork rate ceiling is
+checked in the preflight, and pruning happens behind every refusal, so neither breaks that.
 
 `claude plugin eval` exits 2 on partial results; the Docker backend turns that into a
 `partial: true` result document, and the gate turns that into exit 1. See

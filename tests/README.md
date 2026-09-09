@@ -9,10 +9,11 @@ and the CoWork grader. The table below lists the files that exist today.
 These are not evals. An eval needs a model in the loop. If a failure can be caught by
 pytest, it is not an eval.
 
-A hand-written case tree under `tests/data/cases/`, a hand-written session document under
-`tests/data/documents/` and a recorded judge reply under `tests/data/judge/` are input on
-disk, not stand-ins. The reader, the graders and the vote counting that parse them are the
-real ones.
+A hand-written case tree under `tests/data/cases/`, `tests/data/validate/` and
+`tests/data/cli/`, a hand-written session document under `tests/data/documents/`, a
+hand-written result document under `tests/data/results/` and a recorded judge reply under
+`tests/data/judge/` are input on disk, not stand-ins. The reader, the graders, the validator,
+the gate and the vote counting that parse them are the real ones.
 
 ## Two tiers
 
@@ -52,11 +53,17 @@ A skipped test reports as a pass and hides the thing it was written to catch.
 | `unit/test_results.py`            | The v1 result document, field by field                     | yes    |
 | `unit/test_cowork_backend.py`     | The skip rule, `plan()`, and the document a skipped suite writes | yes |
 | `unit/test_pytest_image.py`       | The test image digest, and the build and run argument lists | yes    |
+| `unit/test_validate.py`           | The case validator and the coverage report over hand-written trees | yes |
+| `unit/test_logs.py`               | The run directory, `env.txt`, `latest`, pruning and the tee | yes    |
+| `unit/test_gate.py`               | The gate over hand-written result documents                | yes    |
+| `unit/test_preflight.py`          | Each backend's unmet conditions, and the rate ceiling      | yes    |
+| `unit/test_cli.py`                | The parser, the refusals, the verbs and the exit codes     | yes    |
 | `integration/test_cowork.py`      | The same driver against a real profile and a real run      | yes    |
 | `integration/test_docker.py`      | The built image, its mounts, its sandbox and one real eval run | yes |
 | `integration/test_judge.py`       | The judge against the real `claude -p`                     | yes    |
 | `integration/test_cowork_backend.py` | The backend against a real profile, and one real suite   | yes    |
 | `integration/test_pytest_image.py` | The built test image, its exit codes, and what it writes | yes    |
+| `integration/test_cli.py`         | The command against the real backends, through the executable | yes |
 
 One file per unit under test, named after the unit and not after the scenario. A unit tested
 in both tiers keeps its name in both directories, which is why `pyproject.toml` sets
@@ -114,6 +121,18 @@ Nothing there builds either. It reads no credential and calls no model, so none 
 tests is `live` and none of them spends. It runs `plugins/smoke/tests/`, which
 [../plugins/README.md](../plugins/README.md) describes.
 
+### The command tier's preconditions
+
+`integration/test_cli.py` needs a reachable daemon, both images already built, and the login
+already made. It needs no CoWork profile: everything the command builds above a backend is
+backend-neutral and is proven on `--docker`, and the option mapping is proven with
+`--dry-run --cowork` in the unit tier. Nothing there builds an image or logs in.
+
+Its one `live` test fires `plugins/smoke/` through `cowork_evals run --docker` and asserts
+the whole log layout over that same run, `run.log` included. That log line is the
+descriptor-level tee proven against a real child process, and it cannot be reached without
+one. Its two `test` verb tests cost a container and no model call, so neither is `live`.
+
 ### The CoWork backend tier's preconditions
 
 `integration/test_cowork_backend.py` needs everything `integration/test_cowork.py` needs, a
@@ -128,16 +147,16 @@ it starts no CoWork session and costs no ceiling entry.
 
 ### The live marker
 
-Six integration tests submit a real run. The three CoWork ones each cost a VM boot, count
+Eight integration tests submit a real run. The three CoWork ones each cost a VM boot, count
 against the driver's rate ceiling and leave a permanent session in the signed-in account.
-The two container ones cost the model calls their case makes, and the judge one costs six
-short `claude -p` calls. All six carry `live` as well as `integration`. An integration run
+The three container ones cost the model calls their case makes, and the two judge ones cost
+short `claude -p` calls. All eight carry `live` as well as `integration`. An integration run
 that must not spend selects `-m "integration and not live"`.
 
 The CoWork ones need the macOS Accessibility grant, a signed-in CoWork, the desktop
 application already running, and `cowork_evals.yaml` naming the active profile. They fail,
 and do not skip, when no profile is configured. Nothing steals focus while one runs. See
-[../docs/cowork_desktop.md](../docs/cowork_desktop.md) for the authorizations. The two
+[../docs/cowork_desktop.md](../docs/cowork_desktop.md) for the authorizations. The three
 container ones need a credential route, and fail without one.
 
 Everything in this repository is 3.14, tests included, and ruff targets `py314`. The 3.10

@@ -171,8 +171,9 @@ class EvalSection:
     judge_model: str = "haiku"
     allow_tools: tuple[str, ...] = ("Bash",)
     max_cost_usd: int | float = 5
-    # Nothing reads this yet. It bounds a whole invocation rather than a run, so what will
-    # read it is the sweep and the gate over it, in docs/running_evals.md, which is not built.
+    # It bounds a whole invocation rather than a run, so the sweep reads it and not the
+    # `claude plugin eval` argument list: `cli.py` checks the spend so far before each
+    # plugin, and a stop becomes a gate failure. docs/running_evals.md.
     max_cost_total_usd: int | float = 25
 
     _FIELDS: ClassVar[dict[str, Callable[[str, Any], Any]]] = {

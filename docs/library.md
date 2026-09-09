@@ -37,10 +37,10 @@ uv add --dev cowork-evals
 pip install cowork-evals
 ```
 
-`[project.scripts]` will provide the `cowork_evals` executable. It is not in
-`pyproject.toml` yet, because nothing is behind it until the CLI is built.
-`cowork_evals --version` prints the installed distribution version from package metadata, and
-every run records it in `env.txt`, so a log says which version produced it.
+`[project.scripts]` provides the `cowork_evals` executable. It is the one entry point: there
+is no second, and no per-backend executable. `cowork_evals --version` prints the installed
+distribution version from package metadata, and every run records it in `env.txt`, so a log
+says which version produced it.
 
 The consumer pins the version in its own `pyproject.toml`. That is the pin. The wheel set and
 the image inventory are measurements of a VM that moves, so a consumer on an old version
@@ -61,6 +61,11 @@ mirrors an old VM. See [runtime.md](runtime.md).
 | `src/cowork_evals/results.py`             | yes   | The v1 `aggregate-result.json` document                            |
 | `src/cowork_evals/requirements.py`        | yes   | The pinned requirements reader, and PEP 503 name normalization     |
 | `src/cowork_evals/cowork_backend.py`      | yes   | The CoWork backend: the skip rule, `plan` and `run`                |
+| `src/cowork_evals/validate.py`            | yes   | The case validator, and the skill coverage report                  |
+| `src/cowork_evals/logs.py`                | yes   | The run directory, `env.txt`, `latest`, pruning and the tee        |
+| `src/cowork_evals/gate.py`                | yes   | The gate over `aggregate-result.json`                              |
+| `src/cowork_evals/preflight.py`           | yes   | Each backend's unmet conditions, for `check` and for `run`         |
+| `src/cowork_evals/cli.py`                 | yes   | The parser, the five verbs, the dispatch and the exit codes        |
 | `src/cowork_evals/docker/`                | yes   | The container backend: the digest, the argument lists, build, check and run |
 | `src/cowork_evals/docker/Dockerfile`      | yes   | What `setup --docker` builds                                       |
 | `src/cowork_evals/docker/Dockerfile.pytest` | yes | One layer over it, carrying pytest                                 |
@@ -93,7 +98,7 @@ The runtime dependencies are `PyYAML`, which parses `cowork_evals.yaml` and `cas
 body, and `packaging`. Nothing here writes a parser, a glob engine or an HTTP client.
 
 `package = false` was removed in the commit that added `src/cowork_evals/`, and not before,
-because `uv sync` fails against a package with no package tree. `[project.scripts]` comes in a
+because `uv sync` fails against a package with no package tree. `[project.scripts]` came in a
 later commit and is unrelated to it.
 
 `requires-python` is a floor, so it also sets the interpreter a consumer's development
