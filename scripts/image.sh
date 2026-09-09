@@ -30,12 +30,16 @@ if [ "${1-}" = "--check" ]; then
   exec uv run --project "$ROOT" python3 -c '
 import sys
 
-from cowork_evals.docker import Docker
+from cowork_evals.docker import Condition, Docker
 
 docker = Docker()
-unmet = [line for line in docker.check() if not line.startswith("no credential")]
-for line in unmet:
-    print(f"FAIL: {line}", file=sys.stderr)
+unmet = [
+    message
+    for condition, message in docker.check()
+    if condition is not Condition.CREDENTIAL
+]
+for message in unmet:
+    print(f"FAIL: {message}", file=sys.stderr)
 if unmet:
     sys.exit(1)
 print(f"OK: {docker.tag} is present")

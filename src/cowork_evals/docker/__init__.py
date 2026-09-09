@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import os
 import subprocess
+from enum import StrEnum
 from pathlib import Path
 
 from ..config import Config
@@ -57,6 +58,19 @@ RESULT_NAME = "aggregate-result.json"
 # are the same string.
 EXTRA_CA_SECRET = "extra_ca"
 CONTAINER_EXTRA_CA = "/usr/local/share/ca-certificates/extra_ca.crt"
+
+
+class Condition(StrEnum):
+    """What `Docker.check` reports unmet.
+
+    The condition is what a caller selects on, and the message beside it is for a person to
+    read. `scripts/image.sh --check` drops `CREDENTIAL`, so rewording a message changes
+    nothing any caller matches.
+    """
+
+    DAEMON = "daemon"
+    IMAGE = "image"
+    CREDENTIAL = "credential"
 
 
 class DockerError(Exception):
@@ -358,18 +372,27 @@ class Docker:
     def has_credential(self) -> bool:
         return self.credentials_file.is_file()
 
-    def check(self) -> list[str]:
+    def check(self) -> list[tuple[Condition, str]]:
         """The unmet conditions, in order, each with the command that fixes it.
 
         An empty list means ready. It writes nothing and builds nothing.
         """
-        unmet: list[str] = []
+        unmet: list[tuple[Condition, str]] = []
         if not self.daemon_is_reachable():
-            unmet.append("docker daemon is not reachable: start Docker Desktop or Rancher Desktop")
+            unmet.append(
+                (
+                    Condition.DAEMON,
+                    "docker daemon is not reachable: start Docker Desktop or Rancher Desktop",
+                )
+            )
         # The image is unreadable without a daemon, so a second line about it would name a
         # condition this run cannot know. The credential is on the host and is read either way.
         elif not self.image_is_present():
-            unmet.append(f"image {self.tag} is absent: run `cowork_evals setup --docker`")
+            unmet.append(
+                (Condition.IMAGE, f"image {self.tag} is absent: run `cowork_evals setup --docker`")
+            )
         if not self.has_credential():
-            unmet.append("no credential: run `cowork_evals setup --docker` to log in")
+            unmet.append(
+                (Condition.CREDENTIAL, "no credential: run `cowork_evals setup --docker` to log in")
+            )
         return unmet

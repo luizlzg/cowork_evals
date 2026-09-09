@@ -209,11 +209,13 @@ Five findings that can produce a wrong result rather than a wrong reading.
       hashes. The Dockerfile holds no path literal, and `CONTAINER_WORK` is now a constant
       too, because `WORKDIR` cannot compute `/work` from the other two. The secret id is
       the one string left on both sides, and a unit test asserts the two agree.
-- [ ] `scripts/image.sh:35` filters `Docker.check()` output with
+- [x] `scripts/image.sh:35` filters `Docker.check()` output with
       `not line.startswith("no credential")`. `check()` returns free text, and rewording the
       message at `docker/__init__.py:347` silently changes what `image.sh --check` reports.
       Give `check()` a discriminator: return `(condition, message)` pairs, or split it into
       `check_image()` and `check_credential()`.
+      Pairs, over a `Condition` enum. A split into two functions would have left the
+      remedy per condition with no condition to key on.
 - [ ] `src/cowork_evals/docker/probe.py:42-44` probes `ssh`, `bwrap` and `socat`, and
       `parity.compare()` iterates `EXPECTED_VERSIONS` and `ABSENT` only, so those three
       results are discarded. `docker/Dockerfile:24-27` says `bwrap` and `socat` are what the
