@@ -19,6 +19,11 @@ from .config import Config
 # docs/running_evals.md.
 DEBUG_FILE_NAME = "debug.txt"
 
+# The result document's name in the same directory, from the same layout. Every backend
+# writes one, not only the two that run this command line, so it is here and not under one
+# of them. docs/running_evals.md.
+RESULT_NAME = "aggregate-result.json"
+
 # The early-access enablement variable, as `--env` takes it. The package exports it into
 # the child, and no developer chooses it, so it is a constant and not a setting.
 # docs/plugin_eval.md.

@@ -18,7 +18,7 @@ from enum import StrEnum
 from pathlib import Path
 
 from ..config import Config
-from ..harness import ENABLEMENT_ENV, RunOptions, eval_argv
+from ..harness import ENABLEMENT_ENV, RESULT_NAME, RunOptions, eval_argv
 
 DOCKERFILE = Path(__file__).parent / "Dockerfile"
 DATA = Path(__file__).parent.parent / "data"
@@ -45,9 +45,6 @@ CONTAINER_HOME = "/tmp/eval-home"
 CONTAINER_WORK = "/work"
 CONTAINER_PLUGIN = f"{CONTAINER_WORK}/plugin"
 CONTAINER_LOGS = f"{CONTAINER_WORK}/logs"
-
-# What the harness leaves behind, and the only thing a backend returns. docs/running_evals.md.
-RESULT_NAME = "aggregate-result.json"
 
 # An optional extra root CA, for a host whose network inspects TLS. The host path is
 # `docker.extra_ca_file`, and the certificate itself never enters this repository. The

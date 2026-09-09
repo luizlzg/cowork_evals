@@ -302,7 +302,7 @@ Each item below names the one file that should own the fact.
       the phase 6 item that renames it. That comment is also where
       `tests/integration/test_docker.py` called a file a page; the line was rewritten and
       the word is gone, but the phase 6 item that names the other three stays open.
-- [ ] `src/cowork_evals/harness.py:20` holds `DEBUG_FILE_NAME` and
+- [x] `src/cowork_evals/harness.py:20` holds `DEBUG_FILE_NAME` and
       `docker/__init__.py:47` holds `RESULT_NAME`. Both are rows of the log layout at
       `docs/running_evals.md:264-266` and both belong to the harness, not to one backend:
       the CoWork and venv backends write `aggregate-result.json` too. Move `RESULT_NAME`
