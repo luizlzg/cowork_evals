@@ -287,7 +287,7 @@ document for free.
 | ------------- | -------------------------------------------- |
 | `regex`       | `final_text`, or `turns` and `tool_calls` for target `trace` |
 | `tool_used`   | `tool_calls`, matched on name and input      |
-| `tool_order`  | `tool_names`, in call order                  |
+| `tool_order`  | `tool_calls`, in call order, because `before` and `after` each take an `input_match` |
 | `file_exists` | `outputs`, as a glob                         |
 | `llm`         | a judge call on the same target, 2 of 3      |
 | `baseline`    | a judge call against `baseline_file`, 2 of 3 |

@@ -181,19 +181,19 @@ are the grader table in
 [`../docs/claude_code/plugin_eval_reference.md`](../docs/claude_code/plugin_eval_reference.md),
 and matching them exactly is what makes a case portable between backends.
 
-- [ ] Frozen `GraderResult`: `name`, `passed`, `weight`, `explanation`, and optional
+- [x] Frozen `GraderResult`: `name`, `passed`, `weight`, `explanation`, and optional
       `judge_votes`, `evidence`, `skipped`, `skip_reason`. It serializes to the run-level
       grader object. `withOnly` is always `false`, because `ablation` is `none` here and
       nothing is dropped for an arm. `scored` is `not skipped`, which widens the
       reference's `scored` = `not withOnly` to the one other exclusion this backend has.
       Phase 5 counts it as a departure, and phase 8 records it.
-- [ ] One path convention for a produced file, and the driver does not change to get it.
+- [x] One path convention for a produced file, and the driver does not change to get it.
       `outputs` in the session document is relative to the session directory, so every entry
       carries an `outputs/` prefix. This layer strips it once, and every grader that names a
       produced file names it relative to `outputs/`. That is what makes `path: report.md`
       mean here what it means under the harness, where the created-file list is relative to
       the workspace. Phase 8 records it.
-- [ ] `resolve_target(document, spec)`: `last_message` to `final_text`, `trace` to one JSON
+- [x] `resolve_target(document, spec)`: `last_message` to `final_text`, `trace` to one JSON
       object per line, `json.dumps` of every entry of `turns` followed by every entry of
       `tool_calls` in the order the document lists them, `files` to the stripped `outputs`
       list joined by newlines, and `{source: file, path}` to that path under
@@ -205,30 +205,30 @@ and matching them exactly is what makes a case portable between backends.
       `outputs/`, are each a failed grader carrying the reason, never an exception. The
       reference confines a file target to the workspace, and `outputs/` is the workspace
       here.
-- [ ] `regex`: the pattern is a JavaScript RegExp source. Compile it with `re`, mapping
+- [x] `regex`: the pattern is a JavaScript RegExp source. Compile it with `re`, mapping
       `i`, `m` and `s` onto `re.I`, `re.M` and `re.S`, adding `re.ASCII` unless the flags
       carry `u` or `v`, and ignoring `d`, `g` and `y`. `re.ASCII` is what makes `\d` and
       `\w` ASCII-only as they are in JavaScript. A pattern `re` cannot compile is a failed
       grader naming the error. Every pattern in the format compiles through this one
       function, `input_match` on `tool_used` and `tool_order` included. Phase 8 records the
       divergence.
-- [ ] `regex` `match`: `contains` (default), `not_contains`, and `count:N` which requires
+- [x] `regex` `match`: `contains` (default), `not_contains`, and `count:N` which requires
       **exactly** N matches.
-- [ ] `tool_used`: count calls in `tool_calls` whose `name` is `tool` and whose input,
+- [x] `tool_used`: count calls in `tool_calls` whose `name` is `tool` and whose input,
       JSON-encoded, matches `input_match`. Pass when the count is within `min` (default 1)
       and `max` (default unlimited). `min: 0, max: 0` passes on zero calls.
-- [ ] `tool_order`: `before` and `after` are each a tool name or `{tool, input_match}`.
+- [x] `tool_order`: `before` and `after` are each a tool name or `{tool, input_match}`.
       Both must have been called, and the **first** matching `before` call must precede the
       **first** matching `after` call. It reads `tool_calls`, not `tool_names`, because of
       the object form. Correct the `tool_order` row in
       [`../docs/cowork_driver.md`](../docs/cowork_driver.md), which names `tool_names`.
-- [ ] `file_exists`: match `path` against each stripped `outputs` entry with
+- [x] `file_exists`: match `path` against each stripped `outputs` entry with
       `pathlib.PurePath.full_match`, which is the harness's glob semantics, `**/` at any
       depth and `*` within a segment. `exists` defaults to true.
-- [ ] `explanation` is mechanical, in the harness's register: `matched Alex`,
+- [x] `explanation` is mechanical, in the harness's register: `matched Alex`,
       `Skill called 1x (expected 1 or more)`.
-- [ ] An unknown grader type is a failed grader naming the type, not an exception.
-- [ ] `tests/unit/test_grader.py` over hand-written session documents under
+- [x] An unknown grader type is a failed grader naming the type, not an exception.
+- [x] `tests/unit/test_grader.py` over hand-written session documents under
       `tests/data/documents/`: every grader type, every target, all three `match` values,
       the `min: 0, max: 0` idiom, the `{tool, input_match}` form of `tool_order`, a `**/`
       glob, a bare file name with no `**/`, which matches because the prefix is stripped, an
