@@ -1,0 +1,6 @@
+{
+  "type": "result",
+  "subtype": "error_during_execution",
+  "is_error": true,
+  "total_cost_usd": 0.0004
+}

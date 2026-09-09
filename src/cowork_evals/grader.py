@@ -147,18 +147,26 @@ def _trace(document: dict[str, Any]) -> str:
     return "\n".join(json.dumps(entry) for entry in entries)
 
 
-def _produced_file(document: dict[str, Any], path: Any) -> Target:
-    """One produced file's contents, read from under the session's `outputs/`.
+def produced_file(document: dict[str, Any], path: Any) -> tuple[Path | None, str | None]:
+    """Where a produced file is on the host, or the reason it cannot be read from here.
 
-    That directory is the workspace here, and the reference confines a file target to the
-    workspace, so a path resolving outside it is refused rather than read.
+    `outputs/` is the workspace on this backend, and the reference confines a file target
+    to the workspace, so a path resolving outside it is refused rather than read. This
+    resolves the path; `resolve_target` renders the contents and `judge.py` reads the bytes.
     """
     if not isinstance(path, str) or not path:
-        return Target(error="a file target needs a path")
+        return None, "a file target needs a path"
     root = (Path(document.get("session_dir", "")) / OUTPUTS).resolve()
     named = (root / path).resolve()
     if not named.is_relative_to(root):
-        return Target(error=f"{path} resolves outside {OUTPUTS}/")
+        return None, f"{path} resolves outside {OUTPUTS}/"
+    return named, None
+
+
+def _produced_file(document: dict[str, Any], path: Any) -> Target:
+    named, error = produced_file(document, path)
+    if named is None:
+        return Target(error=error)
     try:
         return Target(text=named.read_text(encoding="utf-8"))
     except (OSError, ValueError) as error:

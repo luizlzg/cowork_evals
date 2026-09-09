@@ -248,33 +248,33 @@ caller's `judge_model` where one was given, and `eval.judge_model` from
 `suite.judgeModel`. A judged grader never gates, which is the gate table in
 [`../docs/running_evals.md`](../docs/running_evals.md), so nothing here raises.
 
-- [ ] `judge_argv(model)`: `claude -p --output-format json --model <model>
+- [x] `judge_argv(model)`: `claude -p --output-format json --model <model>
       --strict-mcp-config`. `--strict-mcp-config` keeps the developer's MCP servers out of a
       text vote. The composed text goes on stdin, so a long trace never reaches the
       argument list.
-- [ ] Compose one text: the rubric, the material, and a closing instruction to answer with
+- [x] Compose one text: the rubric, the material, and a closing instruction to answer with
       exactly `PASS` or `FAIL`. Send the same text three times. The material is truncated to
       100000 characters, head and tail kept, which is what the harness shows a judge.
-- [ ] Take the reply and the spend from the `--output-format json` document. The spend fills
+- [x] Take the reply and the spend from the `--output-format json` document. The spend fills
       `judgeCostUsd`.
-- [ ] The grader passes on two or more `PASS` votes. A reply that is neither word is a lost
+- [x] The grader passes on two or more `PASS` votes. A reply that is neither word is a lost
       vote and is not a `PASS`. Three lost votes is a failed grader naming the reason.
-- [ ] `llm` reads `criteria` and `focus`, resolved through phase 3. `target` on an `llm`
+- [x] `llm` reads `criteria` and `focus`, resolved through phase 3. `target` on an `llm`
       grader is ignored, because the harness ignores it.
-- [ ] `baseline` reads `baseline_file` under the case directory and `criteria`.
-- [ ] Refuse a file that is not UTF-8 text and fail the grader naming it, except an image,
+- [x] `baseline` reads `baseline_file` under the case directory and `criteria`.
+- [x] Refuse a file that is not UTF-8 text and fail the grader naming it, except an image,
       which is a grader skip carrying its reason rather than a failure: the harness shows
       the judge the image and one text call cannot. It is detected from the file's bytes, as
       the harness detects it, so it is decided here and not in phase 2's `skips`. Phase 5
       writes it into the result document as any other grader skip.
-- [ ] `explanation` is `judge votes: PASS FAIL PASS`. `evidence` is what the judge was
+- [x] `explanation` is `judge votes: PASS FAIL PASS`. `evidence` is what the judge was
       shown, truncated at 2000 characters.
-- [ ] `CLAUDE_CODE_WALNUT_SPIRE` is not exported. It gates `claude plugin eval`, and this is
+- [x] `CLAUDE_CODE_WALNUT_SPIRE` is not exported. It gates `claude plugin eval`, and this is
       `claude -p`.
-- [ ] `tests/unit/test_judge.py`: `judge_argv`, the composed text for both grader types,
+- [x] `tests/unit/test_judge.py`: `judge_argv`, the composed text for both grader types,
       vote counting from recorded reply documents, the lost-vote paths, and the non-text
       refusal. Nothing here starts a process.
-- [ ] `tests/integration/test_judge.py`, marked `live`: one rubric with a string that must
+- [x] `tests/integration/test_judge.py`, marked `live`: one rubric with a string that must
       pass and one that must fail. It proves the stdin invocation and the reply parsing. Six
       short calls, no CoWork session, no ceiling entry. Neither marker needs a change:
       `tests/integration/conftest.py` marks the directory `integration`, and
