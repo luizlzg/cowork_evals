@@ -96,6 +96,13 @@ def test_tests_run_under_the_repo_venv_not_the_mirror():
     assert sys.version_info[:2] >= (3, 14)
 
 
+def test_scripts_readme_carries_a_row_for_every_script():
+    """The index owns the task list, so a new script cannot be reachable and unlisted."""
+    index = (ROOT / "scripts" / "README.md").read_text()
+    for script in sorted((ROOT / "scripts").glob("*.sh")):
+        assert f"`{script.name}`" in index, f"{script.name} has no row in scripts/README.md"
+
+
 def test_every_script_is_executable_and_parses():
     """Every `*.sh` in the repository, outside a dot directory.
 

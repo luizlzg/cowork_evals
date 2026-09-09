@@ -189,19 +189,19 @@ Still `pytest_image.py`. One container, one pytest invocation, nothing between t
 `scripts/cowork_pytest.sh`. It is `scripts/image.sh` for this image, and it goes away as a
 route for a consumer the moment the verb exists. It stays as a development task.
 
-- [ ] `scripts/cowork_pytest.sh [--check | --recreate] [<path>] [-- <pytest args>]`,
+- [x] `scripts/cowork_pytest.sh [--check | --recreate] [<path>] [-- <pytest args>]`,
       following the conventions in [`../scripts/README.md`](../scripts/README.md):
       `set -euo pipefail`, `lib.sh` on the second line, the header block as the help text,
       `die` for a one-line failure.
-- [ ] With no flag and a path, it verifies the image and runs the container, exiting on
+- [x] With no flag and a path, it verifies the image and runs the container, exiting on
       pytest's code unchanged. `--check` verifies the digest and writes nothing.
       `--recreate` builds with `--no-cache`. A missing image is a `die` naming the script
       with no arguments, never an implicit build.
-- [ ] A row for it in [`../scripts/README.md`](../scripts/README.md), and a line saying it
+- [x] A row for it in [`../scripts/README.md`](../scripts/README.md), and a line saying it
       is the image's half of what `scripts/image.sh` is for the eval image. The name carries
       the `cowork_` prefix the other two runtime scripts carry, so it is not read as a
       sibling of `scripts/test.sh`, which runs this repository's own tests.
-- [ ] `tests/unit/test_environments.py` grows a row for the new script, alongside the ones it
+- [x] `tests/unit/test_environments.py` grows a row for the new script, alongside the ones it
       already asserts.
 
 ## Phase 5: The fixture
