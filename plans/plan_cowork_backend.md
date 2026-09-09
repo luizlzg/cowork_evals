@@ -288,66 +288,66 @@ every backend. The contract is
 It is additive-only, which is what permits the three added fields and the one widened
 one.
 
-- [ ] Canonical camelCase, `schemaVersion: 1`, `partial: false`, `startedAt`,
+- [x] Canonical camelCase, `schemaVersion: 1`, `partial: false`, `startedAt`,
       `durationSeconds` and `costUsd` for the suite. `partial` is always false: this backend
       never stops a suite part way, and the ceiling refusal in phase 6 happens before the
       first submission.
-- [ ] `claudeVersion` is the host `claude --version`. No CLI ran the suite on this backend,
+- [x] `claudeVersion` is the host `claude --version`. No CLI ran the suite on this backend,
       and that version is the judge's. Phase 8 says so.
-- [ ] `costUsd` is the judge spend and nothing else. A CoWork run is billed to the account
+- [x] `costUsd` is the judge spend and nothing else. A CoWork run is billed to the account
       and is not observable from the host. It is never estimated. Phase 8 says so.
-- [ ] `suite`: `root` at the plugin root, `ablation: "none"`, `threshold: 0`, `judgeModel`,
+- [x] `suite`: `root` at the plugin root, `ablation: "none"`, `threshold: 0`, `judgeModel`,
       `plugins` from `.claude-plugin/plugin.json` with the folder basename as the `name`
       fallback, and `caseFilter` and `tagFilters` when given.
-- [ ] Per case: `name`, `dir` relative to `suite.root`, `source`, `promptMarkdown`,
+- [x] Per case: `name`, `dir` relative to `suite.root`, `source`, `promptMarkdown`,
       `model`, `runsPerCase`, `timeoutSeconds` and `maxTurns` as the case's declared values
       and never an override, absent where the case declares none, the grader definitions,
       `arms.with` with one entry per run, and `aggregates`. No `arms.without`. One rule for
       all four: the reference makes them what the case asked for, and what actually ran is
       read from `arms.with` and from the run's `cowork` object.
-- [ ] A grader definition carries `name`, `type`, `weight`, `graderMarkdown` on a judged
+- [x] A grader definition carries `name`, `type`, `weight`, `graderMarkdown` on a judged
       grader, and `config` as the author wrote it with the defaults phase 3 applies filled
       in. `Grader.config` from phase 1 is the authored keys alone, so the filling in happens
       here.
-- [ ] Per run: `score` is the weighted fraction of scored graders that passed, and 0 when
+- [x] Per run: `score` is the weighted fraction of scored graders that passed, and 0 when
       there were none to score, which is the reference's rule and covers a case whose
       graders were all skipped and a case with no grader file at all. `passed` when `score`
       is 1.0.
-- [ ] The rest of a run: `turns` from the session document's assistant turns, `costUsd` and
+- [x] The rest of a run: `turns` from the session document's assistant turns, `costUsd` and
       `judgeCostUsd` both the judge spend, `startedAt` from `submitted_at`,
       `durationSeconds` from `collected_at` minus `submitted_at`, `error`, `tracePath` at
       the session transcript, and `skippedPaidGraders: false`.
-- [ ] Two of those read a driver field that can be `None`: `submitted_at`, when the audit
+- [x] Two of those read a driver field that can be `None`: `submitted_at`, when the audit
       record carries no timestamp, and `transcript`, when the session has no transcript
       directory. `startedAt` and `tracePath` are then absent, and `durationSeconds` is
       absent rather than computed against a missing start. Every field but `error` is absent
       rather than null, which is the reference's rule.
-- [ ] Case `aggregates`: `score` as the mean run score, `passRate` as the fraction of runs
+- [x] Case `aggregates`: `score` as the mean run score, `passRate` as the fraction of runs
       scoring 1.0. Above `runs: 1` that rate is the flake rate
       [`../docs/running_evals.md`](../docs/running_evals.md) makes a precondition for
       automating a suite.
-- [ ] Three added fields and one widened field, and no other departure: `skipped` and
+- [x] Three added fields and one widened field, and no other departure: `skipped` and
       `skipReason` on a case, the same pair on a grader result,
       `cowork: {sessionDir, timeoutSeconds}` on a run, and `scored: false` on a skipped
       grader result. `cowork.timeoutSeconds` is the timeout that run ran under, which is the
       override where one was given, and it is the one place an effective value is recorded.
       `cowork.sessionDir` is what re-grades a stored run without submitting again. The gate
       in `plan_cli.md` reads `skipped`.
-- [ ] A skipped case carries `skipped: true`, `skipReason`, an empty `arms.with`, and
+- [x] A skipped case carries `skipped: true`, `skipReason`, an empty `arms.with`, and
       `aggregates` of `score` 0 and `passRate` 0. A case has no `score` and no `passed` of
       its own in v1; those two are run fields.
-- [ ] A run the driver raised on carries `error` as the code and message, `score` 0 and no
+- [x] A run the driver raised on carries `error` as the code and message, `score` 0 and no
       graders.
-- [ ] Suite `aggregates`: `casesTotal`, `casesPassed`, `overallScore`, `overallPassRate`.
+- [x] Suite `aggregates`: `casesTotal`, `casesPassed`, `overallScore`, `overallPassRate`.
       No `meanDelta`: there is no baseline arm. A mean over nothing is 0, so a selection
       that matched no case writes `casesTotal: 0` and three zeros rather than dividing by
       zero. Whether an empty selection passes is the gate's, in `plan_cli.md`.
-- [ ] `casesPassed` is the reference's rule, a case scoring at or above `threshold`, minus
+- [x] `casesPassed` is the reference's rule, a case scoring at or above `threshold`, minus
       every skipped case. `threshold` is 0 here, so without that subtraction a skipped case
       would count as passed. It is the one behavioural departure beside the four above, and
       phase 8 records it. Nothing reads it to decide anything: the gate in `plan_cli.md`
       reads the grader results and `skipped`.
-- [ ] `tests/unit/test_results.py`: build a result document from hand-written cases and
+- [x] `tests/unit/test_results.py`: build a result document from hand-written cases and
       session documents and assert every field. One case passed, one failed, one skipped,
       one errored, one with `runs: 2` where the two runs disagree, and an empty selection.
 
