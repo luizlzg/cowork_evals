@@ -12,6 +12,7 @@ decides pass and fail: that is the CLI's, in [docs/cli.md](../../../docs/cli.md)
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import subprocess
 from enum import StrEnum
@@ -385,7 +386,26 @@ class Docker:
         return completed.returncode == 0
 
     def has_credential(self) -> bool:
-        return self.credentials_file.is_file()
+        """Whether the login directory holds a credential the CLI can use.
+
+        The file existing is not enough. An OAuth flow that never completed leaves one
+        behind with every token empty, and the CLI then exits 1 inside the container with
+        `Not logged in`, while `scripts/login.sh` reads the file, reports a login is
+        already there and declines to replace it. Measured 2026-09-09.
+
+        An expired access token is still a credential. The CLI refreshes it, so only the
+        absence of both tokens means no login.
+        """
+        try:
+            content = json.loads(self.credentials_file.read_text(encoding="utf-8"))
+        except OSError, ValueError:
+            return False
+        if not isinstance(content, dict):
+            return False
+        oauth = content.get("claudeAiOauth")
+        if not isinstance(oauth, dict):
+            return False
+        return bool(oauth.get("accessToken") or oauth.get("refreshToken"))
 
     def check(self) -> list[tuple[Condition, str]]:
         """The unmet conditions, in order, each with the command that fixes it.

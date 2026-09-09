@@ -247,6 +247,15 @@ it, fails, and exits 1 with `JSON Parse error: Unexpected EOF`. Measured 2026-09
 image below. `Docker.seed_login_dir()` writes it, and `Docker.login()` calls that before
 starting the login container.
 
+A credential file is not a credential either. An OAuth flow that is started and not
+finished leaves `.credentials.json` behind carrying `scopes` and `subscriptionType` with
+`accessToken` and `refreshToken` both empty. `Docker.has_credential()` therefore reads the
+tokens rather than testing that the file is there, and the two callers that gate on it, the
+`CREDENTIAL` condition and `scripts/login.sh`, report no login. An expired access token is
+still a credential, because the CLI refreshes it: only the absence of both tokens is no
+login. Measured 2026-09-09, where presence alone reported a login and every container run
+then exited 1 with `Not logged in`.
+
 Both are mounted into the container home, read-write: the CLI refreshes its token and
 rewrites its state file on every start. They are the only host paths a run mounts besides
 the plugin and the log directory, and the container keeps nothing else.
