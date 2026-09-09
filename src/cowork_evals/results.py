@@ -257,7 +257,7 @@ def spend(run_dir: Path | str) -> float:
     for plugin in sorted(Path(run_dir).iterdir()):
         try:
             document = json.loads((plugin / RESULT_NAME).read_text(encoding="utf-8"))
-        except OSError, ValueError:
+        except (OSError, ValueError):
             continue
         if isinstance(document, dict) and isinstance(document.get("costUsd"), int | float):
             total += float(document["costUsd"])
@@ -335,7 +335,7 @@ def _plugin(root: Path) -> dict[str, Any]:
     entry: dict[str, Any] = {"name": plugin_name(root), "path": str(root)}
     try:
         manifest = json.loads((root / PLUGIN_MANIFEST).read_text(encoding="utf-8"))
-    except OSError, ValueError:
+    except (OSError, ValueError):
         return entry
     if not isinstance(manifest, dict):
         return entry
@@ -356,6 +356,15 @@ def _elapsed(start: Any, end: Any) -> float | None:
     if not isinstance(start, str) or not isinstance(end, str):
         return None
     try:
-        return (datetime.fromisoformat(end) - datetime.fromisoformat(start)).total_seconds()
+        return (_isoformat(end) - _isoformat(start)).total_seconds()
     except ValueError:
         return None
+
+
+def _isoformat(value: str) -> datetime:
+    """`datetime.fromisoformat`, with the `Z` suffix the harness writes.
+
+    The harness stamps `...T10:00:00.000Z`. `fromisoformat` accepts `Z` from Python 3.11,
+    and this package runs on 3.10, so the suffix is rewritten here.
+    """
+    return datetime.fromisoformat(value[:-1] + "+00:00" if value.endswith("Z") else value)

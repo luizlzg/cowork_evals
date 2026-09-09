@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -122,7 +122,7 @@ def test_the_platform_is_reported_only_off_macos(tmp_path: Path) -> None:
 
 def run_log(path: Path, entries: int) -> None:
     """A CoWork run log carrying `entries` submissions inside the trailing 24 hours."""
-    stamp = datetime.now(UTC).isoformat()
+    stamp = datetime.now(timezone.utc).isoformat()
     path.write_text(
         "".join(
             json.dumps({"timestamp": stamp, "outcome": "collected", "session_dir": None}) + "\n"

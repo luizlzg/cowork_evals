@@ -11,6 +11,7 @@ import sys
 from importlib.resources import files
 from pathlib import Path
 
+from cowork_evals.docker.parity import EXPECTED_VERSIONS
 from cowork_evals.requirements import pins as read_pins
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -20,6 +21,9 @@ DATA = ROOT / "src" / "cowork_evals" / "data"
 REQUIREMENTS = DATA / "requirements.txt"
 INSTALLABLE = DATA / "requirements_installable.txt"
 TEST_ONLY = DATA / "requirements_test.txt"
+
+# The exact interpreter a CoWork session runs, and what both environments are built on.
+PINNED = (ROOT / ".python-version").read_text().strip()
 
 # The nine pins that cannot install off the CoWork VM. docs/environments.md.
 NOT_INSTALLABLE = {
@@ -41,8 +45,10 @@ def pins(path: Path) -> dict[str, str]:
 
 
 def interpreter(venv: Path) -> str:
+    """The full `major.minor.patch`. The patch is the point: it is what a session runs."""
+    report = 'import sys; print("%d.%d.%d" % sys.version_info[:3])'
     return subprocess.run(
-        [str(venv / "bin" / "python"), "-c", 'import sys; print("%d.%d" % sys.version_info[:2])'],
+        [str(venv / "bin" / "python"), "-c", report],
         capture_output=True,
         text=True,
         check=True,
@@ -80,20 +86,34 @@ def test_the_test_layer_adds_packages_and_moves_none():
     assert set(pins(TEST_ONLY)) & set(pins(REQUIREMENTS)) == set()
 
 
-def test_repo_venv_is_python_314():
+def test_the_development_interpreter_is_the_session_interpreter():
+    """`.python-version` and `parity.py` are the two homes of one fact, and they agree.
+
+    `.python-version` is what `uv` reads to build either environment, and it is not shipped.
+    `EXPECTED_VERSIONS` is the record of the container, and it is. Neither can read the
+    other, so this is what keeps them from drifting. docs/environments.md.
+    """
+    assert EXPECTED_VERSIONS["python3"] == PINNED
+
+
+def test_repo_venv_is_the_pinned_interpreter():
     assert (VENV / "bin" / "python").exists(), ".venv not built. Run scripts/venv.sh"
-    assert interpreter(VENV) == "3.14"
+    assert interpreter(VENV) == PINNED
 
 
-def test_cowork_mirror_is_python_310():
+def test_cowork_mirror_is_the_pinned_interpreter():
     built = (COWORK / "bin" / "python").exists()
     assert built, ".venv_cowork not built. Run scripts/cowork_venv.sh"
-    assert interpreter(COWORK) == "3.10"
+    assert interpreter(COWORK) == PINNED
 
 
 def test_tests_run_under_the_repo_venv_not_the_mirror():
-    """A 3.10 interpreter here means the suite was launched through cowork_run.sh."""
-    assert sys.version_info[:2] >= (3, 14)
+    """Both environments are the same interpreter, so the prefix is what tells them apart.
+
+    A run under the mirror would carry the CoWork wheel set and not the dev group, so the
+    suite would collect against the wrong dependencies. docs/environments.md.
+    """
+    assert Path(sys.prefix).resolve() == VENV.resolve(), f"suite ran under {sys.prefix}"
 
 
 def test_scripts_readme_carries_a_row_for_every_script():

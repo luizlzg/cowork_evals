@@ -15,10 +15,10 @@ classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
   "Intended Audience :: Developers",
-  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.10",
   "Topic :: Software Development :: Testing",
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.10"
 dependencies = ["PyYAML>=6", "packaging>=24", "python-frontmatter>=1.1"]
 
 [project.urls]
@@ -52,20 +52,13 @@ timeout = 300
 
 [tool.ruff]
 line-length = 100
-target-version = "py314"
+target-version = "py310"
+# `test_needs_311.py` is a fixture whose point is that it does not parse on 3.10. Every
+# other file here parses on the target, so ruff reads them all. See plugins/README.md.
+extend-exclude = ["plugins/smoke/tests/test_needs_311.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
-
-[tool.ruff.lint.per-file-ignores]
-# probe.py runs on the container's 3.10 interpreter, not on this package's 3.14. The UP
-# rules rewrite to the target version, and py314 syntax does not parse there. The
-# formatter rewrites to it as well, so that file is excluded from it below.
-# See docs/library.md.
-"src/cowork_evals/docker/probe.py" = ["UP"]
-
-[tool.ruff.format]
-exclude = ["src/cowork_evals/docker/probe.py"]
 
 # `docs/` sits at the repository root and is placed beside the modules in the wheel, so the
 # checkout keeps one documentation tree and the install carries the same one. Nothing under

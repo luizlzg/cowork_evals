@@ -41,15 +41,17 @@ before changing anything under it. Never restate one of these in another file; l
 
   | Code                                     | Runs on               | Python | May depend on                          |
   | ---------------------------------------- | --------------------- | ------ | -------------------------------------- |
-  | This package, `src/cowork_evals/`        | a developer's laptop  | 3.14   | anything                               |
+  | This package, `src/cowork_evals/`        | a developer's laptop  | 3.10   | anything                               |
   | The code under test, under the eval path | the CoWork session VM | 3.10   | the image wheel set, and nothing else  |
   | A consumer's `tests/`                    | the test image        | 3.10   | the image wheel set, and pytest        |
 
+  Every row is 3.10, so the interpreter never separates them. The dependency column does.
   The second row is the hard one: every file under the path passed to `cowork_evals run`,
   meaning each skill, command, agent and hook, imports only what the image carries. See
-  `docs/runtime.md`. The first row is constrained by nothing about CoWork; the rules that do
-  apply to it are in `docs/library.md`. The third row is never loaded in a session, so the
-  wheel set does not bind it; see `docs/cowork_test.md`.
+  `docs/runtime.md`. The first row is constrained by nothing about CoWork, and its 3.10 is a
+  floor a consumer must clear, not a runtime fact; the rules that apply to it are in
+  `docs/library.md`. The third row is never loaded in a session, so the wheel set does not
+  bind it; see `docs/cowork_test.md`.
 - **Never mock, and never skip.** No mock, fake, stub, patch or injected seam appears in a
   test, and no library that supplies one is a dependency. No test is skipped, and no `if`
   bypasses the assertions inside one. A test runs against the real thing or it is not
@@ -72,10 +74,10 @@ before changing anything under it. Never restate one of these in another file; l
   per-backend variant of a case. The format is `docs/eval_format.md`. Which backend honours
   which field is `docs/approaches.md`. A third backend, Claude Code against a 3.10 mirror on
   the host, is designed and deliberately not built: `docs/staged_runtime.md`.
-- **Two environments, never mixed.** `.venv` is Python 3.14 repository tooling. Code that
-  must behave like a CoWork session runs under the 3.10 CoWork mirror through
-  `scripts/cowork_run.sh`. Never run `uv run` under the mirror. See
-  `docs/environments.md`.
+- **Two environments, never mixed.** `.venv` is repository tooling. Code that must behave
+  like a CoWork session runs under the CoWork mirror through `scripts/cowork_run.sh`. Both
+  are Python 3.10, so the wheel set is what separates them, not the interpreter. Never run
+  `uv run` under the mirror. See `docs/environments.md`.
 - **A plan is the state while it exists.** Tick a box only when it is verified, then
   commit. Do not batch ticks. A cleared context resumes from the plan file.
 - **Never delete a plan.** The developer decides when a plan goes, and says so. A plan is

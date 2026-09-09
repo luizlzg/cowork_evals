@@ -117,7 +117,7 @@ def plugin_name(root: Path | str) -> str:
     resolved = Path(root).resolve()
     try:
         manifest = json.loads((resolved / PLUGIN_MANIFEST).read_text(encoding="utf-8"))
-    except OSError, ValueError:
+    except (OSError, ValueError):
         return resolved.name
     if not isinstance(manifest, dict):
         return resolved.name

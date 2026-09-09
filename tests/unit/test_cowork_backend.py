@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 import textwrap
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -186,7 +186,7 @@ def settings(tmp_path: Path, **overrides: object) -> Config:
 
 def log(path: Path, submissions: int) -> None:
     """A hand-written run log, `submissions` entries inside the trailing 24 hours."""
-    stamp = datetime.now(UTC).isoformat()
+    stamp = datetime.now(timezone.utc).isoformat()
     path.write_text(
         "".join(
             json.dumps({"timestamp": stamp, "outcome": "submitted"}) + "\n"
