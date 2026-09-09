@@ -6,7 +6,7 @@
 # wheels, the document tooling and the fonts a CoWork session provides. The digest
 # covers every build input, so a changed input is a different tag. See docs/docker.md.
 #
-#   (no args)     build the image for EVAL_PLATFORM
+#   (no args)     build the image for docker.platform
 #   --check       verify the current digest is present, no writes
 #   --recreate    build with --no-cache
 #

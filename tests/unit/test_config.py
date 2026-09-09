@@ -1,4 +1,8 @@
-"""`cowork_evals.yaml` loads as docs/cowork_driver.md says it does."""
+"""`cowork_evals.yaml` loads as docs/library.md says it does.
+
+One file, three sections, and no other route. Every test writes a real file and reads it
+back through the real loader.
+"""
 
 from __future__ import annotations
 
@@ -9,7 +13,14 @@ from pathlib import Path
 
 import pytest
 
-from cowork_evals.config import CONFIG_FILENAME, Config, CoWorkError
+from cowork_evals.config import (
+    CONFIG_FILENAME,
+    Config,
+    CoWorkError,
+    CoWorkSection,
+    DockerSection,
+    EvalSection,
+)
 
 
 @contextlib.contextmanager
@@ -28,71 +39,77 @@ def write(directory: Path, body: str, name: str = CONFIG_FILENAME) -> Path:
     return file
 
 
-def test_missing_file_yields_defaults(tmp_path: Path) -> None:
+# The defaults, section by section.
+
+
+def test_missing_file_yields_the_cowork_defaults(tmp_path: Path) -> None:
     with working_directory(tmp_path):
-        config = Config.load()
-    assert config.profile is None
-    assert config.surface == "cowork"
-    assert config.settle_seconds == 3.0
-    assert config.session_timeout == 120.0
-    assert config.idle_seconds == 20.0
-    assert config.run_timeout == 1800.0
-    assert config.max_runs == 50
-    assert config.run_log == Path.home() / ".cowork-runs.jsonl"
-    assert config.log_dir == tmp_path / "logs"
+        section = Config.load().cowork
+    assert section.profile is None
+    assert section.surface == "cowork"
+    assert section.settle_seconds == 3.0
+    assert section.session_timeout == 120.0
+    assert section.idle_seconds == 20.0
+    assert section.run_timeout == 1800.0
+    assert section.max_runs == 50
+    assert section.run_log == Path.home() / ".cowork-runs.jsonl"
+    assert section.log_dir == tmp_path / "logs"
 
 
-def test_file_values_beat_defaults(tmp_path: Path) -> None:
-    file = write(tmp_path, "cowork:\n  profile: Fixture\n  max_runs: 7\n  surface: ''\n")
+def test_missing_file_yields_the_eval_defaults(tmp_path: Path) -> None:
+    with working_directory(tmp_path):
+        section = Config.load().eval
+    assert section.model == "sonnet"
+    assert section.judge_model == "haiku"
+    assert section.allow_tools == ("Bash",)
+    assert section.max_cost_usd == 5
+    assert section.max_cost_total_usd == 25
+
+
+def test_missing_file_yields_the_docker_defaults(tmp_path: Path) -> None:
+    with working_directory(tmp_path):
+        section = Config.load().docker
+    assert section.platform == "linux/arm64"
+    assert section.claude_code_version == "2.1.265"
+    assert section.login_dir == Path.home() / ".cache" / "cowork_evals" / "claude"
+    assert section.extra_ca_file is None
+
+
+# The file over the defaults.
+
+
+def test_every_section_is_read_from_one_file(tmp_path: Path) -> None:
+    file = write(
+        tmp_path,
+        "cowork:\n"
+        "  profile: Fixture\n"
+        "eval:\n"
+        "  model: opus\n"
+        "  allow_tools: [Bash, Write]\n"
+        "docker:\n"
+        "  platform: linux/amd64\n",
+    )
     config = Config.load(file)
-    assert config.profile == "Fixture"
-    assert config.max_runs == 7
-    assert config.surface == ""
+    assert config.cowork.profile == "Fixture"
+    assert config.eval.model == "opus"
+    assert config.eval.allow_tools == ("Bash", "Write")
+    assert config.docker.platform == "linux/amd64"
 
 
-def test_override_beats_the_file(tmp_path: Path) -> None:
-    file = write(tmp_path, "cowork:\n  profile: Fixture\n  max_runs: 7\n")
-    config = Config.load(file, max_runs=3)
-    assert config.profile == "Fixture"
-    assert config.max_runs == 3
+def test_a_section_the_file_omits_is_the_default(tmp_path: Path) -> None:
+    file = write(tmp_path, "cowork:\n  profile: Fixture\n")
+    assert Config.load(file).eval == EvalSection()
+    assert Config.load(file).docker == DockerSection()
 
 
-def test_unknown_key_inside_cowork_raises(tmp_path: Path) -> None:
-    file = write(tmp_path, "cowork:\n  profil: Fixture\n")
-    with pytest.raises(CoWorkError) as raised:
-        Config.load(file)
-    assert raised.value.code == 2
-    assert "profil" in str(raised.value)
-
-
-def test_unknown_override_raises(tmp_path: Path) -> None:
-    with working_directory(tmp_path), pytest.raises(CoWorkError) as raised:
-        Config.load(nonsense=1)
-    assert raised.value.code == 2
+def test_a_widened_allow_tools_replaces_the_default(tmp_path: Path) -> None:
+    file = write(tmp_path, "eval:\n  allow_tools: [Write]\n")
+    assert Config.load(file).eval.allow_tools == ("Write",)
 
 
 def test_unknown_top_level_section_is_ignored(tmp_path: Path) -> None:
-    file = write(tmp_path, "docker:\n  platform: linux/arm64\ncowork:\n  profile: Fixture\n")
-    assert Config.load(file).profile == "Fixture"
-
-
-def test_tilde_is_expanded(tmp_path: Path) -> None:
-    file = write(tmp_path, "cowork:\n  run_log: ~/somewhere/runs.jsonl\n")
-    config = Config.load(file)
-    assert config.run_log == Path.home() / "somewhere" / "runs.jsonl"
-    assert "~" not in str(config.run_log)
-
-
-def test_relative_path_resolves_against_the_working_directory(tmp_path: Path) -> None:
-    file = write(tmp_path, "cowork:\n  log_dir: build/logs\n")
-    with working_directory(tmp_path):
-        config = Config.load(file)
-    assert config.log_dir == tmp_path / "build" / "logs"
-
-
-def test_log_dir_null_turns_the_file_off(tmp_path: Path) -> None:
-    file = write(tmp_path, "cowork:\n  log_dir: null\n")
-    assert Config.load(file).log_dir is None
+    file = write(tmp_path, "venv:\n  anything: 1\ncowork:\n  profile: Fixture\n")
+    assert Config.load(file).cowork.profile == "Fixture"
 
 
 def test_empty_file_yields_defaults(tmp_path: Path) -> None:
@@ -106,15 +123,87 @@ def test_a_named_file_that_is_absent_raises(tmp_path: Path) -> None:
     assert raised.value.code == 2
 
 
-def test_a_wrongly_typed_value_raises(tmp_path: Path) -> None:
-    file = write(tmp_path, "cowork:\n  max_runs: many\n")
+# An unknown key, in each section.
+
+
+@pytest.mark.parametrize(
+    ("body", "typo"),
+    [
+        ("cowork:\n  profil: Fixture\n", "profil"),
+        ("eval:\n  modle: opus\n", "modle"),
+        ("docker:\n  platfrom: linux/amd64\n", "platfrom"),
+    ],
+)
+def test_an_unknown_key_inside_a_known_section_raises(tmp_path: Path, body: str, typo: str) -> None:
+    file = write(tmp_path, body)
+    with pytest.raises(CoWorkError) as raised:
+        Config.load(file)
+    assert raised.value.code == 2
+    assert typo in str(raised.value)
+
+
+# A wrongly typed value, in each section.
+
+
+@pytest.mark.parametrize(
+    ("body", "key"),
+    [
+        ("cowork:\n  max_runs: many\n", "cowork.max_runs"),
+        ("eval:\n  max_cost_usd: five\n", "eval.max_cost_usd"),
+        ("eval:\n  allow_tools: Bash Write\n", "eval.allow_tools"),
+        ("docker:\n  platform: 3\n", "docker.platform"),
+    ],
+)
+def test_a_wrongly_typed_value_raises(tmp_path: Path, body: str, key: str) -> None:
+    file = write(tmp_path, body)
+    with pytest.raises(CoWorkError) as raised:
+        Config.load(file)
+    assert raised.value.code == 2
+    assert key in str(raised.value)
+
+
+def test_a_section_that_is_not_a_mapping_raises(tmp_path: Path) -> None:
+    file = write(tmp_path, "eval:\n  - model\n")
     with pytest.raises(CoWorkError) as raised:
         Config.load(file)
     assert raised.value.code == 2
 
 
+def test_a_wrongly_typed_field_raises_however_the_section_was_built() -> None:
+    """Conversion is `__post_init__`, so a direct build is checked like a loaded one."""
+    with pytest.raises(CoWorkError) as raised:
+        CoWorkSection(max_runs="many")  # type: ignore[arg-type]
+    assert raised.value.code == 2
+
+
+# The path convention, which every path key follows.
+
+
+def test_tilde_is_expanded(tmp_path: Path) -> None:
+    file = write(tmp_path, "cowork:\n  run_log: ~/somewhere/runs.jsonl\n")
+    config = Config.load(file)
+    assert config.cowork.run_log == Path.home() / "somewhere" / "runs.jsonl"
+    assert "~" not in str(config.cowork.run_log)
+
+
+def test_a_relative_path_resolves_against_the_working_directory(tmp_path: Path) -> None:
+    file = write(tmp_path, "cowork:\n  log_dir: build/logs\ndocker:\n  login_dir: build/login\n")
+    with working_directory(tmp_path):
+        config = Config.load(file)
+    assert config.cowork.log_dir == tmp_path / "build" / "logs"
+    assert config.docker.login_dir == tmp_path / "build" / "login"
+
+
+def test_log_dir_null_turns_the_file_off(tmp_path: Path) -> None:
+    file = write(tmp_path, "cowork:\n  log_dir: null\n")
+    assert Config.load(file).cowork.log_dir is None
+
+
+# The profile, which has no default.
+
+
 def test_sessions_root_is_derived_from_the_profile() -> None:
-    root = Config(profile="Fixture").sessions_root
+    root = CoWorkSection(profile="Fixture").sessions_root
     assert root == (
         Path.home() / "Library" / "Application Support" / "Fixture" / "local-agent-mode-sessions"
     )
@@ -122,18 +211,12 @@ def test_sessions_root_is_derived_from_the_profile() -> None:
 
 def test_sessions_root_without_a_profile_raises() -> None:
     with pytest.raises(CoWorkError) as raised:
-        _ = Config().sessions_root
+        _ = CoWorkSection().sessions_root
     assert raised.value.code == 2
 
 
-def test_a_wrongly_typed_field_raises_however_the_config_was_built() -> None:
-    """Conversion is `__post_init__`, so a direct build is checked like a loaded one."""
-    with pytest.raises(CoWorkError) as raised:
-        Config(max_runs="many")  # type: ignore[arg-type]
-    assert raised.value.code == 2
-
-
-def test_config_is_frozen() -> None:
-    config = Config(profile="Fixture")
-    with pytest.raises((AttributeError, TypeError)):
-        config.profile = "Other"  # type: ignore[misc]
+def test_every_section_is_frozen() -> None:
+    config = Config()
+    for section, key in ((config.cowork, "profile"), (config.eval, "model")):
+        with pytest.raises((AttributeError, TypeError)):
+            setattr(section, key, "Other")

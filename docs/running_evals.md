@@ -19,7 +19,7 @@ here.
 | ----------------------------------------- | ----- | ------------------------------------------- |
 | The 3.10 mirror, as a development script  | yes   | [environments.md](environments.md)          |
 | The `cowork_evals` package and CLI        | no    | [library.md](library.md), [cli.md](cli.md)  |
-| `.env` and the settings over it           | yes   | [library.md](library.md)                    |
+| `cowork_evals.yaml` and the `Config` over it | yes | [library.md](library.md)                    |
 | The pinned harness argument list          | yes   | this file                                   |
 | The venv backend                          | no    | this file                                   |
 | The staged runtime                        | no    | [staged_runtime.md](staged_runtime.md)      |
@@ -49,7 +49,7 @@ case. That is why [cli.md](cli.md) makes a multi-plugin path a usage error on `-
 The CoWork backend does not call `claude plugin eval`. It reads the same case tree, submits
 each case's prompt body through the driver, grades the driver's result document with the
 CoWork grader, and writes the same `aggregate-result.json`. It pins one run per case. Of the
-pinned flags below it uses only `EVAL_JUDGE_MODEL`, for judged graders. The rest configure
+pinned flags below it uses only `eval.judge_model`, for judged graders. The rest configure
 the CLI, and the CLI is not in the path. See [cowork_driver.md](cowork_driver.md).
 
 ### What counts as a case the backend cannot honour
@@ -163,16 +163,16 @@ Every flag below is pinned because its default would otherwise bite. What each f
 and the harness behaviour behind it, is in [plugin_eval.md](plugin_eval.md). Which of them a
 command-line option overrides, and on which backend, is [cli.md](cli.md).
 
-| Flag                                       | Pinned to                        |
-| ------------------------------------------ | -------------------------------- |
-| `--model`                                  | `${EVAL_MODEL:-sonnet}`          |
-| `--judge-model`                            | `${EVAL_JUDGE_MODEL:-haiku}`     |
-| `--ablation`                               | `none`                           |
-| `--threshold`                              | `0`, so the local gate decides   |
-| `--max-cost-usd`                           | `${EVAL_MAX_COST_USD:-5}`        |
-| `--output-dir`                             | the run's log directory          |
-| `--allow-tools`                            | `${EVAL_ALLOW_TOOLS:-Bash}`      |
-| `--no-publish`, `--no-scaffold`, `--verbose` | always                         |
+| Flag                                       | Pinned to                        | Configuration key, and its default |
+| ------------------------------------------ | -------------------------------- | ---------------------------------- |
+| `--model`                                  | the configured model             | `eval.model`, `sonnet`             |
+| `--judge-model`                            | the configured judge             | `eval.judge_model`, `haiku`        |
+| `--ablation`                               | `none`                           | none                               |
+| `--threshold`                              | `0`, so the local gate decides   | none                               |
+| `--max-cost-usd`                           | the configured ceiling           | `eval.max_cost_usd`, 5             |
+| `--output-dir`                             | the run's log directory          | none                               |
+| `--allow-tools`                            | the configured grant             | `eval.allow_tools`, `[Bash]`       |
+| `--no-publish`, `--no-scaffold`, `--verbose` | always                         | none                               |
 
 The target goes before every variadic flag: `--tag` and `--allow-tools` swallow a trailing
 target.
@@ -215,11 +215,12 @@ of this command. It doubles the agent runs, and the table in
 `--allow-tools` is pinned because a case cannot grant itself `Bash`, `Write`, `Edit`,
 `WebFetch` or an MCP tool. The operator grant is the only route, and an ungranted case loses
 the tool rather than failing loudly. `Bash` is the default because a skill that shells out
-needs it. Widen it through `EVAL_ALLOW_TOOLS` or `--allow-tools`, which replace the value
+needs it. Widen it through `eval.allow_tools` or `--allow-tools`, which replace the value
 rather than adding to it, so the widened value has to name `Bash` again.
 
 The two Claude Code backends export `CLAUDE_CODE_WALNUT_SPIRE`, the early-access enablement
-variable, so no developer sets it by hand. See [plugin_eval.md](plugin_eval.md).
+variable, so no developer sets it by hand. It is a constant in `harness.py` and not a
+configuration key. See [plugin_eval.md](plugin_eval.md).
 
 `--json` is never passed, for the reason in [plugin_eval.md](plugin_eval.md).
 
@@ -307,10 +308,10 @@ A consumer automates it when all four of these hold, and not before:
 [plugin_eval.md](plugin_eval.md) counts the model calls a suite makes. This file sets the
 ceilings on what they may cost.
 
-| Ceiling                   | Default | Binds                | Reached through            |
-| ------------------------- | ------- | -------------------- | -------------------------- |
-| `EVAL_MAX_COST_USD`       | 5       | one plugin's suite   | `--max-cost-usd`           |
-| `EVAL_MAX_COST_TOTAL_USD` | 25      | the whole invocation | the variable only, no flag |
+| Ceiling                      | Default | Binds                | Reached through        |
+| ---------------------------- | ------- | -------------------- | ---------------------- |
+| `eval.max_cost_usd`          | 5       | one plugin's suite   | `--max-cost-usd`       |
+| `eval.max_cost_total_usd`    | 25      | the whole invocation | the key only, no flag  |
 
 The total binds first: five plugins at 5 USD each is 25. A sweep sums `costUsd` from each
 plugin's result document and checks the total before every plugin, the first included, so a

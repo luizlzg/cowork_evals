@@ -67,52 +67,55 @@ The rule, which is what the old split lacked: the section is named for the thing
 it. `Config` becomes the whole file, holding three frozen nested dataclasses. `CoWork` takes
 `config.cowork`.
 
-- [ ] Confirm the split is as described. `src/cowork_evals/env.py` `DEFAULTS` should list
+- [x] Confirm the split is as described. `src/cowork_evals/env.py` `DEFAULTS` should list
       eight names, and `src/cowork_evals/config.py` `_FIELDS` nine.
-- [ ] `config.py`: three frozen dataclasses, `CoWorkSection`, `EvalSection`,
+- [x] `config.py`: three frozen dataclasses, `CoWorkSection`, `EvalSection`,
       `DockerSection`, and a frozen `Config` holding one of each. Keep the existing
       `_FIELDS` idiom: one converter per field, run in `__post_init__`, the key set doubling
       as the accepted-key set. An unknown key inside a known section stays an error. An
       unknown top level section stays ignored.
-- [ ] Defaults move across unchanged: `model` `sonnet`, `judge_model` `haiku`,
+- [x] Defaults move across unchanged: `model` `sonnet`, `judge_model` `haiku`,
       `allow_tools` `["Bash"]`, `max_cost_usd` 5, `max_cost_total_usd` 25, `platform`
       `linux/arm64`, `claude_code_version` `2.1.265`, `login_dir`
       `~/.cache/cowork_evals/claude`, `extra_ca_file` none.
-- [ ] `allow_tools` becomes a list in YAML rather than a whitespace-separated string. It
+- [x] `allow_tools` becomes a list in YAML rather than a whitespace-separated string. It
       still replaces the default rather than adding to it, so a widened value names `Bash`
       again.
-- [ ] `extra_ca_file` is an explicit key. `SSL_CERT_FILE` is no longer read. A machine
+- [x] `extra_ca_file` is an explicit key. `SSL_CERT_FILE` is no longer read. A machine
       behind a TLS-inspecting proxy names the certificate in `cowork_evals.yaml`.
-- [ ] `CLAUDE_CODE_WALNUT_SPIRE` becomes a module constant in `harness.py`, not a setting.
+- [x] `CLAUDE_CODE_WALNUT_SPIRE` becomes a module constant in `harness.py`, not a setting.
       The package exports it into the child; no developer chooses it.
-- [ ] Delete `src/cowork_evals/env.py` and `tests/unit/test_env.py`. Remove
+- [x] Delete `src/cowork_evals/env.py` and `tests/unit/test_env.py`. Remove
       `python-dotenv` from `pyproject.toml`.
-- [ ] `harness.py`: `RunOptions.resolve` takes a `Config` instead of calling `setting()`.
+- [x] `harness.py`: `RunOptions.resolve` takes a `Config` instead of calling `setting()`.
       An explicit argument still beats the file.
-- [ ] `docker/__init__.py`: `Docker.__init__` takes a `Config` and resolves every setting
+- [x] `docker/__init__.py`: `Docker.__init__` takes a `Config` and resolves every setting
       once at construction, `extra_ca_file` included. Today `platform` and
       `claude_code_version` are frozen on the instance while `extra_ca_file` re-reads the
       environment on every property access, against the class docstring's own claim that a
       `Docker` holds frozen configuration.
-- [ ] `login_dir` uses `Config`'s path convention, which expands `~` and resolves a relative
+- [x] `login_dir` uses `Config`'s path convention, which expands `~` and resolves a relative
       path against the working directory. `Docker.__init__` applies only `.expanduser()`
       today, so a relative `login_dir` reaches `docker -v` unresolved.
-- [ ] `tests/unit/test_config.py` covers the three sections, every default, an unknown key
+- [x] `tests/unit/test_config.py` covers the three sections, every default, an unknown key
       in each section, and a wrong type in each section.
-- [ ] `tests/unit/test_harness.py` and `tests/unit/test_docker.py` build a `Config` rather
+- [x] `tests/unit/test_harness.py` and `tests/unit/test_docker.py` build a `Config` rather
       than setting environment variables. The `environment(...)` helper goes if nothing else
       uses it.
-- [ ] `docs/library.md`: one settings route. Delete the four-layer table and the `.env`
+- [x] `docs/library.md`: one settings route. Delete the four-layer table and the `.env`
       section. The ladder is: a command-line option beats the file, the file beats the
       built-in default.
-- [ ] `docs/cowork_driver.md`: the configuration section now describes the `cowork:` section
+- [x] `docs/cowork_driver.md`: the configuration section now describes the `cowork:` section
       of a larger file, and the sentence "`.env` carries credentials and not configuration"
       goes.
-- [ ] `docs/cli.md` and `docs/running_evals.md`: every `EVAL_*` reference becomes a
+- [x] `docs/cli.md` and `docs/running_evals.md`: every `EVAL_*` reference becomes a
       `cowork_evals.yaml` key. `docs/running_evals.md`'s pinned-flag table maps each flag to
       a config key rather than a variable.
-- [ ] `docs/docker.md`: the `CLAUDE_CODE_VERSION` environment route goes.
-- [ ] `README.md`: the example `cowork_evals.yaml` shows all three sections.
+- [x] `docs/docker.md`: the `CLAUDE_CODE_VERSION` environment route goes.
+- [x] `README.md`: the example `cowork_evals.yaml` shows all three sections.
+      not a defect: `README.md` carries no example configuration file. The example lives in
+      `docs/library.md`, which owns the settings route, and shows all three sections. The
+      layout row at `README.md:53` called the file the driver's and was corrected.
 
 ## Phase 2: Statements that are false
 

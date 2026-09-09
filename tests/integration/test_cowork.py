@@ -13,18 +13,18 @@ from pathlib import Path
 
 import pytest
 
-from cowork_evals import Config, CoWork, CoWorkError
+from cowork_evals import Config, CoWork, CoWorkError, CoWorkSection
 
 TAXONOMY = {2, 3, 4, 5, 6, 7, 8}
 
 
-def real_profile() -> Config:
+def real_profile() -> CoWorkSection:
     """The configured profile. Fails when this machine has none, and never skips."""
-    config = Config.load()
-    assert config.profile is not None, "cowork_evals.yaml names no profile"
-    readable = config.profile_dir.is_dir()
+    section = Config.load().cowork
+    assert section.profile is not None, "cowork_evals.yaml names no profile"
+    readable = section.profile_dir.is_dir()
     assert readable, "the configured profile directory does not exist"
-    return config
+    return section
 
 
 @pytest.mark.integration

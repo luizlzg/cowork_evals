@@ -16,8 +16,8 @@ import os
 import subprocess
 from pathlib import Path
 
-from ..env import setting
-from ..harness import RunOptions, eval_argv
+from ..config import Config
+from ..harness import ENABLEMENT_ENV, RunOptions, eval_argv
 
 DOCKERFILE = Path(__file__).parent / "Dockerfile"
 DATA = Path(__file__).parent.parent / "data"
@@ -28,9 +28,8 @@ INSTALLABLE = DATA / "requirements_installable.txt"
 REPOSITORY = "cowork-evals"
 DIGEST_LENGTH = 12
 
-# The configuration directory this package owns, and the CLI state file beside it. Never
-# the developer's own ~/.claude. docs/docker.md.
-DEFAULT_LOGIN_DIR = Path("~/.cache/cowork_evals/claude")
+# The configuration directory this package owns holds these two, and never the developer's
+# own ~/.claude. Its path is `docker.login_dir`. docs/docker.md.
 CLAUDE_DIR_NAME = ".claude"
 STATE_FILE_NAME = ".claude.json"
 CREDENTIALS_FILE_NAME = ".credentials.json"
@@ -46,9 +45,9 @@ CONTAINER_LOGS = "/work/logs"
 # What the harness leaves behind, and the only thing a backend returns. docs/running_evals.md.
 RESULT_NAME = "aggregate-result.json"
 
-# An optional extra root CA, for a host whose network inspects TLS. The host path comes
-# from SSL_CERT_FILE, which such a host already sets for its own tooling, and never from
-# this repository. The Dockerfile installs it under this path. docs/docker.md.
+# An optional extra root CA, for a host whose network inspects TLS. The host path is
+# `docker.extra_ca_file`, and the certificate itself never enters this repository. The
+# Dockerfile installs it under this path. docs/docker.md.
 EXTRA_CA_SECRET = "extra_ca"
 CONTAINER_EXTRA_CA = "/usr/local/share/ca-certificates/extra_ca.crt"
 
@@ -73,31 +72,22 @@ def plugin_root(target: Path | str) -> Path:
 class Docker:
     """One resolved container configuration."""
 
-    def __init__(
-        self,
-        *,
-        platform: str | None = None,
-        claude_code_version: str | None = None,
-        login_dir: Path | str | None = None,
-    ) -> None:
-        self.platform = platform if platform is not None else setting("EVAL_PLATFORM")
-        self.claude_code_version = (
-            claude_code_version
-            if claude_code_version is not None
-            else setting("CLAUDE_CODE_VERSION")
-        )
-        self.login_dir = (
-            Path(login_dir).expanduser() if login_dir else DEFAULT_LOGIN_DIR.expanduser()
-        )
+    def __init__(self, config: Config | None = None) -> None:
+        """Every setting resolved once, so a `Docker` is frozen configuration.
 
-    @property
-    def extra_ca_file(self) -> Path | None:
-        """The host's extra root CA, or None on a network that does not inspect TLS."""
-        value = setting("SSL_CERT_FILE")
-        if not value:
-            return None
-        path = Path(value).expanduser()
-        return path if path.is_file() else None
+        `config` defaults to `cowork_evals.yaml` in the working directory. A configured
+        `extra_ca_file` that is not on disk is a host that does not intercept TLS.
+        """
+        self._config = config if config is not None else Config.load()
+        settings = self._config.docker
+        self.platform = settings.platform
+        self.claude_code_version = settings.claude_code_version
+        self.login_dir = settings.login_dir
+        self.extra_ca_file: Path | None = (
+            settings.extra_ca_file
+            if settings.extra_ca_file is not None and settings.extra_ca_file.is_file()
+            else None
+        )
 
     # The login this package owns. Both paths are mounted read-write, because the CLI
     # refreshes its token and rewrites its state file on every start.
@@ -213,7 +203,7 @@ class Docker:
             # The process in the container is the harness itself, with no wrapper to
             # export the enablement variable. docs/plugin_eval.md.
             "--env",
-            f"CLAUDE_CODE_WALNUT_SPIRE={setting('CLAUDE_CODE_WALNUT_SPIRE')}",
+            ENABLEMENT_ENV,
             # Granting Bash turns on the OS sandbox, and bubblewrap needs two things the
             # default container profile denies: unprivileged user namespaces unfiltered,
             # and a /proc it can mount over. docs/docker.md.
@@ -298,7 +288,7 @@ class Docker:
         itself a failure: the harness exits 1 below threshold and 2 on partial results,
         and the gate reads the document either way. No document at all is.
         """
-        options = options if options is not None else RunOptions.resolve()
+        options = options if options is not None else RunOptions.resolve(self._config)
         output_dir = Path(output_dir).resolve()
         completed = subprocess.run(self.run_argv(target, output_dir, options))
         result = output_dir / RESULT_NAME

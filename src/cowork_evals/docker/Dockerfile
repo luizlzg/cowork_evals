@@ -96,8 +96,8 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 # An optional extra root CA, for a host whose network inspects TLS. It arrives as a build
-# secret read from SSL_CERT_FILE, never from the build context, and is absent on a network
-# that does not intercept. docs/docker.md.
+# secret named by docker.extra_ca_file, never through the build context, and is absent on a
+# network that does not intercept. docs/docker.md.
 ENV EXTRA_CA_FILE=/usr/local/share/ca-certificates/extra_ca.crt
 RUN --mount=type=secret,id=extra_ca \
   set -eux; \

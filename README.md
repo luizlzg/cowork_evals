@@ -50,7 +50,7 @@ Desktop, and the CoWork desktop application. `cowork_evals check` reports what i
 | [`plugins/`](plugins/README.md) | Fixture plugins for this repository's own tests                     |
 | [`tests/`](tests/README.md)     | Deterministic tests for this repository's own code                  |
 | `logs/`                         | Eval run output. Git-ignored, and absent until a run creates it     |
-| `cowork_evals.yaml`             | The CoWork driver's configuration. Git-ignored: it names a profile  |
+| `cowork_evals.yaml`             | Every setting, in three sections. Git-ignored: it names a profile   |
 
 ## Public repository
 

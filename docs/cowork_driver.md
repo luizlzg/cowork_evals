@@ -46,18 +46,20 @@ Two modules, and PyYAML.
 
 | Module                     | Holds                                                       |
 | -------------------------- | ------------------------------------------------------------ |
-| `cowork_evals.config`      | `cowork_evals.yaml`, the frozen `Config`, and `CoWorkError` |
+| `cowork_evals.config`      | `cowork_evals.yaml`, the frozen `Config` and its sections, and `CoWorkError` |
 | `cowork_evals.cowork`      | `CoWork`, the driver                                        |
 
-`Config`, `CoWork` and `CoWorkError` are the whole public surface, and they are re-exported
-from `cowork_evals`. There is no module level function, so a caller passes a configuration
-once and calls methods on the object that holds it.
+`Config`, its three sections, `CoWork` and `CoWorkError` are the whole public surface, and
+they are re-exported from `cowork_evals`. There is no module level function, so a caller
+passes a configuration once and calls methods on the object that holds it. A `CoWork` takes
+the `cowork:` section, `CoWorkSection`, and never the whole file.
 
 ```python
 from cowork_evals import Config, CoWork, CoWorkError
 
 cw = CoWork()  # reads cowork_evals.yaml
 cw = CoWork(profile="...", max_runs=10)  # the same, with overrides
+cw = CoWork(Config.load().cowork)  # from a configuration already loaded
 cw = CoWork.from_file("other.yaml")
 
 doc = cw.run("Reply with exactly: PONG")  # submit, wait, collect
@@ -150,9 +152,10 @@ fires. It can fire during a long pause mid-run, which is why `idle_seconds` is r
 
 ## Configuration
 
-One file, `cowork_evals.yaml`, in the working directory. It is the only configuration route.
-No machine fact is hardcoded, and the driver reads no environment variable. `.env` carries
-credentials and not configuration; see [library.md](library.md).
+The `cowork:` section of `cowork_evals.yaml`, in the working directory. That file is the
+only configuration route, and the sections beside this one belong to other readers; see
+[library.md](library.md). No machine fact is hardcoded, and the driver reads no environment
+variable.
 
 ```yaml
 cowork:
@@ -179,17 +182,10 @@ cowork:
 | `run_log`         | `~/.cowork-runs.jsonl` | The run log, outside the profile               |
 | `log_dir`         | `logs`                 | Diagnostic logs. `null` turns them off         |
 
-Loading rules:
-
-| Rule                                                                                     |
-| ------------------------------------------------------------------------------------------ |
-| A missing `cowork_evals.yaml` is not an error. Every field falls back to its default      |
-| A file named to `Config.load` or `CoWork.from_file` must exist, so a mistyped path is never a silent set of defaults |
-| An unknown key inside `cowork:` is an error, so a typo is never a silent default          |
-| A value of the wrong type is an error, wherever the `Config` was built from                |
-| An unknown top level section is ignored, so a later backend adds its own without touching this loader |
-| An override passed to the `CoWork` constructor or to `Config.load` beats the file, which beats the default |
-| `~` in a path is expanded. A relative path resolves against the working directory          |
+The loading rules are [library.md](library.md), which owns the file. Two are the driver's
+own: a file named to `Config.load` or `CoWork.from_file` must exist, so a mistyped path is
+never a silent set of defaults, and an override passed to the `CoWork` constructor beats
+the file.
 
 `profile` has no default on purpose. A wrong guess drives the wrong account. An unset or
 unreadable one is refused at step 1, as code 2, before anything is fired. A bare name

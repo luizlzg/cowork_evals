@@ -5,11 +5,12 @@ Nothing in this file runs the harness. The argument list is the unit under test.
 
 from __future__ import annotations
 
+from cowork_evals.config import Config, EvalSection
 from cowork_evals.harness import RunOptions, eval_argv
 
 
 def options(**overrides) -> RunOptions:
-    """A fully explicit RunOptions, so a test reads no setting it did not set."""
+    """A fully explicit RunOptions, so a test reads no configuration it did not write."""
     fixed = {
         "model": "sonnet",
         "judge_model": "haiku",
@@ -26,29 +27,34 @@ def value_after(argv: list[str], flag: str) -> str:
 # Resolving the options.
 
 
-def test_the_settings_supply_the_defaults(environment, working_directory, tmp_path):
-    with (
-        environment(
-            EVAL_MODEL=None, EVAL_JUDGE_MODEL=None, EVAL_MAX_COST_USD=None, EVAL_ALLOW_TOOLS=None
-        ),
-        working_directory(tmp_path),
-    ):
-        resolved = RunOptions.resolve()
-    assert resolved == RunOptions(
+def test_the_built_in_defaults_apply_when_the_file_carries_no_eval_section():
+    assert RunOptions.resolve(Config()) == RunOptions(
         model="sonnet", judge_model="haiku", max_cost_usd="5", allow_tools=("Bash",)
     )
 
 
-def test_a_setting_beats_the_default(environment, working_directory, tmp_path):
-    with environment(EVAL_MODEL="opus", EVAL_ALLOW_TOOLS="Bash Write"), working_directory(tmp_path):
-        resolved = RunOptions.resolve()
+def test_the_configured_value_beats_the_default():
+    config = Config(eval=EvalSection(model="opus", allow_tools=("Bash", "Write")))
+    resolved = RunOptions.resolve(config)
     assert resolved.model == "opus"
     assert resolved.allow_tools == ("Bash", "Write")
 
 
-def test_an_explicit_value_beats_the_setting(environment, working_directory, tmp_path):
-    with environment(EVAL_MODEL="opus"), working_directory(tmp_path):
-        assert RunOptions.resolve(model="haiku").model == "haiku"
+def test_an_explicit_argument_beats_the_configured_value():
+    config = Config(eval=EvalSection(model="opus"))
+    assert RunOptions.resolve(config, model="haiku").model == "haiku"
+
+
+def test_an_omitted_config_is_read_from_the_working_directory(working_directory, tmp_path):
+    (tmp_path / "cowork_evals.yaml").write_text("eval:\n  judge_model: opus\n", encoding="utf-8")
+    with working_directory(tmp_path):
+        assert RunOptions.resolve().judge_model == "opus"
+
+
+def test_a_whole_cost_is_emitted_without_a_decimal_point():
+    """`max_cost_usd` is a number in the file and a string on the command line."""
+    assert RunOptions.resolve(Config()).max_cost_usd == "5"
+    assert RunOptions.resolve(Config(eval=EvalSection(max_cost_usd=2.5))).max_cost_usd == "2.5"
 
 
 # The command line.

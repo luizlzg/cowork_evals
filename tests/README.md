@@ -34,9 +34,8 @@ A skipped test reports as a pass and hides the thing it was written to catch.
 | File                              | Covers                                                     | Exists |
 | --------------------------------- | ---------------------------------------------------------- | ------ |
 | `unit/test_environments.py`       | Both interpreters, the two requirements files, the scripts | yes    |
-| `unit/test_config.py`             | `cowork_evals.yaml` and the `Config` it produces           | yes    |
+| `unit/test_config.py`             | `cowork_evals.yaml`, its three sections, and the `Config`  | yes    |
 | `unit/test_cowork.py`             | The CoWork driver: reading, refusing, submitting, waiting  | yes    |
-| `unit/test_env.py`                | `.env` and the three settings layers                       | yes    |
 | `unit/test_harness.py`            | The `claude plugin eval` argument list                     | yes    |
 | `unit/test_docker.py`             | The image digest, and the build, login and run argument lists | yes |
 | `unit/test_parity.py`             | Recorded container probes against the image inventory      | yes    |

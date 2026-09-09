@@ -6,8 +6,8 @@ points it at its own tree.
 
 This file is the boundary. The command surface is [cli.md](cli.md).
 
-Design, except the package tree, the CoWork driver, the settings layers and the container
-backend, which are built. What is built is the status table in
+Design, except the package tree, the CoWork driver, the configuration file and the
+container backend, which are built. What is built is the status table in
 [running_evals.md](running_evals.md).
 
 ## The two repositories
@@ -15,7 +15,7 @@ backend, which are built. What is built is the status table in
 | Repository   | Owns                                                                                              |
 | ------------ | ------------------------------------------------------------------------------------------------- |
 | This one     | The three backends, the CLI, the gate, the case validator, the pinned CoWork wheel set, the image |
-| The consumer | Its plugins, their `evals/` trees, its `logs/`, its `.env`, and the pinned version of this package |
+| The consumer | Its plugins, their `evals/` trees, its `logs/`, its `cowork_evals.yaml`, and the pinned version of this package |
 
 The consumer never runs `claude plugin eval`. That command is an implementation detail of
 two of the three backends, and [cli.md](cli.md) is the whole surface a consumer sees.
@@ -42,7 +42,7 @@ mirrors an old VM. See [runtime.md](runtime.md).
 | ------------------------------------------ | ----- | -------------------------------------------------- |
 | `src/cowork_evals/`                        | yes   | The CoWork driver, the CLI, the three backends, the gate, the validator |
 | `src/cowork_evals/data/requirements*.txt`  | yes   | The pins the mirror and the image are built from   |
-| `src/cowork_evals/env.py`                  | yes   | `.env`, and the three settings layers below        |
+| `src/cowork_evals/config.py`               | yes   | `cowork_evals.yaml`, and the frozen `Config` below |
 | `src/cowork_evals/harness.py`              | yes   | The `claude plugin eval` argument list, for both Claude Code backends |
 | `src/cowork_evals/docker/`                 | yes   | The container backend: the digest, the argument lists, build, check and run |
 | `src/cowork_evals/docker/Dockerfile`       | yes   | What `setup --docker` builds                       |
@@ -117,34 +117,44 @@ A tree the CLI can be pointed at, and nothing else. A plugin is discovered by a
 glob, because marketplace repositories do not share one layout. The case tree inside
 `evals/` is [eval_format.md](eval_format.md), unchanged by which repository holds it.
 
-Options are flags, and their defaults are environment variables. Those variables are written
-in a `.env` file in the working directory, the directory `logs/` is resolved from. A shell or
-a CI job may set a variable directly instead, and wins when it does.
+Options are flags, and their defaults are keys in `cowork_evals.yaml`, in the working
+directory, the directory `logs/` is resolved from. That file is the only configuration
+route: nothing is read from the process environment, and there is no `.env`.
 
-| Layer                           | Beats           | Is for                                  |
-| ------------------------------- | --------------- | --------------------------------------- |
-| A command-line option           | every row below | one run                                 |
-| The process environment         | `.env`          | CI, and a one-off `EVAL_MODEL=opus ...` |
-| `.env` in the working directory | the default     | a consumer's standing settings          |
-| The built-in default            | nothing         | a machine that sets nothing             |
+| Layer                 | Beats           | Is for                         |
+| --------------------- | --------------- | ------------------------------ |
+| A command-line option | every row below | one run                        |
+| `cowork_evals.yaml`   | the default     | a consumer's standing settings |
+| The built-in default  | nothing         | a machine that sets nothing    |
 
-`.env` is read with `python-dotenv`, so the format is that library's, and it is read with
-interpolation off: a value is never expanded against another value or against the
-environment. The file is read, never applied to `os.environ`, because the process
-environment is the layer above it. A key the CLI does not recognise is ignored, because a
-consumer's `.env` serves more than this command.
+The file holds three sections, and a section is named for the thing that reads it. A new
+setting goes in the section of whatever reads it, which is the rule the file is kept to.
 
-`.env` is never committed, and the public repository rule in
-[../README.md](../README.md) applies to every value in it.
+| Section   | Read by                                | Its keys and defaults are in         |
+| --------- | -------------------------------------- | ------------------------------------ |
+| `cowork:` | The CoWork driver                      | [cowork_driver.md](cowork_driver.md) |
+| `eval:`   | The `claude plugin eval` argument list | [running_evals.md](running_evals.md) |
+| `docker:` | The container backend                  | [docker.md](docker.md)               |
 
-The CoWork driver takes none of this. It is configured by `cowork_evals.yaml`, reads no
-environment variable, and reads no `.env`. See [cowork_driver.md](cowork_driver.md).
+```yaml
+cowork:
+  profile: <the Application Support profile directory name>
+eval:
+  model: opus
+docker:
+  platform: linux/amd64
+```
 
-| Variables                                                | Named in                             |
-| ---------------------------------------------------------- | ------------------------------------ |
-| `EVAL_MODEL`, `EVAL_JUDGE_MODEL`, `EVAL_ALLOW_TOOLS`, `EVAL_MAX_COST_USD`, `EVAL_MAX_COST_TOTAL_USD` | [running_evals.md](running_evals.md) |
-| `EVAL_PLATFORM`, `CLAUDE_CODE_VERSION`, `SSL_CERT_FILE`  | [docker.md](docker.md)               |
-| `CLAUDE_CODE_WALNUT_SPIRE`                               | [plugin_eval.md](plugin_eval.md)     |
+| Rule                                                                                    |
+| ----------------------------------------------------------------------------------------- |
+| A missing file, a missing section and a missing key each fall back to the built-in default |
+| An unknown key inside a known section is an error, so a typo is never a silent default     |
+| A value of the wrong type is an error, wherever the `Config` was built from                 |
+| An unknown top level section is ignored, so a later backend adds its own without touching the loader |
+| `~` in a path is expanded, and a relative path resolves against the working directory       |
+
+`cowork_evals.yaml` names a profile, which is an identifier, so it is never committed. The
+public repository rule in [../README.md](../README.md) applies to every value in it.
 
 ## Where state lives
 
@@ -159,8 +169,8 @@ environment variable, and reads no `.env`. See [cowork_driver.md](cowork_driver.
 Nothing writes into the installed package. One thing writes a build product into the
 consumer checkout: the venv backend stages a runtime inside the plugin under test for the
 length of a run, and removes it when the run ends. See
-[staged_runtime.md](staged_runtime.md). The consumer git-ignores `logs/`,
-`.cowork-runtime/` and `.env`, and nothing else.
+[staged_runtime.md](staged_runtime.md). The consumer git-ignores `logs/` and
+`.cowork-runtime/`, and nothing else.
 
 Both digests cover every input that changes the artefact, so a changed input produces a
 different path or tag rather than a stale hit. The mirror digest is the sha256 of

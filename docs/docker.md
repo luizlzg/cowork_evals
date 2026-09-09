@@ -16,12 +16,12 @@ is the status table in [running_evals.md](running_evals.md).
 ## Usage
 
 ```bash
-cowork_evals setup --docker                                   # build for EVAL_PLATFORM
+cowork_evals setup --docker                                   # build for docker.platform
 cowork_evals check --docker                                   # daemon, image digest, credential
 cowork_evals run --docker path/to/plugin/evals/<skill>        # one skill, in the container
 cowork_evals run --docker path/to/repo                        # every plugin, in the container
 
-scripts/image.sh                                              # development: build for EVAL_PLATFORM
+scripts/image.sh                                              # development: build for docker.platform
 scripts/image.sh --check                                      # development: the digest is present, no writes
 scripts/login.sh                                              # development: log in once, in a container
 scripts/login.sh --check                                      # development: a login is present, no writes
@@ -111,7 +111,7 @@ conversion is broken.
 The recorded image is `aarch64`. `--platform linux/arm64` matches it natively on an ARM Mac
 and needs qemu emulation elsewhere, which is correct but several times slower.
 
-The build takes `--platform` from `EVAL_PLATFORM`, default `linux/arm64`. The parity report
+The build takes `--platform` from `docker.platform`, default `linux/arm64`. The parity report
 records the platform actually used, so an x86 run is never mistaken for an aarch64 one.
 
 The upstream LibreOffice archive is named by the kernel architecture, not by Docker's, and
@@ -142,19 +142,19 @@ a TLS-inspecting proxy the container has no issuer for any of them and the build
 the first fetch. PyPI and the npm registry were not intercepted on the host measured below,
 so the pins and the CLI install either way.
 
-The build takes an extra root CA from `SSL_CERT_FILE`, which such a host already sets for
-its own tooling. It is passed as a BuildKit secret, never through the build context, and
+The build takes an extra root CA from `docker.extra_ca_file`, which such a host names in
+`cowork_evals.yaml`. It is passed as a BuildKit secret, never through the build context, and
 the Dockerfile installs it into the image CA store. Both the fetches above and the Claude
 Code CLI inside the container then trust it: `claude.ai` is intercepted on that host too, so
 the login route needs it as much as the build does.
 
 | Layer                     | Reads it from                                    |
 | ------------------------- | ------------------------------------------------ |
-| `build_argv`              | `--secret id=extra_ca,src=$SSL_CERT_FILE`        |
+| `build_argv`              | `--secret id=extra_ca,src=<docker.extra_ca_file>` |
 | The Dockerfile            | `/run/secrets/extra_ca`, once, into the CA store |
 | `run_argv`, `login_argv`  | `--env NODE_EXTRA_CA_CERTS`, because Node carries its own root store |
 
-`SSL_CERT_FILE` unset, or naming a file that is not there, is a host that does not
+`docker.extra_ca_file` unset, or naming a file that is not there, is a host that does not
 intercept, and nothing is passed. The certificate itself never enters this repository: the
 public repository rule in [../README.md](../README.md) covers it, and a corporate root names
 the employer.
@@ -182,9 +182,8 @@ that list is built either way. See [cli.md](cli.md).
 
 The harness is not part of the CoWork image, so it is not in the inventory above. The
 container installs it as a global npm package, `@anthropic-ai/claude-code`, at the version
-in the `CLAUDE_CODE_VERSION` build argument. The default is 2.1.265, and
-`CLAUDE_CODE_VERSION` in the environment or in `.env` moves it. It is in the image digest,
-so two versions cannot share one tag.
+in the `CLAUDE_CODE_VERSION` build argument. `docker.claude_code_version` supplies it,
+default 2.1.265. It is in the image digest, so two versions cannot share one tag.
 
 Not every version runs here. 2.1.259, the version [plugin_eval.md](plugin_eval.md) is
 written against, cannot run a Bash-granting case on Linux at all. Its sandbox masks
@@ -335,8 +334,8 @@ them.
 ## Image tagging
 
 The image is tagged `cowork-evals:<digest>`, where `<digest>` is the first 12 characters of
-the sha256 of the Dockerfile, both requirements files, the resolved `CLAUDE_CODE_VERSION`
-and the resolved platform. Without the platform an `arm64` and an `amd64` image share one
+the sha256 of the Dockerfile, both requirements files, the resolved
+`docker.claude_code_version` and the resolved `docker.platform`. Without the platform an `arm64` and an `amd64` image share one
 tag. Every build input is in the digest, including the build argument, so two CLI versions
 cannot share one tag and no change can be served from a stale image.
 
