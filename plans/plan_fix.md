@@ -173,8 +173,10 @@ belongs in `aggregate-result.json`, which `docs/running_evals.md:228` and
       `docs/cowork_driver.md`: the section title at `:258`, the method table at `:69-72`,
       and `:26`, `:286` and `:297`.
 - [x] "Result document" then means `aggregate-result.json` v1 and nothing else, everywhere.
-- [ ] `docs/cowork_driver.md:302-306` reads correctly once renamed: a skip is written into
+- [x] `docs/cowork_driver.md:302-306` reads correctly once renamed: a skip is written into
       the result document, which is the aggregate.
+      It is now the only result document in that file, and the same paragraph links to
+      `docs/running_evals.md`, which names the aggregate as the v1 result document.
 - [ ] `src/cowork_evals/cowork.py` docstrings and `tests/` follow the same rename.
 - [ ] `plans/plan_cowork_backend.md` follows it too. That plan reads the driver's output on
       every second line and currently inherits the ambiguity.
