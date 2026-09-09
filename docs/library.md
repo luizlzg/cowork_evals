@@ -32,10 +32,31 @@ Docker backend, and [cli.md](cli.md) is the whole surface a consumer sees.
 
 ## Installing
 
+The repository is the distribution. `pyproject.toml` sits at its root and the backend is
+hatchling, so a git reference builds the same wheel `scripts/build.sh` builds. It is not on
+a package index yet, so a consumer installs from the repository:
+
+```sh
+uv add --dev "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.1.0"
+pip install "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.1.0"
+uv tool install "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.1.0"
+```
+
+The reference after `@` is a tag, a branch or a commit, and it is the pin. Dropping it tracks
+the default branch. The third line installs the command outside any project, which is how a
+consumer that runs the command but does not import it holds the pin.
+[../README.md](../README.md) carries the same three lines, and it is what a consumer reads.
+Once the package is on an index they become the name alone:
+
 ```sh
 uv add --dev cowork-evals
 pip install cowork-evals
 ```
+
+The distribution is `cowork-evals` and the command is `cowork_evals`. `scripts/build.sh`
+builds both artefacts into `dist/` and proves the wheel carries the Dockerfiles and the
+requirements files; `uv publish` is what sends them, and this repository runs no publishing
+step of its own.
 
 `[project.scripts]` provides the `cowork_evals` executable. It is the one entry point: there
 is no second, and no per-backend executable. `cowork_evals --version` prints the installed
@@ -79,6 +100,11 @@ A consumer never sees `scripts/`. Those are the tasks that build this repository
 environments, run its tests and lint it, and they are named nowhere in [cli.md](cli.md). See
 [../scripts/README.md](../scripts/README.md).
 
+The table is enforced by the sdist include list in `pyproject.toml`, which names the package,
+`README.md` and `LICENSE` and nothing else. `scripts/build.sh` fails if a development
+directory reaches the sdist, or if a Dockerfile or a requirements file is missing from the
+wheel.
+
 The requirements files are shipped data, not documentation, because `setup --docker` reads
 them at run time on a machine that has no checkout of this repository. They are measured from
 a CoWork VM and recorded once. What they hold, and how they differ, is
@@ -92,6 +118,8 @@ a CoWork VM and recorded once. What they hold, and how they differ, is
 | `dependencies`        | any      | yes                 | Nothing about CoWork constrains what this package imports     |
 | ruff `target-version` | `py314`  | yes                 | The same. It lints this package, not the code under test      |
 | `[tool.uv] package`   | removed  | yes                 | Removing it makes uv build a distribution                     |
+| `license`             | `MIT`    | yes                 | A public repository with no license grants nothing            |
+| `readme`              | `README.md` | yes              | It is the description an index renders                        |
 
 The runtime dependencies are `PyYAML`, which parses `cowork_evals.yaml` and `case.yaml`,
 `python-frontmatter`, which splits a `prompt.md` or a grader file into its `---` block and its
