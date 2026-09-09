@@ -6,9 +6,6 @@ back through the real loader.
 
 from __future__ import annotations
 
-import contextlib
-import os
-from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -23,16 +20,6 @@ from cowork_evals.config import (
 )
 
 
-@contextlib.contextmanager
-def working_directory(path: Path) -> Iterator[None]:
-    previous = Path.cwd()
-    os.chdir(path)
-    try:
-        yield
-    finally:
-        os.chdir(previous)
-
-
 def write(directory: Path, body: str, name: str = CONFIG_FILENAME) -> Path:
     file = directory / name
     file.write_text(body, encoding="utf-8")
@@ -42,7 +29,7 @@ def write(directory: Path, body: str, name: str = CONFIG_FILENAME) -> Path:
 # The defaults, section by section.
 
 
-def test_missing_file_yields_the_cowork_defaults(tmp_path: Path) -> None:
+def test_missing_file_yields_the_cowork_defaults(working_directory, tmp_path: Path) -> None:
     with working_directory(tmp_path):
         section = Config.load().cowork
     assert section.profile is None
@@ -56,7 +43,7 @@ def test_missing_file_yields_the_cowork_defaults(tmp_path: Path) -> None:
     assert section.log_dir == tmp_path / "logs"
 
 
-def test_missing_file_yields_the_eval_defaults(tmp_path: Path) -> None:
+def test_missing_file_yields_the_eval_defaults(working_directory, tmp_path: Path) -> None:
     with working_directory(tmp_path):
         section = Config.load().eval
     assert section.model == "sonnet"
@@ -66,7 +53,7 @@ def test_missing_file_yields_the_eval_defaults(tmp_path: Path) -> None:
     assert section.max_cost_total_usd == 25
 
 
-def test_missing_file_yields_the_docker_defaults(tmp_path: Path) -> None:
+def test_missing_file_yields_the_docker_defaults(working_directory, tmp_path: Path) -> None:
     with working_directory(tmp_path):
         section = Config.load().docker
     assert section.platform == "linux/arm64"
@@ -186,7 +173,9 @@ def test_tilde_is_expanded(tmp_path: Path) -> None:
     assert "~" not in str(config.cowork.run_log)
 
 
-def test_a_relative_path_resolves_against_the_working_directory(tmp_path: Path) -> None:
+def test_a_relative_path_resolves_against_the_working_directory(
+    working_directory, tmp_path: Path
+) -> None:
     file = write(tmp_path, "cowork:\n  log_dir: build/logs\ndocker:\n  login_dir: build/login\n")
     with working_directory(tmp_path):
         config = Config.load(file)

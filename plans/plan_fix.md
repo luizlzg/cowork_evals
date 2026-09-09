@@ -333,9 +333,10 @@ Each item below names the one file that should own the fact.
       It stays, and `tests/unit/test_cowork.py` now covers it: the named file beats the one
       in the working directory, an override beats the named file, and a named file that
       does not exist is code 2, which is what `docs/cowork_driver.md` claims of it.
-- [ ] `working_directory` is defined twice, at `tests/conftest.py:65-80` and
+- [x] `working_directory` is defined twice, at `tests/conftest.py:65-80` and
       `tests/unit/test_config.py:15-22`, with the module-level one shadowing the fixture.
       Delete the local one.
+      The four tests that used it now take the `tests/conftest.py` fixture as an argument.
 - [ ] `scripts/image.sh:19-27` and `scripts/login.sh:20-28` dispatch on `$1` twice, and the
       `--check` arms setting `NO_CACHE=""` and `FORCE=""` are unreachable because the second
       `if` execs. Those values are interpolated into a `python3 -c` heredoc, so an empty one
