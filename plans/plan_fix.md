@@ -178,8 +178,10 @@ belongs in `aggregate-result.json`, which `docs/running_evals.md:228` and
       It is now the only result document in that file, and the same paragraph links to
       `docs/running_evals.md`, which names the aggregate as the v1 result document.
 - [x] `src/cowork_evals/cowork.py` docstrings and `tests/` follow the same rename.
-- [ ] `plans/plan_cowork_backend.md` follows it too. That plan reads the driver's output on
+- [x] `plans/plan_cowork_backend.md` follows it too. That plan reads the driver's output on
       every second line and currently inherits the ambiguity.
+      `plans/plan_cowork_tools.md` still calls the driver's output the result document.
+      It is the implemented plan that built the driver, and no box here covers it.
 
 ## Phase 4: The code defects
 

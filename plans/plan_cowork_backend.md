@@ -11,11 +11,11 @@ The layer above the CoWork driver. It reads the same case tree as every other ba
 submits each case's prompt through the driver, grades what the session produced, and writes
 the same `aggregate-result.json` v1 document.
 
-The driver is not rewritten. It submits one prompt and returns one document, which is its
-scope in [`../docs/cowork_driver.md`](../docs/cowork_driver.md). Repeating a case,
-grading it, aggregating across its runs and writing the document are this layer's work. The
-one change to it is phase 6's: `_recent` becomes public as `recent()`, so the trailing
-24-hour window is implemented once and not twice.
+The driver is not rewritten. It submits one prompt and returns one session document, which
+is its scope in [`../docs/cowork_driver.md`](../docs/cowork_driver.md). Repeating a case,
+grading it, aggregating across its runs and writing the result document are this layer's
+work. The one change to it is phase 6's: `_recent` becomes public as `recent()`, so the
+trailing 24-hour window is implemented once and not twice.
 
 `claude plugin eval` is not in this path. That harness loads a plugin, and only Claude Code
 knows how.
@@ -23,7 +23,7 @@ knows how.
 | Builds                                | Is                                                              |
 | ------------------------------------- | ----------------------------------------------------------------- |
 | `src/cowork_evals/cases.py`           | The case reader. Backend-neutral, and `plan_cli.md` validates over it |
-| `src/cowork_evals/grader.py`          | The four structural graders over the driver's result document   |
+| `src/cowork_evals/grader.py`          | The four structural graders over the session document           |
 | `src/cowork_evals/judge.py`           | The `claude -p` judge behind `llm` and `baseline`               |
 | `src/cowork_evals/results.py`         | The v1 `aggregate-result.json` document                          |
 | `src/cowork_evals/cowork_backend.py`  | The skip rule, `plan(target)` and `run(target, output_dir)`      |
@@ -72,7 +72,7 @@ document. Phase 8 records the absence in the log layout.
   in `pyproject.toml`.
 - Judged graders call `claude -p`. No SDK, and no second credential route.
 - No mock, fake, stub, patch or injected seam. The unit tier reads hand-written case trees
-  and hand-written driver result documents from disk and asserts over literals.
+  and hand-written session documents from disk and asserts over literals.
 - A fixture carries no account identifier, profile identifier, session identifier or real
   prompt. [`../README.md`](../README.md).
 - One exception type is added, `CaseError` in `cases.py`. The ceiling refusal reuses
@@ -171,8 +171,8 @@ the run, so phase 4 decides it and records it the same way.
 
 ## Phase 3: The structural graders
 
-`src/cowork_evals/grader.py`. One `Case` and one driver result document in, one result per
-grader out. It submits nothing and re-runs over a stored document for free. The semantics
+`src/cowork_evals/grader.py`. One `Case` and one session document in, one result per grader
+out. It submits nothing and re-runs over a stored session document for free. The semantics
 are the grader table in
 [`../docs/claude_code/plugin_eval_reference.md`](../docs/claude_code/plugin_eval_reference.md),
 and matching them exactly is what makes a case portable between backends.
@@ -184,7 +184,7 @@ and matching them exactly is what makes a case portable between backends.
       reference's `scored` = `not withOnly` to the one other exclusion this backend has.
       Phase 5 counts it as a departure, and phase 8 records it.
 - [ ] One path convention for a produced file, and the driver does not change to get it.
-      `outputs` in the result document is relative to the session directory, so every entry
+      `outputs` in the session document is relative to the session directory, so every entry
       carries an `outputs/` prefix. This layer strips it once, and every grader that names a
       produced file names it relative to `outputs/`. That is what makes `path: report.md`
       mean here what it means under the harness, where the created-file list is relative to
@@ -226,11 +226,11 @@ and matching them exactly is what makes a case portable between backends.
       `regex` grader on `target: trace` is not portable between backends. Every other
       target is. Record it in `docs/` in phase 8.
 - [ ] An unknown grader type is a failed grader naming the type, not an exception.
-- [ ] `tests/unit/test_grader.py` over hand-written documents under `tests/data/documents/`:
-      every grader type, every target, all three `match` values, the `min: 0, max: 0` idiom,
-      the `{tool, input_match}` form of `tool_order`, a `**/` glob, a bare file name with no
-      `**/`, which matches because the prefix is stripped, an unreadable file, an
-      uncompilable pattern, and an unknown type.
+- [ ] `tests/unit/test_grader.py` over hand-written session documents under
+      `tests/data/documents/`: every grader type, every target, all three `match` values,
+      the `min: 0, max: 0` idiom, the `{tool, input_match}` form of `tool_order`, a `**/`
+      glob, a bare file name with no `**/`, which matches because the prefix is stripped, an
+      unreadable file, an uncompilable pattern, and an unknown type.
 
 ## Phase 4: The judge
 
@@ -258,7 +258,7 @@ caller's `judge_model` where one was given, and `EVAL_JUDGE_MODEL` through
       which is a grader skip carrying its reason rather than a failure: the harness shows
       the judge the image and one text call cannot. It is detected from the file's bytes, as
       the harness detects it, so it is decided here and not in phase 2's `skips`. Phase 5
-      writes it into the document as any other grader skip.
+      writes it into the result document as any other grader skip.
 - [ ] `explanation` is `judge votes: PASS FAIL PASS`. `evidence` is what the judge was
       shown, truncated at 2000 characters.
 - [ ] `CLAUDE_CODE_WALNUT_SPIRE` is not exported. It gates `claude plugin eval`, and this is
@@ -297,7 +297,7 @@ one.
       the reference makes them what the case asked for, and what actually ran is read from
       `arms.with` and from the run's `cowork` object below.
 - [ ] Per run: `score` as the weighted fraction of scored graders that passed, `passed` when
-      `score` is 1.0, `turns` from the document's assistant turns, `costUsd` and
+      `score` is 1.0, `turns` from the session document's assistant turns, `costUsd` and
       `judgeCostUsd` both the judge spend, `startedAt` from `submitted_at`,
       `durationSeconds` from `collected_at` minus `submitted_at`, `error`, `tracePath` at
       the session transcript, and `skippedPaidGraders: false`.
@@ -329,9 +329,9 @@ one.
       would count as passed. It is the one behavioural departure beside the four above, and
       phase 8 records it. Nothing reads it to decide anything: the gate in `plan_cli.md`
       reads the grader results and `skipped`.
-- [ ] `tests/unit/test_results.py`: build a document from hand-written cases and driver
-      documents and assert every field. One case passed, one failed, one skipped, one
-      errored, and one with `runs: 2` where the two runs disagree.
+- [ ] `tests/unit/test_results.py`: build a result document from hand-written cases and
+      session documents and assert every field. One case passed, one failed, one skipped,
+      one errored, and one with `runs: 2` where the two runs disagree.
 
 ## Phase 6: The backend function
 
@@ -341,7 +341,7 @@ and returns the path to the `aggregate-result.json` it wrote. That contract is
 
 - [ ] `run(target, output_dir, *, config=None, runs=None, timeout_seconds=None,
       judge_model=None, tags=(), case_glob=None)`: resolve the plugin root, discover the
-      cases, run each, write the document, return its path.
+      cases, run each, write the result document, return its path.
 - [ ] `judge_model` replaces `EVAL_JUDGE_MODEL` for every judged grader in the suite, and
       reaches phase 4 and `suite.judgeModel`. It is `--judge-model M` in
       [`../docs/cli.md`](../docs/cli.md), which accepts that option on this backend. Without
@@ -350,7 +350,7 @@ and returns the path to the `aggregate-result.json` it wrote. That contract is
       backend.
 - [ ] `runs` and `timeout_seconds` replace every case's declared value, and are `--runs N`
       and `--timeout-seconds N` in [`../docs/cli.md`](../docs/cli.md). Neither multiplies
-      what the case declared. The document records the declared value on the case, as
+      what the case declared. The result document records the declared value on the case, as
       phase 5 sets it, so the case says what it asked for while `arms.with` says how many
       runs there were and each run's `cowork.timeoutSeconds` says what it ran under.
 - [ ] `plan(target, *, config=None, runs=None, timeout_seconds=None, judge_model=None,
@@ -376,7 +376,7 @@ and returns the path to the `aggregate-result.json` it wrote. That contract is
       suite that stops halfway has already spent what it spent.
 - [ ] A skipped case submits nothing and costs no ceiling entry.
 - [ ] Per run: `CoWork.run(case.prompt)`, then phase 3, then phase 4 for judged graders.
-      Each run is its own session and its own document.
+      Each run is its own session and its own session document.
 - [ ] The `CoWork` for a case carries that case's effective `timeout_seconds` as
       `run_timeout`, which is the override where one was given.
       `Config` is frozen, so a differing timeout is a differing `CoWork`. The ceiling and the
@@ -395,8 +395,8 @@ and returns the path to the `aggregate-result.json` it wrote. That contract is
       symlink, write no `env.txt`, prune nothing, print nothing, decide no pass or fail.
 - [ ] `tests/unit/test_cowork_backend.py`: the multi-plugin refusal, `plan()` over a
       hand-written case tree with and without each override, the ceiling arithmetic against
-      a hand-written run log, the document a suite of skipped cases produces, and that
-      `plugins/smoke/`'s case is found, resolves its plugin root and reports no skip.
+      a hand-written run log, the result document a suite of skipped cases produces, and
+      that `plugins/smoke/`'s case is found, resolves its plugin root and reports no skip.
       Nothing here starts a session, and none of it needs a profile.
 
 ## Phase 7: The integration tier, and the measurements
@@ -430,8 +430,8 @@ sessions already in the profile before anything is fired, because that costs not
       it: a prompt asking the session to use any skill it has, and a prompt asking it to
       write a named file. Marked `live`. A profile that already shows both costs nothing
       here.
-- [ ] Fire `plugins/smoke/` through `run()` and assert the document says the case passed.
-      Marked `live`. One VM boot, one ceiling entry, one permanent session.
+- [ ] Fire `plugins/smoke/` through `run()` and assert the result document says the case
+      passed. Marked `live`. One VM boot, one ceiling entry, one permanent session.
 
 | Measurement                                        | If it fails                                                                    |
 | -------------------------------------------------- | -------------------------------------------------------------------------------- |
