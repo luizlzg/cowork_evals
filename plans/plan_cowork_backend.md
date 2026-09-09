@@ -93,17 +93,26 @@ so both backends see the same case set.
       defaults to the filename without `.md`, `weight` to 1, and `config` is every other
       frontmatter key as authored.
 - [ ] Frozen `Case`: `name`, `directory`, `prompt`, `graders`, `tags`, `source`,
-      `frontmatter_keys`, `case_yaml_keys`, `path`. `source` is `prose`, `case_yaml` or
-      `mixed`, which is the v1 document's field. The two key sets are the keys the files
-      wrote out, which phase 2 reads.
-- [ ] A `prompt.md` with no frontmatter raises `CaseError` naming the file.
+      `frontmatter_keys`, `case_yaml_keys`, `path`. `name` defaults to the case directory
+      name, which is the harness's rule for a prose case. `source` is `prose` or `mixed`,
+      which is the v1 document's field. Discovery needs a `prompt.md`, so `case_yaml`
+      cannot occur here. The two key sets are the keys the files wrote out, which phase 2
+      reads.
+- [ ] A `prompt.md` with no frontmatter is read, not refused: empty metadata, the body is
+      the prompt, and `name` is the directory name. Its missing keys are the validator's,
+      in `plan_cli.md` phase 1, which cannot report what the reader refused to build.
+      `CaseError` is for a tree that cannot be read at all: unparsable YAML, or no plugin
+      root.
 - [ ] A grader file with empty metadata is ignored. The harness ignores it, and
       [`../docs/eval_format.md`](../docs/eval_format.md) records the trap.
 - [ ] Read `case.yaml` when present, and keep the `context.*` keys it wrote.
 - [ ] `discover(root, *, tags=(), case_glob=None)`: recurse, a directory holding `prompt.md`
       is a case, anything else is searched through, and the result is sorted by path.
-      `tags` matches the frontmatter `tags`, `case_glob` globs the case directory name.
-      Those are `--tag` and `--case` in [`../docs/cli.md`](../docs/cli.md).
+      `tags` matches the frontmatter `tags`, `case_glob` globs the case `name`, which is
+      what the harness globs and which defaults to the directory name. Those are `--tag`
+      and `--case` in [`../docs/cli.md`](../docs/cli.md). Phase 8 corrects
+      [`../docs/eval_format.md`](../docs/eval_format.md), which says `--case` globs the
+      directory name.
 - [ ] `plugin_root(target)`: the nearest ancestor holding `.claude-plugin/plugin.json`, and
       `CaseError` when there is none.
 - [ ] Move `plugin_root` here from `src/cowork_evals/docker/__init__.py:60` and point the
@@ -111,14 +120,20 @@ so both backends see the same case set.
       wraps it and still raises `DockerError`, which leaves `tests/unit/test_docker.py`
       unchanged.
 - [ ] `tests/unit/test_cases.py` over hand-written trees under `tests/data/cases/`: every
-      frontmatter key, no optional key, a grader with no `---` block, a `case.yaml`, a
-      grouping directory that is not a case, a tag filter, a case glob, and a missing
-      plugin root.
+      frontmatter key, no optional key, a `prompt.md` with no `---` block, a grader with no
+      `---` block, a `case.yaml`, a grouping directory that is not a case, a tag filter, a
+      case glob against a `name` that differs from the directory name, and a missing plugin
+      root.
 
 ## Phase 2: The skip rule
 
-`src/cowork_evals/cowork_backend.py`, as `skips(case, plugin_root)` returning one reason
-string per unhonourable key. `cases.py` stays backend-neutral. The rule is in
+`src/cowork_evals/cowork_backend.py`, as `skips(case, plugin_root)` returning a frozen
+`Skips`: `case`, the reasons the case submits nothing, and `graders`, a mapping of grader
+name to the reason that grader is not scored. The two are never one list. A case skip
+submits nothing and leaves `arms.with` empty; a grader skip runs the case and drops that
+grader from the score. Phases 5 and 6 both read the difference.
+
+`cases.py` stays backend-neutral. The rule is in
 [`../docs/running_evals.md`](../docs/running_evals.md): a written-out key is honoured when
 this backend's behaviour already satisfies it, and skipped otherwise. It reads written keys,
 never merged defaults.
@@ -128,12 +143,15 @@ never merged defaults.
 | `runs: N`                                       | Honoured. Submit the prompt N times            |
 | `timeout_seconds`                               | Honoured as that case's driver `run_timeout`   |
 | `arm: with-only` or `arm: both`                 | Honoured. One arm runs, it is the with-arm, and it is scored |
-| `max_turns`                                     | Skipped. No turn cap reaches a session         |
-| `model`, `allowed_tools`, `append_system_prompt`, `env` | Skipped. The session decides           |
-| Any `context.*` in `case.yaml`                  | Skipped. Nothing stages files into the VM      |
-| An `evals/mocks/` directory in the plugin root  | Skipped, every case in that plugin. The harness applies stand-ins suite-wide and the MCP servers here are real |
+| `max_turns`                                     | The case is skipped. No turn cap reaches a session |
+| `model`, `allowed_tools`, `append_system_prompt`, `env` | The case is skipped. The session decides |
+| Any `context.*` in `case.yaml`                  | The case is skipped. Nothing stages files into the VM |
+| An `evals/mocks/` directory in the plugin root  | Every case in that plugin is skipped. The harness applies stand-ins suite-wide and the MCP servers here are real |
 | A grader with `target` or `focus` of `mock_calls` | That grader is skipped, and the case still runs |
-| An `llm` or `baseline` grader with an image focus | That grader is skipped. The judge is one text call and cannot show an image |
+
+The last row is the only grader skip this function decides. The other one, an `llm` grader
+whose focus turns out to be an image, is read from the file's bytes, which exist only after
+the run, so phase 4 decides it and records it the same way.
 
 - [ ] Implement the table. A skipped grader is excluded from the run's `score`, so a case
       does not fail for a grader that was never asked.
@@ -165,13 +183,22 @@ and matching them exactly is what makes a case portable between backends.
       nothing is dropped for an arm. `scored` is `not skipped`, which widens the
       reference's `scored` = `not withOnly` to the one other exclusion this backend has.
       Phase 5 counts it as a departure, and phase 8 records it.
-- [ ] `resolve_target(document, spec, case_dir, session_dir)`: `last_message` to
-      `final_text`, `trace` to one JSON object per line, `json.dumps` of every entry of
-      `turns` followed by every entry of `tool_calls` in the order the document lists them,
-      `files` to `outputs`, and `{source: file, path}` to that path under the session's
-      `outputs/` directory, which is the one place a produced file is readable from the
-      host. An unreadable file is a failed grader carrying the reason, never an
-      exception.
+- [ ] One path convention for a produced file, and the driver does not change to get it.
+      `outputs` in the result document is relative to the session directory, so every entry
+      carries an `outputs/` prefix. This layer strips it once, and every grader that names a
+      produced file names it relative to `outputs/`. That is what makes `path: report.md`
+      mean here what it means under the harness, where the created-file list is relative to
+      the workspace. Phase 8 records it.
+- [ ] `resolve_target(document, spec)`: `last_message` to `final_text`, `trace` to one JSON
+      object per line, `json.dumps` of every entry of `turns` followed by every entry of
+      `tool_calls` in the order the document lists them, `files` to the stripped `outputs`
+      list joined by newlines, and `{source: file, path}` to that path under
+      `<session_dir>/outputs/`, which is the one place a produced file is readable from the
+      host. The session directory is a field of the document. It returns text every time,
+      because `regex` and the judge both read text and the reference makes `files`
+      newline-separated. `file_exists` is the one grader that does not go through it: it
+      reads the stripped list. An unreadable file is a failed grader carrying the reason,
+      never an exception.
 - [ ] `regex`: the pattern is a JavaScript RegExp source. Compile it with `re`, mapping
       `i`, `m` and `s` onto `re.I`, `re.M` and `re.S`, adding `re.ASCII` unless the flags
       carry `u` or `v`, and ignoring `d`, `g` and `y`. `re.ASCII` is what makes `\d` and
@@ -187,10 +214,12 @@ and matching them exactly is what makes a case portable between backends.
       **first** matching `after` call. It reads `tool_calls`, not `tool_names`, because of
       the object form. Correct the `tool_order` row in
       [`../docs/cowork_driver.md`](../docs/cowork_driver.md), which names `tool_names`.
-- [ ] `file_exists`: match `path` against each entry of `outputs` with
+- [ ] `file_exists`: match `path` against each stripped `outputs` entry with
       `pathlib.PurePath.full_match`, which is the harness's glob semantics, `**/` at any
       depth and `*` within a segment. `exists` defaults to true.
-- [ ] A run with no scored graders scores 0, which is the reference's rule.
+- [ ] A run with no scored graders scores 0, which is the reference's rule. That covers a
+      case whose graders were all skipped and a case with no grader file at all. Neither is
+      refused here.
 - [ ] `explanation` is mechanical, in the harness's register: `matched Alex`,
       `Skill called 1x (expected 1 or more)`.
 - [ ] That trace rendering is this backend's and is not the harness's `trace.jsonl`, so a
@@ -199,15 +228,18 @@ and matching them exactly is what makes a case portable between backends.
 - [ ] An unknown grader type is a failed grader naming the type, not an exception.
 - [ ] `tests/unit/test_grader.py` over hand-written documents under `tests/data/documents/`:
       every grader type, every target, all three `match` values, the `min: 0, max: 0` idiom,
-      the `{tool, input_match}` form of `tool_order`, a `**/` glob, an unreadable file, an
+      the `{tool, input_match}` form of `tool_order`, a `**/` glob, a bare file name with no
+      `**/`, which matches because the prefix is stripped, an unreadable file, an
       uncompilable pattern, and an unknown type.
 
 ## Phase 4: The judge
 
-`src/cowork_evals/judge.py`. `llm` and `baseline`, three votes, majority. The model is
-`EVAL_JUDGE_MODEL` through `src/cowork_evals/env.py`. A judged grader never gates, which is
-the gate table in [`../docs/running_evals.md`](../docs/running_evals.md), so nothing here
-raises.
+`src/cowork_evals/judge.py`. `llm` and `baseline`, three votes, majority. The model is the
+caller's `judge_model` where one was given, and `EVAL_JUDGE_MODEL` through
+`src/cowork_evals/env.py` otherwise. [`../docs/cli.md`](../docs/cli.md) accepts
+`--judge-model M` on this backend, so phase 6 carries it down and phase 5 records it as
+`suite.judgeModel`. A judged grader never gates, which is the gate table in
+[`../docs/running_evals.md`](../docs/running_evals.md), so nothing here raises.
 
 - [ ] `judge_argv(model)`: `claude -p --output-format json --model <model>
       --strict-mcp-config`. `--strict-mcp-config` keeps the developer's MCP servers out of a
@@ -222,9 +254,11 @@ raises.
 - [ ] `llm` reads `criteria` and `focus`, resolved through phase 3. `target` on an `llm`
       grader is ignored, because the harness ignores it.
 - [ ] `baseline` reads `baseline_file` under the case directory and `criteria`.
-- [ ] Refuse a file that is not UTF-8 text and fail the grader naming it. An image focus is
-      a skip rather than a failure, per phase 2, because the harness grades it and this
-      backend cannot.
+- [ ] Refuse a file that is not UTF-8 text and fail the grader naming it, except an image,
+      which is a grader skip carrying its reason rather than a failure: the harness shows
+      the judge the image and one text call cannot. It is detected from the file's bytes, as
+      the harness detects it, so it is decided here and not in phase 2's `skips`. Phase 5
+      writes it into the document as any other grader skip.
 - [ ] `explanation` is `judge votes: PASS FAIL PASS`. `evidence` is what the judge was
       shown, truncated at 2000 characters.
 - [ ] `CLAUDE_CODE_WALNUT_SPIRE` is not exported. It gates `claude plugin eval`, and this is
@@ -257,28 +291,44 @@ one.
       `plugins` from `.claude-plugin/plugin.json` with the folder basename as the `name`
       fallback, and `caseFilter` and `tagFilters` when given.
 - [ ] Per case: `name`, `dir` relative to `suite.root`, `source`, `promptMarkdown`,
-      `runsPerCase` as the declared `runs` and never the override, `timeoutSeconds` as the
-      timeout it ran under, the grader definitions, `arms.with` with one entry per run, and
-      `aggregates`. No `arms.without`.
+      `runsPerCase`, `timeoutSeconds` and `maxTurns` as the case's declared values and never
+      an override, absent where the case declares none, the grader definitions, `arms.with`
+      with one entry per run, and `aggregates`. No `arms.without`. One rule for all three:
+      the reference makes them what the case asked for, and what actually ran is read from
+      `arms.with` and from the run's `cowork` object below.
 - [ ] Per run: `score` as the weighted fraction of scored graders that passed, `passed` when
       `score` is 1.0, `turns` from the document's assistant turns, `costUsd` and
       `judgeCostUsd` both the judge spend, `startedAt` from `submitted_at`,
       `durationSeconds` from `collected_at` minus `submitted_at`, `error`, `tracePath` at
       the session transcript, and `skippedPaidGraders: false`.
+- [ ] Two of those read a driver field that can be `None`: `submitted_at`, when the audit
+      record carries no timestamp, and `transcript`, when the session has no transcript
+      directory. `startedAt` and `tracePath` are then absent, and `durationSeconds` is
+      absent rather than computed against a missing start. Every field but `error` is absent
+      rather than null, which is the reference's rule.
 - [ ] Case `aggregates`: `score` as the mean run score, `passRate` as the fraction of runs
       scoring 1.0. Above `runs: 1` that rate is the flake rate
       [`../docs/running_evals.md`](../docs/running_evals.md) makes a precondition for
       automating a suite.
 - [ ] Three added fields and one widened field, and no other departure: `skipped` and
-      `skipReason` on a case, the same pair on a grader result, `cowork: {sessionDir}` on a
-      run, and `scored: false` on a skipped grader result. The gate in `plan_cli.md` reads
-      `skipped`.
-- [ ] A skipped case carries `skipped: true`, an empty `arms.with`, `score` 0 and
-      `passed: false`, and is never counted in `aggregates.casesPassed`.
+      `skipReason` on a case, the same pair on a grader result,
+      `cowork: {sessionDir, timeoutSeconds}` on a run, and `scored: false` on a skipped
+      grader result. `cowork.timeoutSeconds` is the timeout that run ran under, which is the
+      override where one was given, and it is the one place an effective value is recorded.
+      The gate in `plan_cli.md` reads `skipped`.
+- [ ] A skipped case carries `skipped: true`, `skipReason`, an empty `arms.with`, and
+      `aggregates` of `score` 0 and `passRate` 0, and is never counted in
+      `aggregates.casesPassed`. A case has no `score` and no `passed` of its own in v1;
+      those two are run fields.
 - [ ] A run the driver raised on carries `error` as the code and message, `score` 0 and no
       graders.
 - [ ] Suite `aggregates`: `casesTotal`, `casesPassed`, `overallScore`, `overallPassRate`.
       No `meanDelta`: there is no baseline arm.
+- [ ] `casesPassed` is the reference's rule, a case scoring at or above `threshold`, minus
+      every skipped case. `threshold` is 0 here, so without that subtraction a skipped case
+      would count as passed. It is the one behavioural departure beside the four above, and
+      phase 8 records it. Nothing reads it to decide anything: the gate in `plan_cli.md`
+      reads the grader results and `skipped`.
 - [ ] `tests/unit/test_results.py`: build a document from hand-written cases and driver
       documents and assert every field. One case passed, one failed, one skipped, one
       errored, and one with `runs: 2` where the two runs disagree.
@@ -289,20 +339,27 @@ Back to `src/cowork_evals/cowork_backend.py`. It takes a case path and an output
 and returns the path to the `aggregate-result.json` it wrote. That contract is
 [`README.md`](README.md).
 
-- [ ] `run(target, output_dir, *, config=None, runs=None, timeout_seconds=None, tags=(),
-      case_glob=None)`: resolve the plugin root, discover the cases, run each, write the
-      document, return its path.
+- [ ] `run(target, output_dir, *, config=None, runs=None, timeout_seconds=None,
+      judge_model=None, tags=(), case_glob=None)`: resolve the plugin root, discover the
+      cases, run each, write the document, return its path.
+- [ ] `judge_model` replaces `EVAL_JUDGE_MODEL` for every judged grader in the suite, and
+      reaches phase 4 and `suite.judgeModel`. It is `--judge-model M` in
+      [`../docs/cli.md`](../docs/cli.md), which accepts that option on this backend. Without
+      the parameter the option has no route: `judge.py` reads the setting and `env.py` never
+      writes to `os.environ`. `plan_cli.md` calls both signatures and nothing else on this
+      backend.
 - [ ] `runs` and `timeout_seconds` replace every case's declared value, and are `--runs N`
       and `--timeout-seconds N` in [`../docs/cli.md`](../docs/cli.md). Neither multiplies
-      what the case declared. The document still records the declared `runs` as
-      `runsPerCase`, so it says what the case asked for while `arms.with` says what ran,
-      and `timeoutSeconds` records the timeout the run actually ran under.
-- [ ] `plan(target, *, config=None, runs=None, timeout_seconds=None, tags=(),
-      case_glob=None)`: the same resolution and the same arithmetic, returning per case its
-      name, its skip reasons, its effective run count and its effective timeout, with the
-      ceiling numbers. It submits nothing. `run` calls it, and so does `--dry-run --cowork`
-      in `plan_cli.md` phase 6, which prints exactly those and would otherwise re-derive
-      them.
+      what the case declared. The document records the declared value on the case, as
+      phase 5 sets it, so the case says what it asked for while `arms.with` says how many
+      runs there were and each run's `cowork.timeoutSeconds` says what it ran under.
+- [ ] `plan(target, *, config=None, runs=None, timeout_seconds=None, judge_model=None,
+      tags=(), case_glob=None)`: the same resolution and the same arithmetic, returning per
+      case its name, its `Skips`, its effective run count and its effective timeout, with
+      the ceiling numbers. It submits nothing, so it carries the case skips and the grader
+      skips phase 2 decides and not the image-focus skip phase 4 decides after a run. `run`
+      calls it, and so does `--dry-run --cowork` in `plan_cli.md` phase 6, which prints
+      exactly those and would otherwise re-derive them.
 - [ ] A target covering more than one plugin root raises `CaseError`.
       [`../docs/cli.md`](../docs/cli.md) makes that a usage error, and the CLI is what exits.
 - [ ] Rename `_recent` to `recent()` in `src/cowork_evals/cowork.py` and make it public. It
@@ -312,9 +369,11 @@ and returns the path to the `aggregate-result.json` it wrote. That contract is
       assertion over it against a hand-written run log, and phase 8 adds the row to the API
       table.
 - [ ] Before submitting anything, sum the effective run count over the cases that will
-      submit, which is `runs` where it was given and the declared `runs` otherwise, and
-      raise `CoWorkError(2, ...)` when that total plus `CoWork.recent()` is above
-      `max_runs`. A suite that stops halfway has already spent what it spent.
+      submit, which is `runs` where it was given, the declared `runs` where the case wrote
+      one, and 1 otherwise, because a case that writes no `runs` key runs once here.
+      [`../docs/running_evals.md`](../docs/running_evals.md) is where that rule lives. Raise
+      `CoWorkError(2, ...)` when that total plus `CoWork.recent()` is above `max_runs`. A
+      suite that stops halfway has already spent what it spent.
 - [ ] A skipped case submits nothing and costs no ceiling entry.
 - [ ] Per run: `CoWork.run(case.prompt)`, then phase 3, then phase 4 for judged graders.
       Each run is its own session and its own document.
@@ -327,15 +386,18 @@ and returns the path to the `aggregate-result.json` it wrote. That contract is
 - [ ] Code 7, the run timeout, is caught and then collected. The error carries
       `session_dir`, so `collect` reads the session as it stands and the run is graded on
       what it produced, with `error` recording the timeout. That is what the harness does.
-      The CoWork session is not stopped and keeps running in the VM.
+      The CoWork session is not stopped and keeps running in the VM. A `collect` that then
+      raises code 8, meaning the session wrote no assistant text before the timeout, leaves
+      the run with `error` naming the timeout, `score` 0 and no graders.
 - [ ] Cases run in sequence, and the runs of a case run in sequence. There is one desktop
       application and one composer.
 - [ ] Write `<output_dir>/aggregate-result.json`. Name no run directory, write no `latest`
       symlink, write no `env.txt`, prune nothing, print nothing, decide no pass or fail.
 - [ ] `tests/unit/test_cowork_backend.py`: the multi-plugin refusal, `plan()` over a
       hand-written case tree with and without each override, the ceiling arithmetic against
-      a hand-written run log, and the document a suite of skipped cases produces. Nothing
-      here starts a session.
+      a hand-written run log, the document a suite of skipped cases produces, and that
+      `plugins/smoke/`'s case is found, resolves its plugin root and reports no skip.
+      Nothing here starts a session, and none of it needs a profile.
 
 ## Phase 7: The integration tier, and the measurements
 
@@ -350,11 +412,13 @@ in. Its one `regex` grader matches `Python 3\.10\.12`, the string
 [`../docs/runtime.md`](../docs/runtime.md) records for the session interpreter and the
 string the container asserts too. Nothing about the fixture changes here.
 
+Nothing here asserts over the reader or the skip rule. Neither needs a profile or a session,
+so both are phase 6's unit boxes. [`../tests/README.md`](../tests/README.md) puts in this
+tier only what a real profile or a real run is needed for.
+
 Two facts about the grader mapping cannot be read from a file. Both are measured against the
 sessions already in the profile before anything is fired, because that costs nothing.
 
-- [ ] Assert the reader finds `plugins/smoke/`'s case, resolves its plugin root and reports
-      no skip. No session.
 - [ ] Assert `claude --version` is reachable, naming the reason when it is not. The judge
       and `claudeVersion` both need it.
 - [ ] Walk every session in the configured profile through `collect`, and record whether any
@@ -386,12 +450,19 @@ Nothing durable may survive only in this file.
       deployed, the three added fields and the widened `scored`, the judge through
       `claude -p`, the JavaScript to Python regex divergence, the `target: trace` rendering
       and that a regex over it is not portable, `recent()` in the API table, what
-      `claudeVersion` and `costUsd` mean here, the corrected `tool_order` row, and the
+      `claudeVersion` and `costUsd` mean here, the corrected `tool_order` row, the corrected
+      `{source: file, path}` row, which names the session directory today and not
+      `outputs/`, the stripped `outputs/` prefix that makes a produced-file path mean the
+      same here as under the harness, `casesPassed` excluding a skipped case, and the
       phase 7 measurements.
-- [ ] `docs/approaches.md`: the same precondition, and the rows phase 2 corrected.
-- [ ] `docs/cli.md`: `--runs N` accepted on `--cowork`, `--timeout-seconds N` added to the
-      option table and accepted on every backend, `claude` on `PATH` added to the
-      `--cowork` preflight row because the judge and `claudeVersion` both need it, the
+- [ ] `docs/approaches.md`: the same precondition, the rows phase 2 corrected, and the `llm`
+      and `baseline` row, which says both are honoured and does not say an image focus is
+      skipped.
+- [ ] `docs/cli.md`: `--runs N` accepted on `--cowork`, the `--timeout-seconds N` row phase 2
+      added, which is accepted on `--cowork` and refused on `--venv` and `--docker` because
+      `claude plugin eval` has no timeout flag and `harness.eval_argv` emits none, `claude`
+      on `PATH` added to the `--cowork` preflight row because the judge and `claudeVersion`
+      both need it, the
       driver-code mapping row corrected so a code 2 raised before any case submits is exit 3
       and not exit 1, the ceiling arithmetic that refuses a suite too large for `max_runs`,
       and that host spend here is the judge alone while the account's own spend is unbounded
@@ -400,8 +471,10 @@ Nothing durable may survive only in this file.
       writes `aggregate-result.json` and no `report.html`.
 - [ ] `docs/library.md`: the five new modules, and `python-frontmatter` in the dependency
       list.
-- [ ] `docs/eval_format.md`: only if phase 7 dropped the skill-fired idiom or `file_exists`
-      on this backend, in which case that file points at `docs/cowork_driver.md`.
+- [ ] `docs/eval_format.md`: `--case` globs the case name, not the case directory name,
+      which is what the harness does and what phase 1 built. The two differ only for a case
+      whose `name` is not its directory name. And, only if phase 7 dropped the skill-fired
+      idiom or `file_exists` on this backend, a pointer at `docs/cowork_driver.md`.
 - [ ] `tests/README.md`: a row per new test file, and the integration tier's preconditions.
 - [ ] `plugins/README.md`: `smoke` serves this backend as well.
 - [ ] Re-read every touched file for a statement this plan made false.
