@@ -19,14 +19,16 @@ an eval. Everything the other five plans build is the other half of that sentenc
 ## What it waits on
 
 Nothing. It needs the container image, which plan 2 built, and
-`src/cowork_evals/docker/__init__.py`, which holds it.
+`src/cowork_evals/docker/__init__.py`, which holds it. Every phase here is executable today.
 
-The `cowork_evals test` verb itself is built by [`plan_cli.md`](plan_cli.md), which builds
-every verb. This plan builds the mechanism behind it, reaches it through
-`scripts/cowork_pytest.sh` during development, writes its surface into
-[`../docs/cli.md`](../docs/cli.md), and adds the phase to `plan_cli.md` that wires it. That
-is the same shape plans 1, 2 and 3 have: a mechanism, reachable through `scripts/`, that
-plan 5 assembles.
+The `cowork_evals test` verb is built by [`plan_cli.md`](plan_cli.md), in its phase 5 and
+its phase 6, alongside the other four. A fifth verb is a parser entry and a dispatch, and
+that plan owns both. It calls `PytestImage.check()` and `PytestImage.run()` and nothing
+else here.
+
+This plan is therefore the mechanism and its documentation. `scripts/cowork_pytest.sh` is
+how it is reached until the command exists, exactly as `scripts/image.sh` was for the
+container backend before it.
 
 ## Scope
 
@@ -44,7 +46,7 @@ plan 5 assembles.
 
 | Not built                                            | Belongs to                                    |
 | ---------------------------------------------------- | --------------------------------------------- |
-| The `cowork_evals test` verb and its parser          | [`plan_cli.md`](plan_cli.md), phase 9, added by phase 7 here |
+| The `cowork_evals test` verb, its parser and its dispatch | [`plan_cli.md`](plan_cli.md), phases 5 and 6 |
 | Running a consumer's tests on the mirror or on CoWork | nobody. The rule is in the decisions below    |
 | A test runner other than pytest                      | nobody                                        |
 | Any test over a shipped plugin                       | the consumer repository                       |
@@ -252,14 +254,9 @@ One commit. Every decision above lands in a file that owns it, and nothing is re
 - [ ] `docs/README.md`: a row for `cowork_test.md` in the index table, and a sentence in
       "The run, and the mechanisms" placing it as a mechanism file. The opening paragraph
       says this repository runs evals; it gains the second thing it runs.
-- [ ] `docs/cli.md`: the synopsis gains `cowork_evals test --docker <path> [-- <pytest args>]`,
-      "four verbs" becomes five, a `test` section holds its options and its preflight row,
-      and the sentence forbidding a raw tail on `run` gains the clause that allows one on
-      `test`. `setup --docker` and `check --docker` gain the second image.
-- [ ] The exit code table in `docs/cli.md` gains the one exception to "the exit code is the
-      CLI's": `test` returns pytest's code unchanged once the container starts, and the
-      CLI's own 2 and 3 are reachable only before it does. That sentence is the whole
-      contract of the verb and is written where an operator reads the codes.
+- [ ] `docs/cli.md` is not touched here. The verb's surface is written by
+      [`plan_cli.md`](plan_cli.md)'s phase 8, which owns that file, and the statements it
+      writes are the `test` rows of this plan's decision table.
 - [ ] `docs/docker.md`: one sentence saying the eval image carries no pytest and why, linking
       `cowork_test.md`. The parity section is unchanged and says so.
 - [ ] `docs/environments.md`: "Two requirements files" becomes three, and the table gains
@@ -277,14 +274,11 @@ One commit. Every decision above lands in a file that owns it, and nothing is re
       consumer's `tests/`, which runs in the test image on 3.10 and may import pytest. The
       "Two tiers of test" rule is about this repository's own tests and gains one sentence
       saying so, because the new verb runs a consumer's.
-- [ ] `README.md`: the opening line and the "Using it" block. The package runs evals and runs
-      a consumer's tests in the same runtime, and both go through one command.
-- [ ] `plans/README.md`: a row for this plan, numbered 6, branch `feat/test`, status
-      `written` until the branch merges, and a section describing it alongside the others.
-      The narrative there says plans 1, 2 and 3 build mechanisms that reach a running agent;
-      this one builds a mechanism that reaches no agent at all, and that sentence is what
-      the section states.
-- [ ] `plans/plan_cli.md`: a phase 9 that builds the verb over `PytestImage`, its parser
-      entry, its refusals, its preflight and its exit codes, and a row for `test` in that
-      plan's option mapping table. Its "Out of scope" table loses nothing: the verb was
-      never in it.
+- [ ] `../README.md`, the repository index: the opening line and the "Using it" block. The
+      package runs evals and runs a consumer's tests in the same runtime, and both go
+      through one command.
+- [ ] [`README.md`](README.md), the plan index: its row, its section and the renumbering are
+      already written, ahead of this plan, so the index says what is being built while it is
+      built. What is left here is the link to `docs/cowork_test.md`, which that file
+      describes without linking until this phase creates it. The status becomes
+      `implemented` when the branch merges.
