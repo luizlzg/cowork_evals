@@ -265,12 +265,15 @@ Each item below names the one file that should own the fact.
 - [x] The `.cowork-runtime/` staging exception is stated in `docs/running_evals.md:109-111`,
       `docs/library.md:159-163`, `docs/staged_runtime.md:71-75` and `docs/cli.md:41-43`.
       Keep it in `docs/library.md`, which owns where state lives, and link from the rest.
-- [ ] `docs/cowork_driver.md:6-9` says the measured application internals are in
+- [x] `docs/cowork_driver.md:6-9` says the measured application internals are in
       `docs/cowork_desktop.md` and "Do not restate them here", then restates three of them:
       the 14336 character cap at `:234-235` against `docs/cowork_desktop.md:66-67`, the
       verbatim prompt record at `:230-232` against `:153-154`, and the transcript reading
       rules at `:242-256` against `:102-118`. State only the design decision in
       `cowork_driver.md` and link the measured value.
+      All three held. A fourth copy of the cap was in the sequence table at
+      `docs/cowork_driver.md:114` and went with them. Of the eight reading rules, three
+      restated a measured shape; the other five are decisions and stay.
 - [ ] `docs/approaches.md:51` says the CoWork backend honours no `runs` value, while
       `docs/running_evals.md:62-65` says `runs: 1` and an absent key both run once. The
       smoke fixture writes `runs: 1`. `plan_cowork_backend.md` phase 2 rewrites both rows

@@ -111,7 +111,7 @@ for the length of an agentic run. Everything else uses `run`.
 
 | # | Step                | Does                                                                                | Fails as |
 | - | ------------------- | ----------------------------------------------------------------------------------- | -------- |
-| 1 | Refuse              | Check the configuration, the rate ceiling and the 14336 cap                         | 2        |
+| 1 | Refuse              | Check the configuration, the rate ceiling and the prompt cap                        | 2        |
 | 2 | Record the baseline | List the session directories that already exist                                     |          |
 | 3 | Fire the deep link  | `open claude://claude.ai/new?q=<prompt>&surface=<surface>`                          | 3        |
 | 4 | Settle              | Sleep `settle_seconds` while the window navigates and focuses the composer          |          |
@@ -221,12 +221,14 @@ counter suffix.
 
 ## Identifying its own run
 
-The `user` record in `audit.jsonl` carries the submitted prompt verbatim in
-`message.content`. The driver compares it and refuses any session that does not match. That
-is what makes a collected result attributable to a submission.
+The driver compares the prompt recorded in `audit.jsonl` against the one it submitted, and
+refuses any session that does not match. That the record carries the prompt verbatim is
+measured in [cowork_desktop.md](cowork_desktop.md), and the comparison is what makes a
+collected result attributable to a submission.
 
-The application caps the deep link prompt at 14336 characters and truncates silently above
-it, so the driver refuses a longer prompt rather than grade an altered one.
+The driver refuses a prompt longer than the deep link cap
+[cowork_desktop.md](cowork_desktop.md) measures, rather than fire one and grade an altered
+prompt.
 
 ## Reading a session
 
@@ -238,13 +240,14 @@ Rules the reader follows. The record shapes they act on are in
   merged into it.
 - An unparsable line is skipped. Both `audit.jsonl` and the transcript are appended while
   the run is live, so the last line can be partial.
-- `message.content` is a string or a list of blocks. Both carry turn text.
-- A `tool_result` attaches to its `tool_use` by `tool_use_id`. Positional pairing is wrong:
-  results arrive in later records, and parallel calls interleave.
+- Both forms `message.content` takes are read for turn text.
+- A `tool_result` is paired to its `tool_use` by id, never by position: results arrive in
+  later records, and parallel calls interleave.
 - A `tool_result` whose call is absent from this transcript belongs to a subagent and is
   dropped.
-- Only `user` and `assistant` records carry a turn. Every other record type in the
-  transcript is ignored, because the set is open. A `thinking` block is not turn text.
+- Turns are read from `user` and `assistant` records only. Every other record type is
+  ignored, because [cowork_desktop.md](cowork_desktop.md) measures that set as open. A
+  thinking block is not read as turn text.
 - `final_text` is the last assistant text turn. A run with none raises code 8.
 - A session directory with no transcript directory yet is tolerated, and raises code 8 for
   the same reason.
