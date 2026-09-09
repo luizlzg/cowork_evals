@@ -1,0 +1,31 @@
+{
+  "prompt": "Reply with exactly: PONG",
+  "prompt_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+  "session_dir": "session",
+  "submitted_at": "2026-09-09T11:00:00.000Z",
+  "collected_at": "2026-09-09T11:00:30.000Z",
+  "transcript": null,
+  "other_transcripts": [],
+  "subagent_transcripts": [],
+  "audit_prompt": "Reply with exactly: PONG",
+  "lifecycle": [
+    "queued",
+    "started",
+    "completed"
+  ],
+  "turns": [
+    {
+      "role": "user",
+      "text": "Reply with exactly: PONG"
+    },
+    {
+      "role": "assistant",
+      "text": "PONG"
+    }
+  ],
+  "tool_calls": [],
+  "tool_names": [],
+  "final_text": "PONG",
+  "outputs": [],
+  "log_file": null
+}

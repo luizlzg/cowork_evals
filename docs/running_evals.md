@@ -30,8 +30,8 @@ here.
 | The container backend and its Dockerfile  | yes   | [docker.md](docker.md)                      |
 | `scripts/parity.sh` and `tests/unit/test_parity.py` | yes | [docker.md](docker.md)                     |
 | The CoWork driver                         | yes   | [cowork_driver.md](cowork_driver.md)        |
-| The CoWork backend over it                | no    | [cowork_driver.md](cowork_driver.md)        |
-| `plugins/smoke/`, the fixture the container backend fires | yes | [../plugins/README.md](../plugins/README.md) |
+| The CoWork backend over it                | yes   | [cowork_driver.md](cowork_driver.md)        |
+| `plugins/smoke/`, the fixture the container and CoWork backends fire | yes | [../plugins/README.md](../plugins/README.md) |
 
 ## The cases it runs
 
@@ -49,9 +49,10 @@ case. That is why [cli.md](cli.md) makes a multi-plugin path a usage error on `-
 
 The CoWork backend does not call `claude plugin eval`. It reads the same case tree, submits
 each case's prompt body through the driver, grades the session document with the CoWork
-grader, and writes the same `aggregate-result.json`. It pins one run per case. Of the
-pinned flags below it uses only `eval.judge_model`, for judged graders. The rest configure
-the CLI, and the CLI is not in the path. See [cowork_driver.md](cowork_driver.md).
+grader, and writes the same `aggregate-result.json`. A case runs as many times as it wrote
+`runs`, and once when it wrote none. Of the pinned flags below it uses only
+`eval.judge_model`, for judged graders. The rest configure the CLI, and the CLI is not in
+the path. See [cowork_driver.md](cowork_driver.md).
 
 ### What counts as a case the backend cannot honour
 
@@ -59,14 +60,20 @@ A backend reads the keys the case file writes, never the merged defaults. `runs:
 default for every case, so treating a default as a request would skip every case on CoWork
 and leave the gate permanently red.
 
-| In the case file                                  | On CoWork          |
-| -------------------------------------------------- | ------------------ |
-| No `runs` key                                      | Runs once          |
-| `runs: 1`                                          | Runs once          |
-| `runs: 3`, written out                             | Skipped            |
-| `max_turns` or `timeout_seconds`, written out      | Skipped            |
-| `model`, `allowed_tools`, `append_system_prompt`, `env` | Skipped       |
-| `context.*`, or a `mocks/` directory the case uses | Skipped            |
+| In the case file                                        | On CoWork                        |
+| --------------------------------------------------------- | ---------------------------------- |
+| No `runs` key                                           | Runs once                        |
+| `runs: N`, written out                                  | Runs N times                     |
+| `timeout_seconds`, written out                          | That case's driver `run_timeout` |
+| `arm: with-only` or `arm: both` on a grader             | Honoured. One arm runs, it is the with-arm, and every grader is scored in it |
+| `max_turns`, written out                                | Skipped                          |
+| `model`, `allowed_tools`, `append_system_prompt`, `env` | Skipped                          |
+| `context.*`, or a `mocks/` directory the case uses      | Skipped                          |
+| `target` or `focus` of `mock_calls` on a grader         | That grader is skipped, and the case still runs |
+
+A grader skip and a case skip are not one thing. A case skip submits nothing. A grader skip
+runs the case and drops that grader from the score, so the case does not fail for a grader
+that was never asked.
 
 The rule is the same for every backend: an explicit key is honoured when the backend's fixed
 behaviour already satisfies it, and skipped otherwise. Which key each backend can honour is
@@ -187,6 +194,11 @@ logs/evals/latest                # symlink to the newest directory
 The log root is the working directory unless `--out` overrides it, and `<scope>` is named
 from the path argument. Both are [cli.md](cli.md). Run directories older than 30 days are
 deleted at the start of every run.
+
+A CoWork run writes `<plugin>/aggregate-result.json` and nothing else. There is no
+`report.html` and no `debug.txt` on that backend: the first is the harness's, and the second
+is `claude --debug-file`, and the harness is not in that path. The gate reads only the
+result document, so it decides identically for all three backends.
 
 The debug log exists only when the run is given one:
 `claude --debug-file <path> plugin eval ... --verbose`. The flag goes before `plugin`, and

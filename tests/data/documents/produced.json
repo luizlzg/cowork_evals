@@ -1,0 +1,31 @@
+{
+  "prompt": "Render the deck and one slide.",
+  "prompt_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+  "session_dir": "produced",
+  "submitted_at": "2026-09-09T12:00:00.000Z",
+  "collected_at": "2026-09-09T12:05:00.000Z",
+  "transcript": null,
+  "other_transcripts": [],
+  "subagent_transcripts": [],
+  "audit_prompt": "Render the deck and one slide.",
+  "lifecycle": [
+    "queued",
+    "started",
+    "completed"
+  ],
+  "turns": [
+    {
+      "role": "assistant",
+      "text": "The deck and the slide are written."
+    }
+  ],
+  "tool_calls": [],
+  "tool_names": [],
+  "final_text": "The deck and the slide are written.",
+  "outputs": [
+    "outputs/deck.pptx",
+    "outputs/notes.md",
+    "outputs/slide.png"
+  ],
+  "log_file": null
+}

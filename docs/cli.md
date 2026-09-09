@@ -54,7 +54,8 @@ runs on two backends of three, so a pass-through would be silently ignored on th
 
 | Option                    | `--venv` | `--docker` | `--cowork`                        |
 | ------------------------- | -------- | ---------- | --------------------------------- |
-| `--runs N`                | yes      | yes        | refused, one run per case         |
+| `--runs N`                | yes      | yes        | yes, replacing each case's own    |
+| `--timeout-seconds N`     | refused  | refused    | yes, as each run's `run_timeout`  |
 | `--model M`               | yes      | yes        | refused, the session decides      |
 | `--judge-model M`         | yes      | yes        | yes, for judged graders           |
 | `--allow-tools T...`      | yes      | yes        | refused, the session decides      |
@@ -63,6 +64,10 @@ runs on two backends of three, so a pass-through would be silently ignored on th
 | `--out DIR`               | yes      | yes        | yes                               |
 | `--build-missing`         | yes      | yes        | refused, nothing to build         |
 | `--dry-run`               | yes      | yes        | yes                               |
+
+`--timeout-seconds N` is refused on the two Claude Code backends because
+`claude plugin eval` has no timeout flag to map it onto. Only the CoWork backend sets a
+per-case `run_timeout` itself.
 
 Defaults come from the `eval:` section of `cowork_evals.yaml`, in
 [running_evals.md](running_evals.md), which also says which underlying flag each option maps
@@ -91,7 +96,7 @@ and a run that silently spends ten more building an image is not readable in a l
 | ---------- | -------------------------------------------------------------------- | ----------------------------------------------------------- |
 | `--venv`   | `claude` on `PATH`, the mirror at the current digest, the uv interpreter the mirror was built from | the mirror is absent or stale, `python3 -V` is not 3.10, or the interpreter to stage is absent |
 | `--docker` | a Docker or Rancher daemon, the image at the current digest, and the container login | the daemon is down, the image is absent or stale, or there is no login |
-| `--cowork` | macOS, the CoWork desktop application, an Accessibility grant        | the grant is missing, so there is no headless route and no CI |
+| `--cowork` | macOS, the CoWork desktop application, an Accessibility grant, `claude` on `PATH`, and the suite inside the driver's `max_runs` | the grant is missing, so there is no headless route and no CI, or `claude` is absent, or the suite would exceed the ceiling |
 
 A failed preflight exits 3 and prints one line naming the command that fixes it:
 
@@ -101,6 +106,15 @@ mirror is stale: run `cowork_evals setup --venv`
 
 `--build-missing` builds instead of failing. It is off by default and exists for unattended
 use.
+
+`claude` is a `--cowork` precondition because the judge behind an `llm` or `baseline` grader
+is `claude -p`, and because `claudeVersion` in the result document is the host `claude
+--version`. The signed-in CLI is the one credential route; there is no second one.
+
+Host spend on `--cowork` is the judge alone. The CoWork session itself is billed to the
+signed-in account and is not observable from the host, so `--max-cost-usd` is refused there
+and the ceiling that binds is the driver's `max_runs`. See
+[cowork_driver.md](cowork_driver.md).
 
 ## setup
 

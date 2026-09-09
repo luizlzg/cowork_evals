@@ -18,6 +18,8 @@ import subprocess
 from enum import StrEnum
 from pathlib import Path
 
+from ..cases import CaseError
+from ..cases import plugin_root as cases_plugin_root
 from ..config import Config
 from ..harness import ENABLEMENT_ENV, RESULT_NAME, RunOptions, eval_argv
 
@@ -35,9 +37,6 @@ DIGEST_LENGTH = 12
 CLAUDE_DIR_NAME = ".claude"
 STATE_FILE_NAME = ".claude.json"
 CREDENTIALS_FILE_NAME = ".credentials.json"
-
-# What makes a directory a plugin root. docs/eval_format.md.
-PLUGIN_MANIFEST = Path(".claude-plugin") / "plugin.json"
 
 # Inside the container. The uid the run carries has no passwd entry, so HOME is explicit.
 # The Dockerfile creates all four and writes none of them: it takes them as build arguments
@@ -97,13 +96,14 @@ def plugin_root(target: Path | str) -> Path:
     """The nearest directory at or above `target` holding `.claude-plugin/plugin.json`.
 
     It is what the read-only mount is rooted at, and what the container-side target is
-    relative to.
+    relative to. The rule is `cases.plugin_root`, which every backend resolves the same
+    way; this raises the container backend's own exception over it, so a caller here
+    catches one type.
     """
-    resolved = Path(target).resolve()
-    for candidate in (resolved, *resolved.parents):
-        if (candidate / PLUGIN_MANIFEST).is_file():
-            return candidate
-    raise DockerError(f"no {PLUGIN_MANIFEST} at or above {resolved}")
+    try:
+        return cases_plugin_root(target)
+    except CaseError as error:
+        raise DockerError(str(error)) from error
 
 
 class Docker:

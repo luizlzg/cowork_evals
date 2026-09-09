@@ -1,0 +1,5 @@
+{
+  "name": "reader-fixture",
+  "description": "A hand-written plugin root for the case reader's tests. Not a real plugin.",
+  "version": "0.0.1"
+}

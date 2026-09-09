@@ -1,0 +1,72 @@
+{
+  "prompt": "Say hello to Alex and write the report.",
+  "prompt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "session_dir": "session",
+  "submitted_at": "2026-09-09T10:00:00.000Z",
+  "collected_at": "2026-09-09T10:02:00.000Z",
+  "transcript": "session/.claude/projects/session/t-0001.jsonl",
+  "other_transcripts": [],
+  "subagent_transcripts": [],
+  "audit_prompt": "Say hello to Alex and write the report.",
+  "lifecycle": [
+    "queued",
+    "started",
+    "completed"
+  ],
+  "turns": [
+    {
+      "role": "user",
+      "text": "Say hello to Alex and write the report."
+    },
+    {
+      "role": "assistant",
+      "text": "Hello Alex. The report is in report.md."
+    }
+  ],
+  "tool_calls": [
+    {
+      "id": "call-a",
+      "name": "Skill",
+      "input": {
+        "skill": "greeter:greet"
+      },
+      "mcp_server": null,
+      "mcp_tool": null,
+      "timestamp": "2026-09-09T10:00:05.000Z",
+      "result": "greeting"
+    },
+    {
+      "id": "call-b",
+      "name": "Read",
+      "input": {
+        "file_path": "notes.md"
+      },
+      "mcp_server": null,
+      "mcp_tool": null,
+      "timestamp": "2026-09-09T10:00:20.000Z",
+      "result": "three notes"
+    },
+    {
+      "id": "call-c",
+      "name": "Write",
+      "input": {
+        "file_path": "report.md"
+      },
+      "mcp_server": null,
+      "mcp_tool": null,
+      "timestamp": "2026-09-09T10:01:00.000Z",
+      "result": "written"
+    }
+  ],
+  "tool_names": [
+    "Skill",
+    "Read",
+    "Write"
+  ],
+  "final_text": "Hello Alex. The report is in report.md.",
+  "outputs": [
+    "outputs/figures/chart.svg",
+    "outputs/report.md"
+  ],
+  "log_file": null
+}

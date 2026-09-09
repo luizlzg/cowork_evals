@@ -25,8 +25,10 @@ command on the interpreter the backend put there. See
 fixture and each backend it fires are built is the status table in
 [../docs/running_evals.md](../docs/running_evals.md).
 
-The exact string carries a patch release, which is the one the image installs, so this
-fixture is the container backend's alone. The venv backend stages an interpreter from the
+The exact string carries a patch release. The container installs it, and the CoWork VM runs
+it, so this fixture serves both the container backend and the CoWork backend. The CoWork
+backend loads no plugin, and this case needs none: it writes `runs: 1`, carries no skill,
+and asks for a command any session can run. The venv backend stages an interpreter from the
 mirror, and the mirror pins `3.10` and takes whatever patch release uv resolves: the staged
 one in [../docs/staged_runtime.md](../docs/staged_runtime.md) is a different patch, and the
 grader does not match it. The fixture serves the venv backend when that backend pins a patch

@@ -501,3 +501,14 @@ def test_a_refusal_before_firing_leaves_no_run_log_line(tmp_path: Path) -> None:
         driver.submit("x" * 14337)
     assert raised.value.code == 2
     assert driver.history() == []
+
+
+def test_recent_counts_the_trailing_24_hours_of_a_hand_written_run_log(tmp_path: Path) -> None:
+    """The CoWork backend calls this rather than re-deriving the window over `history()`."""
+    driver = build(tmp_path)
+    old = {"timestamp": "2020-01-01T00:00:00+00:00", "outcome": "submitted"}
+    driver.config.run_log.write_text(json.dumps(old) + "\n", encoding="utf-8")
+    assert driver.recent() == 0
+    driver._record("Reply with exactly: PONG", None, "submitted")
+    driver._record("Reply with exactly: PONG", None, "failed:4")
+    assert driver.recent() == 2, "a failed submission counts too"

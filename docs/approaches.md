@@ -47,17 +47,19 @@ session wrote, so it honours a subset of the format.
 | `prompt.md` body                                        | yes                  | yes                                     |
 | `regex`, `tool_used`, `tool_order` graders              | yes                  | yes                                     |
 | `file_exists` grader                                    | any created file     | files under `outputs/` only             |
-| `llm` and `baseline` graders                            | yes                  | yes, judged by a separate call          |
-| `runs`, `max_turns`, `timeout_seconds`                  | yes                  | no, one run per case, one timeout       |
+| `llm` and `baseline` graders                            | yes                  | yes, judged by a separate `claude -p` call. An `llm` grader whose file focus is an image is skipped |
+| `runs`, `timeout_seconds`                               | yes                  | yes                                     |
+| `max_turns`                                             | yes                  | no, no turn cap reaches a session       |
 | `model`, `allowed_tools`, `append_system_prompt`, `env` | yes                  | no, the session decides                 |
 | `context.add_dirs`, `context.scaffold_script`           | yes                  | no, nothing stages files into the VM    |
 | `mocks/`                                                | yes                  | no, the MCP servers are the real ones   |
-| `arm:` on a grader                                      | read, but inert      | no                                      |
+| `arm:` on a grader                                      | read, but inert      | read, but inert                         |
 
-`arm:` is read on the Claude Code backends and changes nothing, because `--ablation` is
-pinned to `none` and no baseline arm runs. There is no baseline arm on any backend, so
-`--ablation with-without` is not reachable through this command at all. See
-[running_evals.md](running_evals.md).
+`arm:` is read on every backend and changes nothing, because `--ablation` is pinned to
+`none` on the Claude Code backends and the CoWork backend runs one arm, which is the
+with-arm. There is no baseline arm on any backend, so `--ablation with-without` is not
+reachable through this command at all. A case carrying `arm:` for portability is therefore
+honoured rather than skipped. See [running_evals.md](running_evals.md).
 
 A case that writes out a key the CoWork backend cannot honour is reported by that backend as
 skipped, never as passed. A default is not a request, so a case that writes no `runs` key
@@ -116,6 +118,13 @@ The costs. None is reduced by better engineering.
 | Costs a VM boot plus a full agentic run, so minutes per case | [cowork_desktop.md](cowork_desktop.md)    |
 
 It is the pre-release confirmation, run by a person on purpose. It is never a commit gate.
+
+**The plugin under test is not loaded by this backend.** The deep link carries a prompt, and
+nothing on the host writes into the VM's configuration, so a CoWork run exercises the plugin
+set already deployed to the signed-in account. A case path selects which cases run; it does
+not select which code runs, and a local edit to a skill is invisible here until it is
+deployed. Nothing checks it, because it is not verifiable from the host. See
+[cowork_driver.md](cowork_driver.md).
 
 ## Which to use when
 
