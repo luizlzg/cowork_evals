@@ -126,6 +126,24 @@ def plugin_name(root: Path | str) -> str:
     return named if isinstance(named, str) and named else resolved.name
 
 
+def plugin_roots(target: Path | str) -> list[Path]:
+    """Every plugin root the target covers, sorted by path.
+
+    A path at or under one root is that root. A path covering several is every directory
+    below it holding `.claude-plugin/plugin.json` with a sibling `evals/`, which is how a
+    marketplace repository is swept without a fixed `plugins/*` glob. docs/library.md.
+    """
+    resolved = Path(target).resolve()
+    below = sorted(
+        {
+            manifest.parent.parent.resolve()
+            for manifest in resolved.rglob(str(PLUGIN_MANIFEST))
+            if manifest.is_file() and (manifest.parent.parent / EVAL_DIR).is_dir()
+        }
+    )
+    return below if below else [plugin_root(resolved)]
+
+
 def discover(
     root: Path | str, *, tags: tuple[str, ...] = (), case_glob: str | None = None
 ) -> list[Case]:

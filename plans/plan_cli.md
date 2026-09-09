@@ -379,92 +379,92 @@ One table, because the two backends take different arguments and nothing else st
 
 ### run
 
-- [ ] Resolve the target to a list of plugin roots. A path at or under one root is that
+- [x] Resolve the target to a list of plugin roots. A path at or under one root is that
       root. A path covering several is every directory below it holding
       `.claude-plugin/plugin.json` with a sibling `evals/`, sorted by path.
-- [ ] More than one plugin root on `--cowork` is a usage error, exit 2.
-- [ ] Preflight the backend. On `--docker` with `--build-missing`, an absent or stale image
+- [x] More than one plugin root on `--cowork` is a usage error, exit 2.
+- [x] Preflight the backend. On `--docker` with `--build-missing`, an absent or stale image
       is built here instead of failing; every other unmet condition still fails, the
       container login included, because that login is interactive.
-- [ ] On `--cowork`, preflight also calls `preflight.cowork_ceiling`, so a suite too large
+- [x] On `--cowork`, preflight also calls `preflight.cowork_ceiling`, so a suite too large
       for `max_runs` is refused before anything is created.
-- [ ] Validate every selected plugin root, not only the target. Any violation prints the
+- [x] Validate every selected plugin root, not only the target. Any violation prints the
       file and the rule and exits 3.
-- [ ] Print `validate.uncovered` for every selected root. It fails nothing on its own. Under
+- [x] Print `validate.uncovered` for every selected root. It fails nothing on its own. Under
       `--require-coverage` an uncovered skill exits 3, like any other preflight condition.
-- [ ] Count the selection: `cases.discover` over every selected root with `--tag` and
+- [x] Count the selection: `cases.discover` over every selected root with `--tag` and
       `--case` applied. Zero across all of them is a usage error, exit 2, naming the path
       and the filters. A mistyped `--tag` must not read as a pass, and this catches it
       before a container starts. One root of several matching zero is normal under a filter
       and is not an error.
-- [ ] Any unmet condition, violation or empty selection exits before anything is created and
+- [x] Any unmet condition, violation or empty selection exits before anything is created and
       before anything is deleted.
-- [ ] Resolve the log root and prune directories older than 30 days. It happens after every
+- [x] Resolve the log root and prune directories older than 30 days. It happens after every
       refusal above, so exit 2 and exit 3 leave the root untouched, and before the
       `--dry-run` exit, so an unattended dry run still reclaims space.
-- [ ] `--dry-run` exits 0 here. On `--docker` it prints `Docker.run_argv`, one argument per
+- [x] `--dry-run` exits 0 here. On `--docker` it prints `Docker.run_argv`, one argument per
       line. On `--cowork` it prints one line per case with its run count, its timeout and
       its `Skips`, then the ceiling arithmetic, all from `cowork_backend.plan`. The skips
       are the point of the dry run: a skipped case fails the gate, so an operator reads
       which ones before spending. Neither creates a run directory.
-- [ ] Create the run directory, open the tee, write `env.txt`, and point `latest`.
-- [ ] Per plugin root, in order: sum `costUsd` over the documents written so far, stop when
+- [x] Create the run directory, open the tee, write `env.txt`, and point `latest`.
+- [x] Per plugin root, in order: sum `costUsd` over the documents written so far, stop when
       the sum has reached `eval.max_cost_total_usd`, create the plugin directory with
       `logs.plugin_dir`, and call the backend through the mapping above. The check runs
       before the first plugin, so a ceiling of 0 stops the invocation before it spends
       anything. On `--cowork` that sum is the judge spend alone, because the session is
       billed to the account and is not observable from the host, so the ceiling that binds
       there is the driver's `max_runs` in preflight and not this one.
-- [ ] A stop on the ceiling becomes one `extra` line to the gate. The gate then reads the
+- [x] A stop on the ceiling becomes one `extra` line to the gate. The gate then reads the
       documents written so far, adds that line, and the invocation exits 1. A sweep that
       stops on the ceiling is never a pass.
-- [ ] A `DockerError` or a `CaseError` raised while running a plugin prints, and the sweep
+- [x] A `DockerError` or a `CaseError` raised while running a plugin prints, and the sweep
       continues with the next plugin. The gate then reads a missing document and exits 1.
-- [ ] A `CoWorkError` raised while running a case reaches the result document, which is what
+- [x] A `CoWorkError` raised while running a case reaches the result document, which is what
       `plan_cowork_backend.md` built.
-- [ ] Gate the run directory once, write `gate.txt`, print it, and return 0 or 1.
+- [x] Gate the run directory once, write `gate.txt`, print it, and return 0 or 1.
 
 ### test
 
 The verb is a preflight and one call. Nothing between the two inspects, wraps or interprets
 what pytest produced. [`../docs/cowork_test.md`](../docs/cowork_test.md) is the mechanism.
 
-- [ ] Resolve the path to one plugin root with `cases.plugin_root`. A path covering several
+- [x] Resolve the path to one plugin root with `cases.plugin_root`. A path covering several
       is a usage error, exit 2.
-- [ ] Preflight `PytestImage.check()`: the daemon and the test image, never the container
+- [x] Preflight `PytestImage.check()`: the daemon and the test image, never the container
       login. Any unmet condition prints and returns 3, having created nothing.
-- [ ] `--build-missing` builds the test image, and the base image first when that is absent
+- [x] `--build-missing` builds the test image, and the base image first when that is absent
       too. Without it, either being absent or stale returns 3 naming
       `cowork_evals setup --docker`.
-- [ ] No case validation, no log directory, no `env.txt`, no `latest`, no pruning and no
+- [x] No case validation, no log directory, no `env.txt`, no `latest`, no pruning and no
       gate. The verb writes nothing on the host.
-- [ ] `--dry-run` prints `PytestImage.run_argv`, one argument per line, and returns 0
+- [x] `--dry-run` prints `PytestImage.run_argv`, one argument per line, and returns 0
       without starting a container.
-- [ ] Return `PytestImage.run(target, pytest_args=...)` unchanged. `main` returns it and
+- [x] Return `PytestImage.run(target, pytest_args=...)` unchanged. `main` returns it and
       `console_main` exits on it. A failing suite is a result, not an error, and nothing
       here remaps a code.
 
 ### setup, check and prune
 
-- [ ] `setup --docker`: `Docker.build()` when the image is absent, then `PytestImage.build()`
+- [x] `setup --docker`: `Docker.build()` when the image is absent, then `PytestImage.build()`
       when the test image is absent, then the interactive
       login when `has_credential()` is false. An image already at its current digest prints
       `current` and returns 0.
-- [ ] `check` prints the unmet conditions from phase 4 and returns 0 when every named
+- [x] `check` prints the unmet conditions from phase 4 and returns 0 when every named
       backend is ready, 3 otherwise. `check --all` covers both backends, so a ready machine
       returns 0. `check --docker` reports both images and the container login: the login is
       unmet for `run` and is not read by `test`'s preflight.
-- [ ] `prune --logs` deletes run directories under the resolved root older than
+- [x] `prune --logs` deletes run directories under the resolved root older than
       `--older-than`, default 30.
-- [ ] `Docker.images()` returns each `cowork-evals:*` and `cowork-evals-test:*` tag with its
+- [x] `Docker.images()` returns each `cowork-evals:*` and `cowork-evals-test:*` tag with its
       creation date, from `docker image ls`. `Docker.remove_image(tag)` removes one, from
       `docker image rm`. Both live in the docker module, because nothing outside it builds a
       `docker` argument list.
-- [ ] `prune --docker` removes every image `Docker.images()` returns except the current
+- [x] `prune --docker` removes every image `Docker.images()` returns except the current
       digest of each of the two, restricted by `--older-than` against the creation date. The
       container login is left alone.
-- [ ] `prune` with no selection flag returns 2.
-- [ ] `tests/unit/test_cli.py` grows: the sweep's plugin root resolution over a
+- [x] `prune` with no selection flag returns 2.
+- [x] `tests/unit/test_cli.py` grows: the sweep's plugin root resolution over a
       hand-written two-plugin tree, two plugins sharing a manifest name getting two
       directories, the multi-plugin refusal on `--cowork`, the empty selection refusal and a
       filtered sweep where one root of two matches nothing and the invocation proceeds, the
@@ -472,7 +472,7 @@ what pytest produced. [`../docs/cowork_test.md`](../docs/cowork_test.md) is the 
       `--dry-run` outputs, the multi-plugin refusal on `test`, the ceiling arithmetic
       against hand-written documents, and each `setup`, `check` and `prune` return code that
       needs no daemon.
-- [ ] `tests/unit/test_docker.py` grows: the `images()` and `remove_image()` argument lists,
+- [x] `tests/unit/test_docker.py` grows: the `images()` and `remove_image()` argument lists,
       asserted without a daemon.
 
 ## Phase 7: The integration tier

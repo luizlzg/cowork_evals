@@ -107,13 +107,22 @@ def log_root(out: Path | str | None = None) -> Path:
 # Creating.
 
 
+def run_dir_name(scope: str) -> str:
+    """`<yyyymmdd-hhmmss>-<scope>`, local time, because a person reads it.
+
+    Separate from `run_dir` so `--dry-run` can name the directory it would create without
+    creating one, and so the name is composed in one place.
+    """
+    return f"{datetime.now().strftime(STAMP_FORMAT)}-{scope}"
+
+
 def run_dir(root: Path | str, scope: str) -> Path:
-    """`<root>/<yyyymmdd-hhmmss>-<scope>`, created. Local time, because a person reads it.
+    """`<root>/<yyyymmdd-hhmmss>-<scope>`, created.
 
     A second invocation inside the same second appends `-2`, then `-3`, so two runs never
     share a directory.
     """
-    return _unique(Path(root), f"{datetime.now().strftime(STAMP_FORMAT)}-{scope}")
+    return _unique(Path(root), run_dir_name(scope))
 
 
 def plugin_dir(run_directory: Path | str, name: str) -> Path:

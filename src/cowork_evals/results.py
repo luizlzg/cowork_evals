@@ -249,6 +249,24 @@ def write(output_dir: Path | str, document: dict[str, Any]) -> Path:
     return path
 
 
+def spend(run_dir: Path | str) -> float:
+    """`costUsd` summed over every result document one level under a run directory.
+
+    It is what a sweep compares against `eval.max_cost_total_usd` before each plugin. A
+    document that is missing or unreadable contributes nothing: the gate is what reports
+    it, and a sweep never stops early because it could not read one.
+    """
+    total = 0.0
+    for plugin in sorted(Path(run_dir).iterdir()):
+        try:
+            document = json.loads((plugin / RESULT_NAME).read_text(encoding="utf-8"))
+        except OSError, ValueError:
+            continue
+        if isinstance(document, dict) and isinstance(document.get("costUsd"), int | float):
+            total += float(document["costUsd"])
+    return total
+
+
 def version() -> str:
     """The host `claude --version`, as its first token."""
     try:

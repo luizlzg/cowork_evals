@@ -25,8 +25,10 @@ from cowork_evals.docker import (
     Condition,
     Docker,
     DockerError,
+    images_argv,
     plugin_root,
     remedy,
+    remove_image_argv,
 )
 from cowork_evals.harness import RunOptions
 
@@ -415,3 +417,30 @@ def test_the_remedy_for_an_unreachable_daemon_names_no_command_of_this_package()
 def test_no_remedy_names_a_development_script():
     """A consumer never sees `scripts/`. docs/library.md."""
     assert not [condition for condition in Condition if "scripts/" in remedy(condition)]
+
+
+# The image inventory, for `prune --docker`. Both argument lists are asserted here, with
+# no daemon: this module is the one place a `docker` argument list is built.
+
+
+def test_the_image_listing_names_every_repository_it_was_given():
+    assert images_argv("cowork-evals", "cowork-evals-test") == [
+        "docker",
+        "image",
+        "ls",
+        "--filter",
+        "reference=cowork-evals:*",
+        "--filter",
+        "reference=cowork-evals-test:*",
+        "--format",
+        "{{.Repository}}:{{.Tag}}\t{{.CreatedAt}}",
+    ]
+
+
+def test_the_image_removal_names_one_tag():
+    assert remove_image_argv("cowork-evals:0123456789ab") == [
+        "docker",
+        "image",
+        "rm",
+        "cowork-evals:0123456789ab",
+    ]

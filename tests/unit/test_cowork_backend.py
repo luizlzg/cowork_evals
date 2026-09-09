@@ -281,9 +281,12 @@ def test_a_tag_filter_and_a_case_glob_reach_discovery(tmp_path: Path) -> None:
 
 def test_a_target_covering_two_plugin_roots_raises(tmp_path: Path) -> None:
     for name in ("one", "two"):
-        manifest = tmp_path / "marketplace" / name / ".claude-plugin"
-        manifest.mkdir(parents=True)
-        (manifest / "plugin.json").write_text(MANIFEST, encoding="utf-8")
+        root = tmp_path / "marketplace" / name
+        (root / ".claude-plugin").mkdir(parents=True)
+        (root / ".claude-plugin" / "plugin.json").write_text(MANIFEST, encoding="utf-8")
+        # A plugin is a manifest with a sibling `evals/`, and never a manifest alone.
+        # docs/library.md.
+        (root / "evals").mkdir()
     with pytest.raises(CaseError) as raised:
         plan(tmp_path / "marketplace", config=settings(tmp_path))
     assert "more than one plugin root" in str(raised.value)

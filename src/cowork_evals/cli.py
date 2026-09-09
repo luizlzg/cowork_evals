@@ -16,10 +16,17 @@ from __future__ import annotations
 
 import argparse
 import sys
+from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any
 
-from . import logs
-from .preflight import COWORK, DOCKER
+from . import cowork_backend, docker, gate, logs, preflight, results, validate
+from .cases import CaseError, discover, plugin_name, plugin_roots
+from .config import Config, CoWorkError
+from .docker import Docker, DockerError, pytest_image
+from .docker.pytest_image import PytestImage
+from .harness import RunOptions
+from .preflight import COWORK, DOCKER, TEST
 
 # `check --all`, the one selection that is not a backend.
 ALL = "all"
@@ -220,14 +227,365 @@ def main(argv: list[str] | None = None) -> int:
         return USAGE
 
     try:
-        return _dispatch(args)
+        config = Config.load()
+    except CoWorkError as error:
+        print(error, file=sys.stderr)
+        return PREFLIGHT_FAILED
+
+    try:
+        return _dispatch(args, config)
     except KeyboardInterrupt:
         print("interrupted", file=sys.stderr)
         return INTERRUPTED
 
 
-def _dispatch(args: argparse.Namespace) -> int:
-    raise NotImplementedError(f"the {args.verb} verb is phase 6")
+def _dispatch(args: argparse.Namespace, config: Config) -> int:
+    if args.verb == "run":
+        return _run(args, config)
+    if args.verb == "test":
+        return _test(args, config)
+    if args.verb == "setup":
+        return _setup(config)
+    if args.verb == "check":
+        return _check(args, config)
+    return _prune(args, config)
+
+
+# run.
+
+
+def _run(args: argparse.Namespace, config: Config) -> int:
+    """Preflight, validate, count, prune, then run every selected plugin and gate once.
+
+    Every refusal happens before anything is created and before anything is deleted, so
+    exit 2 and exit 3 leave the log root exactly as it was. docs/cli.md.
+    """
+    try:
+        roots = plugin_roots(args.path)
+    except CaseError as error:
+        return _usage(str(error))
+    if len(roots) > 1 and args.backend == COWORK:
+        named = ", ".join(str(root) for root in roots)
+        return _usage(f"{args.path} covers more than one plugin root on --cowork: {named}")
+
+    targets = _targets(args.path, roots)
+    tags = tuple(args.tag or ())
+
+    unmet = _run_preflight(args, config, targets)
+    if unmet:
+        return _refuse(unmet, PREFLIGHT_FAILED)
+    blocked = _validate(roots, require_coverage=args.require_coverage)
+    if blocked:
+        return _refuse(blocked, PREFLIGHT_FAILED)
+    if not _selected(targets, tags, args.case):
+        return _usage(f"{args.path} selects no case{_filters(tags, args.case)}")
+
+    root = logs.log_root(args.out)
+    for deleted in logs.prune(root, logs.RUN_PRUNE_DAYS):
+        print(f"pruned {deleted}")
+
+    if args.dry_run:
+        return _dry_run(args, config, root, targets, tags)
+
+    return _sweep(args, config, root, targets, tags)
+
+
+def _targets(path: str, roots: list[Path]) -> list[tuple[Path, Path]]:
+    """One `(root, target)` pair per plugin the invocation will run.
+
+    A single root runs the path as it was typed, so a case directory runs that case. A
+    sweep runs each root whole, because the path itself is above all of them.
+    """
+    if len(roots) == 1:
+        return [(roots[0], Path(path).resolve())]
+    return [(root, root) for root in roots]
+
+
+def _run_preflight(
+    args: argparse.Namespace, config: Config, targets: list[tuple[Path, Path]]
+) -> list[str]:
+    """The backend's unmet conditions, plus the rate ceiling on `--cowork`.
+
+    `--build-missing` builds an absent image here instead of failing. Every other unmet
+    condition still fails, the container login included, because that login is interactive.
+    """
+    if args.backend == DOCKER and args.build_missing:
+        image = Docker(config)
+        if image.daemon_is_reachable() and not image.image_is_present():
+            image.build()
+    unmet = preflight.checks(args.backend, config)
+    if args.backend == COWORK and not unmet:
+        unmet += preflight.cowork_ceiling(
+            targets[0][1],
+            config=config,
+            runs=args.runs,
+            timeout_seconds=args.timeout_seconds,
+            tags=tuple(args.tag or ()),
+            case_glob=args.case,
+        )
+    return unmet
+
+
+def _validate(roots: list[Path], *, require_coverage: bool) -> list[str]:
+    """Every selected plugin root, whole. A malformed sibling case blocks a single case.
+
+    Coverage is always reported and fails nothing on its own. `--require-coverage` makes an
+    uncovered skill a preflight condition like any other. docs/cli.md.
+    """
+    blocked = [str(violation) for root in roots for violation in validate.violations(root)]
+    gaps = [line for root in roots for line in validate.uncovered(root)]
+    for line in gaps:
+        print(f"uncovered: {line}")
+    return blocked + gaps if require_coverage else blocked
+
+
+def _selected(targets: list[tuple[Path, Path]], tags: tuple[str, ...], case: str | None) -> int:
+    """How many cases the selection matches across every plugin.
+
+    Zero across all of them is a usage error, so a mistyped `--tag` never reads as a pass.
+    One plugin of a sweep matching zero is normal under a filter and is not an error.
+    """
+    return sum(len(discover(target, tags=tags, case_glob=case)) for _, target in targets)
+
+
+def _filters(tags: tuple[str, ...], case: str | None) -> str:
+    named = [f"--tag {tag}" for tag in tags] + ([f"--case {case}"] if case else [])
+    return f" under {', '.join(named)}" if named else ""
+
+
+def _dry_run(
+    args: argparse.Namespace,
+    config: Config,
+    root: Path,
+    targets: list[tuple[Path, Path]],
+    tags: tuple,
+) -> int:
+    """What would run, and no run directory. Pruning already happened above."""
+    for plugin, target in targets:
+        name = plugin_name(plugin)
+        print(f"# {name}")
+        if args.backend == COWORK:
+            _dry_run_cowork(args, config, target, tags)
+            continue
+        would_be = root / logs.run_dir_name(logs.scope_name(target, [plugin])) / logs.slug(name)
+        for argument in Docker(config).run_argv(target, would_be, _options(args, config, tags)):
+            print(argument)
+    return OK
+
+
+def _dry_run_cowork(args: argparse.Namespace, config: Config, target: Path, tags: tuple) -> None:
+    """One line per case, then the ceiling arithmetic. This backend builds no command line.
+
+    The skips are the point: a skipped case fails the gate, so an operator reads which ones
+    before spending a VM boot on the rest.
+    """
+    prepared = cowork_backend.plan(
+        target,
+        config=config,
+        runs=args.runs,
+        timeout_seconds=args.timeout_seconds,
+        tags=tags,
+        case_glob=args.case,
+    )
+    for entry in prepared.entries:
+        print(f"{entry.name}: runs {entry.runs}, timeout {entry.timeout_seconds}s")
+        for reason in entry.skips.case:
+            print(f"  skip: {reason}")
+        for grader, reason in sorted(entry.skips.graders.items()):
+            print(f"  grader skip {grader}: {reason}")
+    print(prepared.arithmetic)
+
+
+def _options(args: argparse.Namespace, config: Config, tags: tuple) -> RunOptions:
+    """The container backend's options, resolved through the one ladder. docs/library.md."""
+    return RunOptions.resolve(
+        config,
+        model=args.model,
+        judge_model=args.judge_model,
+        max_cost_usd=None if args.max_cost_usd is None else str(args.max_cost_usd),
+        allow_tools=None if args.allow_tools is None else tuple(args.allow_tools),
+        runs=args.runs,
+        tags=tags,
+        case=args.case,
+    )
+
+
+def _sweep(
+    args: argparse.Namespace,
+    config: Config,
+    root: Path,
+    targets: list[tuple[Path, Path]],
+    tags: tuple,
+) -> int:
+    """Every selected plugin in turn, inside one run directory, gated once."""
+    image = Docker(config) if args.backend == DOCKER else None
+    scope = logs.scope_name(args.path, [plugin for plugin, _ in targets])
+    directory = logs.run_dir(root, scope)
+    logs.point_latest(root, directory)
+
+    with logs.tee(directory):
+        logs.write_env(directory, args.backend, image=None if image is None else image.tag)
+        extra = _each_plugin(args, config, directory, targets, tags, image)
+        decided = gate.gate(directory, extra=extra)
+        (directory / logs.GATE_FILE).write_text(decided.text, encoding="utf-8")
+        print(decided.text, end="")
+    return OK if decided.passed else GATE_FAILED
+
+
+def _each_plugin(
+    args: argparse.Namespace,
+    config: Config,
+    directory: Path,
+    targets: list[tuple[Path, Path]],
+    tags: tuple,
+    image: Docker | None,
+) -> tuple[str, ...]:
+    """Run each plugin, stopping on the total cost ceiling.
+
+    The check runs before the first plugin, so a ceiling of 0 stops the invocation before
+    it spends anything. On `--cowork` the sum is the judge spend alone: the session is
+    billed to the account and is not observable from the host, so the ceiling that binds
+    there is the driver's `max_runs`, in the preflight above. docs/running_evals.md.
+    """
+    ceiling = config.eval.max_cost_total_usd
+    for plugin, target in targets:
+        spent = results.spend(directory)
+        if spent >= ceiling:
+            return (
+                f"the total cost ceiling stopped the sweep at {plugin}: "
+                f"{spent} spent, eval.max_cost_total_usd is {ceiling}",
+            )
+        output = logs.plugin_dir(directory, plugin_name(plugin))
+        try:
+            if image is not None:
+                image.run(target, output, _options(args, config, tags))
+            else:
+                cowork_backend.run(
+                    target,
+                    output,
+                    config=config,
+                    runs=args.runs,
+                    timeout_seconds=args.timeout_seconds,
+                    judge_model=args.judge_model,
+                    tags=tags,
+                    case_glob=args.case,
+                )
+        except (DockerError, CaseError) as error:
+            # The gate reads the missing document and fails, so the sweep goes on.
+            print(f"{plugin}: {error}", file=sys.stderr)
+    return ()
+
+
+# test.
+
+
+def _test(args: argparse.Namespace, config: Config) -> int:
+    """A preflight and one call. Nothing between the two interprets what pytest produced.
+
+    The verb writes nothing on the host: no run directory, no `env.txt`, no `latest`, no
+    pruning and no gate. It validates no case and reads no `evals/`, so a malformed case
+    never blocks a test run. docs/cowork_test.md.
+    """
+    try:
+        roots = plugin_roots(args.path)
+    except CaseError as error:
+        return _usage(str(error))
+    if len(roots) > 1:
+        named = ", ".join(str(root) for root in roots)
+        return _usage(f"{args.path} covers more than one plugin root: {named}. pytest takes one")
+
+    image = PytestImage(config)
+    tail = tuple(args.pytest_args)
+    if args.dry_run:
+        # Before the preflight, unlike `run --dry-run`, which prunes the log root and so
+        # must not act behind a failed one. This prints an argument list and does nothing
+        # else, so there is nothing for a preflight to guard. docs/cli.md.
+        for argument in image.run_argv(args.path, pytest_args=tail):
+            print(argument)
+        return OK
+    if args.build_missing:
+        if not image.docker.image_is_present():
+            image.docker.build()
+        if not image.image_is_present():
+            image.build()
+    unmet = preflight.checks(TEST, config)
+    if unmet:
+        return _refuse(unmet, PREFLIGHT_FAILED)
+
+    return image.run(args.path, pytest_args=tail)
+
+
+# setup, check and prune.
+
+
+def _setup(config: Config) -> int:
+    """Build the two images, then log in. An image already at its digest is `current`."""
+    image = Docker(config)
+    test_image = PytestImage(config)
+    for artefact in (image, test_image):
+        if artefact.image_is_present():
+            print(f"{artefact.tag}: current")
+        else:
+            artefact.build()
+    if image.has_credential():
+        print(f"{image.credentials_file}: current")
+        return OK
+    image.login()
+    return OK
+
+
+def _check(args: argparse.Namespace, config: Config) -> int:
+    """Report what each named backend is missing. It writes nothing and never builds."""
+    unmet = (
+        preflight.checks_all(config)
+        if args.backend == ALL
+        else preflight.checks(args.backend, config)
+    )
+    if not unmet:
+        print("ready")
+        return OK
+    return _refuse(unmet, PREFLIGHT_FAILED)
+
+
+def _prune(args: argparse.Namespace, config: Config) -> int:
+    """Delete what this command created, and nothing else."""
+    if not args.docker and not args.logs:
+        return _usage("prune takes --docker, --logs, or both")
+    if args.logs:
+        for deleted in logs.prune(logs.log_root(args.out), args.older_than):
+            print(f"removed {deleted}")
+    if args.docker:
+        _prune_images(config, args.older_than)
+    return OK
+
+
+def _prune_images(config: Config, days: int) -> None:
+    """Every tag of both repositories except the current digest of each.
+
+    The container login is left alone: it is a credential, not a build product, and
+    deleting it forces an interactive login. docs/cli.md.
+    """
+    current = {Docker(config).tag, PytestImage(config).tag}
+    cutoff = datetime.now().astimezone() - timedelta(days=days)
+    for tag, created in docker.images(docker.REPOSITORY, pytest_image.REPOSITORY):
+        if tag in current or created >= cutoff:
+            continue
+        docker.remove_image(tag)
+        print(f"removed {tag}")
+
+
+# Printing, and the two refusals every verb shares.
+
+
+def _usage(message: str) -> int:
+    print(message, file=sys.stderr)
+    return USAGE
+
+
+def _refuse(lines: list[str], code: int) -> int:
+    for line in lines:
+        print(line, file=sys.stderr)
+    return code
 
 
 def console_main() -> None:

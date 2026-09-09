@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 import subprocess
+from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 
@@ -89,6 +90,63 @@ def remedy(condition: Condition) -> str:
 
 class DockerError(Exception):
     """A container backend failure, carrying a message and nothing else."""
+
+
+# The image inventory, for `prune --docker`. Both are module functions and take the
+# repositories to list, because one module owns each image and neither may import the
+# other: `pytest_image.py` imports this file. Nothing outside this module builds a
+# `docker` argument list. docs/cowork_test.md.
+
+# What `docker image ls` prints per row, and how the second half parses.
+IMAGE_FORMAT = "{{.Repository}}:{{.Tag}}\t{{.CreatedAt}}"
+CREATED_FORMAT = "%Y-%m-%d %H:%M:%S %z"
+CREATED_LENGTH = 25
+
+
+def images_argv(*repositories: str) -> list[str]:
+    """Every tag of each named repository, with its creation date. One row per image."""
+    argv = ["docker", "image", "ls"]
+    for repository in repositories:
+        argv += ["--filter", f"reference={repository}:*"]
+    return argv + ["--format", IMAGE_FORMAT]
+
+
+def images(*repositories: str) -> list[tuple[str, datetime]]:
+    """Each tag and the moment it was built, sorted by tag. An unreadable row is dropped.
+
+    A row `docker` printed in a format this cannot parse is not an image to delete, and a
+    prune that guessed at its age would delete the wrong one.
+    """
+    try:
+        completed = subprocess.run(
+            images_argv(*repositories), capture_output=True, text=True, check=False
+        )
+    except OSError as error:
+        raise DockerError(f"docker image ls could not run: {error}") from error
+    if completed.returncode != 0:
+        raise DockerError(f"docker image ls exited {completed.returncode}: {completed.stderr}")
+    found = []
+    for line in completed.stdout.splitlines():
+        tag, _, created = line.partition("\t")
+        try:
+            when = datetime.strptime(created[:CREATED_LENGTH], CREATED_FORMAT)
+        except ValueError:
+            continue
+        found.append((tag, when))
+    return sorted(found)
+
+
+def remove_image_argv(tag: str) -> list[str]:
+    return ["docker", "image", "rm", tag]
+
+
+def remove_image(tag: str) -> None:
+    """Remove one image. A non-zero exit raises, so a prune says which tag it could not."""
+    completed = subprocess.run(remove_image_argv(tag), capture_output=True, text=True, check=False)
+    if completed.returncode != 0:
+        raise DockerError(
+            f"docker image rm {tag} exited {completed.returncode}: {completed.stderr}"
+        )
 
 
 def plugin_root(target: Path | str) -> Path:
