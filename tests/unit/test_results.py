@@ -14,7 +14,6 @@ from typing import Any
 import pytest
 
 from cowork_evals.cases import Case, Grader, read
-from cowork_evals.cowork_backend import Skips
 from cowork_evals.grader import GraderResult
 from cowork_evals.harness import RESULT_NAME
 from cowork_evals.results import CaseResult, Run, build, write
@@ -194,7 +193,8 @@ def test_case_aggregates_are_the_mean_score_and_the_pass_rate() -> None:
 def test_a_skipped_case_submits_nothing_and_carries_its_reason() -> None:
     skipped = CaseResult(
         case=case("staged", max_turns=12),
-        skips=Skips(case=("max_turns: no turn cap reaches a CoWork session",)),
+        skipped=True,
+        skip_reason="max_turns: no turn cap reaches a CoWork session",
     )
     document = skipped.document(TREE.resolve())
     assert document["skipped"] is True
@@ -259,7 +259,7 @@ def test_the_suite_cost_is_the_judge_spend_alone() -> None:
 def test_a_skipped_case_is_subtracted_from_cases_passed() -> None:
     cases = [
         CaseResult(case=case("runs"), runs=(Run(graders=(result("a", True),)),)),
-        CaseResult(case=case("skipped"), skips=Skips(case=("model: the session decides",))),
+        CaseResult(case=case("skipped"), skipped=True, skip_reason="model: the session decides"),
     ]
     document = suite(cases)
     assert document["aggregates"]["casesTotal"] == 2

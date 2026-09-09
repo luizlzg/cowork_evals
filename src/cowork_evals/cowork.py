@@ -279,7 +279,7 @@ class CoWork:
         if not directory.is_dir() or not os.access(directory, os.R_OK):
             raise CoWorkError(2, f"{directory}: the configured CoWork profile is not readable")
 
-        recent = self._recent()
+        recent = self.recent()
         if recent >= self._config.max_runs:
             raise CoWorkError(
                 2,
@@ -294,8 +294,12 @@ class CoWork:
                 "and the application would truncate it silently",
             )
 
-    def _recent(self) -> int:
-        """Submissions in the trailing 24 hours, counted from the run log."""
+    def recent(self) -> int:
+        """Submissions in the trailing 24 hours, counted from the run log.
+
+        It owns `CEILING_WINDOW` and the timestamp parsing, so the CoWork backend calls it
+        rather than re-deriving the window over `history()`.
+        """
         cutoff = datetime.now(UTC) - CEILING_WINDOW
         count = 0
         for entry in self.history():

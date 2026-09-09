@@ -357,19 +357,19 @@ Back to `src/cowork_evals/cowork_backend.py`. It takes a case path and an output
 and returns the path to the `aggregate-result.json` it wrote. That contract is
 [`README.md`](README.md).
 
-- [ ] `run(target, output_dir, *, config=None, runs=None, timeout_seconds=None,
+- [x] `run(target, output_dir, *, config=None, runs=None, timeout_seconds=None,
       judge_model=None, tags=(), case_glob=None)`: resolve the plugin root, discover the
       cases, run each, write the result document, return its path.
-- [ ] `judge_model` replaces `eval.judge_model` for every judged grader in the suite, and
+- [x] `judge_model` replaces `eval.judge_model` for every judged grader in the suite, and
       reaches phase 4 and `suite.judgeModel`. It is `--judge-model M` in
       [`../docs/cli.md`](../docs/cli.md), and the parameter is the only route that option
       has on this backend.
-- [ ] `runs` and `timeout_seconds` replace every case's declared value, and are `--runs N`
+- [x] `runs` and `timeout_seconds` replace every case's declared value, and are `--runs N`
       and `--timeout-seconds N` in [`../docs/cli.md`](../docs/cli.md). Neither multiplies
       what the case declared. The result document records the declared value on the case, as
       phase 5 sets it, so the case says what it asked for while `arms.with` says how many
       runs there were and each run's `cowork.timeoutSeconds` says what it ran under.
-- [ ] `plan(target, *, config=None, runs=None, timeout_seconds=None, judge_model=None,
+- [x] `plan(target, *, config=None, runs=None, timeout_seconds=None, judge_model=None,
       tags=(), case_glob=None)`: the same resolution and the same arithmetic, returning a
       frozen `Plan`: one entry per case carrying its name, its `Skips`, its effective run
       count and its effective timeout, and three numbers, the submissions the suite will
@@ -378,39 +378,39 @@ and returns the path to the `aggregate-result.json` it wrote. That contract is
       and not the image-focus skip phase 4 decides after a run. `run` calls it, and so does
       `--dry-run --cowork` in `plan_cli.md` phase 6, which prints exactly those and would
       otherwise re-derive them.
-- [ ] A target covering more than one plugin root raises `CaseError`.
+- [x] A target covering more than one plugin root raises `CaseError`.
       [`../docs/cli.md`](../docs/cli.md) makes that a usage error, and the CLI is what exits.
-- [ ] Rename `_recent` to `recent()` in `src/cowork_evals/cowork.py` and make it public. It
+- [x] Rename `_recent` to `recent()` in `src/cowork_evals/cowork.py` and make it public. It
       is the count of submissions in the trailing 24 hours, and it already owns
       `CEILING_WINDOW` and the timestamp parsing. The backend calls it rather than
       re-deriving the window over `history()`. `tests/unit/test_cowork.py` gains one
       assertion over it against a hand-written run log, and phase 8 adds the row to the API
       table.
-- [ ] Before submitting anything, sum the effective run count over the cases that will
+- [x] Before submitting anything, sum the effective run count over the cases that will
       submit, which is `runs` where it was given, the declared `runs` where the case wrote
       one, and 1 otherwise, because a case that writes no `runs` key runs once here.
       [`../docs/running_evals.md`](../docs/running_evals.md) is where that rule lives. Raise
       `CoWorkError(2, ...)` when that total plus `CoWork.recent()` is above `max_runs`. A
       skipped case submits nothing and costs no ceiling entry.
-- [ ] Per run: `CoWork.run(case.prompt)`, then phase 3, then phase 4 for judged graders.
+- [x] Per run: `CoWork.run(case.prompt)`, then phase 3, then phase 4 for judged graders.
       Each run is its own session and its own session document. Cases run in sequence, and
       the runs of a case run in sequence: there is one desktop application and one composer.
-- [ ] The `CoWork` for a case carries that case's effective `timeout_seconds` as
+- [x] The `CoWork` for a case carries that case's effective `timeout_seconds` as
       `run_timeout`, which is the override where one was given. `Config` is frozen, so a
       differing timeout is a differing `CoWork`. The ceiling and the run log are files and
       still count across instances.
-- [ ] A `CoWorkError` is caught per run and becomes that run's `error`. The remaining runs of
+- [x] A `CoWorkError` is caught per run and becomes that run's `error`. The remaining runs of
       that case still fire, and the suite continues.
-- [ ] Code 7, the run timeout, is caught and then collected. The error carries
+- [x] Code 7, the run timeout, is caught and then collected. The error carries
       `session_dir`, so `collect` reads the session as it stands and the run is graded on
       what it produced, with `error` recording the timeout. That is what the harness does.
       The CoWork session is not stopped and keeps running in the VM. A `collect` that then
       raises code 8, meaning the session wrote no assistant text before the timeout, leaves
       the run with `error` naming the timeout, `score` 0 and no graders.
-- [ ] Write `<output_dir>/aggregate-result.json`. The caller created that directory, as it
+- [x] Write `<output_dir>/aggregate-result.json`. The caller created that directory, as it
       does for `Docker.run`. Name no run directory, write no `latest` symlink, write no
       `env.txt`, prune nothing, print nothing, decide no pass or fail.
-- [ ] `tests/unit/test_cowork_backend.py`: the multi-plugin refusal, `plan()` over a
+- [x] `tests/unit/test_cowork_backend.py`: the multi-plugin refusal, `plan()` over a
       hand-written case tree with and without each override, the ceiling arithmetic against
       a hand-written run log, the result document a suite of skipped cases produces, and
       that `plugins/smoke/`'s case is found, resolves its plugin root and reports no skip.

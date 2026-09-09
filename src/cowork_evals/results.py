@@ -17,13 +17,12 @@ from __future__ import annotations
 
 import json
 import subprocess
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from .cases import PLUGIN_MANIFEST, Case, Grader
-from .cowork_backend import Skips
 from .grader import GraderResult
 from .harness import RESULT_NAME
 
@@ -154,11 +153,17 @@ class Run:
 
 @dataclass(frozen=True, slots=True)
 class CaseResult:
-    """One case: what it asked for, why it was skipped where it was, and every run of it."""
+    """One case: what it asked for, every run of it, and why there were none.
+
+    `skipped` and `skip_reason` are what the document says. The rule that decides them is
+    `cowork_backend.skips`, and nothing here reads it: this module owns the document, and
+    that one owns what this backend can honour.
+    """
 
     case: Case
-    skips: Skips = field(default_factory=Skips)
     runs: tuple[Run, ...] = ()
+    skipped: bool = False
+    skip_reason: str | None = None
 
     @property
     def score(self) -> float:
@@ -186,9 +191,9 @@ class CaseResult:
         entry["graders"] = [_grader_definition(grader) for grader in self.case.graders]
         entry["arms"] = {"with": [run.document() for run in self.runs]}
         entry["aggregates"] = {"score": self.score, "passRate": self.pass_rate}
-        if self.skips.skipped:
+        if self.skipped:
             entry["skipped"] = True
-            entry["skipReason"] = self.skips.reason
+            entry["skipReason"] = self.skip_reason
         return entry
 
 
@@ -273,7 +278,7 @@ def _aggregates(cases: list[CaseResult]) -> dict[str, Any]:
     total = len(cases)
     return {
         "casesTotal": total,
-        "casesPassed": sum(1 for case in cases if not case.skips.skipped),
+        "casesPassed": sum(1 for case in cases if not case.skipped),
         "overallScore": (sum(case.score for case in cases) / total) if total else 0.0,
         "overallPassRate": (sum(case.pass_rate for case in cases) / total) if total else 0.0,
     }

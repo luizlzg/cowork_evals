@@ -5,11 +5,17 @@ The skip rule is docs/running_evals.md, one assertion per row of it. See ../READ
 
 from __future__ import annotations
 
+import json
 import textwrap
+from datetime import UTC, datetime
 from pathlib import Path
 
-from cowork_evals.cases import read
-from cowork_evals.cowork_backend import skips
+import pytest
+
+from cowork_evals.cases import CaseError, read
+from cowork_evals.config import Config, CoWorkError, CoWorkSection
+from cowork_evals.cowork_backend import plan, run, skips
+from cowork_evals.harness import RESULT_NAME
 
 MANIFEST = '{"name": "skips-fixture", "description": "A fixture.", "version": "0.0.1"}\n'
 
@@ -162,3 +168,170 @@ def test_a_judged_grader_focusing_mock_calls_is_skipped(tmp_path: Path) -> None:
     result = skips_of(tmp_path, graders=graders)
     assert result.case == ()
     assert list(result.graders) == ["judged"]
+
+
+# The plan. Nothing below starts a session, and none of it needs a profile.
+
+
+SMOKE = Path(__file__).resolve().parent.parent.parent / "plugins" / "smoke"
+TREE = Path(__file__).resolve().parent.parent / "data" / "cases" / "tree"
+
+
+def settings(tmp_path: Path, **overrides: object) -> Config:
+    """A configuration whose run log is a file this test owns."""
+    values: dict[str, object] = {"run_log": str(tmp_path / "runs.jsonl"), "log_dir": None}
+    values.update(overrides)
+    return Config(cowork=CoWorkSection(**values))  # type: ignore[arg-type]
+
+
+def log(path: Path, submissions: int) -> None:
+    """A hand-written run log, `submissions` entries inside the trailing 24 hours."""
+    stamp = datetime.now(UTC).isoformat()
+    path.write_text(
+        "".join(
+            json.dumps({"timestamp": stamp, "outcome": "submitted"}) + "\n"
+            for _ in range(submissions)
+        ),
+        encoding="utf-8",
+    )
+
+
+def test_the_smoke_fixture_is_found_and_reports_no_skip(tmp_path: Path) -> None:
+    prepared = plan(SMOKE, config=settings(tmp_path))
+    assert prepared.root == SMOKE.resolve()
+    assert [entry.name for entry in prepared.entries] == ["python-version"]
+    entry = prepared.entries[0]
+    assert entry.skips.case == ()
+    assert entry.skips.graders == {}
+    assert entry.runs == 1, "the case writes runs: 1"
+    assert prepared.submissions == 1
+
+
+def test_a_case_that_writes_no_runs_key_runs_once(tmp_path: Path) -> None:
+    prepared = plan(TREE / "evals" / "greeter" / "no-frontmatter", config=settings(tmp_path))
+    assert prepared.entries[0].runs == 1
+
+
+def test_a_declared_runs_key_is_the_run_count(tmp_path: Path) -> None:
+    prepared = plan(TREE / "evals" / "greeter" / "every-key", config=settings(tmp_path))
+    assert prepared.entries[0].runs == 2
+    assert prepared.entries[0].timeout_seconds == 600.0
+
+
+def test_an_override_replaces_what_the_case_declared_and_never_multiplies_it(
+    tmp_path: Path,
+) -> None:
+    prepared = plan(
+        TREE / "evals" / "greeter" / "every-key",
+        config=settings(tmp_path),
+        runs=3,
+        timeout_seconds=120,
+    )
+    assert prepared.entries[0].runs == 3
+    assert prepared.entries[0].timeout_seconds == 120.0
+
+
+def test_a_case_declaring_no_timeout_runs_under_the_configured_one(tmp_path: Path) -> None:
+    prepared = plan(SMOKE, config=settings(tmp_path, run_timeout=900))
+    assert prepared.entries[0].timeout_seconds == 900.0
+
+
+def test_a_skipped_case_costs_no_ceiling_entry(tmp_path: Path) -> None:
+    root, _ = build(tmp_path, frontmatter="max_turns: 12\nruns: 4")
+    prepared = plan(root, config=settings(tmp_path))
+    assert prepared.entries[0].skips.skipped is True
+    assert prepared.entries[0].runs == 4
+    assert prepared.entries[0].submissions == 0
+    assert prepared.submissions == 0
+
+
+def test_the_ceiling_arithmetic_is_the_plan_plus_the_run_log(tmp_path: Path) -> None:
+    config = settings(tmp_path, max_runs=3)
+    log(tmp_path / "runs.jsonl", 2)
+    prepared = plan(SMOKE, config=config, runs=1)
+    assert prepared.recent == 2
+    assert prepared.max_runs == 3
+    assert prepared.submissions == 1
+    assert prepared.over_ceiling is False
+
+    prepared = plan(SMOKE, config=config, runs=2)
+    assert prepared.over_ceiling is True
+    assert "max_runs is 3" in prepared.refusal
+
+
+def test_run_refuses_above_the_ceiling_before_submitting_anything(tmp_path: Path) -> None:
+    log(tmp_path / "runs.jsonl", 5)
+    output = tmp_path / "out"
+    output.mkdir()
+    with pytest.raises(CoWorkError) as raised:
+        run(SMOKE, output, config=settings(tmp_path, max_runs=3), runs=1)
+    assert raised.value.code == 2
+    assert list(output.iterdir()) == [], "nothing was written"
+
+
+def test_a_tag_filter_and_a_case_glob_reach_discovery(tmp_path: Path) -> None:
+    config = settings(tmp_path)
+    assert plan(TREE, config=config, tags=("greeter",)).entries[0].name == "greets-alex"
+    assert plan(TREE, config=config, case_glob="inner-*").entries[0].name == "inner-case"
+    assert plan(TREE, config=config, case_glob="no-such-case").entries == ()
+
+
+# What the target selects.
+
+
+def test_a_target_covering_two_plugin_roots_raises(tmp_path: Path) -> None:
+    for name in ("one", "two"):
+        manifest = tmp_path / "marketplace" / name / ".claude-plugin"
+        manifest.mkdir(parents=True)
+        (manifest / "plugin.json").write_text(MANIFEST, encoding="utf-8")
+    with pytest.raises(CaseError) as raised:
+        plan(tmp_path / "marketplace", config=settings(tmp_path))
+    assert "more than one plugin root" in str(raised.value)
+
+
+def test_a_target_under_no_plugin_root_raises(tmp_path: Path) -> None:
+    (tmp_path / "loose").mkdir()
+    with pytest.raises(CaseError):
+        plan(tmp_path / "loose", config=settings(tmp_path))
+
+
+# The document a suite of skipped cases produces.
+
+
+def test_a_suite_of_skipped_cases_writes_a_document_and_submits_nothing(tmp_path: Path) -> None:
+    root, _ = build(tmp_path, frontmatter="model: sonnet")
+    output = tmp_path / "out"
+    output.mkdir()
+    written = run(root, output, config=settings(tmp_path))
+    assert written == output / RESULT_NAME
+
+    document = json.loads(written.read_text(encoding="utf-8"))
+    assert document["schemaVersion"] == 1
+    assert document["partial"] is False
+    assert document["costUsd"] == 0.0
+    assert document["suite"]["root"] == str(root.resolve())
+    assert document["suite"]["judgeModel"] == "haiku"
+    assert document["aggregates"] == {
+        "casesTotal": 1,
+        "casesPassed": 0,
+        "overallScore": 0.0,
+        "overallPassRate": 0.0,
+    }
+    entry = document["cases"][0]
+    assert entry["skipped"] is True
+    assert entry["skipReason"] == "model: the session decides its model"
+    assert entry["arms"]["with"] == []
+    assert driver_log_is_empty(tmp_path)
+
+
+def test_the_judge_model_override_reaches_the_suite(tmp_path: Path) -> None:
+    root, _ = build(tmp_path, frontmatter="model: sonnet")
+    output = tmp_path / "out"
+    output.mkdir()
+    written = run(root, output, config=settings(tmp_path), judge_model="opus")
+    assert json.loads(written.read_text(encoding="utf-8"))["suite"]["judgeModel"] == "opus"
+
+
+def driver_log_is_empty(tmp_path: Path) -> bool:
+    """No submission was made, so the driver's run log was never written."""
+    return not (tmp_path / "runs.jsonl").exists()
