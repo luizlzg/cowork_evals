@@ -495,4 +495,4 @@ Nothing durable may survive only in this file.
 - [x] `tests/README.md`: a row per new test file, and the integration tier's preconditions.
 - [x] `plugins/README.md`: `smoke` serves this backend as well.
 - [x] Re-read every touched file for a statement this plan made false.
-- [ ] `plans/README.md`: mark this plan `implemented`.
+- [x] `plans/README.md`: mark this plan `implemented`.
