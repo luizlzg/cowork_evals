@@ -437,16 +437,16 @@ records a `Skill` `tool_use`, and whether a session writes files under `outputs/
 measured against the sessions already in the profile before anything is fired, because that
 costs nothing.
 
-- [ ] Assert `claude --version` is reachable, naming the reason when it is not. The judge
+- [x] Assert `claude --version` is reachable, naming the reason when it is not. The judge
       and `claudeVersion` both need it.
-- [ ] Walk every session in the configured profile through `collect`, and record both facts.
+- [x] Walk every session in the configured profile through `collect`, and record both facts.
       A session with no assistant text raises code 8, which the walk catches and steps over,
       as `tests/integration/test_cowork.py:37` already does. Marked `integration`, not
       `live`: it submits nothing.
-- [ ] Where the profile does not already show both, fire one prompt that provokes them:
+- [x] Where the profile does not already show both, fire one prompt that provokes them:
       use any skill the session has, then write a named file. One run, marked `live`. A
       profile that shows both costs nothing here.
-- [ ] Fire `plugins/smoke/` through `run()` and assert the result document says the case
+- [x] Fire `plugins/smoke/` through `run()` and assert the result document says the case
       passed. Marked `live`. One VM boot, one ceiling entry, one permanent session.
 
 | Measurement                                        | If it fails                                                                    |
@@ -454,7 +454,7 @@ costs nothing.
 | A transcript carries a `Skill` `tool_use` record  | The skill-fired idiom in [`../docs/eval_format.md`](../docs/eval_format.md) cannot be graded here. `docs/cowork_driver.md` records that and drops the row. Phase 3 is unchanged: `tool_used` still grades every other tool |
 | A session writes a produced file under `outputs/` | `file_exists` cannot be graded here. `docs/cowork_driver.md` and `docs/approaches.md` record it and drop the row |
 
-- [ ] Record in `docs/cowork_driver.md`: the capture date, the wall clock of one case, the
+- [x] Record in `docs/cowork_driver.md`: the capture date, the wall clock of one case, the
       ceiling entries one suite costs, and both measurements. No machine name, no user name,
       no home directory path, no profile name.
 
@@ -487,7 +487,7 @@ Nothing durable may survive only in this file.
       named beside `PyYAML` as a runtime dependency, and the `eval:` section's reader row,
       which names the `claude plugin eval` argument list alone and now also feeds this
       backend's judge.
-- [ ] `docs/eval_format.md`: `--case` globs the case name, not the case directory name,
+- [x] `docs/eval_format.md`: `--case` globs the case name, not the case directory name,
       which is what the harness does and what phase 1 built. The two differ only for a case
       whose `name` is not its directory name. And, only where phase 7 dropped the
       skill-fired idiom or `file_exists` on this backend, a pointer at
