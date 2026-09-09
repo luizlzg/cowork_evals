@@ -142,3 +142,27 @@ report, and this is the phase that makes the claim true.
 - [x] The wheel installs into a clean 3.14 venv, and `docs`, `docs eval_format` and `init` all work out of it
 - [x] In a repository holding one plugin and nothing else, `init` then a case written from the shipped skill reaches `run --docker --dry-run` exit 0
 - [ ] `scripts/test.sh -m integration` passes. The 29 that spend nothing pass; the 8 marked `live` are outstanding and need the developer's go-ahead, because each submits a real run and a CoWork one takes the keyboard
+
+### Phase 10: a dry run validates without a backend
+
+An independent Claude Code session was given a repository holding one plugin, a fresh wheel
+install and no other context, and told to write an eval and validate it without spending
+money. Captured 2026-09-09. It reached the case format at its fourth shell invocation with no
+wandering, wrote a case the validator accepted on the first submission, and named
+`cowork_evals docs` as what made that possible. It found one sharp edge and three smaller
+ones.
+
+`run` calls `_run_preflight` before `_validate`, so validating a case needs a reachable
+daemon, a present image and a credential. None of that is used by a dry run: the image tag is
+a hash of local files, `run_argv` builds a list, and `cowork_backend.plan` reads the case tree
+and the configuration. Both were confirmed to run with no daemon and no profile. The gate has
+nothing behind it, and a consumer without Docker cannot check a case at all.
+
+The developer chose to drop the gate on `--dry-run` rather than add an eighth verb.
+
+- [x] `--dry-run` skips the backend preflight. Validation still runs, and a malformed case still exits 3
+- [x] A dry run on `--cowork` reports the ceiling arithmetic rather than refusing on it, which `_dry_run_cowork` already prints
+- [x] `docs/cli.md`: the order, and that a dry run needs no backend
+- [x] `eval_smoke/README.md`: `max_turns` and `allowed_tools` are named as the second way those cases diverge, because both skip a case on the CoWork backend and a skip fails the gate
+- [x] `docs/eval_format.md`: whether a `regex` anchor is string-anchored or line-anchored, measured and dated
+- [x] Tests for the two behaviours, and `scripts/test.sh` passes

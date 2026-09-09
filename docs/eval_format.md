@@ -119,6 +119,28 @@ delete the grader, or use `arm`.
 Values for `target` and `focus`: `last_message` (default), `trace`, `files` (created paths,
 not contents), `{source: file, path}` (a produced file's contents), `mock_calls`.
 
+### A regex anchor is string-anchored
+
+A `regex` grader's `pattern` is JavaScript RegExp source, and `flags` carries the flags. `^`
+and `$` therefore match the start and the end of the whole target, not of a line, unless
+`flags` carries `m`. This differs from Python, where `$` also matches before a trailing
+newline, and it is what a grader asserting that an answer is exactly one thing rests on.
+
+Snapshot, 2026-09-09, Node 25.9.0, over the pattern `^\s*(?:blocker|major|minor)\s*$`:
+
+| Target                      | no flags | `m`   |
+| --------------------------- | -------- | ----- |
+| `blocker`                   | pass     | pass  |
+| `blocker\n`                 | pass     | pass  |
+| `  minor  `                 | pass     | pass  |
+| `minor.`                    | fail     | fail  |
+| `The severity is blocker`   | fail     | fail  |
+| `blocker\nmajor`            | fail     | pass  |
+| `line one\nblocker`         | fail     | pass  |
+
+A trailing newline passes because `\s*` consumes it, not because `$` matches before it. A
+pattern with no `\s*` and a target ending in a newline fails.
+
 `arm` selects which ablation arm scores a grader: `with-only`, or `both`. It matters only
 under `--ablation with-without`, which this repository never runs, so a case here sets it
 only to stay portable. See [running_evals.md](running_evals.md).

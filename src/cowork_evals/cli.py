@@ -278,7 +278,14 @@ def _run(args: argparse.Namespace, config: Config) -> int:
     """Preflight, validate, count, prune, then run every selected plugin and gate once.
 
     Every refusal happens before anything is created and before anything is deleted, so
-    exit 2 and exit 3 leave the log root exactly as it was. docs/cli.md.
+    exit 2 and exit 3 leave the log root exactly as it was.
+
+    `--dry-run` skips the preflight and keeps the validation. Nothing behind the preflight is
+    reached by a dry run: the image tag is a hash of local files, `run_argv` builds a list,
+    and `cowork_backend.plan` reads the case tree and the configuration. Gating a filesystem
+    check on a running daemon is the one thing that stopped a consumer without Docker from
+    checking a case at all. The ceiling is part of that preflight, and a dry run on
+    `--cowork` prints the same arithmetic instead of refusing on it. docs/cli.md.
     """
     try:
         roots = plugin_roots(args.path)
@@ -291,9 +298,10 @@ def _run(args: argparse.Namespace, config: Config) -> int:
     targets = _targets(args.path, roots)
     tags = tuple(args.tag or ())
 
-    unmet = _run_preflight(args, config, targets)
-    if unmet:
-        return _refuse(unmet, PREFLIGHT_FAILED)
+    if not args.dry_run:
+        unmet = _run_preflight(args, config, targets)
+        if unmet:
+            return _refuse(unmet, PREFLIGHT_FAILED)
     blocked = _validate(roots, require_coverage=args.require_coverage)
     if blocked:
         return _refuse(blocked, PREFLIGHT_FAILED)
@@ -349,14 +357,18 @@ def _run_preflight(
 def _validate(roots: list[Path], *, require_coverage: bool) -> list[str]:
     """Every selected plugin root, whole. A malformed sibling case blocks a single case.
 
-    Coverage is always reported and fails nothing on its own. `--require-coverage` makes an
-    uncovered skill a preflight condition like any other. docs/cli.md.
+    Coverage is a report and fails nothing on its own, so it is printed here and goes to
+    stdout. `--require-coverage` turns it into a preflight condition like any other, and it
+    is then returned rather than printed: the caller refuses it on stderr, and printing it
+    here as well would put every gap on both streams. docs/cli.md.
     """
     blocked = [str(violation) for root in roots for violation in validate.violations(root)]
     gaps = [line for root in roots for line in validate.uncovered(root)]
+    if require_coverage:
+        return blocked + gaps
     for line in gaps:
         print(f"uncovered: {line}")
-    return blocked + gaps if require_coverage else blocked
+    return blocked
 
 
 def _selected(targets: list[tuple[Path, Path]], tags: tuple[str, ...], case: str | None) -> int:

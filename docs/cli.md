@@ -189,6 +189,16 @@ matching none is normal under `--tag` and is not a failure.
 The order is preflight, then validation, then the selection count, then pruning, then the
 `--dry-run` exit.
 
+`--dry-run` skips the preflight and keeps everything after it. Nothing behind the preflight
+is reached by a dry run: the image tag is a hash of local files, the container argument list
+is built without asking the daemon, and the `--cowork` plan reads the case tree and the
+configuration. A dry run therefore validates a case on a machine with no daemon, no image, no
+credential and no profile, and a malformed case still exits 3. The ceiling belongs to the
+preflight, and a dry run on `--cowork` prints the same arithmetic instead of refusing on it.
+
+That is what makes `run --dry-run` the way to check a case without spending anything. There
+is no separate validate verb.
+
 `claude` is a `--cowork` precondition because the judge behind an `llm` or `baseline` grader
 is `claude -p`, and because `claudeVersion` in the result document is the host
 `claude --version`. The signed-in CLI is the one credential route; there is no second one.

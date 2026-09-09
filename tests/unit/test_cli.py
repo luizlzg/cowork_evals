@@ -277,6 +277,7 @@ def test_no_verb_at_all_is_a_usage_error(capsys) -> None:
 
 
 MARKETPLACE = Path(__file__).resolve().parent.parent / "data" / "cli" / "marketplace"
+VALIDATE = Path(__file__).resolve().parent.parent / "data" / "validate"
 FIRST = MARKETPLACE / "first"
 SECOND = MARKETPLACE / "second"
 SMOKE = Path(__file__).resolve().parent.parent.parent / "plugins" / "smoke"
@@ -491,6 +492,46 @@ def test_check_returns_three_and_names_every_unmet_condition(tmp_path, capsys) -
     args = parse("check", "--cowork")
     assert cli._check(args, config) == 3
     assert "no readable sessions root" in capsys.readouterr().err
+
+
+def test_a_dry_run_validates_with_no_backend_reachable(tmp_path, capsys) -> None:
+    """Nothing behind the preflight is reached by a dry run, so nothing gates it.
+
+    The profile names a directory that is not there, which is what an unconfigured consumer
+    has. A dry run still reports what would run and exits 0.
+    """
+    config = settings(tmp_path, "cowork:\n  profile: /nowhere-at-all\n")
+    args = parse("run", "--cowork", str(VALIDATE / "clean"), "--dry-run")
+    assert cli._run(args, config) == 0
+    assert "no readable sessions root" not in capsys.readouterr().err
+
+
+def test_a_dry_run_still_refuses_a_malformed_case(tmp_path, capsys) -> None:
+    """Dropping the preflight drops no validation. A bad case is exit 3 either way."""
+    config = settings(tmp_path, "cowork:\n  profile: /nowhere-at-all\n")
+    args = parse("run", "--cowork", str(VALIDATE / "broken"), "--dry-run")
+    assert cli._run(args, config) == 3
+    assert capsys.readouterr().err.strip()
+
+
+def test_an_uncovered_skill_prints_once_and_on_one_stream(tmp_path, capsys) -> None:
+    """Coverage is a report, so it is stdout and fails nothing."""
+    config = settings(tmp_path, "cowork:\n  profile: /nowhere-at-all\n")
+    args = parse("run", "--cowork", str(VALIDATE / "uncovered"), "--dry-run")
+    assert cli._run(args, config) == 0
+    printed = capsys.readouterr()
+    assert printed.out.count("uncovered: ") == printed.out.count("no eval directory")
+    assert "no eval directory" not in printed.err
+
+
+def test_require_coverage_refuses_once_and_not_on_both_streams(tmp_path, capsys) -> None:
+    """Under the flag a gap is a refusal, so it is stderr alone and never printed twice."""
+    config = settings(tmp_path, "cowork:\n  profile: /nowhere-at-all\n")
+    args = parse("run", "--cowork", str(VALIDATE / "uncovered"), "--dry-run", "--require-coverage")
+    assert cli._run(args, config) == 3
+    printed = capsys.readouterr()
+    assert "no eval directory" in printed.err
+    assert "no eval directory" not in printed.out
 
 
 def test_check_all_names_every_backend_and_states_a_ready_one(tmp_path, capsys) -> None:
