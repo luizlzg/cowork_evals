@@ -67,13 +67,18 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 [tool.ruff.format]
 exclude = ["src/cowork_evals/docker/probe.py"]
 
+# `docs/` sits at the repository root and is placed beside the modules in the wheel, so the
+# checkout keeps one documentation tree and the install carries the same one. Nothing under
+# `src/` links into it: a link would name a different path on each side. That is rule R1 in
+# docs/library.md.
 [tool.hatch.build.targets.wheel]
 packages = ["src/cowork_evals"]
+force-include = { "docs" = "cowork_evals/docs" }
 
-# The sdist holds the package, and the two files the wheel metadata names. No development
-# directory ships: not `scripts/`, `tests/`, `plugins/`, `docs/` or `plans/`. That is the
-# same rule as the "What ships" table in docs/library.md. A pattern is anchored, because an
-# unanchored one matches at every depth and would pull in each directory's own README.md.
+# The sdist holds the package, the documentation, and the two files the wheel metadata names.
+# No development directory ships: not `scripts/`, `tests/`, `plugins/` or `plans/`. That is
+# the same rule as the "What ships" table in docs/library.md. A pattern is anchored, because
+# an unanchored one matches at every depth and would pull in each directory's own README.md.
 # Hatchling adds `pyproject.toml`, `PKG-INFO` and `.gitignore` itself.
 [tool.hatch.build.targets.sdist]
-include = ["/src/cowork_evals", "/README.md", "/LICENSE"]
+include = ["/src/cowork_evals", "/docs", "/README.md", "/LICENSE"]

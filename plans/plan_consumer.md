@@ -73,11 +73,11 @@ reason the requirements files are: `init` reads it at run time on a machine with
 
 ### Phase 1: ship docs/
 
-- [ ] `pyproject.toml`: `force-include = { "docs" = "cowork_evals/docs" }` on the wheel target, `/docs` in the sdist include list, and the stale comment above the sdist block rewritten
-- [ ] `scripts/build.sh`: drop `docs` from the loop that refuses a development directory in the sdist, and assert `cowork_evals/docs/eval_format.md` and `cowork_evals/docs/claude_code/plugin_eval_reference.md` are in the wheel
-- [ ] `docs/library.md`: the "What ships" table carries `docs/` as `yes`, the `tests/`, `plugins/`, `plans/` row loses it, and the paragraph under the table states why documentation is shipped data
-- [ ] `docs/library.md`: R1 and R2 written, with the reason
-- [ ] `scripts/build.sh` passes
+- [x] `pyproject.toml`: `force-include = { "docs" = "cowork_evals/docs" }` on the wheel target, `/docs` in the sdist include list, and the stale comment above the sdist block rewritten
+- [x] `scripts/build.sh`: drop `docs` from the loop that refuses a development directory in the sdist, and assert `cowork_evals/docs/eval_format.md` and `cowork_evals/docs/claude_code/plugin_eval_reference.md` are in the wheel
+- [x] `docs/library.md`: the "What ships" table carries `docs/` as `yes`, the `tests/`, `plugins/`, `plans/` row loses it, and the paragraph under the table states why documentation is shipped data
+- [x] `docs/library.md`: R1 and R2 written, with the reason
+- [x] `scripts/build.sh` passes
 
 ### Phase 2: fix the references
 

@@ -93,22 +93,64 @@ mirrors an old VM. See [runtime.md](runtime.md).
 | `src/cowork_evals/docker/pytest_image.py` | yes   | `PytestImage`: the test image's digest, build, check and run       |
 | `src/cowork_evals/docker/probe.py`        | yes   | The parity probe, the one file here that is 3.10                   |
 | `src/cowork_evals/docker/parity.py`       | yes   | The comparison, run on the host                                    |
+| `src/cowork_evals/data/cowork_evals.example.yaml` | yes | Every key and every default, and what `init` writes          |
+| `src/cowork_evals/data/skill/SKILL.md`    | yes   | The eval-authoring skill, and what `init` installs                 |
+| `docs/`                                   | yes   | Every document in this tree, at `cowork_evals/docs/` in the wheel  |
 | `scripts/`                                | no    | Development tasks for this repository only                         |
-| `tests/`, `plugins/`, `docs/`, `plans/`   | no    | Development and reference material                                 |
+| `tests/`, `plugins/`, `plans/`            | no    | Development material                                               |
 
 A consumer never sees `scripts/`. Those are the tasks that build this repository's own
 environments, run its tests and lint it, and they are named nowhere in [cli.md](cli.md). See
 [../scripts/README.md](../scripts/README.md).
 
 The table is enforced by the sdist include list in `pyproject.toml`, which names the package,
-`README.md` and `LICENSE` and nothing else. `scripts/build.sh` fails if a development
-directory reaches the sdist, or if a Dockerfile or a requirements file is missing from the
-wheel.
+`docs/`, `README.md` and `LICENSE` and nothing else. `scripts/build.sh` fails if a development
+directory reaches the sdist, if a Dockerfile or a requirements file is missing from the wheel,
+or if the two artefacts carry a different number of documents.
 
 The requirements files are shipped data, not documentation, because `setup --docker` reads
 them at run time on a machine that has no checkout of this repository. They are measured from
 a CoWork VM and recorded once. What they hold, and how they differ, is
-[environments.md](environments.md).
+[environments.md](environments.md). `cowork_evals.example.yaml` and `SKILL.md` are shipped
+data for the same reason: `init` writes both on a machine with no checkout.
+
+## Why the documentation ships
+
+A consumer writes cases, writes plugin code and runs the command. The authoring contract is
+[eval_format.md](eval_format.md), the option surface is [cli.md](cli.md), and the wheel set
+the code under test may import is [runtime.md](runtime.md). None of that is derivable from
+the module source, so a consumer without this tree is reading a command with no reference.
+
+The tree ships whole. There is no ship list to curate and no decision to take when a document
+is added, and a hand-picked set had already omitted [runtime.md](runtime.md) once.
+`docs/claude_code/` is included: it is the authority where [eval_format.md](eval_format.md)
+is silent, and a consumer needs the field reference for the same reason this repository
+vendored it.
+
+`docs/` sits at the repository root and hatchling places it at `cowork_evals/docs/` in the
+wheel, so nothing moves in the checkout. `cowork_evals docs` prints where it landed. See
+[cli.md](cli.md).
+
+## The two reference rules
+
+`docs/` ships and the tree around it does not. A reference that crosses that edge names a
+different path in the checkout and in the install, so one of the two is always wrong, and a
+link that resolves in a checkout is exactly the link that dangles for a consumer. Both rules
+below are enforced by a test.
+
+| Rule | In                    | Is                                                                       |
+| ---- | --------------------- | -------------------------------------------------------------------------- |
+| R1   | any file under `src/` | A document is named by its `docs/` path. It is never linked to             |
+| R2   | any file under `docs/` | A target inside `docs/` is linked. A target outside it is named, not linked |
+
+R1 is why a module docstring reads `docs/eval_format.md` and carries no `](...)`. The module
+sits two levels under the repository root in a checkout and one level above the documents in
+an install, and no single relative path is correct in both.
+
+R2 keeps `docs/` self-contained. A link from one document to another stays a link, because
+the tree moves whole and the relative path holds. `../README.md`, `../CLAUDE.md`,
+`../scripts/`, `../tests/` and `../plugins/` are named as repository paths instead: a
+consumer has none of them, and this repository's own reader can still find them.
 
 ## Package constraints
 
