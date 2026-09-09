@@ -31,7 +31,7 @@ here.
 | `scripts/parity.sh` and `tests/unit/test_parity.py` | yes | [docker.md](docker.md)                     |
 | The CoWork driver                         | yes   | [cowork_driver.md](cowork_driver.md)        |
 | The CoWork backend over it                | no    | [cowork_driver.md](cowork_driver.md)        |
-| `plugins/smoke/`, the fixture both Claude Code backends fire | yes | [../plugins/README.md](../plugins/README.md) |
+| `plugins/smoke/`, the fixture the container backend fires | yes | [../plugins/README.md](../plugins/README.md) |
 
 ## The cases it runs
 

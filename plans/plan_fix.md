@@ -377,12 +377,17 @@ Each item below names the one file that should own the fact.
       Marked, and the mark names `docs/running_evals.md`, not the plan. That file owns the
       ceiling, the sweep that sums `costUsd` and the gate's build status, and no code links
       to a plan.
-- [ ] The smoke grader matches `Python 3\.10\.12`, but `docs/staged_runtime.md:118` records
+- [x] The smoke grader matches `Python 3\.10\.12`, but `docs/staged_runtime.md:118` records
       the staged interpreter as 3.10.16, and `docs/running_evals.md:33` says the fixture
       serves both Claude Code backends. It cannot serve the venv one as written. Loosen the
       pattern to `Python 3\.10\.` and rename the grader file, or record in
       `plugins/README.md` that the fixture is container-only until the venv backend pins a
       patch release. The container assertion in `docs/docker.md:93` stays exact either way.
+      Recorded, and the grader is untouched. Loosening it would weaken a real assertion for
+      a backend that is not built and whose plan is skipped, and it would have made the
+      phase 5 comment naming `parity.py` as the sibling wrong. The status row that said the
+      fixture serves both Claude Code backends now says the container backend, which is the
+      statement `plugins/README.md` would otherwise contradict.
 
 ## Phase 7: The index, and the boundary that has no rule
 
