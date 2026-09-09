@@ -110,9 +110,9 @@ The inventory in [`../docs/runtime.md`](../docs/runtime.md) already carries
 `packaging==26.3` and `attrs==21.2.0`. pytest on 3.10 also needs `pluggy`, `iniconfig`,
 `exceptiongroup` and `tomli`, none of which is in the inventory.
 
-- [ ] Run `pip install --dry-run pytest` inside a container off the current
+- [x] Run `pip install --dry-run pytest` inside a container off the current
       `cowork-evals:<digest>`, and record what it would install and what it would move.
-- [ ] `src/cowork_evals/data/requirements_test.txt`: `pytest` and every package the previous
+- [x] `src/cowork_evals/data/requirements_test.txt`: `pytest` and every package the previous
       box says is absent from the image, each pinned to an exact version. A package already
       in the inventory is never listed, whatever version pytest would prefer.
 - [ ] The measurement, with its capture date, goes into `docs/cowork_test.md` in phase 7 as
