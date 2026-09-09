@@ -6,6 +6,7 @@ covered in tests/integration/test_docker.py.
 
 from __future__ import annotations
 
+import json
 import os
 import re
 
@@ -312,6 +313,61 @@ def test_run_argv_mounts_nothing_else_from_the_host(plugin, tmp_path):
     """The two login paths, the plugin and the logs. Nothing else."""
     argv = backend().run_argv(plugin, tmp_path, run_options())
     assert argv.count("-v") == 4
+
+
+def credential(docker, **oauth) -> None:
+    """Write one `.credentials.json`, the shape the CLI writes."""
+    docker.claude_dir.mkdir(parents=True, exist_ok=True)
+    docker.credentials_file.write_text(json.dumps({"claudeAiOauth": oauth}), encoding="utf-8")
+
+
+def test_an_absent_credential_file_is_not_a_login(tmp_path):
+    assert backend(login_dir=tmp_path / "login").has_credential() is False
+
+
+def test_a_credential_file_with_an_access_token_is_a_login(tmp_path):
+    docker = backend(login_dir=tmp_path / "login")
+    credential(docker, accessToken="tok", refreshToken="ref", expiresAt=1)
+    assert docker.has_credential() is True
+
+
+def test_an_expired_access_token_with_a_refresh_token_is_still_a_login(tmp_path):
+    """The CLI refreshes it, so an expiry in the past is not an absent login."""
+    docker = backend(login_dir=tmp_path / "login")
+    credential(docker, accessToken="", refreshToken="ref", expiresAt=0)
+    assert docker.has_credential() is True
+
+
+def test_a_credential_file_with_empty_tokens_is_not_a_login(tmp_path):
+    """An abandoned OAuth flow leaves the file behind carrying no token.
+
+    The file is there, so presence alone reported a login that the CLI then refused
+    inside the container with `Not logged in`. Measured 2026-09-09.
+    """
+    docker = backend(login_dir=tmp_path / "login")
+    credential(
+        docker,
+        accessToken="",
+        refreshToken="",
+        expiresAt=0,
+        scopes=["user:inference"],
+        subscriptionType="max",
+    )
+    assert docker.has_credential() is False
+
+
+def test_an_unparseable_credential_file_is_not_a_login(tmp_path):
+    docker = backend(login_dir=tmp_path / "login")
+    docker.claude_dir.mkdir(parents=True)
+    docker.credentials_file.write_text("", encoding="utf-8")
+    assert docker.has_credential() is False
+
+
+def test_a_credential_file_carrying_no_oauth_section_is_not_a_login(tmp_path):
+    docker = backend(login_dir=tmp_path / "login")
+    docker.claude_dir.mkdir(parents=True)
+    docker.credentials_file.write_text('{"other": {}}', encoding="utf-8")
+    assert docker.has_credential() is False
 
 
 def test_seed_login_dir_writes_a_state_file_the_cli_will_accept(tmp_path):
