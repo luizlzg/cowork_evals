@@ -29,6 +29,11 @@ GRADERS_DIR = "graders"
 # What makes a directory a plugin root. docs/eval_format.md.
 PLUGIN_MANIFEST = Path(".claude-plugin") / "plugin.json"
 
+# The eval directory the harness defaults to, and this repository never configures another.
+# It is here rather than under a backend because every reader of a case tree needs it.
+# docs/eval_format.md.
+EVAL_DIR = "evals"
+
 # Directories the harness never descends into during discovery. Matching it is what keeps
 # the case set identical on every backend. docs/claude_code/plugin_eval_reference.md.
 PRUNED = frozenset({"node_modules", ".git", ".claude", "results"})

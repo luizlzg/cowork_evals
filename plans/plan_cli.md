@@ -154,34 +154,34 @@ every one of them into that file.
 [`../docs/eval_format.md`](../docs/eval_format.md) calls an error. It writes nothing and
 runs no case.
 
-- [ ] `Violation` frozen: `path`, `rule`, `detail`. `violations(root)` returns them sorted
+- [x] `Violation` frozen: `path`, `rule`, `detail`. `violations(root)` returns them sorted
       by path, and an empty list means the tree is valid.
-- [ ] `uncovered(root) -> list[str]`, one line per directory under `<plugin>/skills/` with
+- [x] `uncovered(root) -> list[str]`, one line per directory under `<plugin>/skills/` with
       no directory of that name under `evals/`. It is a second return value and never a
       violation: coverage is not a rule of the format, and `--require-coverage` in phase 5
       is what turns it into a failure.
-- [ ] The `<skill>` layer, both directions. A directory directly under `evals/` is `plugin`,
+- [x] The `<skill>` layer, both directions. A directory directly under `evals/` is `plugin`,
       `mocks`, or the name of a directory under `<plugin>/skills/`. A plugin with no
       `skills/` directory admits only `plugin` and `mocks`.
-- [ ] `tags` names the case's own `<skill>` directory.
-- [ ] `plugins: ["../../.."]` resolves, from the case directory, to the same directory
+- [x] `tags` names the case's own `<skill>` directory.
+- [x] `plugins: ["../../.."]` resolves, from the case directory, to the same directory
       `cases.plugin_root` resolved. [`../docs/cli.md`](../docs/cli.md) requires the
       cross-check.
-- [ ] `name` is present. `tags` and `plugins` are present.
-- [ ] Any frontmatter key outside the table in
+- [x] `name` is present. `tags` and `plugins` are present.
+- [x] Any frontmatter key outside the table in
       [`../docs/eval_format.md`](../docs/eval_format.md) is a violation, `context.*`
       in `prompt.md` included.
-- [ ] The caps: `runs` at most 50, `max_turns` at most 200, `timeout_seconds` at most 3600.
+- [x] The caps: `runs` at most 50, `max_turns` at most 200, `timeout_seconds` at most 3600.
       Each `env` key starts with `EVAL_`. That key is the case's execution environment for
       the agent under test, which the harness reads. It is not this package's configuration.
-- [ ] `case.yaml` carries `schema_version: "1.1"` and `name`, and no key outside
+- [x] `case.yaml` carries `schema_version: "1.1"` and `name`, and no key outside
       `context.scaffold_script`, `context.history_file` and `context.add_dirs`.
-- [ ] A `context.add_dirs` entry that resolves outside its own case directory is a
+- [x] A `context.add_dirs` entry that resolves outside its own case directory is a
       violation.
-- [ ] A grader `weight` is greater than 0. An unknown grader `type` is a violation.
-- [ ] A file under `graders/` with no `---` block is a violation. The harness ignores it, so
+- [x] A grader `weight` is greater than 0. An unknown grader `type` is a violation.
+- [x] A file under `graders/` with no `---` block is a violation. The harness ignores it, so
       the case runs with fewer graders than it appears to have.
-- [ ] `tests/unit/test_validate.py` over hand-written trees under `tests/data/validate/`:
+- [x] `tests/unit/test_validate.py` over hand-written trees under `tests/data/validate/`:
       one clean tree, one violation of every rule above, and one tree whose only finding is
       an uncovered skill, which returns no violation.
 
