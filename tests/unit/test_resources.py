@@ -99,6 +99,42 @@ def test_the_memory_block_carries_its_own_marker() -> None:
     assert resources.MEMORY_MARKER in resources.MEMORY_BLOCK
 
 
+# The skill against the documents it condenses. docs/library.md.
+
+
+def _traps(text: str, start: str, end: str | None) -> list[str]:
+    body = text[text.index(start) :]
+    if end is not None:
+        body = body[: body.index(end)]
+    return [line for line in body.splitlines() if line.startswith("- ")]
+
+
+def test_the_skill_carries_every_grader_type_the_format_defines() -> None:
+    """The skill states no fact of its own, so a type in one is a type in the other."""
+    skill = resources.SKILL.read_text()
+    fmt = (resources.docs_dir() / "eval_format.md").read_text()
+    for grader in ("regex", "tool_used", "tool_order", "file_exists", "llm", "baseline"):
+        assert f"`{grader}`" in skill, grader
+        assert f"`{grader}`" in fmt, grader
+
+
+def test_the_skill_carries_as_many_traps_as_the_format() -> None:
+    """A trap added to one and not the other is the drift this rule exists to stop."""
+    skill = resources.SKILL.read_text()
+    fmt = (resources.docs_dir() / "eval_format.md").read_text()
+    assert len(_traps(skill, "## Traps", "## The exit codes")) == len(
+        _traps(fmt, "## Authoring traps", None)
+    )
+
+
+def test_the_skill_sends_the_reader_to_the_docs_verb() -> None:
+    """Everything it does not carry is one command away, and it has to say which."""
+    skill = resources.SKILL.read_text()
+    assert "cowork_evals docs" in skill
+    for name in ("eval_format", "cli", "runtime"):
+        assert f"docs {name}" in skill, name
+
+
 # R1 and R2. docs/library.md.
 
 
