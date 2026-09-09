@@ -8,7 +8,8 @@ their defaults are [docs/cowork_driver.md](../../docs/cowork_driver.md), the `ev
 [docs/docker.md](../../docs/docker.md).
 
 A section is named for the thing that reads it: `cowork:` the driver, `eval:` the
-`claude plugin eval` argument list, `docker:` the container backend.
+`claude plugin eval` argument list and the CoWork backend's judge, `docker:` the container
+backend.
 
 `CoWorkError` lives here because configuration is the first thing that fails, and
 `cowork.py` imports it rather than the other way round.
@@ -158,7 +159,11 @@ class CoWorkSection:
 
 @dataclass(frozen=True, slots=True)
 class EvalSection:
-    """What the `claude plugin eval` argument list reads. docs/running_evals.md."""
+    """What the `claude plugin eval` argument list reads. docs/running_evals.md.
+
+    `judge_model` has a second reader: the CoWork backend's judge, which is `claude -p` and
+    not that command line. docs/cowork_driver.md.
+    """
 
     _NAME: ClassVar[str] = "eval"
 

@@ -30,8 +30,8 @@ here.
 | The container backend and its Dockerfile  | yes   | [docker.md](docker.md)                      |
 | `scripts/parity.sh` and `tests/unit/test_parity.py` | yes | [docker.md](docker.md)                     |
 | The CoWork driver                         | yes   | [cowork_driver.md](cowork_driver.md)        |
-| The CoWork backend over it                | no    | [cowork_driver.md](cowork_driver.md)        |
-| `plugins/smoke/`, the fixture the container backend fires | yes | [../plugins/README.md](../plugins/README.md) |
+| The CoWork backend over it                | yes   | [cowork_driver.md](cowork_driver.md)        |
+| `plugins/smoke/`, the fixture the container and CoWork backends fire | yes | [../plugins/README.md](../plugins/README.md) |
 
 ## The cases it runs
 
@@ -194,6 +194,11 @@ logs/evals/latest                # symlink to the newest directory
 The log root is the working directory unless `--out` overrides it, and `<scope>` is named
 from the path argument. Both are [cli.md](cli.md). Run directories older than 30 days are
 deleted at the start of every run.
+
+A CoWork run writes `<plugin>/aggregate-result.json` and nothing else. There is no
+`report.html` and no `debug.txt` on that backend: the first is the harness's, and the second
+is `claude --debug-file`, and the harness is not in that path. The gate reads only the
+result document, so it decides identically for all three backends.
 
 The debug log exists only when the run is given one:
 `claude --debug-file <path> plugin eval ... --verbose`. The flag goes before `plugin`, and

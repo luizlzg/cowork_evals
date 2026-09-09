@@ -462,28 +462,28 @@ costs nothing.
 
 Nothing durable may survive only in this file.
 
-- [ ] `docs/cowork_driver.md`, what this backend does that the reference does not: the
+- [x] `docs/cowork_driver.md`, what this backend does that the reference does not: the
       precondition that the plugin under test is already deployed, the three added fields
       and the widened `scored`, `casesPassed` excluding a skipped case, the judge through
       `claude -p`, what `claudeVersion` and `costUsd` mean here, and the JavaScript to
       Python regex divergence.
-- [ ] `docs/cowork_driver.md`, the rows phase 3 made false: `tool_order`, which names
+- [x] `docs/cowork_driver.md`, the rows phase 3 made false: `tool_order`, which names
       `tool_names`; `{source: file, path}`, which names the session directory and not
       `outputs/`; the stripped `outputs/` prefix that makes a produced-file path mean the
       same here as under the harness; and that `target: trace` renders this backend's way,
       so a regex over it is not portable. The same section says the grader prints one result
       per grader, and nothing here prints. Add `recent()` to the API table.
-- [ ] `docs/approaches.md`: the same deployment precondition, the rows phase 2 corrected,
+- [x] `docs/approaches.md`: the same deployment precondition, the rows phase 2 corrected,
       and the `llm` and `baseline` row, which says both are honoured and does not say an
       image focus is skipped.
-- [ ] `docs/cli.md`: `--runs N` accepted on `--cowork`, the `--timeout-seconds N` row phase 2
+- [x] `docs/cli.md`: `--runs N` accepted on `--cowork`, the `--timeout-seconds N` row phase 2
       added, `claude` on `PATH` added to the `--cowork` preflight row because the judge and
       `claudeVersion` both need it, and that host spend here is the judge alone while the
       account's own spend is unbounded from this side.
-- [ ] `docs/running_evals.md`: mark the CoWork backend built, record that a CoWork run
+- [x] `docs/running_evals.md`: mark the CoWork backend built, record that a CoWork run
       writes `aggregate-result.json` and no `report.html`, and correct the `plugins/smoke/`
       status row, which calls the fixture the container backend's alone.
-- [ ] `docs/library.md`: one row per new module in the ships table, `python-frontmatter`
+- [x] `docs/library.md`: one row per new module in the ships table, `python-frontmatter`
       named beside `PyYAML` as a runtime dependency, and the `eval:` section's reader row,
       which names the `claude plugin eval` argument list alone and now also feeds this
       backend's judge.
@@ -492,7 +492,7 @@ Nothing durable may survive only in this file.
       whose `name` is not its directory name. And, only where phase 7 dropped the
       skill-fired idiom or `file_exists` on this backend, a pointer at
       `docs/cowork_driver.md`.
-- [ ] `tests/README.md`: a row per new test file, and the integration tier's preconditions.
-- [ ] `plugins/README.md`: `smoke` serves this backend as well.
-- [ ] Re-read every touched file for a statement this plan made false.
+- [x] `tests/README.md`: a row per new test file, and the integration tier's preconditions.
+- [x] `plugins/README.md`: `smoke` serves this backend as well.
+- [x] Re-read every touched file for a statement this plan made false.
 - [ ] `plans/README.md`: mark this plan `implemented`.

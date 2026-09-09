@@ -96,7 +96,7 @@ and a run that silently spends ten more building an image is not readable in a l
 | ---------- | -------------------------------------------------------------------- | ----------------------------------------------------------- |
 | `--venv`   | `claude` on `PATH`, the mirror at the current digest, the uv interpreter the mirror was built from | the mirror is absent or stale, `python3 -V` is not 3.10, or the interpreter to stage is absent |
 | `--docker` | a Docker or Rancher daemon, the image at the current digest, and the container login | the daemon is down, the image is absent or stale, or there is no login |
-| `--cowork` | macOS, the CoWork desktop application, an Accessibility grant        | the grant is missing, so there is no headless route and no CI |
+| `--cowork` | macOS, the CoWork desktop application, an Accessibility grant, `claude` on `PATH`, and the suite inside the driver's `max_runs` | the grant is missing, so there is no headless route and no CI, or `claude` is absent, or the suite would exceed the ceiling |
 
 A failed preflight exits 3 and prints one line naming the command that fixes it:
 
@@ -106,6 +106,15 @@ mirror is stale: run `cowork_evals setup --venv`
 
 `--build-missing` builds instead of failing. It is off by default and exists for unattended
 use.
+
+`claude` is a `--cowork` precondition because the judge behind an `llm` or `baseline` grader
+is `claude -p`, and because `claudeVersion` in the result document is the host `claude
+--version`. The signed-in CLI is the one credential route; there is no second one.
+
+Host spend on `--cowork` is the judge alone. The CoWork session itself is billed to the
+signed-in account and is not observable from the host, so `--max-cost-usd` is refused there
+and the ceiling that binds is the driver's `max_runs`. See
+[cowork_driver.md](cowork_driver.md).
 
 ## setup
 

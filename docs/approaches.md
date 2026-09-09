@@ -47,7 +47,7 @@ session wrote, so it honours a subset of the format.
 | `prompt.md` body                                        | yes                  | yes                                     |
 | `regex`, `tool_used`, `tool_order` graders              | yes                  | yes                                     |
 | `file_exists` grader                                    | any created file     | files under `outputs/` only             |
-| `llm` and `baseline` graders                            | yes                  | yes, judged by a separate call          |
+| `llm` and `baseline` graders                            | yes                  | yes, judged by a separate `claude -p` call. An `llm` grader whose file focus is an image is skipped |
 | `runs`, `timeout_seconds`                               | yes                  | yes                                     |
 | `max_turns`                                             | yes                  | no, no turn cap reaches a session       |
 | `model`, `allowed_tools`, `append_system_prompt`, `env` | yes                  | no, the session decides                 |
@@ -118,6 +118,13 @@ The costs. None is reduced by better engineering.
 | Costs a VM boot plus a full agentic run, so minutes per case | [cowork_desktop.md](cowork_desktop.md)    |
 
 It is the pre-release confirmation, run by a person on purpose. It is never a commit gate.
+
+**The plugin under test is not loaded by this backend.** The deep link carries a prompt, and
+nothing on the host writes into the VM's configuration, so a CoWork run exercises the plugin
+set already deployed to the signed-in account. A case path selects which cases run; it does
+not select which code runs, and a local edit to a skill is invisible here until it is
+deployed. Nothing checks it, because it is not verifiable from the host. See
+[cowork_driver.md](cowork_driver.md).
 
 ## Which to use when
 

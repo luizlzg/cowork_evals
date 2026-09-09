@@ -43,6 +43,12 @@ mirrors an old VM. See [runtime.md](runtime.md).
 | `src/cowork_evals/data/requirements*.txt`  | yes   | The pins the mirror and the image are built from   |
 | `src/cowork_evals/config.py`               | yes   | `cowork_evals.yaml`, and the frozen `Config` below |
 | `src/cowork_evals/harness.py`              | yes   | The `claude plugin eval` argument list, for both Claude Code backends |
+| `src/cowork_evals/cowork.py`               | yes   | The CoWork driver: one prompt in, one session document out |
+| `src/cowork_evals/cases.py`                | yes   | The case reader, backend-neutral. `CaseError` lives here |
+| `src/cowork_evals/grader.py`               | yes   | The four structural graders over a session document |
+| `src/cowork_evals/judge.py`                | yes   | The `claude -p` judge behind `llm` and `baseline` |
+| `src/cowork_evals/results.py`              | yes   | The v1 `aggregate-result.json` document |
+| `src/cowork_evals/cowork_backend.py`       | yes   | The CoWork backend: the skip rule, `plan` and `run` |
 | `src/cowork_evals/docker/`                 | yes   | The container backend: the digest, the argument lists, build, check and run |
 | `src/cowork_evals/docker/Dockerfile`       | yes   | What `setup --docker` builds                       |
 | `src/cowork_evals/docker/probe.py`         | yes   | The parity probe, the one file here that is 3.10   |
@@ -65,6 +71,12 @@ is [environments.md](environments.md).
 | --------------------- | -------- | ------------------- | -------------------------------------------------------------- |
 | `requires-python`     | `>=3.14` | yes                 | This package runs on a developer's laptop, never in a session |
 | `dependencies`        | any      | yes                 | Nothing about CoWork constrains what this package imports     |
+
+The runtime dependencies are `PyYAML`, which parses `cowork_evals.yaml` and `case.yaml`,
+`python-frontmatter`, which splits a `prompt.md` or a grader file into its `---` block and
+its body, and `packaging`. Nothing here writes a parser, a glob engine or an HTTP client.
+
+
 | ruff `target-version` | `py314`  | yes                 | The same. It lints this package, not the code under test      |
 | `[tool.uv] package`   | removed  | yes                 | Removing it makes uv build a distribution                     |
 
@@ -132,7 +144,7 @@ setting goes in the section of whatever reads it, which is the rule the file is 
 | Section   | Read by                                | Its keys and defaults are in         |
 | --------- | -------------------------------------- | ------------------------------------ |
 | `cowork:` | The CoWork driver                      | [cowork_driver.md](cowork_driver.md) |
-| `eval:`   | The `claude plugin eval` argument list | [running_evals.md](running_evals.md) |
+| `eval:`   | The `claude plugin eval` argument list, and the CoWork backend's judge model | [running_evals.md](running_evals.md) |
 | `docker:` | The container backend                  | [docker.md](docker.md)               |
 
 ```yaml

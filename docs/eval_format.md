@@ -50,7 +50,8 @@ the case directory.
 Two frontmatter keys make a case addressable, and both are checked:
 
 - `tags: [<skill>]`, matching the case's own directory. `--tag` is the only reliable
-  per-skill selector; `--case` globs the case directory name.
+  per-skill selector; `--case` globs the case **name**, which defaults to the directory name
+  and differs from it whenever the case writes a `name`.
 - `plugins: ["../../.."]`, the plugin root, counted from the case directory. That is three
   levels up from a case under `evals/<skill>/<case>/`.
 
@@ -132,7 +133,8 @@ Each of these has a silent failure mode, and each is fixed by editing the case.
 - **`file_exists` only sees files created during the run.** Not scaffold output, and not
   files merely modified.
 - **`llm` graders refuse binaries.** A `.pptx` is a ZIP. Render to an image, or write text.
-  An image file is shown to the judge as an image.
+  An image file is shown to the judge as an image, except on the CoWork backend, where an
+  image focus is a grader skip. See [cowork_driver.md](cowork_driver.md).
 - **Scaffolds run in an empty working directory** with a minimal environment, no
   credentials, and a 2-minute cap. Reference resources as `$(dirname "$0")/...`.
 - **`context.add_dirs` must stay inside the case directory.** Naming the eval directory, a
