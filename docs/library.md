@@ -37,9 +37,9 @@ hatchling, so a git reference builds the same wheel `scripts/build.sh` builds. I
 a package index yet, so a consumer installs from the repository:
 
 ```sh
-uv add --dev "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.1.0"
-pip install "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.1.0"
-uv tool install "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.1.0"
+uv add --dev "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.1.1"
+pip install "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.1.1"
+uv tool install "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.1.1"
 ```
 
 The reference after `@` is a tag, a branch or a commit, and it is the pin. Dropping it tracks

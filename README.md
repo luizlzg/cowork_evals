@@ -19,15 +19,15 @@ it drives a live session rather than the harness.
 Python 3.14 or later. The package is not on PyPI yet, so it installs from this repository.
 
 ```bash
-uv add --dev "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.1.0"
+uv add --dev "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.1.1"
 ```
 
 ```bash
-pip install "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.1.0"
+pip install "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.1.1"
 ```
 
 ```bash
-uv tool install "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.1.0"
+uv tool install "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.1.1"
 ```
 
 The last line installs the command on its own, outside any project. The reference after `@` is
@@ -37,11 +37,10 @@ The distribution is `cowork-evals`. The command it installs is `cowork_evals`.
 
 ## What you need
 
-| To run                | You need                                                            |
-| --------------------- | --------------------------------------------------------------------- |
-| Anything              | `claude` on `PATH`, signed in                                       |
-| The container backend | Docker or Rancher Desktop, running                                  |
-| The CoWork backend    | macOS, the CoWork desktop application signed in, and a profile named in `cowork_evals.yaml` |
+| Backend                    | You need                                                       |
+| -------------------------- | ---------------------------------------------------------------- |
+| The container, `--docker`  | Docker or Rancher Desktop running, the images, and the one-time login. `setup --docker` makes all three |
+| CoWork, `--cowork`         | macOS, `claude` on `PATH`, CoWork signed in, the profile named in `cowork_evals.yaml`, and the macOS Accessibility grant |
 
 `cowork_evals check --all` reports what each backend is still missing, and names the command
 that supplies it.
