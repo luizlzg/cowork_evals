@@ -555,16 +555,31 @@ def _setup(config: Config) -> int:
 
 
 def _check(args: argparse.Namespace, config: Config) -> int:
-    """Report what each named backend is missing. It writes nothing and never builds."""
-    unmet = (
-        preflight.checks_all(config)
-        if args.backend == ALL
-        else preflight.checks(args.backend, config)
-    )
-    if not unmet:
-        print("ready")
-        return OK
-    return _refuse(unmet, PREFLIGHT_FAILED)
+    """Report what each named backend is missing. It writes nothing and never builds.
+
+    One backend prints `ready`, or its unmet lines on stderr. There the operator named the
+    backend, nothing needs disambiguating, and an unmet condition is a refusal.
+
+    `--all` is a report and goes to stdout whole, in backend order: a ready backend is stated
+    rather than silent, and every line says which backend it belongs to. Splitting it across
+    two streams would interleave it out of order.
+
+    The exit code is the same in both: 0 when nothing is unmet, 3 otherwise. docs/cli.md.
+    """
+    if args.backend != ALL:
+        unmet = preflight.checks(args.backend, config)
+        if not unmet:
+            print("ready")
+            return OK
+        return _refuse(unmet, PREFLIGHT_FAILED)
+
+    failed = False
+    for backend, unmet in preflight.report_all(config):
+        print(f"{backend}: {'not ready' if unmet else 'ready'}")
+        for line in unmet:
+            print(f"  {line}")
+        failed = failed or bool(unmet)
+    return PREFLIGHT_FAILED if failed else OK
 
 
 def _docs(args: argparse.Namespace) -> int:

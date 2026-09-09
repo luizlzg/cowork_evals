@@ -258,6 +258,27 @@ is not read by `test`'s preflight, and `check` reports the condition either way.
 machine that has no CoWork installed rather than failing the whole invocation. It returns 0 on
 a machine where both are ready.
 
+The two forms print differently, and the split is which of the two the output is.
+
+| Form                              | Prints                                                   | Stream |
+| --------------------------------- | -------------------------------------------------------- | ------ |
+| `--docker`, `--cowork`            | `ready`, or the unmet lines alone                        | stdout, then stderr for the lines |
+| `--all`                           | one section per backend, each named, then `ready` or its indented unmet lines | stdout |
+
+A named backend is a refusal: the operator asked about that one, and an unmet condition is
+what stops them. `--all` is a report, so a ready backend is stated rather than silent, every
+line says which backend it belongs to, and the whole thing goes to one stream in backend
+order.
+
+```
+$ cowork_evals check --all
+docker: ready
+cowork: not ready
+  no CoWork profile configured: set cowork.profile in cowork_evals.yaml
+```
+
+The exit code does not change with the form: 0 when nothing is unmet, 3 otherwise.
+
 `check` never reads the rate ceiling. That condition needs a target and `check` takes none, so
 it is `run`'s alone.
 

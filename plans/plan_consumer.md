@@ -113,10 +113,10 @@ contributes no line, so its output is indistinguishable from a backend that was 
 reached, and no line says which backend it belongs to. `README.md` claims a per-backend
 report, and this is the phase that makes the claim true.
 
-- [ ] `check --all` prints one section per backend, each naming the backend and then `ready` or its unmet lines
-- [ ] `check --docker` and `check --cowork` keep the output they have, which is `ready` or the lines alone
-- [ ] The exit code is unchanged: 0 when nothing is unmet, 3 otherwise
-- [ ] `docs/cli.md`: the per-backend report, and that a ready backend is stated rather than silent
+- [x] `check --all` prints one section per backend, each naming the backend and then `ready` or its unmet lines
+- [x] `check --docker` and `check --cowork` keep the output they have, which is `ready` or the lines alone
+- [x] The exit code is unchanged: 0 when nothing is unmet, 3 otherwise
+- [x] `docs/cli.md`: the per-backend report, and that a ready backend is stated rather than silent
 
 ### Phase 7: the documentation sweep
 

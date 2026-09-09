@@ -66,6 +66,17 @@ def checks_all(config: Config) -> list[str]:
     return [line for backend in BACKENDS for line in checks(backend, config)]
 
 
+def report_all(config: Config) -> list[tuple[str, list[str]]]:
+    """One entry per backend, in order, each with its unmet conditions.
+
+    `checks_all` flattens the same probe and loses which backend a line came from, and loses
+    a ready backend entirely: it contributes no line, so its output cannot be told from a
+    backend that was never reached. `check --all` prints this instead. The exit code still
+    comes from `checks_all`, so the two never disagree about pass and fail.
+    """
+    return [(backend, checks(backend, config)) for backend in BACKENDS]
+
+
 def _cowork(config: Config) -> list[str]:
     """macOS, `claude`, a configured profile, a readable sessions root, and the grant.
 
