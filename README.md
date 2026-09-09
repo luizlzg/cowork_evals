@@ -25,7 +25,7 @@ is; it runs on a laptop. See [`docs/runtime.md`](docs/runtime.md).
 ## Using it
 
 ```bash
-uv add --dev cowork-evals            # or: pip install cowork-evals
+uv add --dev git+https://github.com/<owner>/cowork_evals@v0.1.0    # not on an index yet
 
 cowork_evals setup --docker          # build the container images, and log in once
 cowork_evals check --all             # what each backend still needs
@@ -56,6 +56,7 @@ what is missing.
 | `logs/`                         | Eval run output. Git-ignored, and absent until a run creates it     |
 | `cowork_evals.yaml`             | Every setting, in three sections. Git-ignored: it names a profile   |
 | `cowork_evals.example.yaml`     | The template for it: every key, every default, no identifier       |
+| `LICENSE`                       | MIT                                                                |
 
 ## Public repository
 

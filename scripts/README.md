@@ -19,6 +19,7 @@ its own header. `lib.sh` is sourced, never executed.
 | `parity.sh`      | Probe the image and compare it against the inventory    |
 | `test.sh`        | Run the test suite under `.venv`                        |
 | `lint.sh`        | Lint Python and shell. `--fix` applies                  |
+| `build.sh`       | Build the distribution into `dist/`, and verify the wheel |
 | `lib.sh`         | Shared `ROOT`, `VENV`, `COWORK`, `die`, `need`, `usage` |
 
 `image.sh` and `parity.sh` are the image's half of what `cowork_venv.sh` is for the mirror.

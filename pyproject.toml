@@ -6,6 +6,18 @@ build-backend = "hatchling.build"
 name = "cowork-evals"
 version = "0.1.0"
 description = "Run evals for Claude CoWork skills and plugins"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Pablo Cingolani" }]
+keywords = ["claude", "cowork", "evals", "plugins", "skills"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Software Development :: Testing",
+]
 requires-python = ">=3.14"
 dependencies = ["PyYAML>=6", "packaging>=24", "python-frontmatter>=1.1"]
 
@@ -51,3 +63,11 @@ exclude = ["src/cowork_evals/docker/probe.py"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/cowork_evals"]
+
+# The sdist holds the package, and the two files the wheel metadata names. No development
+# directory ships: not `scripts/`, `tests/`, `plugins/`, `docs/` or `plans/`. That is the
+# same rule as the "What ships" table in docs/library.md. A pattern is anchored, because an
+# unanchored one matches at every depth and would pull in each directory's own README.md.
+# Hatchling adds `pyproject.toml`, `PKG-INFO` and `.gitignore` itself.
+[tool.hatch.build.targets.sdist]
+include = ["/src/cowork_evals", "/README.md", "/LICENSE"]
