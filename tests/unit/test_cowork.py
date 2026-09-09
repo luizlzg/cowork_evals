@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 
 from cowork_evals import CoWork, CoWorkError, CoWorkSection
+from cowork_evals.config import CONFIG_FILENAME
 
 ROOT = Path(__file__).resolve().parent.parent / "data" / "cowork" / "sessions"
 PROFILE = ROOT / "acct0000" / "prof0000"
@@ -181,6 +182,32 @@ def test_a_constructor_override_beats_the_configuration() -> None:
 def test_an_unknown_constructor_override_raises() -> None:
     with pytest.raises(CoWorkError) as raised:
         CoWork(CoWorkSection(), nonsense=1)
+    assert raised.value.code == 2
+
+
+def test_from_file_reads_the_named_file_and_not_the_working_directory(
+    working_directory, tmp_path: Path
+) -> None:
+    named = tmp_path / "other.yaml"
+    named.write_text("cowork:\n  profile: Named\n  max_runs: 7\n", encoding="utf-8")
+    (tmp_path / CONFIG_FILENAME).write_text("cowork:\n  profile: Working\n", encoding="utf-8")
+    with working_directory(tmp_path):
+        driver = CoWork.from_file(named)
+    assert driver.config.profile == "Named"
+    assert driver.config.max_runs == 7
+
+
+def test_from_file_takes_the_same_overrides_as_the_constructor(tmp_path: Path) -> None:
+    named = tmp_path / "other.yaml"
+    named.write_text("cowork:\n  profile: Named\n  max_runs: 7\n", encoding="utf-8")
+    driver = CoWork.from_file(named, max_runs=3)
+    assert driver.config.profile == "Named"
+    assert driver.config.max_runs == 3
+
+
+def test_from_file_refuses_a_path_that_does_not_exist(tmp_path: Path) -> None:
+    with pytest.raises(CoWorkError) as raised:
+        CoWork.from_file(tmp_path / "absent.yaml")
     assert raised.value.code == 2
 
 

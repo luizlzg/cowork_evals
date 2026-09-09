@@ -326,10 +326,13 @@ Each item below names the one file that should own the fact.
       not a defect: phase 1 removed `Config.load(**overrides)` when `CoWork` started taking
       a `CoWorkSection`. `__init__` resolves the base section, then `_override` applies the
       overrides on both branches, so there is one function already.
-- [ ] `CoWork.from_file` at `src/cowork_evals/cowork.py:66-69` has no caller and no test,
+- [x] `CoWork.from_file` at `src/cowork_evals/cowork.py:66-69` has no caller and no test,
       and is a third route to the same two lines. It is documented at
       `docs/cowork_driver.md:187`, so it is a designed surface. Add a test or ask the
       developer to drop it.
+      It stays, and `tests/unit/test_cowork.py` now covers it: the named file beats the one
+      in the working directory, an override beats the named file, and a named file that
+      does not exist is code 2, which is what `docs/cowork_driver.md` claims of it.
 - [ ] `working_directory` is defined twice, at `tests/conftest.py:65-80` and
       `tests/unit/test_config.py:15-22`, with the module-level one shadowing the fixture.
       Delete the local one.
