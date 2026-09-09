@@ -25,8 +25,8 @@ Which of the two is built is the status table in
 | Claude Code, Docker     | Local `claude`, Ubuntu 22.04 | Skill logic, activation, hook gates, rendering, OCR, fonts, CLIs | [docker.md](docker.md) |
 | CoWork, driven directly | The real CoWork VM           | The deployed stack, end to end               | [cowork_driver.md](cowork_driver.md) |
 
-This is the one copy of that table. [`../README.md`](../README.md) introduces the same two
-approaches in prose and links here.
+This is the one copy of that table. `README.md` introduces the same two approaches in prose and
+links here.
 
 ## One case format, two backends
 

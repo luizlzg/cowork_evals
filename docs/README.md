@@ -14,6 +14,9 @@ you are about to change, and link to it rather than restating it.
 - Every file states what is true of this repository now. A measured fact carries its capture
   date and is called a snapshot.
 - No file here carries a build status of its own, and no file here links to a plan.
+- This tree ships inside the package. `cowork_evals docs` prints where it landed, and a
+  reference that leaves this tree is named rather than linked. Both rules are in
+  [`library.md`](library.md).
 
 The table below is in reading order. The first six files are the system; the next four are
 the mechanisms under it; the next two are measurements of things this repository does not
@@ -68,8 +71,8 @@ subjects have a row link there.
 `eval_format.md` is the authoring contract a case is written to. `plugin_eval.md` describes a
 Claude Code command this repository does not own and carries the CLI version it was written
 against. The three requirements files are measurements too and are not here: they are package
-data at [`../src/cowork_evals/data/`](../src/cowork_evals/data/), and
-[`environments.md`](environments.md) owns the split between them.
+data at `src/cowork_evals/data/`, and [`environments.md`](environments.md) owns the split
+between them.
 
-Writing rules are in [`../CLAUDE.md`](../CLAUDE.md). The public repository rule is in
-[`../README.md`](../README.md), and it applies to every file here.
+Writing rules are in `CLAUDE.md`. The public repository rule is in `README.md`, and it applies
+to every file here.

@@ -38,7 +38,7 @@ not restate any of them here.
 | `scripts/parity.sh` and `tests/unit/test_parity.py` | yes | [docker.md](docker.md)                     |
 | The CoWork driver                             | yes      | [cowork_driver.md](cowork_driver.md)         |
 | The CoWork backend over it                    | yes      | [cowork_backend.md](cowork_backend.md)       |
-| `plugins/smoke/`, the fixture both backends fire | yes   | [../plugins/README.md](../plugins/README.md) |
+| `plugins/smoke/`, the fixture both backends fire | yes   | `plugins/README.md` |
 | The test image, `cowork-evals-test:<digest>`  | yes      | [cowork_test.md](cowork_test.md)             |
 | The `test` verb over it                       | yes      | [cowork_test.md](cowork_test.md)             |
 | The venv backend and the runtime it stages    | deferred | [staged_runtime.md](staged_runtime.md)       |

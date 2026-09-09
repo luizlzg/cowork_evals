@@ -32,10 +32,10 @@ scripts/cowork_pytest.sh --recreate                        # development: build 
 scripts/cowork_pytest.sh path/to/plugin/tests -- -v        # development: run a suite
 ```
 
-`cowork_evals test --docker` is the shipped route, and `cowork_evals setup --docker` builds
-the image behind it. `scripts/cowork_pytest.sh` stays as a development task for this
-repository, exactly as `scripts/image.sh` is for the eval image, and is not part of the
-command. See [../scripts/README.md](../scripts/README.md).
+`cowork_evals test --docker` is the shipped route, and `cowork_evals setup --docker` builds the
+image behind it. `scripts/cowork_pytest.sh` stays as a development task for this repository,
+exactly as `scripts/image.sh` is for the eval image, and is not part of the command. See
+`scripts/README.md`.
 
 ## Transparency
 

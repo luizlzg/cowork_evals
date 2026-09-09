@@ -99,7 +99,7 @@ Rules that hold for all of them:
 - There is no test seam. `open` and `osascript` are run directly, no mock, fake, stub or
   patch is used anywhere in this repository, and no parameter exists to inject one. What a
   test cannot reach without the application, the live test reaches by firing one. See
-  [../tests/README.md](../tests/README.md).
+  `tests/README.md`.
 - `collect` takes `prompt` when the caller knows what was submitted, which fills `prompt`
   and `prompt_sha256`. Without it those two come from the audit record.
 - Every public callable is fully type hinted, and the session document is JSON-serializable:
@@ -201,7 +201,7 @@ which is how a test and a developer point the driver at a profile elsewhere.
 margin. `settle_seconds` is not measured and is conservative.
 
 `cowork_evals.yaml` names a profile, which is an identifier, so it is git-ignored. See the
-public repository rule in [../README.md](../README.md).
+public repository rule in `README.md`.
 
 The driver never writes anywhere under the profile. The two log files below are the only
 files it owns.

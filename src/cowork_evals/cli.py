@@ -1,15 +1,14 @@
-"""The command: the parser, the five verbs, the dispatch and the exit codes.
+"""The command: the parser, the seven verbs, the dispatch and the exit codes.
 
-The surface is [docs/cli.md](../../docs/cli.md), and this module is the whole of it. There
-is no second entry point and no per-backend executable.
+The surface is docs/cli.md, and this module is the whole of it. There is no second entry point
+and no per-backend executable.
 
-Printing happens here and nowhere else, and `sys.exit` is called in `console_main` alone.
-`main` returns a code. The one exit it does not return is `SystemExit(2)`, which `argparse`
-raises from inside `parse_args` for an unknown option or a missing path.
+Printing happens here and nowhere else, and `sys.exit` is called in `console_main` alone. `main`
+returns a code. The one exit it does not return is `SystemExit(2)`, which `argparse` raises from
+inside `parse_args` for an unknown option or a missing path.
 
-The venv backend is not built, so `--venv` is an unknown option on every verb and
-`argparse` exits 2. Its design stays in
-[docs/staged_runtime.md](../../docs/staged_runtime.md).
+The venv backend is not built, so `--venv` is an unknown option on every verb and `argparse`
+exits 2. Its design stays in docs/staged_runtime.md.
 """
 
 from __future__ import annotations
@@ -20,7 +19,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from . import cowork_backend, docker, gate, logs, preflight, results, validate
+from . import cowork_backend, docker, gate, logs, preflight, resources, results, validate
 from .cases import CaseError, discover, plugin_name, plugin_roots
 from .config import Config, CoWorkError
 from .docker import Docker, DockerError, pytest_image
@@ -87,6 +86,8 @@ def build_parser() -> argparse.ArgumentParser:
     _setup_parser(verbs)
     _check_parser(verbs)
     _prune_parser(verbs)
+    _docs_parser(verbs)
+    _init_parser(verbs)
     return parser
 
 
@@ -131,7 +132,9 @@ def _run_parser(verbs: Any) -> None:
         action="store_true",
         help="fail the preflight when a skill has no eval directory",
     )
-    verb.add_argument("--dry-run", action="store_true", help="print what would run, and exit 0")
+    verb.add_argument(
+        "--dry-run", action="store_true", help="print what would run, and the code it would reach"
+    )
 
 
 def _test_parser(verbs: Any) -> None:
@@ -185,6 +188,21 @@ def _prune_parser(verbs: Any) -> None:
         "--older-than", type=int, default=logs.RUN_PRUNE_DAYS, help="restrict every selection"
     )
     verb.add_argument("--out", help="the log root, replacing logs/evals")
+
+
+def _init_parser(verbs: Any) -> None:
+    """`init` takes no backend and no option. It writes three targets and overwrites none."""
+    verbs.add_parser("init", help="write the config, the skill and a CLAUDE.md block")
+
+
+def _docs_parser(verbs: Any) -> None:
+    """`docs` takes no backend. It reads the shipped tree and writes nothing."""
+    verb = verbs.add_parser("docs", help="print where the shipped documentation is")
+    verb.add_argument(
+        "name",
+        nargs="?",
+        help="one document, with or without .md. Omitted, every name is listed",
+    )
 
 
 # The refusals.
@@ -248,6 +266,10 @@ def _dispatch(args: argparse.Namespace, config: Config) -> int:
         return _setup(config)
     if args.verb == "check":
         return _check(args, config)
+    if args.verb == "docs":
+        return _docs(args)
+    if args.verb == "init":
+        return _init()
     return _prune(args, config)
 
 
@@ -258,7 +280,14 @@ def _run(args: argparse.Namespace, config: Config) -> int:
     """Preflight, validate, count, prune, then run every selected plugin and gate once.
 
     Every refusal happens before anything is created and before anything is deleted, so
-    exit 2 and exit 3 leave the log root exactly as it was. docs/cli.md.
+    exit 2 and exit 3 leave the log root exactly as it was.
+
+    `--dry-run` skips the preflight and keeps the validation. Nothing behind the preflight is
+    reached by a dry run: the image tag is a hash of local files, `run_argv` builds a list,
+    and `cowork_backend.plan` reads the case tree and the configuration. Gating a filesystem
+    check on a running daemon is the one thing that stopped a consumer without Docker from
+    checking a case at all. The ceiling is part of that preflight, and a dry run on
+    `--cowork` prints the same arithmetic instead of refusing on it. docs/cli.md.
     """
     try:
         roots = plugin_roots(args.path)
@@ -271,9 +300,10 @@ def _run(args: argparse.Namespace, config: Config) -> int:
     targets = _targets(args.path, roots)
     tags = tuple(args.tag or ())
 
-    unmet = _run_preflight(args, config, targets)
-    if unmet:
-        return _refuse(unmet, PREFLIGHT_FAILED)
+    if not args.dry_run:
+        unmet = _run_preflight(args, config, targets)
+        if unmet:
+            return _refuse(unmet, PREFLIGHT_FAILED)
     blocked = _validate(roots, require_coverage=args.require_coverage)
     if blocked:
         return _refuse(blocked, PREFLIGHT_FAILED)
@@ -329,14 +359,18 @@ def _run_preflight(
 def _validate(roots: list[Path], *, require_coverage: bool) -> list[str]:
     """Every selected plugin root, whole. A malformed sibling case blocks a single case.
 
-    Coverage is always reported and fails nothing on its own. `--require-coverage` makes an
-    uncovered skill a preflight condition like any other. docs/cli.md.
+    Coverage is a report and fails nothing on its own, so it is printed here and goes to
+    stdout. `--require-coverage` turns it into a preflight condition like any other, and it
+    is then returned rather than printed: the caller refuses it on stderr, and printing it
+    here as well would put every gap on both streams. docs/cli.md.
     """
     blocked = [str(violation) for root in roots for violation in validate.violations(root)]
     gaps = [line for root in roots for line in validate.uncovered(root)]
+    if require_coverage:
+        return blocked + gaps
     for line in gaps:
         print(f"uncovered: {line}")
-    return blocked + gaps if require_coverage else blocked
+    return blocked
 
 
 def _selected(targets: list[tuple[Path, Path]], tags: tuple[str, ...], case: str | None) -> int:
@@ -360,24 +394,41 @@ def _dry_run(
     targets: list[tuple[Path, Path]],
     tags: tuple,
 ) -> int:
-    """What would run, and no run directory. Pruning already happened above."""
+    """What would run, and no run directory. Pruning already happened above.
+
+    A dry run reports the exit code the run would reach, so it is not always 0. On `--cowork`
+    a suite whose every case is skipped would fail the gate, and this returns the gate's code
+    rather than a pass: a dry run wired into CI as a portability check has to go red on a
+    suite that is dead on that backend. The container backend's skips are the harness's and
+    are decided at run time, so a dry run there cannot know them and reports nothing.
+    docs/cli.md.
+    """
+    dead = False
     for plugin, target in targets:
         name = plugin_name(plugin)
         print(f"# {name}")
         if args.backend == COWORK:
-            _dry_run_cowork(args, config, target, tags)
+            dead = _dry_run_cowork(args, config, target, tags) or dead
             continue
         would_be = root / logs.run_dir_name(logs.scope_name(target, [plugin])) / logs.slug(name)
         for argument in Docker(config).run_argv(target, would_be, _options(args, config, tags)):
             print(argument)
+    if dead:
+        return _refuse(
+            ["every selected case is skipped on this backend, so the gate would fail"],
+            GATE_FAILED,
+        )
     return OK
 
 
-def _dry_run_cowork(args: argparse.Namespace, config: Config, target: Path, tags: tuple) -> None:
+def _dry_run_cowork(args: argparse.Namespace, config: Config, target: Path, tags: tuple) -> bool:
     """One line per case, then the ceiling arithmetic. This backend builds no command line.
 
     The skips are the point: a skipped case fails the gate, so an operator reads which ones
     before spending a VM boot on the rest.
+
+    It returns whether the suite is dead here, meaning it planned no submission at all
+    because every case was skipped. An empty selection is not that: it is refused earlier.
     """
     prepared = cowork_backend.plan(
         target,
@@ -394,6 +445,7 @@ def _dry_run_cowork(args: argparse.Namespace, config: Config, target: Path, tags
         for grader, reason in sorted(entry.skips.graders.items()):
             print(f"  grader skip {grader}: {reason}")
     print(prepared.arithmetic)
+    return prepared.submissions == 0
 
 
 def _options(args: argparse.Namespace, config: Config, tags: tuple) -> RunOptions:
@@ -535,16 +587,108 @@ def _setup(config: Config) -> int:
 
 
 def _check(args: argparse.Namespace, config: Config) -> int:
-    """Report what each named backend is missing. It writes nothing and never builds."""
-    unmet = (
-        preflight.checks_all(config)
-        if args.backend == ALL
-        else preflight.checks(args.backend, config)
-    )
-    if not unmet:
-        print("ready")
+    """Report what each named backend is missing. It writes nothing and never builds.
+
+    One backend prints `ready`, or its unmet lines on stderr. There the operator named the
+    backend, nothing needs disambiguating, and an unmet condition is a refusal.
+
+    `--all` is a report and goes to stdout whole, in backend order: a ready backend is stated
+    rather than silent, and every line says which backend it belongs to. Splitting it across
+    two streams would interleave it out of order.
+
+    The exit code is the same in both: 0 when nothing is unmet, 3 otherwise. docs/cli.md.
+    """
+    if args.backend != ALL:
+        unmet = preflight.checks(args.backend, config)
+        if not unmet:
+            print("ready")
+            return OK
+        return _refuse(unmet, PREFLIGHT_FAILED)
+
+    failed = False
+    for backend, unmet in preflight.report_all(config):
+        print(f"{backend}: {'not ready' if unmet else 'ready'}")
+        for line in unmet:
+            print(f"  {line}")
+        failed = failed or bool(unmet)
+    return PREFLIGHT_FAILED if failed else OK
+
+
+def _docs(args: argparse.Namespace) -> int:
+    """Print where the shipped documentation is, or the path of one document.
+
+    It reads nothing but the filesystem, writes nothing, and needs no configuration and no
+    backend. A consumer's Claude Code session runs it to find the authoring contract, so
+    what it prints is paths and names and never prose. docs/cli.md.
+    """
+    names = resources.documents()
+    if not names:
+        return _refuse(["no documentation in this installation"], PREFLIGHT_FAILED)
+
+    if args.name is None:
+        print(resources.docs_dir())
+        for name in names:
+            print(name)
         return OK
-    return _refuse(unmet, PREFLIGHT_FAILED)
+
+    path = resources.document(args.name)
+    if path is None:
+        return _refuse(
+            [f"no document named {args.name!r}", "the names are:", *names],
+            USAGE,
+        )
+    print(path)
+    return OK
+
+
+def _init() -> int:
+    """Write the configuration file, the skill and the `CLAUDE.md` block, into the working
+    directory.
+
+    It never overwrites. A target that exists is left exactly as it is and reported, so a
+    second run changes nothing and a consumer's own edits survive. Regenerating one means
+    deleting it first, which is the operator's act and not this verb's. docs/cli.md.
+    """
+    written = 0
+    for source, target in (
+        (resources.EXAMPLE_CONFIG, Path(resources.CONFIG_NAME)),
+        (resources.SKILL, resources.SKILL_TARGET),
+    ):
+        if target.exists():
+            print(f"kept {target}")
+            continue
+        if not source.is_file():
+            return _refuse([f"{source.name} is missing from this installation"], PREFLIGHT_FAILED)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(source.read_text())
+        print(f"wrote {target}")
+        written += 1
+
+    written += _init_memory()
+    if written == 0:
+        print("nothing to do: every target was already there")
+    return OK
+
+
+def _init_memory() -> int:
+    """Append the pointer block to `CLAUDE.md`, creating the file when it is absent.
+
+    The marker is the block's own heading. A file already carrying it is left alone, whatever
+    the block below the heading has since been edited to say.
+    """
+    target = Path(resources.MEMORY_NAME)
+    if target.is_file():
+        existing = target.read_text()
+        if resources.MEMORY_MARKER in existing:
+            print(f"kept {target}: it already carries the block")
+            return 0
+        separator = "" if existing.endswith("\n") else "\n"
+        target.write_text(existing + separator + resources.MEMORY_BLOCK)
+        print(f"appended to {target}")
+        return 1
+    target.write_text(resources.MEMORY_BLOCK.lstrip("\n"))
+    print(f"wrote {target}")
+    return 1
 
 
 def _prune(args: argparse.Namespace, config: Config) -> int:

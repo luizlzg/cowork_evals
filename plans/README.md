@@ -16,8 +16,8 @@ while the work happens.
 
 ## Plans
 
-Seven plans. Six build something and are numbered in build order, and one of those six is
-skipped. `plan_fix` builds nothing, so it carries no number: it corrects what the others
+Eight plans. Seven build something and are numbered in build order, and one of those seven
+is skipped. `plan_fix` builds nothing, so it carries no number: it corrects what the others
 wrote, and it ran before `plan_cowork_backend.md` because it changes what that plan and
 `plan_cli.md` both read. The order is the order they are built in, not a gate: a plan is
 written whenever the developer decides to write it, and a plan whose inputs already exist is
@@ -34,6 +34,7 @@ not the system's: what is built and usable is
 | 5 | [`done/plan_test.20260909.md`](done/plan_test.20260909.md) | The test image, and a consumer's pytest suite run on the CoWork runtime            | implemented | `feat/test`           |
 | 6 | [`done/plan_cli.20260909.md`](done/plan_cli.20260909.md) | Scope resolution, the run directory, the gate, and the command                    | implemented | `feat/cli`            |
 | - | [`done/plan_fix.20260909.md`](done/plan_fix.20260909.md) | Nothing. One configuration file, one name per artifact, and the false statements  | implemented | `feat/fix-consistency` |
+| 7 | [`done/plan_consumer.20260909.md`](done/plan_consumer.20260909.md) | The shipped documentation, the `docs` and `init` verbs, and the eval-authoring skill | implemented | `feat/consumer`       |
 
 | Status        | Means                                                                     |
 | ------------- | --------------------------------------------------------------------------- |
@@ -59,6 +60,12 @@ The rule that separates it from the other five is in
 [`../tests/README.md`](../tests/README.md): if a failure can be caught by pytest, it is not
 an eval. Its mechanism is [`../docs/cowork_test.md`](../docs/cowork_test.md), and plan 6
 builds the verb that reaches it.
+
+Plan 7 builds no part of a run either. It changes what the distribution carries and what the
+installed package can tell a reader about itself: `docs/` ships, the references that break on
+the way out are corrected, and two verbs and one skill put the shipped tree in front of a
+Claude Code session in the consumer repository. The boundary it moves is
+[`../docs/library.md`](../docs/library.md).
 
 Plans 2 and 3 each build one backend whole. Running an eval on those two backends is
 `claude plugin eval`, which discovers the cases, runs them, grades them and writes

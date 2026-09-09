@@ -1,16 +1,13 @@
 """The v1 `aggregate-result.json` document, as this backend writes it.
 
-It is the same document the harness writes, so one gate covers every backend. The contract
-is
-[docs/claude_code/plugin_eval_reference.md](../../docs/claude_code/plugin_eval_reference.md):
-canonical camelCase, `schemaVersion: 1`, additive-only, and an optional field absent rather
-than null.
+It is the same document the harness writes, so one gate covers every backend. The contract is
+docs/claude_code/plugin_eval_reference.md: canonical camelCase, `schemaVersion: 1`,
+additive-only, and an optional field absent rather than null.
 
 Additive-only is what permits the three fields this backend adds and the one it widens:
-`skipped` and `skipReason` on a case and on a grader result, `cowork` on a run, and
-`scored`, which is `not skipped` here rather than `not withOnly`. Every one of them, and the
-one behavioural departure in `casesPassed`, is recorded in
-[docs/cowork_backend.md](../../docs/cowork_backend.md).
+`skipped` and `skipReason` on a case and on a grader result, `cowork` on a run, and `scored`,
+which is `not skipped` here rather than `not withOnly`. Every one of them, and the one
+behavioural departure in `casesPassed`, is recorded in docs/cowork_backend.md.
 """
 
 from __future__ import annotations

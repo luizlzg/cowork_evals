@@ -33,7 +33,7 @@ and hook in the plugin. They do not bind `cowork_evals` itself, which runs on a 
   fine; `X | Y` in an annotation needs `from __future__ import annotations`, and anything
   added in 3.11 or later is not available at all.
 - **Import only what the image carries.** The standard library, and the wheels in
-  [`requirements.txt`](../src/cowork_evals/data/requirements.txt). Nothing else resolves.
+  `src/cowork_evals/data/requirements.txt`. Nothing else resolves.
 - **No package installs at runtime.** No `pip install`, `uv pip install`, `npm install`,
   `apt-get install`, `conda`, `brew`, or a script that shells out to any of them, in a
   skill, a command, an agent, or a hook.
@@ -84,8 +84,7 @@ An eval case cannot assume a clean guest filesystem outside its own session dire
 
 Base image: Ubuntu 22.04.5 LTS (Jammy), architecture `aarch64` (ARM64).
 
-Exact Python pins: [`requirements.txt`](../src/cowork_evals/data/requirements.txt), the
-verbatim `pip freeze`.
+Exact Python pins: `src/cowork_evals/data/requirements.txt`, the verbatim `pip freeze`.
 
 ### Core runtime
 

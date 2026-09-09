@@ -28,6 +28,12 @@ one proves only the harness.
 `tags:` and `plugins: ["../../.."]`. These cases sit at `evals/<case>/` with no `tags:` and
 `plugins: ["../.."]`, which is the harness's own shape and nothing else.
 
+They also write out `max_turns` and `allowed_tools`. The CoWork backend honours neither, and
+a case that writes out a key that backend cannot honour is skipped there, which fails the
+gate. See [`../../running_evals.md`](../../running_evals.md). These cases never run on that
+backend, so it costs them nothing. Do not copy those two keys into a case that has to run on
+both.
+
 That is deliberate and it is the point of the directory. When the harness is what you are
 debugging, every convention this repository adds is one more thing that can be wrong. The
 case validator skips this tree.

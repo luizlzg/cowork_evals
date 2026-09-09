@@ -102,8 +102,8 @@ This file owns the split. Everything else links here for it.
 | `requirements_installable.txt` | The same minus the nine below                        | 127  | The image build, `cowork_venv.sh` |
 | `requirements_test.txt`        | pytest and what it needs that the inventory lacks    | 5    | The test image layer              |
 
-All three are at [`../src/cowork_evals/data/`](../src/cowork_evals/data/) and ship as package
-data. See [library.md](library.md).
+All three are at `src/cowork_evals/data/` and ship as package data. See
+[library.md](library.md).
 
 The rule that decides which file a new pin goes in:
 

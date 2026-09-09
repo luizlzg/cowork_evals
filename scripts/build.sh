@@ -36,18 +36,32 @@ SDIST="$(echo dist/*.tar.gz)"
 WHEEL_FILES="$(unzip -Z1 "$WHEEL")"
 SDIST_FILES="$(tar tzf "$SDIST")"
 
-# What ships beside the modules. docs/library.md holds the table.
+# What ships beside the modules. docs/library.md holds the table. The two documents named
+# here are the ones a consumer cannot work without: the authoring contract, and the vendored
+# field reference it defers to.
 for member in \
   cowork_evals/data/requirements.txt \
   cowork_evals/data/requirements_installable.txt \
   cowork_evals/data/requirements_test.txt \
+  cowork_evals/data/cowork_evals.example.yaml \
+  cowork_evals/data/skill/SKILL.md \
   cowork_evals/docker/Dockerfile \
-  cowork_evals/docker/Dockerfile.pytest; do
+  cowork_evals/docker/Dockerfile.pytest \
+  cowork_evals/docs/eval_format.md \
+  cowork_evals/docs/claude_code/plugin_eval_reference.md; do
   grep -qx "$member" <<< "$WHEEL_FILES" || die "$member is missing from the wheel"
 done
 
+# The documentation ships in both artefacts, and the same count reaches each.
+WHEEL_DOCS="$(grep -c "^cowork_evals/docs/" <<< "$WHEEL_FILES" || true)"
+SDIST_DOCS="$(grep -c "/docs/" <<< "$SDIST_FILES" || true)"
+[ "$WHEEL_DOCS" -gt 0 ] || die "no documentation in the wheel"
+[ "$WHEEL_DOCS" = "$SDIST_DOCS" ] ||
+  die "the wheel carries $WHEEL_DOCS documents and the sdist $SDIST_DOCS"
+
 # No development directory ships. The sdist include list in pyproject.toml is the rule.
-for directory in scripts docs tests plans plugins; do
+# `docs/` is not one: it is the consumer's reference and ships. docs/library.md.
+for directory in scripts tests plans plugins; do
   if grep -q "/$directory/" <<< "$SDIST_FILES"; then
     die "$directory/ is in the sdist"
   fi

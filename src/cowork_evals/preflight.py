@@ -1,13 +1,12 @@
 """What each backend needs before it runs, and what is missing.
 
-One function per backend, each returning the unmet conditions in order, each line naming
-the command that fixes it. It writes nothing, builds nothing and submits nothing, so a
-failed preflight leaves the machine exactly as it was. The conditions are the preflight
-table in [docs/cli.md](../../docs/cli.md).
+One function per backend, each returning the unmet conditions in order, each line naming the
+command that fixes it. It writes nothing, builds nothing and submits nothing, so a failed
+preflight leaves the machine exactly as it was. The conditions are the preflight table in
+docs/cli.md.
 
-`check` prints what this returns. `run` prints it and exits 3. The one condition `run`
-adds and `check` does not is the CoWork rate ceiling, which needs a target and is
-`cowork_ceiling` below.
+`check` prints what this returns. `run` prints it and exits 3. The one condition `run` adds and
+`check` does not is the CoWork rate ceiling, which needs a target and is `cowork_ceiling` below.
 """
 
 from __future__ import annotations
@@ -65,6 +64,17 @@ def checks(backend: str, config: Config) -> list[str]:
 def checks_all(config: Config) -> list[str]:
     """Every backend's unmet conditions, in the order the backends are listed."""
     return [line for backend in BACKENDS for line in checks(backend, config)]
+
+
+def report_all(config: Config) -> list[tuple[str, list[str]]]:
+    """One entry per backend, in order, each with its unmet conditions.
+
+    `checks_all` flattens the same probe and loses which backend a line came from, and loses
+    a ready backend entirely: it contributes no line, so its output cannot be told from a
+    backend that was never reached. `check --all` prints this instead. The exit code still
+    comes from `checks_all`, so the two never disagree about pass and fail.
+    """
+    return [(backend, checks(backend, config)) for backend in BACKENDS]
 
 
 def _cowork(config: Config) -> list[str]:

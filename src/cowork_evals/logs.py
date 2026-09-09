@@ -1,12 +1,11 @@
 """The run directory, and everything the log layout puts in it.
 
-The layout is [docs/running_evals.md](../../docs/running_evals.md), and this module writes
-all of it, so no backend has to. A backend takes a case path and an output directory and
-returns the path of the result document it wrote; naming that directory, recording the
-environment, pointing `latest`, pruning and capturing the terminal are all here.
+The layout is docs/running_evals.md, and this module writes all of it, so no backend has to. A
+backend takes a case path and an output directory and returns the path of the result document it
+wrote; naming that directory, recording the environment, pointing `latest`, pruning and
+capturing the terminal are all here.
 
-Nothing here reads a case, decides pass or fail or prints. Printing happens in
-[cli.py](cli.py).
+Nothing here reads a case, decides pass or fail or prints. Printing happens in [cli.py](cli.py).
 """
 
 from __future__ import annotations

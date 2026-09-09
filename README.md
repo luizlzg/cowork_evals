@@ -48,6 +48,15 @@ a tag, a branch or a commit, and it is the pin. Drop it to track the default bra
 
 The distribution is `cowork-evals`. The command it installs is `cowork_evals`.
 
+Then, in the repository that owns the plugins:
+
+```bash
+cowork_evals init    # cowork_evals.yaml, the eval-authoring skill, and a CLAUDE.md block
+cowork_evals docs    # where the documentation went, and every document name
+```
+
+`init` overwrites nothing. It reports every target it kept.
+
 ## What you need
 
 | Backend                    | You need                                                       |
@@ -69,8 +78,10 @@ than the code deployed to the account. The whole comparison is
 Three parts: install the package and build a backend, write and run an eval, and run a
 plugin's own pytest suite on the CoWork runtime.
 
-Everything below is the container backend, and it needs no `cowork_evals.yaml`: every key has
-a built-in default, and only the CoWork backend requires a file at all. Every name is the
+Everything below is the container backend. It needs no setting in `cowork_evals.yaml`: every
+key has a built-in default, and only the CoWork backend requires one. `init` is still the
+first step, because it also installs the eval-authoring skill and the `CLAUDE.md` block that
+tell a Claude Code session in your repository how any of this works. Every name is the
 example's own. The plugin is `notes`, it sits at `plugins/notes`, and it has one skill,
 `summarize`. Substitute yours throughout.
 
@@ -79,6 +90,7 @@ example's own. The plugin is `notes`, it sits at `plugins/notes`, and it has one
 Install the package as above, then build the container backend:
 
 ```bash
+cowork_evals init             # the config, the skill, and the CLAUDE.md block
 cowork_evals setup --docker   # two images, and one interactive login. Minutes, and once only
 cowork_evals check --docker   # exits 0 when the backend is ready
 ```
@@ -204,10 +216,12 @@ costs to run, is [`docs/approaches.md`](docs/approaches.md).
 ## The command
 
 ```bash
+cowork_evals init                    # the config, the skill, and the CLAUDE.md block
 cowork_evals setup --docker          # build the container images, and log in once
-cowork_evals check --all             # what each backend still needs
+cowork_evals check --all             # what each backend still needs, one line per backend
 cowork_evals run  --docker path/to/plugin          # an eval: a model, graders, a gate
 cowork_evals test --docker path/to/plugin/tests    # pytest on the CoWork runtime, no model
+cowork_evals docs [name]             # where the documentation is, or one document's path
 cowork_evals prune --docker          # delete what setup built
 ```
 
@@ -216,20 +230,28 @@ runs your own pytest suite inside the CoWork runtime, and returns pytest's exit 
 
 Every option has a default in `cowork_evals.yaml`, in the working directory. That file is the
 only configuration route: nothing is read from the process environment, and there is no `.env`.
-Copy `cowork_evals.example.yaml`, which carries every key and every default. Runs write to
-`logs/` under the working directory.
+`cowork_evals init` writes it with every key and every default. Runs write to `logs/` under the
+working directory.
 
 ## Documentation
 
-| File                                             | Covers                                             |
+This tree ships inside the package. `cowork_evals docs` prints the directory it landed in and
+every document name, and `cowork_evals docs <name>` prints one document's path, so a consumer
+reads the same files without this repository checked out.
+
+| Document                                         | Covers                                             |
 | ------------------------------------------------ | ---------------------------------------------------- |
 | [`docs/cli.md`](docs/cli.md)                     | The whole command surface: verbs, options, exit codes |
 | [`docs/eval_format.md`](docs/eval_format.md)     | How to write a case: tree, frontmatter, graders    |
 | [`docs/approaches.md`](docs/approaches.md)       | The two backends, and what each one proves         |
 | [`docs/running_evals.md`](docs/running_evals.md) | The run: what is built today, the gate, logs, cost |
 | [`docs/cowork_test.md`](docs/cowork_test.md)     | `test`, and the runtime your suite gets            |
+| [`docs/runtime.md`](docs/runtime.md)             | What a CoWork session provides, and what your plugin code may import |
 | [`docs/library.md`](docs/library.md)             | What ships, what it writes, and where              |
 | [`docs/README.md`](docs/README.md)               | Everything else, in reading order                  |
+
+The name `cowork_evals docs` takes is the path inside the tree without the extension, so
+`cowork_evals docs eval_format` prints the second row's file.
 
 ## License
 

@@ -58,6 +58,8 @@ A skipped test reports as a pass and hides the thing it was written to catch.
 | `unit/test_gate.py`               | The gate over hand-written result documents                | yes    |
 | `unit/test_preflight.py`          | Each backend's unmet conditions, and the rate ceiling      | yes    |
 | `unit/test_cli.py`                | The parser, the refusals, the verbs and the exit codes     | yes    |
+| `unit/test_cli_docs_init.py`      | The `docs` and `init` verbs: what they print and what they write | yes |
+| `unit/test_resources.py`          | The shipped documentation and data, and the two reference rules | yes |
 | `integration/test_cowork.py`      | The same driver against a real profile and a real run      | yes    |
 | `integration/test_docker.py`      | The built image, its mounts, its sandbox and one real eval run | yes |
 | `integration/test_judge.py`       | The judge against the real `claude -p`                     | yes    |

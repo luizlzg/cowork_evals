@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from cowork_evals import cli, logs, results
+from cowork_evals import cli, logs, preflight, results
 from cowork_evals.cases import plugin_name, plugin_roots
 from cowork_evals.cli import USAGE, build_parser, main
 from cowork_evals.config import Config
@@ -277,6 +277,7 @@ def test_no_verb_at_all_is_a_usage_error(capsys) -> None:
 
 
 MARKETPLACE = Path(__file__).resolve().parent.parent / "data" / "cli" / "marketplace"
+VALIDATE = Path(__file__).resolve().parent.parent / "data" / "validate"
 FIRST = MARKETPLACE / "first"
 SECOND = MARKETPLACE / "second"
 SMOKE = Path(__file__).resolve().parent.parent.parent / "plugins" / "smoke"
@@ -491,6 +492,117 @@ def test_check_returns_three_and_names_every_unmet_condition(tmp_path, capsys) -
     args = parse("check", "--cowork")
     assert cli._check(args, config) == 3
     assert "no readable sessions root" in capsys.readouterr().err
+
+
+def _plugin(root: Path, *, portable: bool) -> Path:
+    """One plugin, one skill, one case, one grader. `portable` decides one frontmatter key.
+
+    `allowed_tools` is honoured by the container backend and not by CoWork, so writing it out
+    is what makes the case skipped there and the suite dead. Nothing else differs.
+    """
+    plugin = root / "one"
+    case = plugin / "evals" / "greeter" / "only"
+    (case / "graders").mkdir(parents=True)
+    (plugin / ".claude-plugin").mkdir()
+    (plugin / ".claude-plugin" / "plugin.json").write_text('{"name": "one"}')
+    (plugin / "skills" / "greeter").mkdir(parents=True)
+    (plugin / "skills" / "greeter" / "SKILL.md").write_text("---\nname: greeter\n---\n")
+    unhonoured = "" if portable else "allowed_tools: [Skill]\n"
+    (case / "prompt.md").write_text(
+        f"---\nname: only\ntags: [greeter]\nplugins: ['../../..']\n{unhonoured}---\n\nSay hello.\n"
+    )
+    (case / "graders" / "said.md").write_text(
+        "---\ntype: regex\ntarget: last_message\npattern: 'hello'\n---\n"
+    )
+    return plugin
+
+
+def test_a_dry_run_validates_with_no_backend_reachable(tmp_path, capsys) -> None:
+    """Nothing behind the preflight is reached by a dry run, so nothing gates it.
+
+    The profile names a directory that is not there, which is what an unconfigured consumer
+    has. The case still validates and the dry run still reports what would run.
+    """
+    plugin = _plugin(tmp_path, portable=True)
+    config = settings(tmp_path, "cowork:\n  profile: /nowhere-at-all\n")
+    assert cli._run(parse("run", "--cowork", str(plugin), "--dry-run"), config) == 0
+    printed = capsys.readouterr()
+    assert "1 submissions planned" in printed.out
+    assert "no readable sessions root" not in printed.err
+
+
+def test_a_dry_run_still_refuses_a_malformed_case(tmp_path, capsys) -> None:
+    """Dropping the preflight drops no validation. A bad case is exit 3 either way."""
+    config = settings(tmp_path, "cowork:\n  profile: /nowhere-at-all\n")
+    args = parse("run", "--cowork", str(VALIDATE / "broken"), "--dry-run")
+    assert cli._run(args, config) == 3
+    assert capsys.readouterr().err.strip()
+
+
+def test_a_dry_run_fails_when_every_case_is_skipped_on_cowork(tmp_path, capsys) -> None:
+    """A suite dead on this backend would fail the gate, so the dry run says so."""
+    plugin = _plugin(tmp_path, portable=False)
+    config = settings(tmp_path, "cowork:\n  profile: /nowhere-at-all\n")
+    assert cli._run(parse("run", "--cowork", str(plugin), "--dry-run"), config) == 1
+    printed = capsys.readouterr()
+    assert "skip: allowed_tools" in printed.out
+    assert "0 submissions planned" in printed.out
+    assert "the gate would fail" in printed.err
+
+
+def test_the_same_dead_suite_is_not_a_failure_on_docker(tmp_path, capsys) -> None:
+    """That backend honours the key, and its skips are the harness's own at run time."""
+    plugin = _plugin(tmp_path, portable=False)
+    config = settings(tmp_path, "cowork:\n  profile: /nowhere-at-all\n")
+    assert cli._run(parse("run", "--docker", str(plugin), "--dry-run"), config) == 0
+    assert "the gate would fail" not in capsys.readouterr().err
+
+
+def test_an_uncovered_skill_prints_once_and_on_one_stream(tmp_path, capsys) -> None:
+    """Coverage is a report, so it is stdout and fails nothing."""
+    config = settings(tmp_path, "cowork:\n  profile: /nowhere-at-all\n")
+    args = parse("run", "--cowork", str(VALIDATE / "uncovered"), "--dry-run")
+    assert cli._run(args, config) == 0
+    printed = capsys.readouterr()
+    assert printed.out.count("uncovered: ") == printed.out.count("no eval directory")
+    assert "no eval directory" not in printed.err
+
+
+def test_require_coverage_refuses_once_and_not_on_both_streams(tmp_path, capsys) -> None:
+    """Under the flag a gap is a refusal, so it is stderr alone and never printed twice."""
+    config = settings(tmp_path, "cowork:\n  profile: /nowhere-at-all\n")
+    args = parse("run", "--cowork", str(VALIDATE / "uncovered"), "--dry-run", "--require-coverage")
+    assert cli._run(args, config) == 3
+    printed = capsys.readouterr()
+    assert "no eval directory" in printed.err
+    assert "no eval directory" not in printed.out
+
+
+def test_check_all_names_every_backend_and_states_a_ready_one(tmp_path, capsys) -> None:
+    """A ready backend is stated. Silence is what made a report indistinguishable from a
+    backend that was never reached.
+
+    The whole report goes to stdout in backend order, so it cannot interleave. Which backend
+    is ready on the machine running this is not asserted: that is the integration tier's.
+    """
+    config = settings(tmp_path, "cowork:\n  profile: /nowhere-at-all\n")
+    args = parse("check", "--all")
+    code = cli._check(args, config)
+    printed = capsys.readouterr()
+    assert code == 3
+    for backend in preflight.BACKENDS:
+        assert f"{backend}: " in printed.out
+    assert "no readable sessions root" in printed.out
+    assert printed.err == ""
+
+
+def test_a_named_backend_keeps_its_unmet_lines_on_stderr(tmp_path, capsys) -> None:
+    """One backend is a refusal, not a report, and neither names a backend in its output."""
+    config = settings(tmp_path, "cowork:\n  profile: /nowhere-at-all\n")
+    assert cli._check(parse("check", "--cowork"), config) == 3
+    printed = capsys.readouterr()
+    assert "no readable sessions root" in printed.err
+    assert printed.out == ""
 
 
 def test_prune_with_no_selection_flag_returns_two(capsys) -> None:
