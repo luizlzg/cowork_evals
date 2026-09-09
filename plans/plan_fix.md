@@ -1,6 +1,6 @@
 # Plan: the consistency fixes
 
-Branch `feat/fix-consistency`. Seven phases, one commit each.
+Branch `feat/fix-consistency`. Seven phases.
 
 This plan holds what two audits found on 2026-09-08: one over `src/`, `scripts/` and
 `tests/`, one over the documents. Thirty-one items. It waits on nothing, and it runs before
@@ -19,8 +19,15 @@ item names the evidence and the check.
 | The claim is wrong             | Tick the box and append `not a defect: <one line why>` to it   |
 | The fix is bigger than it looks | Tick nothing. Add a line under the item and ask the developer |
 
-Tick one box, commit, then start the next. Do not batch ticks. The file is the state, so a
-cleared context resumes from here.
+Tick a box the moment that item is verified, before starting the next one. Never carry a
+finished item unticked, and never tick one that is not verified. The file is the state: a
+cleared context resumes from here, so at every instant the ticks must say exactly what is
+done.
+
+Commit whenever `scripts/test.sh` and `scripts/lint.sh` are both green, which is normally
+one commit per box. Where a box cannot leave the suite green on its own, because the
+refactor around it is mid-flight, the tick still goes in immediately and the next green
+commit carries it and names in its message which boxes it carries.
 
 The two rules these items are measured against are new, in
 [`../CLAUDE.md`](../CLAUDE.md): **One config file** and **A split needs a rule**.
