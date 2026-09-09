@@ -84,39 +84,39 @@ document. Phase 8 records the absence in the log layout.
 [`../docs/eval_format.md`](../docs/eval_format.md) defines, the way the harness parses it,
 so both backends see the same case set.
 
-- [ ] Add `python-frontmatter` to `dependencies` in `pyproject.toml`. It splits the `---`
+- [x] Add `python-frontmatter` to `dependencies` in `pyproject.toml`. It splits the `---`
       block from the body and returns empty metadata when there is no block.
-- [ ] Frozen `Grader`: `name`, `type`, `weight`, `config`, `markdown`, `path`. `name`
+- [x] Frozen `Grader`: `name`, `type`, `weight`, `config`, `markdown`, `path`. `name`
       defaults to the filename without `.md`, `weight` to 1, and `config` is every other
       frontmatter key as authored.
-- [ ] Frozen `Case`: `name`, `directory`, `prompt`, `graders`, `tags`, `source`,
+- [x] Frozen `Case`: `name`, `directory`, `prompt`, `graders`, `tags`, `source`,
       `frontmatter_keys`, `case_yaml_keys`, `path`. `name` defaults to the case directory
       name, which is the harness's rule for a prose case. `source` is `prose` or `mixed`,
       which is the v1 document's field. Discovery needs a `prompt.md`, so `case_yaml`
       cannot occur here. The two key sets are the keys the files wrote out, which phase 2
       reads.
-- [ ] A `prompt.md` with no frontmatter is read, not refused: empty metadata, the body is
+- [x] A `prompt.md` with no frontmatter is read, not refused: empty metadata, the body is
       the prompt, and `name` is the directory name. Its missing keys are the validator's,
       in `plan_cli.md` phase 1, which cannot report what the reader refused to build.
       `CaseError` is for a tree that cannot be read at all: unparsable YAML, or no plugin
       root.
-- [ ] A grader file with empty metadata is ignored, as the harness ignores it.
+- [x] A grader file with empty metadata is ignored, as the harness ignores it.
       [`../docs/eval_format.md`](../docs/eval_format.md) records the trap.
-- [ ] Read `case.yaml` when present, and keep the `context.*` keys it wrote.
-- [ ] `discover(root, *, tags=(), case_glob=None)`: recurse, a directory holding `prompt.md`
+- [x] Read `case.yaml` when present, and keep the `context.*` keys it wrote.
+- [x] `discover(root, *, tags=(), case_glob=None)`: recurse, a directory holding `prompt.md`
       is a case, anything else is searched through, and the result is sorted by path.
       `tags` matches the frontmatter `tags`, `case_glob` globs the case `name`, which is
       what the harness globs and which defaults to the directory name. Those are `--tag`
       and `--case` in [`../docs/cli.md`](../docs/cli.md). Phase 8 corrects
       [`../docs/eval_format.md`](../docs/eval_format.md), which says `--case` globs the
       directory name.
-- [ ] `plugin_root(target)`: the nearest ancestor holding `.claude-plugin/plugin.json`, and
+- [x] `plugin_root(target)`: the nearest ancestor holding `.claude-plugin/plugin.json`, and
       `CaseError` when there is none.
-- [ ] Move `plugin_root` here from `src/cowork_evals/docker/__init__.py:95`. The docker
+- [x] Move `plugin_root` here from `src/cowork_evals/docker/__init__.py:95`. The docker
       module keeps a wrapper of the same name, which catches `CaseError` and raises
       `DockerError`, so `tests/unit/test_docker.py:217-229` still imports it from there and
       still asserts `DockerError`.
-- [ ] `tests/unit/test_cases.py` over hand-written trees under `tests/data/cases/`: every
+- [x] `tests/unit/test_cases.py` over hand-written trees under `tests/data/cases/`: every
       frontmatter key, no optional key, a `prompt.md` with no `---` block, a grader with no
       `---` block, a `case.yaml`, a grouping directory that is not a case, a tag filter, a
       case glob against a `name` that differs from the directory name, and a missing plugin
