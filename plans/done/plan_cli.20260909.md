@@ -580,4 +580,4 @@ Nothing durable may survive only in this file.
       `scripts/cowork_pytest.sh` as the route until the verb exists, which the verb now
       replaces. The script stays as a development task.
 - [x] Re-read every touched file for a statement this plan made false.
-- [ ] [`README.md`](README.md): mark this plan `implemented`.
+- [x] [`README.md`](README.md): mark this plan `implemented`.
