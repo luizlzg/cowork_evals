@@ -25,8 +25,10 @@ from cowork_evals.requirements import pins
 
 ROOT = Path(__file__).resolve().parents[2]
 SMOKE = ROOT / "plugins" / "smoke"
-PASSES = SMOKE / "tests" / "test_runtime.py"
+RUNTIME = SMOKE / "tests" / "test_runtime.py"
+PASSES = SMOKE / "tests" / "test_passes.py"
 FAILS = SMOKE / "tests" / "test_fails.py"
+NEEDS_311 = SMOKE / "tests" / "test_needs_311.py"
 
 # docs/runtime.md, the core runtime table, read through the one place that records it.
 PYTHON_VERSION = f"Python {EXPECTED_VERSIONS['python3']}"
@@ -105,13 +107,18 @@ def freeze(tag: str, platform: str) -> dict[str, str]:
 # The exit code, unchanged.
 
 
-def test_the_passing_fixture_returns_zero(image):
+def test_a_trivial_passing_test_returns_zero(image):
+    """A green suite that asserts nothing about the runtime."""
     assert image.run(PASSES) == 0
 
 
-def test_the_passing_fixture_names_its_three_assertions(image):
+def test_the_runtime_fixture_returns_zero(image):
+    assert image.run(RUNTIME) == 0
+
+
+def test_the_runtime_fixture_names_its_three_assertions(image):
     """The `-v` is the caller's, forwarded verbatim. Nothing here chose it."""
-    code, text = output(image, PASSES, "-v")
+    code, text = output(image, RUNTIME, "-v")
     assert code == 0
     for name in ASSERTIONS:
         assert name in text
@@ -121,6 +128,20 @@ def test_the_passing_fixture_names_its_three_assertions(image):
 def test_the_failing_fixture_returns_one(image):
     """A red suite is a result, not an error. Nothing raises on it."""
     assert image.run(FAILS) == 1
+
+
+def test_a_test_written_for_3_11_grammar_returns_two(image):
+    """`except*` does not parse on 3.10, so the file is a collection error.
+
+    This is the failure the whole mechanism exists to produce: a suite written against a
+    newer interpreter than a session has fails here, rather than passing on a laptop and
+    failing in a session. pytest's code for an interrupted collection is 2, and it reaches
+    the caller as 2 and not as 1.
+    """
+    code, text = output(image, NEEDS_311)
+    assert code == 2
+    assert "SyntaxError" in text
+    assert "1 error during collection" in text
 
 
 def test_a_path_that_collects_no_test_returns_five(image):

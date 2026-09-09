@@ -161,12 +161,12 @@ pytest's exit code is returned unchanged. Not remapped, not collapsed, not inter
 | ---- | ------------------------------ |
 | 0    | every test passed              |
 | 1    | a test failed                  |
-| 2    | interrupted                    |
+| 2    | interrupted, a collection error included |
 | 3    | an internal pytest error       |
 | 4    | a pytest usage error           |
 | 5    | no test was collected          |
 
-`5` stays `5`. A red suite is a result, not an error, so nothing in this package raises on
+`5` stays `5`, and a file that does not parse on 3.10 stays `2`. A red suite is a result, not an error, so nothing in this package raises on
 an exit code. Every code the CLI defines for itself is reachable only before the container
 starts, on a parse failure or a failed preflight: an unreachable daemon or an absent image
 raises before any container starts.
