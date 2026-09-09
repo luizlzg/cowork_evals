@@ -128,25 +128,25 @@ The inventory in [`../docs/runtime.md`](../docs/runtime.md) already carries
 
 `src/cowork_evals/docker/Dockerfile.pytest` and `src/cowork_evals/docker/pytest_image.py`.
 
-- [ ] `Dockerfile.pytest`: `FROM ${BASE_TAG}`, then one `COPY` of
+- [x] `Dockerfile.pytest`: `FROM ${BASE_TAG}`, then one `COPY` of
       `requirements_test.txt` and one `pip install --no-deps --no-cache-dir -r` over it. It
       declares `ARG BASE_TAG` and nothing else, and its build context is the same `data/`
       directory the base image uses.
-- [ ] `PytestImage` in `pytest_image.py`, constructed from a `Config` like `Docker`, holding
+- [x] `PytestImage` in `pytest_image.py`, constructed from a `Config` like `Docker`, holding
       a `Docker` for the base tag. Frozen configuration, no work at construction.
-- [ ] `digest`: the sha256 of the base image's digest, `Dockerfile.pytest`,
+- [x] `digest`: the sha256 of the base image's digest, `Dockerfile.pytest`,
       `requirements_test.txt` and the platform, truncated to `DIGEST_LENGTH`. A rebuilt base
       image is therefore a different test tag, never a stale hit over an old base.
-- [ ] `tag`: `cowork-evals-test:<digest>`. There is no `latest`.
-- [ ] `build_argv()` and `build()`, mirroring `Docker`. The base image being absent is a
+- [x] `tag`: `cowork-evals-test:<digest>`. There is no `latest`.
+- [x] `build_argv()` and `build()`, mirroring `Docker`. The base image being absent is a
       failure naming `Docker.tag`, not an implicit base build.
-- [ ] `image_is_present()` and `check()`, returning the same `(Condition, message)` pairs
+- [x] `image_is_present()` and `check()`, returning the same `(Condition, message)` pairs
       `Docker.check()` returns, reusing `Condition` and `remedy` from `docker/__init__.py`.
       `Condition.CREDENTIAL` is never returned: there is no login in this path.
-- [ ] `tests/unit/test_environments.py` grows: `requirements_test.txt` lists no package that
+- [x] `tests/unit/test_environments.py` grows: `requirements_test.txt` lists no package that
       `requirements.txt` already pins. That is the assertion that keeps the install additive,
       checked without a daemon.
-- [ ] `tests/unit/test_pytest_image.py`: the digest changes when the base digest, the
+- [x] `tests/unit/test_pytest_image.py`: the digest changes when the base digest, the
       Dockerfile, the pinned list or the platform changes, and is stable otherwise; the tag
       shape; the build argument list; and that `check()` never returns `CREDENTIAL`. No
       daemon is started.

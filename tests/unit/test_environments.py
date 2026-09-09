@@ -19,6 +19,7 @@ COWORK = ROOT / ".venv_cowork"
 DATA = ROOT / "src" / "cowork_evals" / "data"
 REQUIREMENTS = DATA / "requirements.txt"
 INSTALLABLE = DATA / "requirements_installable.txt"
+TEST_ONLY = DATA / "requirements_test.txt"
 
 # The nine pins that cannot install off the CoWork VM. docs/environments.md.
 NOT_INSTALLABLE = {
@@ -51,6 +52,7 @@ def interpreter(venv: Path) -> str:
 def test_requirements_files_exist():
     assert REQUIREMENTS.is_file()
     assert INSTALLABLE.is_file()
+    assert TEST_ONLY.is_file()
 
 
 def test_requirements_files_resolve_as_package_data():
@@ -66,6 +68,16 @@ def test_installable_is_the_freeze_minus_the_nine():
     assert set(full) - set(installable) == NOT_INSTALLABLE
     # Every shared pin is at the same version. A drift here silently changes the mirror.
     assert {k: full[k] for k in installable} == installable
+
+
+def test_the_test_layer_adds_packages_and_moves_none():
+    """No pin of `requirements_test.txt` is already in the image.
+
+    The test image installs it with `--no-deps`, so a name on both lists would either be
+    reinstalled at the wrong version or silently do nothing. docs/environments.md owns
+    which of the three files a pin goes in.
+    """
+    assert set(pins(TEST_ONLY)) & set(pins(REQUIREMENTS)) == set()
 
 
 def test_repo_venv_is_python_314():
