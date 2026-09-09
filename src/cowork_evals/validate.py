@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .cases import CASE_YAML, EVAL_DIR, GRADERS_DIR, PRUNED, Case, discover
+from .cases import CASE_YAML, EVAL_DIR, GRADER_TYPES, GRADERS_DIR, PRUNED, Case, discover
 
 # The directory a plugin's skills live in. Coverage is one directory here against one
 # directory under `evals/`. docs/eval_format.md.
@@ -76,9 +76,6 @@ CAPS = {"runs": 50, "max_turns": 200, "timeout_seconds": 3600}
 # The prefix every `env` key carries. That mapping is the case's execution environment for
 # the agent under test, and is not this package's configuration. docs/eval_format.md.
 ENV_PREFIX = "EVAL_"
-
-# Every grader type the format defines. docs/eval_format.md.
-GRADER_TYPES = frozenset({"regex", "tool_used", "tool_order", "file_exists", "llm", "baseline"})
 
 
 @dataclass(frozen=True, slots=True)

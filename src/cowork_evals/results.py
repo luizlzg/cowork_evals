@@ -22,7 +22,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .cases import PLUGIN_MANIFEST, Case, Grader, plugin_name
+from .cases import JUDGED, PLUGIN_MANIFEST, Case, Grader, plugin_name
 from .grader import GraderResult
 from .harness import RESULT_NAME
 
@@ -46,9 +46,6 @@ GRADER_DEFAULTS: dict[str, dict[str, Any]] = {
     "file_exists": {"exists": True},
     "llm": {"focus": "last_message"},
 }
-
-# The two grader types whose rubric is embedded, so a report shows what was judged.
-JUDGED_TYPES = ("llm", "baseline")
 
 # The case keys the document records as declared, and their camelCase names. They are the
 # case's own values and never an override: what actually ran is read from `arms.with` and
@@ -290,10 +287,10 @@ def _grader_definition(grader: Grader) -> dict[str, Any]:
         "type": grader.type,
         "weight": grader.weight,
     }
-    if grader.type in JUDGED_TYPES:
+    if grader.type in JUDGED:
         definition["graderMarkdown"] = grader.markdown
     config = {**GRADER_DEFAULTS.get(grader.type, {}), **grader.config}
-    if grader.type in JUDGED_TYPES and "criteria" not in config:
+    if grader.type in JUDGED and "criteria" not in config:
         config["criteria"] = grader.markdown
     definition["config"] = config
     return definition

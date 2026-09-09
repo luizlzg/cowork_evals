@@ -233,40 +233,40 @@ no backend has to.
 invocation. The conditions are the gate table in
 [`../docs/running_evals.md`](../docs/running_evals.md).
 
-- [ ] `GateResult` frozen: `passed`, `lines`. `gate(run_dir, *, extra=())` reads every
+- [x] `GateResult` frozen: `passed`, `lines`. `gate(run_dir, *, extra=())` reads every
       `<plugin>/aggregate-result.json` one level under the run directory. `extra` is a
       failure line the caller already has, which is how the cost ceiling reaches the gate
       without a second code path.
-- [ ] A missing or unparsable document is a failure naming the path. So is a document whose
+- [x] A missing or unparsable document is a failure naming the path. So is a document whose
       `schemaVersion` is not 1. An unknown field is ignored: the contract is additive-only.
-- [ ] The `with` arm only.
-- [ ] A grader result carries `name`, `passed` and `scored`, never `type`. Join it to that
+- [x] The `with` arm only.
+- [x] A grader result carries `name`, `passed` and `scored`, never `type`. Join it to that
       case's grader definition by name to learn its class. A result with no matching
       definition is a failure naming it.
-- [ ] A failed `regex`, `tool_used`, `tool_order` or `file_exists` grader fails the gate.
-- [ ] A failed `llm` or `baseline` grader is printed and does not fail the gate.
-- [ ] A case carrying `skipped: true`, a grader result carrying `skipped: true`, and a
+- [x] A failed `regex`, `tool_used`, `tool_order` or `file_exists` grader fails the gate.
+- [x] A failed `llm` or `baseline` grader is printed and does not fail the gate.
+- [x] A case carrying `skipped: true`, a grader result carrying `skipped: true`, and a
       grader result carrying `scored: false` each fail the gate, with the reason on the
       line.
-- [ ] `partial: true` fails the gate, whatever `partialReason` says. Correct the row in
+- [x] `partial: true` fails the gate, whatever `partialReason` says. Correct the row in
       [`../docs/running_evals.md`](../docs/running_evals.md) in phase 8, which names two
       reasons today and misses `interrupted`.
-- [ ] A run carrying `error` fails the gate, on every backend. It is the CoWork case the
+- [x] A run carrying `error` fails the gate, on every backend. It is the CoWork case the
       driver could not run or collect, and it is also a harness run that timed out, hit the
       turn cap or exited non-zero: those are graded on what they produced, so the score
       alone does not catch them. Correct the row in
       [`../docs/running_evals.md`](../docs/running_evals.md) in phase 8, which names only
       the CoWork case.
-- [ ] A document whose `aggregates.casesTotal` is 0 is not a failure. A `--tag` sweep
+- [x] A document whose `aggregates.casesTotal` is 0 is not a failure. A `--tag` sweep
       matches no case in most plugins, and failing on that would make every filtered sweep
       red. The whole selection matching nothing is refused in phase 6, before anything runs.
       Record it in [`../docs/running_evals.md`](../docs/running_evals.md) in phase 8, beside
       the gate table.
-- [ ] One line per failure, then one summary line with the case counts and the overall
+- [x] One line per failure, then one summary line with the case counts and the overall
       score. Over a sweep the counts are summed across plugins and the score is the mean of
       each document's `aggregates.overallScore`. The caller writes the text to `gate.txt`
       and prints it.
-- [ ] `tests/unit/test_gate.py` over hand-written documents under `tests/data/results/`:
+- [x] `tests/unit/test_gate.py` over hand-written documents under `tests/data/results/`:
       a pass, each structural grader failing, a judged grader failing under an otherwise
       passing document, a skipped case, `scored: false`, `partial: true`, a run with an
       `error` under an otherwise passing document, an empty document passing, a missing

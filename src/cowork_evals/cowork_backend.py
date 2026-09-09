@@ -17,13 +17,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from .cases import EVAL_DIR, PLUGIN_MANIFEST, Case, CaseError, discover, plugin_root
+from .cases import EVAL_DIR, JUDGED, PLUGIN_MANIFEST, Case, CaseError, discover, plugin_root
 from .config import Config, CoWorkError
 from .cowork import CoWork
 from .grader import grade as grade_structural
 from .grader import skipped as skipped_result
-from .judge import JUDGED, resolve_model
 from .judge import grade as grade_judged
+from .judge import resolve_model
 from .results import CaseResult, Run, build, write
 
 # The MCP stand-in directory. Its three layers, suite, group and case, are

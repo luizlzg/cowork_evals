@@ -42,6 +42,13 @@ PRUNED = frozenset({"node_modules", ".git", ".claude", "results"})
 # A grader's default weight. docs/eval_format.md.
 DEFAULT_WEIGHT = 1
 
+# Every grader type the format defines, split into the two classes the gate reads: a
+# structural grader is deterministic and gates, and a judged grader calls a model and is
+# printed. docs/eval_format.md, docs/running_evals.md.
+STRUCTURAL = ("regex", "tool_used", "tool_order", "file_exists")
+JUDGED = ("llm", "baseline")
+GRADER_TYPES = frozenset(STRUCTURAL + JUDGED)
+
 # `source` in the v1 result document. A case is discovered by its `prompt.md`, so
 # `case_yaml` cannot occur here. docs/claude_code/plugin_eval_reference.md.
 PROSE = "prose"
