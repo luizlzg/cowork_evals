@@ -47,8 +47,8 @@ counts against the driver's `max_runs` ceiling, so a sweep is a smoke set named 
 case. That is why [cli.md](cli.md) makes a multi-plugin path a usage error on `--cowork`.
 
 The CoWork backend does not call `claude plugin eval`. It reads the same case tree, submits
-each case's prompt body through the driver, grades the driver's result document with the
-CoWork grader, and writes the same `aggregate-result.json`. It pins one run per case. Of the
+each case's prompt body through the driver, grades the session document with the CoWork
+grader, and writes the same `aggregate-result.json`. It pins one run per case. Of the
 pinned flags below it uses only `eval.judge_model`, for judged graders. The rest configure
 the CLI, and the CLI is not in the path. See [cowork_driver.md](cowork_driver.md).
 

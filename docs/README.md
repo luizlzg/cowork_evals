@@ -19,7 +19,7 @@ part of it.
 | [`eval_format.md`](eval_format.md)               | What a case file contains: tree, frontmatter, graders, traps    |
 | [`running_evals.md`](running_evals.md)           | The eval system: mirror, pinned flags, gate, logs, cadence      |
 | [`docker.md`](docker.md)                         | The container that reproduces the CoWork image                  |
-| [`cowork_driver.md`](cowork_driver.md)           | Driving CoWork from a script: API, sequence, result document    |
+| [`cowork_driver.md`](cowork_driver.md)           | Driving CoWork from a script: API, sequence, session document   |
 | [`runtime.md`](runtime.md)                       | What a CoWork session provides and what is on the image         |
 | [`environments.md`](environments.md)             | The two Python environments and how to build them               |
 | [`staged_runtime.md`](staged_runtime.md)         | The 3.10 runtime staged into a plugin so a sandboxed case reaches it |

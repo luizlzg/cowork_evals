@@ -172,7 +172,7 @@ belongs in `aggregate-result.json`, which `docs/running_evals.md:228` and
 - [x] Rename the driver's output to **session document** throughout
       `docs/cowork_driver.md`: the section title at `:258`, the method table at `:69-72`,
       and `:26`, `:286` and `:297`.
-- [ ] "Result document" then means `aggregate-result.json` v1 and nothing else, everywhere.
+- [x] "Result document" then means `aggregate-result.json` v1 and nothing else, everywhere.
 - [ ] `docs/cowork_driver.md:302-306` reads correctly once renamed: a skip is written into
       the result document, which is the aggregate.
 - [ ] `src/cowork_evals/cowork.py` docstrings and `tests/` follow the same rename.
