@@ -364,9 +364,12 @@ Each item below names the one file that should own the fact.
 - [x] `src/cowork_evals/docker/__init__.py:9` links a module docstring to `plan_cli.md`.
       Documentation never links to a plan. Point it at `docs/cli.md`.
       It was the only plan link outside `plans/`.
-- [ ] Four files call a file a "page", against the writing rules:
+- [x] Four files call a file a "page", against the writing rules:
       `docker/parity.py:8`, `docker/__init__.py:8`, `tests/unit/test_env.py:84` (deleted in
       phase 1) and `tests/integration/test_docker.py:29`.
+      Two were left. `tests/unit/test_env.py` went in phase 1 and
+      `tests/integration/test_docker.py:29` was rewritten in phase 5. The word is now
+      nowhere in the repository except the rule in `CLAUDE.md` that forbids it.
 - [ ] `max_cost_total_usd` is defaulted, documented and tested, and read nowhere. After
       phase 1 it is a YAML key nothing reads. Mark it in `config.py` as belonging to the
       unbuilt gate, naming `plan_cli.md` phase 6 as what will read it, or leave it out until

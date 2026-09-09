@@ -6,7 +6,7 @@ absent turning up present, `import uno`, because unoserver and headless conversi
 capability the container exists to prove, and a tool probe.py probes that no table here
 records, whose result would otherwise be read by nothing.
 
-No page under `docs/` is parsed. The pins come from the shipped `requirements.txt`, read
+No file under `docs/` is parsed. The pins come from the shipped `requirements.txt`, read
 by cowork_evals.requirements, and the expected non-Python versions are the table below,
 which cites docs/runtime.md.
 

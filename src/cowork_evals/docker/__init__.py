@@ -5,7 +5,7 @@ configuration and does no work at construction, so `Docker().digest` answers on 
 with no daemon.
 
 Docker is driven through its CLI with `subprocess`, not through `docker-py`, for the
-reason in that page. Nothing here names a run directory, writes a symlink, prunes or
+reason in that file. Nothing here names a run directory, writes a symlink, prunes or
 decides pass and fail: that is the CLI's, in [docs/cli.md](../../../docs/cli.md).
 """
 
