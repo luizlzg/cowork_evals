@@ -6,7 +6,7 @@ with no daemon.
 
 Docker is driven through its CLI with `subprocess`, not through `docker-py`, for the
 reason in that page. Nothing here names a run directory, writes a symlink, prunes or
-decides pass and fail: that is the CLI's, in `plan_cli.md`.
+decides pass and fail: that is the CLI's, in [docs/cli.md](../../../docs/cli.md).
 """
 
 from __future__ import annotations

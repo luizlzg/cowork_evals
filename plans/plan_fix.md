@@ -361,8 +361,9 @@ Each item below names the one file that should own the fact.
       one rule that also excludes the vendored one under `.venv_cowork/`. `run.sh` had one
       shfmt finding, padding before a trailing comment, and it is fixed rather than
       exempted. shellcheck was already clean on it.
-- [ ] `src/cowork_evals/docker/__init__.py:9` links a module docstring to `plan_cli.md`.
+- [x] `src/cowork_evals/docker/__init__.py:9` links a module docstring to `plan_cli.md`.
       Documentation never links to a plan. Point it at `docs/cli.md`.
+      It was the only plan link outside `plans/`.
 - [ ] Four files call a file a "page", against the writing rules:
       `docker/parity.py:8`, `docker/__init__.py:8`, `tests/unit/test_env.py:84` (deleted in
       phase 1) and `tests/integration/test_docker.py:29`.
