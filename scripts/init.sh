@@ -5,6 +5,7 @@
 # Run once after cloning. Pass any argument through to both builders, so
 # `init.sh --recreate` rebuilds both from scratch. See docs/environments.md.
 set -euo pipefail
+# shellcheck source=lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 case "${1-}" in

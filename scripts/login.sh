@@ -13,6 +13,7 @@
 # It needs a terminal and a browser. Run it before the integration tier: those tests read
 # the credential and never create one.
 set -euo pipefail
+# shellcheck source=lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 need uv
 need docker

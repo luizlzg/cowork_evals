@@ -16,6 +16,7 @@
 #
 # Shell, not Python: it runs before and independently of the repo environment.
 set -euo pipefail
+# shellcheck source=lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 need uv
 
@@ -70,7 +71,7 @@ verify() {
   missing="$(comm -23 <(echo "$expected") <(echo "$actual"))"
   if [ -n "$missing" ]; then
     fail "$(echo "$missing" | wc -l | tr -d ' ') pins missing or at the wrong version:"
-    echo "$missing" | sed 's/^/  /' >&2
+    awk '{ print "  " $0 }' <<< "$missing" >&2
   fi
 
   # An extra is anything installed that is neither a pin nor a test-only package, at
@@ -82,7 +83,7 @@ verify() {
   )"
   if [ -n "$extra" ]; then
     fail "$(echo "$extra" | wc -l | tr -d ' ') packages installed that are on neither list:"
-    echo "$extra" | sed 's/^/  /' >&2
+    awk '{ print "  " $0 }' <<< "$extra" >&2
   fi
 
   # Without this a package added to TEST_ONLY_DIRECT is never installed: it is not a
@@ -93,7 +94,7 @@ verify() {
   )"
   if [ -n "$absent" ]; then
     fail "$(echo "$absent" | wc -l | tr -d ' ') test-only packages not installed:"
-    echo "$absent" | sed 's/^/  /' >&2
+    awk '{ print "  " $0 }' <<< "$absent" >&2
   fi
 
   [ "$DRIFT" -eq 0 ]

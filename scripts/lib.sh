@@ -1,3 +1,5 @@
+# shellcheck shell=bash
+#
 # Shared by every script in this directory. Source it, do not execute it.
 #
 #   . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
@@ -6,7 +8,10 @@
 # See docs/environments.md.
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[1]}")/.." && pwd)"
+# Read by the scripts that source this file, not here.
+# shellcheck disable=SC2034
 VENV="$ROOT/.venv"
+# shellcheck disable=SC2034
 COWORK="$ROOT/.venv_cowork"
 
 die() {

@@ -9,6 +9,7 @@
 # scripts/ when they are on PATH. Markdown is not formatted by a tool: see the
 # writing rules in CLAUDE.md.
 set -euo pipefail
+# shellcheck source=lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 need uv
 
@@ -31,6 +32,6 @@ else
   uv run ruff format --check .
   command -v shfmt > /dev/null 2>&1 && shfmt -d -i 2 -ci scripts/*.sh
 fi
-command -v shellcheck > /dev/null 2>&1 && shellcheck -x scripts/*.sh
+command -v shellcheck > /dev/null 2>&1 && shellcheck -x -P scripts scripts/*.sh
 
 echo "OK: lint clean"
