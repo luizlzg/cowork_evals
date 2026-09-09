@@ -137,13 +137,15 @@ acts on them.
 - [x] `docs/library.md:155` says the container login applies "when no API key is set".
       `docs/docker.md:224` says there is no API key route and records the developer's
       decision of 2026-09-08. Delete the clause. `docs/docker.md` owns credentials.
-- [ ] `plans/README.md` marks `plan_docker.md` implemented, while
+- [x] `plans/README.md` marks `plan_docker.md` implemented, while
       `docs/running_evals.md:326` still reads `not yet measured` for the Docker smoke row.
       `plans/README.md:126` says a row reading that means the box filling it is not ticked.
       `docs/docker.md:198` records that the run happened on 2026-09-08. Either recover the
       wall clock and cost from that run and fill the row, or re-run
       `plugins/smoke/evals` through the container and record what it costs. Until one of
       those, `plan_docker.md` is not implemented and `plans/README.md` should say so.
+      The run's `aggregate-result.json` survives on disk, so the row is filled from it and
+      `plan_docker.md` stays implemented. No container was fired.
 - [ ] `README.md:27-33` shows three example commands, all `--venv`. That backend is not
       built and its plan is skipped. Change the quickstart to `--docker`, the built one.
 - [ ] `docs/README.md:42` classifies `cowork_driver.md` as design. It is built:

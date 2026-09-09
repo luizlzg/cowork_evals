@@ -324,8 +324,13 @@ The total has no command-line option because it governs an invocation rather tha
 | Measurement                    | Wall clock       | costUsd          |
 | ------------------------------ | ---------------- | ---------------- |
 | Smoke case, `runs: 1`, local   | not yet measured | not yet measured |
-| Smoke case, `runs: 1`, Docker  | not yet measured | not yet measured |
+| Smoke case, `runs: 1`, Docker  | 3 s              | 0.057            |
 | Full sweep, local              | not yet measured | not yet measured |
 
 A row reading `not yet measured` has not been run. The ceilings above were chosen, not
 measured.
+
+The Docker row is a snapshot, 2026-09-08. It is `durationSeconds` and `costUsd` read from
+the `aggregate-result.json` of the passing container run [docker.md](docker.md) records, on
+CLI 2.1.265, `sonnet` and the `haiku` judge. The wall clock is the harness's own, so it
+excludes the image build and the container start.
