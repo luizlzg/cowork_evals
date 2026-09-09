@@ -12,6 +12,7 @@ to build. `CaseError` is for a tree that cannot be read at all.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from fnmatch import fnmatchcase
 from pathlib import Path
@@ -99,6 +100,23 @@ def plugin_root(target: Path | str) -> Path:
         if (candidate / PLUGIN_MANIFEST).is_file():
             return candidate
     raise CaseError(f"no {PLUGIN_MANIFEST} at or above {resolved}")
+
+
+def plugin_name(root: Path | str) -> str:
+    """The manifest's `name`, and the folder basename when the manifest names none.
+
+    Every reader of a plugin root names it this way: the result document, and the scope
+    the run directory is named for. docs/eval_format.md.
+    """
+    resolved = Path(root).resolve()
+    try:
+        manifest = json.loads((resolved / PLUGIN_MANIFEST).read_text(encoding="utf-8"))
+    except OSError, ValueError:
+        return resolved.name
+    if not isinstance(manifest, dict):
+        return resolved.name
+    named = manifest.get("name")
+    return named if isinstance(named, str) and named else resolved.name
 
 
 def discover(

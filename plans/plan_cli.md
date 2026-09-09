@@ -191,38 +191,38 @@ runs no case.
 [`../docs/running_evals.md`](../docs/running_evals.md), and one module writes all of it, so
 no backend has to.
 
-- [ ] `scope_name(target, roots)`: `<plugin>-<skill>-<case>` for a case directory,
+- [x] `scope_name(target, roots)`: `<plugin>-<skill>-<case>` for a case directory,
       `<plugin>-<skill>` for a skill directory, `<plugin>` for an `evals/` directory, `all`
       for a path covering more than one plugin root, and `<plugin>` for any other path
       inside one root, the plugin root itself included. The plugin name is
       `.claude-plugin/plugin.json`'s `name`, and the folder basename when that file names
       none.
-- [ ] `slug(name)`: every character outside `[A-Za-z0-9._-]` becomes `-`. Both a scope name
+- [x] `slug(name)`: every character outside `[A-Za-z0-9._-]` becomes `-`. Both a scope name
       and a per-plugin directory name go through it.
-- [ ] `run_dir(root, scope)`: `<root>/<yyyymmdd-hhmmss>-<scope>`, local time. A second
+- [x] `run_dir(root, scope)`: `<root>/<yyyymmdd-hhmmss>-<scope>`, local time. A second
       invocation inside the same second appends `-2`, then `-3`.
-- [ ] `plugin_dir(run_dir, name)`: `<run_dir>/<slug>`, with the same `-2` suffix on a
+- [x] `plugin_dir(run_dir, name)`: `<run_dir>/<slug>`, with the same `-2` suffix on a
       collision. Two plugins in one sweep whose manifests carry the same `name` get two
       directories, so neither document is overwritten and the gate reads both.
-- [ ] The root is `<cwd>/logs/evals`, and `--out DIR` replaces it with `DIR`.
-- [ ] `write_env(run_dir, backend, image=None)`: one `name: value` line per row, for
+- [x] The root is `<cwd>/logs/evals`, and `--out DIR` replaces it with `DIR`.
+- [x] `write_env(run_dir, backend, image=None)`: one `name: value` line per row, for
       `cowork_evals` from `importlib.metadata`, `claude --version`, `python3 -V`, `backend`,
       and `image` on the container backend. A command that does not run records the failure
       on its line rather than raising.
-- [ ] `point_latest(root, run_dir)`: a relative symlink at `<root>/latest`, replaced through
+- [x] `point_latest(root, run_dir)`: a relative symlink at `<root>/latest`, replaced through
       a temporary name and `os.replace`, so it is never absent between two runs.
-- [ ] `prune(root, days)`: delete directories whose name matches the stamp pattern and whose
+- [x] `prune(root, days)`: delete directories whose name matches the stamp pattern and whose
       stamp is older than `days`. Read the stamp from the name, never the modification time,
       which a later read moves. Nothing else under the root is touched, and `latest` is
       re-pointed or removed when it dangles.
-- [ ] `tee(run_dir)`: a context manager over `run.log`. It opens a pipe, dups the write end
+- [x] `tee(run_dir)`: a context manager over `run.log`. It opens a pipe, dups the write end
       onto file descriptors 1 and 2, and runs a thread that copies bytes to both the saved
       terminal descriptor and the file. It restores both descriptors and joins the thread on
       the way out. A child process inherits descriptors 1 and 2, so the harness's and the
       container's output reaches the file. Wrapping `sys.stdout` does not, which is why this
       is at the descriptor level.
-- [ ] The copy is bytes and is never decoded, so a progress carriage return survives.
-- [ ] `tests/unit/test_logs.py`: the five scope shapes, the slug rule, both collision
+- [x] The copy is bytes and is never decoded, so a progress carriage return survives.
+- [x] `tests/unit/test_logs.py`: the five scope shapes, the slug rule, both collision
       suffixes, the `env.txt` lines, the symlink replacement, pruning by name with a fixture
       whose modification time contradicts its name, a dangling `latest`, and a real
       `subprocess.run` whose output is asserted in `run.log`.

@@ -22,7 +22,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .cases import PLUGIN_MANIFEST, Case, Grader
+from .cases import PLUGIN_MANIFEST, Case, Grader, plugin_name
 from .grader import GraderResult
 from .harness import RESULT_NAME
 
@@ -319,17 +319,14 @@ def _grader_result(result: GraderResult) -> dict[str, Any]:
 
 
 def _plugin(root: Path) -> dict[str, Any]:
-    """The plugin under test, from its manifest. The folder basename is the name fallback."""
-    entry: dict[str, Any] = {"name": root.name, "path": str(root)}
+    """The plugin under test, from its manifest. `cases.plugin_name` decides the name."""
+    entry: dict[str, Any] = {"name": plugin_name(root), "path": str(root)}
     try:
         manifest = json.loads((root / PLUGIN_MANIFEST).read_text(encoding="utf-8"))
     except OSError, ValueError:
         return entry
     if not isinstance(manifest, dict):
         return entry
-    named = manifest.get("name")
-    if isinstance(named, str) and named:
-        entry["name"] = named
     version_named = manifest.get("version")
     if isinstance(version_named, str) and version_named:
         entry["version"] = version_named
