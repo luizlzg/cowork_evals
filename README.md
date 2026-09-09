@@ -27,9 +27,9 @@ package is; it runs on a laptop. See [`docs/runtime.md`](docs/runtime.md).
 ```bash
 uv add --dev cowork-evals            # or: pip install cowork-evals
 
-cowork_evals setup --venv            # build the 3.10 CoWork mirror
+cowork_evals setup --docker          # build the container image, and log in once
 cowork_evals check --all             # what each backend still needs
-cowork_evals run --venv path/to/plugin/evals
+cowork_evals run --docker path/to/plugin/evals
 ```
 
 The command takes one path, and the path is the scope: a case, a skill, a plugin's suite, or

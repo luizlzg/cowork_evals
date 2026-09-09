@@ -146,7 +146,7 @@ acts on them.
       those, `plan_docker.md` is not implemented and `plans/README.md` should say so.
       The run's `aggregate-result.json` survives on disk, so the row is filled from it and
       `plan_docker.md` stays implemented. No container was fired.
-- [ ] `README.md:27-33` shows three example commands, all `--venv`. That backend is not
+- [x] `README.md:27-33` shows three example commands, all `--venv`. That backend is not
       built and its plan is skipped. Change the quickstart to `--docker`, the built one.
 - [ ] `docs/README.md:42` classifies `cowork_driver.md` as design. It is built:
       `docs/running_evals.md:31` says so, and so does `docs/cowork_driver.md:11`. Fixed by
