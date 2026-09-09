@@ -111,12 +111,26 @@ def images_argv(*repositories: str) -> list[str]:
     return argv + ["--format", IMAGE_FORMAT]
 
 
-def images(*repositories: str) -> list[tuple[str, datetime]]:
-    """Each tag and the moment it was built, sorted by tag. An unreadable row is dropped.
+def parse_images(output: str) -> list[tuple[str, datetime]]:
+    """What `docker image ls` printed, as tags and creation dates, sorted by tag.
 
-    A row `docker` printed in a format this cannot parse is not an image to delete, and a
-    prune that guessed at its age would delete the wrong one.
+    A row in a format this cannot parse is dropped: it is not an image to delete, and a
+    prune that guessed at its age would delete the wrong one. Separate from `images` so a
+    test asserts the parse against a recorded listing rather than against a daemon.
     """
+    found = []
+    for line in output.splitlines():
+        tag, _, created = line.partition("\t")
+        try:
+            when = datetime.strptime(created[:CREATED_LENGTH], CREATED_FORMAT)
+        except ValueError:
+            continue
+        found.append((tag, when))
+    return sorted(found)
+
+
+def images(*repositories: str) -> list[tuple[str, datetime]]:
+    """Each tag and the moment it was built, sorted by tag."""
     try:
         completed = subprocess.run(
             images_argv(*repositories), capture_output=True, text=True, check=False
@@ -125,15 +139,7 @@ def images(*repositories: str) -> list[tuple[str, datetime]]:
         raise DockerError(f"docker image ls could not run: {error}") from error
     if completed.returncode != 0:
         raise DockerError(f"docker image ls exited {completed.returncode}: {completed.stderr}")
-    found = []
-    for line in completed.stdout.splitlines():
-        tag, _, created = line.partition("\t")
-        try:
-            when = datetime.strptime(created[:CREATED_LENGTH], CREATED_FORMAT)
-        except ValueError:
-            continue
-        found.append((tag, when))
-    return sorted(found)
+    return parse_images(completed.stdout)
 
 
 def remove_image_argv(tag: str) -> list[str]:

@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import re
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -26,11 +27,15 @@ from cowork_evals.docker import (
     Docker,
     DockerError,
     images_argv,
+    parse_images,
     plugin_root,
     remedy,
     remove_image_argv,
 )
 from cowork_evals.harness import RunOptions
+
+# The zone `docker image ls` printed in the recorded listing below.
+EDT = timezone(timedelta(hours=-4))
 
 
 def build_arg(argv: list[str], flag: str) -> str:
@@ -443,4 +448,34 @@ def test_the_image_removal_names_one_tag():
         "image",
         "rm",
         "cowork-evals:0123456789ab",
+    ]
+
+
+def test_a_recorded_listing_parses_into_tags_and_dates():
+    """One `docker image ls` listing, recorded 2026-09-09 on `linux/arm64`, a snapshot."""
+    listing = (
+        "cowork-evals-test:0eafee9a4184\t2026-09-09 05:15:58 -0400 EDT\n"
+        "cowork-evals:57f48ba2adac\t2026-09-09 04:08:37 -0400 EDT\n"
+        "cowork-evals:9e9d75cdfb6e\t2026-09-08 16:47:25 -0400 EDT\n"
+    )
+    assert parse_images(listing) == [
+        ("cowork-evals-test:0eafee9a4184", datetime(2026, 9, 9, 5, 15, 58, tzinfo=EDT)),
+        ("cowork-evals:57f48ba2adac", datetime(2026, 9, 9, 4, 8, 37, tzinfo=EDT)),
+        ("cowork-evals:9e9d75cdfb6e", datetime(2026, 9, 8, 16, 47, 25, tzinfo=EDT)),
+    ]
+
+
+def test_a_row_in_no_format_this_reads_is_dropped():
+    """It is not an image to delete, and a guessed age would delete the wrong one."""
+    assert parse_images("cowork-evals:abc\tyesterday\nnot a row at all\n") == []
+
+
+def test_the_listing_is_sorted_by_tag():
+    listing = (
+        "cowork-evals:ff78131ca4c5\t2026-09-08 18:38:34 -0400 EDT\n"
+        "cowork-evals:0b8b9652310f\t2026-09-08 17:56:46 -0400 EDT\n"
+    )
+    assert [tag for tag, _ in parse_images(listing)] == [
+        "cowork-evals:0b8b9652310f",
+        "cowork-evals:ff78131ca4c5",
     ]

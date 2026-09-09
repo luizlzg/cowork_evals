@@ -559,6 +559,19 @@ def _prune(args: argparse.Namespace, config: Config) -> int:
     return OK
 
 
+def _stale(
+    inventory: list[tuple[datetime, str]] | list[tuple[str, datetime]],
+    current: set[str],
+    cutoff: datetime,
+) -> list[str]:
+    """Which tags a prune removes: neither current digest, and built before the cutoff.
+
+    Separate from `_prune_images` so the rule is asserted against a hand-written inventory
+    rather than against whatever images a machine happens to hold.
+    """
+    return [tag for tag, created in inventory if tag not in current and created < cutoff]
+
+
 def _prune_images(config: Config, days: int) -> None:
     """Every tag of both repositories except the current digest of each.
 
@@ -567,9 +580,8 @@ def _prune_images(config: Config, days: int) -> None:
     """
     current = {Docker(config).tag, PytestImage(config).tag}
     cutoff = datetime.now().astimezone() - timedelta(days=days)
-    for tag, created in docker.images(docker.REPOSITORY, pytest_image.REPOSITORY):
-        if tag in current or created >= cutoff:
-            continue
+    inventory = docker.images(docker.REPOSITORY, pytest_image.REPOSITORY)
+    for tag in _stale(inventory, current, cutoff):
         docker.remove_image(tag)
         print(f"removed {tag}")
 

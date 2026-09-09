@@ -515,3 +515,29 @@ def test_prune_logs_keeps_a_run_inside_the_age(tmp_path) -> None:
     young.mkdir(parents=True)
     assert main(["prune", "--logs", "--older-than", "1", "--out", str(root)]) == 0
     assert young.is_dir()
+
+
+def test_a_prune_keeps_the_current_digest_of_each_image() -> None:
+    """The two images a `setup --docker` just built are never removed, at any age."""
+    cutoff = datetime(2026, 9, 9)
+    old = datetime(2026, 1, 1)
+    inventory = [
+        ("cowork-evals:current00000", old),
+        ("cowork-evals-test:current0", old),
+        ("cowork-evals:stale0000000", old),
+    ]
+    current = {"cowork-evals:current00000", "cowork-evals-test:current0"}
+    assert cli._stale(inventory, current, cutoff) == ["cowork-evals:stale0000000"]
+
+
+def test_a_prune_keeps_an_image_built_after_the_cutoff() -> None:
+    cutoff = datetime(2026, 9, 9)
+    inventory = [
+        ("cowork-evals:young000000", datetime(2026, 9, 9, 0, 0, 1)),
+        ("cowork-evals:old00000000", datetime(2026, 9, 8, 23, 59, 59)),
+    ]
+    assert cli._stale(inventory, current=set(), cutoff=cutoff) == ["cowork-evals:old00000000"]
+
+
+def test_a_prune_of_nothing_removes_nothing() -> None:
+    assert cli._stale([], set(), datetime(2026, 9, 9)) == []
