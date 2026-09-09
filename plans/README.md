@@ -42,6 +42,9 @@ Plan 3 is skipped, so the venv backend is not built. The design of it stays wher
 [`../docs/running_evals.md`](../docs/running_evals.md) is what says it is unbuilt. Nothing
 is removed from `docs/` for a skipped plan.
 
+Every section below describes each plan as it is written, plan 3 included. What plan 3
+describes is designed and not built.
+
 Plans 2 and 3 each build one backend whole. Running an eval on those two backends is
 `claude plugin eval`, which discovers the cases, runs them, grades them and writes
 `aggregate-result.json` itself, so there is nothing above the backend to put in a plan of its

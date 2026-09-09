@@ -25,6 +25,7 @@ part of it.
 | [`staged_runtime.md`](staged_runtime.md)         | The 3.10 runtime staged into a plugin so a sandboxed case reaches it |
 | [`plugin_eval.md`](plugin_eval.md)               | `claude plugin eval`: availability, flags, harness limits, cost |
 | [`cowork_desktop.md`](cowork_desktop.md)         | Desktop application internals: deep links, session filesystem   |
+| [`claude_code/`](claude_code/README.md)          | The vendored harness references, and the harness smoke plugin   |
 
 A measured fact here carries its capture date and is called a snapshot. A snapshot is not a
 contract, and it is re-probed when the thing it describes changes. `runtime.md` and

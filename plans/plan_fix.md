@@ -391,17 +391,26 @@ Each item below names the one file that should own the fact.
 
 ## Phase 7: The index, and the boundary that has no rule
 
-- [ ] `docs/README.md` gains a row for `docs/claude_code/`. `docs/eval_format.md:10` calls
+- [x] `docs/README.md` gains a row for `docs/claude_code/`. `docs/eval_format.md:10` calls
       the vendored reference the authority where it is silent, and the index that owns
       reference material omits the directory holding it.
-- [ ] `tests/README.md:4-5` lists what the suite covers and omits the container and parity
+      The row links to `docs/claude_code/README.md`, which is the index that owns the
+      directory and says which two of the three files are vendored.
+- [x] `tests/README.md:4-5` lists what the suite covers and omits the container and parity
       work that its own table at `:41-44` lists as existing.
-- [ ] `plans/README.md` describes plan 3 in the present tense at `:45`, `:53` and `:59-65`
+      It omitted the configuration file and the harness argument list too. The sentence now
+      names every unit in the table, and points at the table for which ones exist.
+- [x] `plans/README.md` describes plan 3 in the present tense at `:45`, `:53` and `:59-65`
       while marking it skipped at `:28`. Say once that the following sections describe it as
       designed.
-- [ ] `docs/running_evals.md:28` is the one status row naming no design file, reading
+      The sentence sits at the end of the paragraph that already says plan 3 is skipped, so
+      a reader meets it before the three sections that use the present tense.
+- [x] `docs/running_evals.md:28` is the one status row naming no design file, reading
       `nowhere yet`. Either write the design or say in the row that it is deliberately
       undesigned.
+      The row now reads `nowhere. Not designed, and no plan builds it`. No design was
+      written: a design for an unasked check is a new feature, which this plan's "Out of
+      scope" sends to nobody. `docs/library.md` already points at this row for the answer.
 - [ ] Nothing states which subjects belong to `docs/running_evals.md` and which to
       `docs/staged_runtime.md`. `running_evals.md:4` calls itself design that is "true
       whether or not a given piece is built", yet it holds the sole record of what is built,

@@ -1,8 +1,10 @@
 # tests
 
 Tests for this repository's own code. Python 3.14 under `.venv`, run by `scripts/test.sh`.
-Scope as each piece is built: the environments, the CLI's option surface and backend
-mapping, the result gate, the case validator, the CoWork driver and its grader.
+Scope as each piece is built: the environments, the configuration file, the harness
+argument list, the container image and its parity probe, the CoWork driver, the CLI's option
+surface and backend mapping, the result gate, the case validator and the CoWork grader. The
+table below says which of those has a file today.
 
 These are not evals. An eval needs a model in the loop. If a failure can be caught by
 pytest, it is not an eval.

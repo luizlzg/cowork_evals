@@ -26,7 +26,7 @@ here.
 | The staged runtime                        | no    | [staged_runtime.md](staged_runtime.md)      |
 | The gate                                  | no    | this file                                   |
 | The case validator                        | no    | [eval_format.md](eval_format.md)            |
-| The 3.10 and import check over code under test | no | nowhere yet                                 |
+| The 3.10 and import check over code under test | no | nowhere. Not designed, and no plan builds it |
 | The container backend and its Dockerfile  | yes   | [docker.md](docker.md)                      |
 | `scripts/parity.sh` and `tests/unit/test_parity.py` | yes | [docker.md](docker.md)                     |
 | The CoWork driver                         | yes   | [cowork_driver.md](cowork_driver.md)        |
