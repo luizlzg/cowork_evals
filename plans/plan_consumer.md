@@ -138,7 +138,7 @@ report, and this is the phase that makes the claim true.
 
 ### Phase 9: the install test
 
-- [ ] `scripts/build.sh` passes, wheel and sdist both carrying `docs/`
-- [ ] The wheel installs into a clean 3.14 venv, and `docs`, `docs eval_format` and `init` all work out of it
-- [ ] In a repository holding one plugin and nothing else, `init` then a case written from the shipped skill reaches `run --docker --dry-run` exit 0
-- [ ] `scripts/test.sh -m integration` passes
+- [x] `scripts/build.sh` passes, wheel and sdist both carrying `docs/`
+- [x] The wheel installs into a clean 3.14 venv, and `docs`, `docs eval_format` and `init` all work out of it
+- [x] In a repository holding one plugin and nothing else, `init` then a case written from the shipped skill reaches `run --docker --dry-run` exit 0
+- [ ] `scripts/test.sh -m integration` passes. The 29 that spend nothing pass; the 8 marked `live` are outstanding and need the developer's go-ahead, because each submits a real run and a CoWork one takes the keyboard
