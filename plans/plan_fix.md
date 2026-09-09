@@ -148,9 +148,11 @@ acts on them.
       `plan_docker.md` stays implemented. No container was fired.
 - [x] `README.md:27-33` shows three example commands, all `--venv`. That backend is not
       built and its plan is skipped. Change the quickstart to `--docker`, the built one.
-- [ ] `docs/README.md:42` classifies `cowork_driver.md` as design. It is built:
+- [x] `docs/README.md:42` classifies `cowork_driver.md` as design. It is built:
       `docs/running_evals.md:31` says so, and so does `docs/cowork_driver.md:11`. Fixed by
       the phase 5 item that removes the classification from the index.
+      The classification now reads part built, so the index no longer contradicts the
+      status table. The phase 5 item still removes the sentence.
 - [ ] `docs/README.md:29` says two files here are measurements. Four are:
       `docs/running_evals.md:116` and `:143`, `docs/docker.md:382-408` and
       `docs/staged_runtime.md:77-97` all carry dated snapshots. Replace the enumeration with

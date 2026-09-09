@@ -39,7 +39,7 @@ the CLI version it was written against, and `environments.md` marks which of its
 built and which are design.
 
 Every other file says at the top which of it is built and which is design. `docker.md`,
-`library.md` and `approaches.md` are part built; `cli.md`, `cowork_driver.md` and
+`library.md`, `approaches.md` and `cowork_driver.md` are part built; `cli.md` and
 `staged_runtime.md` are design.
 
 Nothing here ever links to a plan. Anything durable a plan establishes is written into one
