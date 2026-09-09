@@ -155,31 +155,31 @@ The inventory in [`../docs/runtime.md`](../docs/runtime.md) already carries
 
 Still `pytest_image.py`. One container, one pytest invocation, nothing between the two.
 
-- [ ] `run_argv(target, *, pytest_args=())`: `docker run --rm`, the platform, the host uid
+- [x] `run_argv(target, *, pytest_args=())`: `docker run --rm`, the platform, the host uid
       and gid, `HOME`, the extra CA environment when one is configured, the plugin root
       mounted read-write at `CONTAINER_PLUGIN`, `-w CONTAINER_PLUGIN`, the tag, then
       `python3 -m pytest <container target> <pytest args>`.
-- [ ] That command line carries no option this package chose. Everything after
+- [x] That command line carries no option this package chose. Everything after
       `python3 -m pytest` is the resolved target and then the caller's tail, verbatim and in
       that order.
-- [ ] No `PYTHONPATH` is set. The image sets its own, for pyuno, and overwriting it would
+- [x] No `PYTHONPATH` is set. The image sets its own, for pyuno, and overwriting it would
       remove `import uno` from the runtime this verb claims to reproduce. The working
       directory is the plugin root, so pytest's rootdir is the plugin root and the
       consumer's configuration file there is the one that is read.
-- [ ] The plugin root and the container-side relative target are resolved with
+- [x] The plugin root and the container-side relative target are resolved with
       `docker.plugin_root`, which is `cases.plugin_root`. Every backend resolves a target the
       same way and this one does not get its own rule.
-- [ ] No credential mount, no `--security-opt`, no enablement variable, no `--network` flag
+- [x] No credential mount, no `--security-opt`, no enablement variable, no `--network` flag
       and no log mount.
-- [ ] `extra_ca_env_argv` and `plugin_root` are reused from `docker/__init__.py`. Neither is
+- [x] `extra_ca_env_argv` and `plugin_root` are reused from `docker/__init__.py`. Neither is
       reimplemented here.
-- [ ] `run(target, *, pytest_args=()) -> int` runs it with the terminal inherited, so
+- [x] `run(target, *, pytest_args=()) -> int` runs it with the terminal inherited, so
       pytest's output reaches it as pytest wrote it, and returns
       `subprocess.run(...).returncode` unchanged. It maps nothing, prints nothing of its own
       and raises on no exit code. A red suite is a result, not an error.
-- [ ] A daemon that cannot be reached, or an absent image, raises `DockerError` before any
+- [x] A daemon that cannot be reached, or an absent image, raises `DockerError` before any
       container starts. That is a precondition, and the caller turns it into exit 3.
-- [ ] `tests/unit/test_pytest_image.py` grows: the argument list with and without a pytest
+- [x] `tests/unit/test_pytest_image.py` grows: the argument list with and without a pytest
       tail, for a plugin root target and for a subdirectory target; the absence of the
       credential mounts, the sandbox options, the enablement variable and any pytest option;
       and that the mount is `rw`.

@@ -16,11 +16,22 @@ holds here.
 from __future__ import annotations
 
 import hashlib
+import os
 import subprocess
 from pathlib import Path
 
 from ..config import Config
-from . import DATA, DIGEST_LENGTH, Condition, Docker, DockerError, remedy
+from . import (
+    CONTAINER_HOME,
+    CONTAINER_PLUGIN,
+    DATA,
+    DIGEST_LENGTH,
+    Condition,
+    Docker,
+    DockerError,
+    plugin_root,
+    remedy,
+)
 
 DOCKERFILE = Path(__file__).parent / "Dockerfile.pytest"
 REQUIREMENTS_TEST = DATA / "requirements_test.txt"
@@ -110,6 +121,56 @@ class PytestImage:
         argv.append(str(DATA))
         return argv
 
+    def run_argv(self, target: Path | str, *, pytest_args: tuple[str, ...] = ()) -> list[str]:
+        """One pytest invocation, as a container. Nothing stands between the two.
+
+        Everything after `python3 -m pytest` is the resolved target and then the caller's
+        tail, verbatim and in that order. This package chooses no pytest option: not
+        `-p no:cacheprovider`, not `-q`, not a colour flag. Whatever `pytest <path>` does
+        on a laptop is what it does here.
+
+        The plugin root goes in read-write, unlike a `run --docker`: pytest writes
+        `.pytest_cache` and `__pycache__` beside a suite on a laptop, and a read-only
+        mount would change what that suite does. The container runs as the host uid and
+        gid, so what it writes into the tree is the developer's and not root's.
+
+        No credential mount, no `--security-opt`, no enablement variable, no `--network`
+        flag and no log mount. There is no model call and no `Bash` grant here, so none of
+        them has a reason.
+
+        No `PYTHONPATH` either. The image sets its own, for pyuno, and overwriting it
+        would remove `import uno` from the runtime this reproduces. The working directory
+        is the plugin root, so pytest's rootdir is the plugin root and the consumer's own
+        configuration file there is the one that is read.
+        """
+        root = plugin_root(target)
+        relative = Path(target).resolve().relative_to(root)
+        container_target = CONTAINER_PLUGIN
+        if relative != Path("."):
+            container_target = f"{CONTAINER_PLUGIN}/{relative.as_posix()}"
+        return [
+            "docker",
+            "run",
+            "--rm",
+            "--platform",
+            self.platform,
+            "--user",
+            f"{os.getuid()}:{os.getgid()}",
+            "--env",
+            f"HOME={CONTAINER_HOME}",
+            *self.docker.extra_ca_env_argv(),
+            "-v",
+            f"{root}:{CONTAINER_PLUGIN}:rw",
+            "-w",
+            CONTAINER_PLUGIN,
+            self.tag,
+            "python3",
+            "-m",
+            "pytest",
+            container_target,
+            *pytest_args,
+        ]
+
     # Doing the work.
 
     def build(self, *, no_cache: bool = False) -> None:
@@ -131,6 +192,21 @@ class PytestImage:
             text=True,
         )
         return completed.returncode == 0
+
+    def run(self, target: Path | str, *, pytest_args: tuple[str, ...] = ()) -> int:
+        """Run one container and return the exit code pytest produced, unchanged.
+
+        Not remapped, not collapsed, not interpreted: `5`, no test collected, stays `5`.
+        A red suite is a result and not an error, so nothing here raises on an exit code.
+        The terminal is inherited, so pytest's output reaches it as pytest wrote it.
+
+        An unreachable daemon or an absent image raises before any container starts. That
+        is a precondition, and the caller turns it into its own exit code.
+        """
+        unmet = self.check()
+        if unmet:
+            raise DockerError("; ".join(message for _, message in unmet))
+        return subprocess.run(self.run_argv(target, pytest_args=pytest_args)).returncode
 
     def check(self) -> list[tuple[Condition, str]]:
         """The unmet conditions, in order, each with the command that fixes it.
