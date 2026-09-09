@@ -264,13 +264,19 @@ The total has no command-line option because it governs an invocation rather tha
 
 | Measurement                   | Wall clock       | costUsd          |
 | ----------------------------- | ---------------- | ---------------- |
-| Smoke case, `runs: 1`, Docker | 3 s              | 0.057            |
+| Smoke case, `runs: 1`, Docker | 8 s              | 0.057            |
 | Full sweep, Docker            | not yet measured | not yet measured |
 
 A row reading `not yet measured` has not been run. The ceilings above were chosen, not
-measured.
+measured. The sweep row stays unmeasured here: this repository holds one fixture plugin, so
+a sweep measurement belongs to a consumer.
 
-The Docker row is a snapshot, 2026-09-08. It is `durationSeconds` and `costUsd` read from the
-`aggregate-result.json` of the passing container run [docker.md](docker.md) records, on CLI
+The Docker row is a snapshot, 2026-09-09. It is `durationSeconds` and `costUsd` read from the
+`aggregate-result.json` of a passing `cowork_evals run --docker plugins/smoke`, on CLI
 2.1.265, `sonnet` and the `haiku` judge. The wall clock is the harness's own, so it excludes
 the image build and the container start.
+
+The cost is unchanged from the 2026-09-08 snapshot, which ran the same case through
+`Docker.run` rather than through the command. The command adds no model call, so an
+unchanged cost is what it should be. The wall clock moved from 3 s to 8 s, and that is the
+agent's own variance across runs rather than anything the command added.

@@ -483,30 +483,30 @@ profile. A missing precondition fails the test and never skips it.
 
 The fixture is `plugins/smoke/evals`, unchanged. Nothing new is added to `plugins/`.
 
-- [ ] `check --docker` returns 0 on a ready machine, and its lines name the fix when it does
+- [x] `check --docker` returns 0 on a ready machine, and its lines name the fix when it does
       not. Marked `integration`, not `live`.
-- [ ] `cowork_evals run --docker plugins/smoke/evals` returns 0. Assert the run directory
+- [x] `cowork_evals run --docker plugins/smoke/evals` returns 0. Assert the run directory
       holds `run.log`, `env.txt`, `gate.txt`, `smoke/aggregate-result.json`,
       `smoke/report.html` and `smoke/debug.txt`, and that `latest` points at it. Marked
       `live`.
-- [ ] Assert, over that same run and not a second one, that `run.log` holds a line the
+- [x] Assert, over that same run and not a second one, that `run.log` holds a line the
       harness printed. That is the descriptor-level tee proven against a real child, and it
       cannot be reached without one.
-- [ ] No live CoWork run here. `plan_cowork_backend.md` phase 7 already fires
+- [x] No live CoWork run here. `plan_cowork_backend.md` phase 7 already fires
       `plugins/smoke/` through `cowork_backend.run` against a real session, and everything
       this plan builds above that backend is backend-neutral and is proven on `--docker`
       above: the run directory, the tee, `env.txt`, `latest` and the gate. What is left is
       the option mapping, covered by `--dry-run --cowork` in the unit tier, and the absence
       of `report.html`, which is an assertion about a file the backend never writes. A VM
       boot, a ceiling entry and a permanent session in the account buy none of it.
-- [ ] `cowork_evals test --docker plugins/smoke/tests` returns 0, and the same path with the
+- [x] `cowork_evals test --docker plugins/smoke/tests` returns 0, and the same path with the
       failing fixture returns 1, both through the real executable. It costs a container and
       no model call, so it is `integration` and not `live`. What the container itself proves
       is `plan_test.md`'s integration tier; this proves only that the verb reaches it and
       returns its code.
-- [ ] The failing-gate path is asserted in the unit tier over a hand-written document. A
+- [x] The failing-gate path is asserted in the unit tier over a hand-written document. A
       second eval run buys nothing the gate tests do not already cover.
-- [ ] The Docker smoke row in the cost table of
+- [x] The Docker smoke row in the cost table of
       [`../docs/running_evals.md`](../docs/running_evals.md) is already measured through
       `Docker.run`. Re-record it with a new capture date only if the run above differs; the
       command adds no model call, so a difference is a finding. The two local rows stay
