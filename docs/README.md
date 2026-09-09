@@ -34,12 +34,12 @@ not here: they are package data at
 [`../src/cowork_evals/data/`](../src/cowork_evals/data/), and
 [`environments.md`](environments.md) owns the split between them.
 
-Two carry no build status at all. `eval_format.md` is the authoring contract a case is
-written to, and `plugin_eval.md` describes a Claude Code command this repository does not own
-and carries the CLI version it was written against.
+`eval_format.md` is the authoring contract a case is written to, and `plugin_eval.md`
+describes a Claude Code command this repository does not own and carries the CLI version it
+was written against.
 
-Every other file links to the status table in [running_evals.md](running_evals.md) rather
-than carrying a build status of its own.
+No file here carries a build status of its own. [`running_evals.md`](running_evals.md) holds
+the status table, and the files whose subjects have a row in it link there.
 
 Nothing here ever links to a plan. Anything durable a plan establishes is written into one
 of these files while the work happens, so nothing here depends on a plan file.
