@@ -1,18 +1,15 @@
 """`cowork_evals.yaml`, and the frozen `Config` it produces.
 
-Every setting this package defines is in that file. There is no second route: nothing is
-read from the process environment, and there is no `.env`. The three sections and the
-ladder over them are [docs/library.md](../../docs/library.md). The `cowork:` keys and
-their defaults are [docs/cowork_driver.md](../../docs/cowork_driver.md), the `eval:` keys
-[docs/running_evals.md](../../docs/running_evals.md), and the `docker:` keys
-[docs/docker.md](../../docs/docker.md).
+Every setting this package defines is in that file. There is no second route: nothing is read
+from the process environment, and there is no `.env`. The three sections and the ladder over
+them are docs/library.md. The `cowork:` keys and their defaults are docs/cowork_driver.md, the
+`eval:` keys docs/running_evals.md, and the `docker:` keys docs/docker.md.
 
-A section is named for the thing that reads it: `cowork:` the driver, `eval:` the
-`claude plugin eval` argument list and the CoWork backend's judge, `docker:` the container
-backend.
+A section is named for the thing that reads it: `cowork:` the driver, `eval:` the `claude plugin
+eval` argument list and the CoWork backend's judge, `docker:` the container backend.
 
-`CoWorkError` lives here because configuration is the first thing that fails, and
-`cowork.py` imports it rather than the other way round.
+`CoWorkError` lives here because configuration is the first thing that fails, and `cowork.py`
+imports it rather than the other way round.
 """
 
 from __future__ import annotations

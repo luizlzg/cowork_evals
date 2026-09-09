@@ -44,9 +44,9 @@ uv tool install "cowork-evals @ git+https://github.com/pcingola/cowork_evals@v0.
 
 The reference after `@` is a tag, a branch or a commit, and it is the pin. Dropping it tracks
 the default branch. The third line installs the command outside any project, which is how a
-consumer that runs the command but does not import it holds the pin.
-[../README.md](../README.md) carries the same three lines, and it is what a consumer reads.
-Once the package is on an index they become the name alone:
+consumer that runs the command but does not import it holds the pin. `README.md` carries the
+same three lines, and it is what a consumer reads. Once the package is on an index they become
+the name alone:
 
 ```sh
 uv add --dev cowork-evals
@@ -101,7 +101,7 @@ mirrors an old VM. See [runtime.md](runtime.md).
 
 A consumer never sees `scripts/`. Those are the tasks that build this repository's own
 environments, run its tests and lint it, and they are named nowhere in [cli.md](cli.md). See
-[../scripts/README.md](../scripts/README.md).
+`scripts/README.md`.
 
 The table is enforced by the sdist include list in `pyproject.toml`, which names the package,
 `docs/`, `README.md` and `LICENSE` and nothing else. `scripts/build.sh` fails if a development
@@ -253,7 +253,7 @@ docker:
 | `~` in a path is expanded, and a relative path resolves against the working directory                |
 
 `cowork_evals.yaml` names a profile, which is an identifier, so it is never committed. The
-public repository rule in [../README.md](../README.md) applies to every value in it.
+public repository rule in `README.md` applies to every value in it.
 `../cowork_evals.example.yaml` is the committed template: every key, every default, and a
 placeholder for the profile.
 

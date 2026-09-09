@@ -1,15 +1,14 @@
 """The command: the parser, the five verbs, the dispatch and the exit codes.
 
-The surface is [docs/cli.md](../../docs/cli.md), and this module is the whole of it. There
-is no second entry point and no per-backend executable.
+The surface is docs/cli.md, and this module is the whole of it. There is no second entry point
+and no per-backend executable.
 
-Printing happens here and nowhere else, and `sys.exit` is called in `console_main` alone.
-`main` returns a code. The one exit it does not return is `SystemExit(2)`, which `argparse`
-raises from inside `parse_args` for an unknown option or a missing path.
+Printing happens here and nowhere else, and `sys.exit` is called in `console_main` alone. `main`
+returns a code. The one exit it does not return is `SystemExit(2)`, which `argparse` raises from
+inside `parse_args` for an unknown option or a missing path.
 
-The venv backend is not built, so `--venv` is an unknown option on every verb and
-`argparse` exits 2. Its design stays in
-[docs/staged_runtime.md](../../docs/staged_runtime.md).
+The venv backend is not built, so `--venv` is an unknown option on every verb and `argparse`
+exits 2. Its design stays in docs/staged_runtime.md.
 """
 
 from __future__ import annotations

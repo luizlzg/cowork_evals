@@ -1,13 +1,12 @@
 """What each backend needs before it runs, and what is missing.
 
-One function per backend, each returning the unmet conditions in order, each line naming
-the command that fixes it. It writes nothing, builds nothing and submits nothing, so a
-failed preflight leaves the machine exactly as it was. The conditions are the preflight
-table in [docs/cli.md](../../docs/cli.md).
+One function per backend, each returning the unmet conditions in order, each line naming the
+command that fixes it. It writes nothing, builds nothing and submits nothing, so a failed
+preflight leaves the machine exactly as it was. The conditions are the preflight table in
+docs/cli.md.
 
-`check` prints what this returns. `run` prints it and exits 3. The one condition `run`
-adds and `check` does not is the CoWork rate ceiling, which needs a target and is
-`cowork_ceiling` below.
+`check` prints what this returns. `run` prints it and exits 3. The one condition `run` adds and
+`check` does not is the CoWork rate ceiling, which needs a target and is `cowork_ceiling` below.
 """
 
 from __future__ import annotations

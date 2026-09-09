@@ -1,14 +1,14 @@
 """Compare a probe document against the image inventory. Runs on the host.
 
-The delta table in [docs/docker.md](../../../docs/docker.md) is applied exactly, and four
-things fail: a pin that is missing or at another version, one of the five tools recorded as
-absent turning up present, `import uno`, because unoserver and headless conversion are the
-capability the container exists to prove, and a tool probe.py probes that no table here
-records, whose result would otherwise be read by nothing.
+The delta table in docs/docker.md is applied exactly, and four things fail: a pin that is
+missing or at another version, one of the five tools recorded as absent turning up present,
+`import uno`, because unoserver and headless conversion are the capability the container exists
+to prove, and a tool probe.py probes that no table here records, whose result would otherwise be
+read by nothing.
 
-No file under `docs/` is parsed. The pins come from the shipped `requirements.txt`, read
-by cowork_evals.requirements, and the expected non-Python versions are the table below,
-which cites docs/runtime.md.
+No file under `docs/` is parsed. The pins come from the shipped `requirements.txt`, read by
+cowork_evals.requirements, and the expected non-Python versions are the table below, which cites
+docs/runtime.md.
 
     python3 -m cowork_evals.docker.parity probe.json
 """

@@ -1,17 +1,16 @@
 """The case validator, and the skill coverage report.
 
-It reads what [cases.py](cases.py) produced and reports what
-[docs/eval_format.md](../../docs/eval_format.md) calls an error. It writes nothing, runs no
-case and refuses nothing: a caller decides what a violation costs, and
-[docs/cli.md](../../docs/cli.md) says it costs exit 3 inside `run`'s preflight.
+It reads what [cases.py](cases.py) produced and reports what docs/eval_format.md calls an error.
+It writes nothing, runs no case and refuses nothing: a caller decides what a violation costs,
+and docs/cli.md says it costs exit 3 inside `run`'s preflight.
 
-Coverage is separate and is not a rule of the format. A skill with no eval directory is
-always reported, and `--require-coverage` is what turns that report into a failure.
+Coverage is separate and is not a rule of the format. A skill with no eval directory is always
+reported, and `--require-coverage` is what turns that report into a failure.
 
-`cases.py` reads a case tree without refusing anything a case merely got wrong, so every
-finding here is over a `Case` it already built. The one exception is a grader file with no
-`---` block: the reader drops it exactly as the harness drops it, so this compares the
-files on disk against the graders the reader returned rather than deciding again.
+`cases.py` reads a case tree without refusing anything a case merely got wrong, so every finding
+here is over a `Case` it already built. The one exception is a grader file with no `---` block:
+the reader drops it exactly as the harness drops it, so this compares the files on disk against
+the graders the reader returned rather than deciding again.
 """
 
 from __future__ import annotations

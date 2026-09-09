@@ -1,8 +1,7 @@
 """The CoWork driver: submit one prompt, wait for the run, collect what it produced.
 
-The behaviour is [docs/cowork_driver.md](../../docs/cowork_driver.md) and the record shapes
-are [docs/cowork_desktop.md](../../docs/cowork_desktop.md). Nothing here writes anywhere
-under the CoWork profile.
+The behaviour is docs/cowork_driver.md and the record shapes are docs/cowork_desktop.md. Nothing
+here writes anywhere under the CoWork profile.
 """
 
 from __future__ import annotations

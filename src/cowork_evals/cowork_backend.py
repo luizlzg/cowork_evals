@@ -1,13 +1,13 @@
 """The CoWork backend: which case this backend can run, and what running one produces.
 
-The layer above the driver. It reads the case tree `cases.py` produced, submits each
-case's prompt through `CoWork`, grades the session document, and writes the same
+The layer above the driver. It reads the case tree `cases.py` produced, submits each case's
+prompt through `CoWork`, grades the session document, and writes the same
 `aggregate-result.json` v1 document every other backend writes.
 
-The skip rule is [docs/running_evals.md](../../docs/running_evals.md): a key the case wrote
-out is honoured when this backend's behaviour already satisfies it, and skipped otherwise.
-A key the case left to its default is not a request and is not a skip, which is why this
-reads `Case.frontmatter_keys` and `Case.case_yaml_keys` and never a merged value.
+The skip rule is docs/running_evals.md: a key the case wrote out is honoured when this backend's
+behaviour already satisfies it, and skipped otherwise. A key the case left to its default is not
+a request and is not a skip, which is why this reads `Case.frontmatter_keys` and
+`Case.case_yaml_keys` and never a merged value.
 """
 
 from __future__ import annotations

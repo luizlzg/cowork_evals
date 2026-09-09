@@ -1,15 +1,14 @@
 """The four structural graders, over one session document.
 
-One `Grader` and one session document in, one `GraderResult` out. Nothing here submits
-anything, so a grader re-runs over a stored session document for free.
+One `Grader` and one session document in, one `GraderResult` out. Nothing here submits anything,
+so a grader re-runs over a stored session document for free.
 
-The semantics are the grader table in
-[docs/claude_code/plugin_eval_reference.md](../../docs/claude_code/plugin_eval_reference.md),
-and matching them exactly is what makes a case portable between backends. Where this
-backend diverges, [docs/cowork_backend.md](../../docs/cowork_backend.md) records it.
+The semantics are the grader table in docs/claude_code/plugin_eval_reference.md, and matching
+them exactly is what makes a case portable between backends. Where this backend diverges,
+docs/cowork_backend.md records it.
 
-No failure here raises. A pattern that will not compile, a file that will not read and a
-grader type nothing knows are each a failed grader carrying the reason.
+No failure here raises. A pattern that will not compile, a file that will not read and a grader
+type nothing knows are each a failed grader carrying the reason.
 """
 
 from __future__ import annotations

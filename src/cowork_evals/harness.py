@@ -1,11 +1,10 @@
 """The `claude plugin eval` command line, built once for both Claude Code backends.
 
-Every flag emitted here is pinned in [docs/running_evals.md](../../docs/running_evals.md),
-and the harness behind them is [docs/plugin_eval.md](../../docs/plugin_eval.md). The venv
-backend reuses this unchanged; only the host differs.
+Every flag emitted here is pinned in docs/running_evals.md, and the harness behind them is
+docs/plugin_eval.md. The venv backend reuses this unchanged; only the host differs.
 
-Both paths arrive already resolved for the host the harness runs on, so the container
-backend passes container paths and nothing here resolves one.
+Both paths arrive already resolved for the host the harness runs on, so the container backend
+passes container paths and nothing here resolves one.
 """
 
 from __future__ import annotations

@@ -2,14 +2,14 @@
 
 It reads `<plugin>/aggregate-result.json`, so one gate covers every backend and a sweep is
 decided once rather than once per plugin. The conditions are the gate table in
-[docs/running_evals.md](../../docs/running_evals.md).
+docs/running_evals.md.
 
-Structural graders gate. Judged graders are printed and gate nothing, because a judged
-grader over a non-deterministic agent is a flaky gate. A skip gates, so a backend cannot go
-green by honouring nothing.
+Structural graders gate. Judged graders are printed and gate nothing, because a judged grader
+over a non-deterministic agent is a flaky gate. A skip gates, so a backend cannot go green by
+honouring nothing.
 
-Nothing here writes a file or prints. The caller writes `lines` to `gate.txt` and prints
-them, and turns `passed` into an exit code. [cli.py](cli.py).
+Nothing here writes a file or prints. The caller writes `lines` to `gate.txt` and prints them,
+and turns `passed` into an exit code. [cli.py](cli.py).
 """
 
 from __future__ import annotations

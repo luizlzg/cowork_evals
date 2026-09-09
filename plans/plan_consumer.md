@@ -81,10 +81,10 @@ reason the requirements files are: `init` reads it at run time on a machine with
 
 ### Phase 2: fix the references
 
-- [ ] R1 applied: the 26 markdown links under `src/cowork_evals/` become plain-text names
-- [ ] R2 applied: the 11 escaping links under `docs/` become plain-text paths
-- [ ] `src/cowork_evals/__init__.py`: the docstring describes the package, not the driver alone
-- [ ] `scripts/lint.sh` passes
+- [x] R1 applied: the 26 markdown links under `src/cowork_evals/` become plain-text names
+- [x] R2 applied: the 11 escaping links under `docs/` become plain-text paths
+- [x] `src/cowork_evals/__init__.py`: the docstring describes the package, not the driver alone
+- [x] `scripts/lint.sh` passes
 
 ### Phase 3: the docs verb
 

@@ -1,7 +1,7 @@
 """Report what the container actually holds, as one JSON document on stdout.
 
-It runs inside the container, on that image's Python 3.10, so it is 3.10 syntax, imports
-the standard library only, and imports nothing from this package. The comparison against
+It runs inside the container, on that image's Python 3.10, so it is 3.10 syntax, imports the
+standard library only, and imports nothing from this package. The comparison against
 docs/runtime.md runs on the host and is parity.py.
 
     python3 probe.py > probe.json

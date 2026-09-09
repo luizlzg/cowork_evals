@@ -1,16 +1,16 @@
 """The image pytest runs in: the digest, the build and the check.
 
-The design is [docs/cowork_test.md](../../../docs/cowork_test.md). It is one layer over
-the eval image, and `Dockerfile.pytest` beside this file is that layer.
+The design is docs/cowork_test.md. It is one layer over the eval image, and `Dockerfile.pytest`
+beside this file is that layer.
 
-One module per image. [`__init__.py`](__init__.py) owns the image the harness runs in and
-this owns the image pytest runs in, and each owns its Dockerfile, its digest, its argument
-lists and its check. The command that fixes an absent image is therefore written here for
-this image and there for that one.
+One module per image. [`__init__.py`](__init__.py) owns the image the harness runs in and this
+owns the image pytest runs in, and each owns its Dockerfile, its digest, its argument lists and
+its check. The command that fixes an absent image is therefore written here for this image and
+there for that one.
 
 A `PytestImage` holds frozen configuration and does no work at construction, so
-`PytestImage().digest` answers on a machine with no daemon. That is `Docker`'s rule and it
-holds here.
+`PytestImage().digest` answers on a machine with no daemon. That is `Docker`'s rule and it holds
+here.
 """
 
 from __future__ import annotations

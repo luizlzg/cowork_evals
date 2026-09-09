@@ -1,13 +1,12 @@
 """The case reader. One case tree in, one list of `Case` out.
 
-It parses what [docs/eval_format.md](../../docs/eval_format.md) defines, the way
-`claude plugin eval` parses it, so every backend sees the same case set. It is
-backend-neutral: nothing here knows which backend will run a case, and nothing here
-decides a skip.
+It parses what docs/eval_format.md defines, the way `claude plugin eval` parses it, so every
+backend sees the same case set. It is backend-neutral: nothing here knows which backend will run
+a case, and nothing here decides a skip.
 
-It refuses nothing a case merely got wrong. A `prompt.md` with no frontmatter is read, with
-its missing keys left for the case validator, which cannot report what the reader declined
-to build. `CaseError` is for a tree that cannot be read at all.
+It refuses nothing a case merely got wrong. A `prompt.md` with no frontmatter is read, with its
+missing keys left for the case validator, which cannot report what the reader declined to build.
+`CaseError` is for a tree that cannot be read at all.
 """
 
 from __future__ import annotations

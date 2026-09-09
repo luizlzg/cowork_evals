@@ -191,8 +191,7 @@ the login route needs it as much as the build does.
 
 `docker.extra_ca_file` unset, or naming a file that is not there, is a host that does not
 intercept, and nothing is passed. The certificate itself never enters this repository: the
-public repository rule in [../README.md](../README.md) covers it, and a corporate root names
-the employer.
+public repository rule in `README.md` covers it, and a corporate root names the employer.
 
 The image digest does not cover the certificate. It is a property of the host that built the
 image, not of the inventory the image reproduces. The path it is installed at is a build
@@ -406,8 +405,8 @@ the probe bind-mounted read-only, then compares what the probe wrote. It checks 
 release, the architecture, every version in the runtime tables, `import uno`, the font
 family count, and the full `pip freeze`.
 
-It is a shell script like every other task under [../scripts/](../scripts/), and the
-comparison runs on the host. Nothing from this package is installed into the image to do it.
+It is a shell script like every other task under `scripts/`, and the comparison runs on the
+host. Nothing from this package is installed into the image to do it.
 
 No file under `docs/` is parsed. The pins come from the shipped `requirements.txt`, and the
 non-Python versions are a table in `parity.py` that cites [runtime.md](runtime.md). A change
