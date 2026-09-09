@@ -88,6 +88,10 @@ be run.
 `pip freeze` inside the built image reports every pin, because pip sees `dist-packages`.
 That is the fidelity gain over the mirror, which cannot hold the nine.
 
+This image carries no pytest, so the inventory stays exact and the parity section below is
+unchanged by it. The image that does carry pytest is one layer over this one, and is
+[cowork_test.md](cowork_test.md).
+
 Measured on `ubuntu:22.04` `linux/arm64` on 2026-09-03, a snapshot: apt installs the nine
 above, `python3 -V` reports 3.10.12, and `pip freeze` reports all nine at the recorded pin
 strings exactly. Jammy's python3.10 carries no `EXTERNALLY-MANAGED` marker, so pip installs
