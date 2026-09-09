@@ -3,7 +3,7 @@
 The command. One executable, four verbs, three backends. It is the whole surface a consumer
 repository sees; the boundary behind it is [library.md](library.md).
 
-Design. Nothing here is built. What is built is the status table in
+What of this command is built is the status table in
 [running_evals.md](running_evals.md).
 
 ## Synopsis

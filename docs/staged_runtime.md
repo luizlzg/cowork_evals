@@ -4,10 +4,10 @@ A relocatable Python 3.10 interpreter carrying the CoWork wheel set, copied into
 directory under test before a run. The venv backend puts its `bin` first on `PATH`, so a
 bare `python3` in a granted `Bash` call resolves to 3.10 with the CoWork wheels.
 
-This file is design, and the measurements in it are a snapshot. The mirror it is built from
-is [environments.md](environments.md). The backend that stages it is
-[running_evals.md](running_evals.md). The sandbox rules it satisfies are the "How the
-sandbox works" section of
+The measurements in this file are a snapshot. The mirror it is built from is
+[environments.md](environments.md). The backend that stages it, and whether that backend is
+built, are both in [running_evals.md](running_evals.md). The sandbox rules it satisfies are
+the "How the sandbox works" section of
 [claude_code/plugin_eval_reference.md](claude_code/plugin_eval_reference.md).
 
 ## Why the mirror is not staged directly

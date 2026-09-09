@@ -16,8 +16,8 @@ format, because it drives a live session rather than the harness.
 
 [`docs/approaches.md`](docs/approaches.md) says what each one proves and what it does
 not, which subset, and links each to its design.
-[`docs/running_evals.md`](docs/running_evals.md) says what is built: today, the 3.10 mirror,
-the CoWork driver and the container backend.
+[`docs/running_evals.md`](docs/running_evals.md) carries the status table, which says what is
+built today.
 
 The code under test is bound to Python 3.10 and the CoWork wheel set. Nothing in this
 package is; it runs on a laptop. See [`docs/runtime.md`](docs/runtime.md).

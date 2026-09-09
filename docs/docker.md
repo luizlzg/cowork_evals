@@ -8,10 +8,9 @@ The image inventory this container has to match is [runtime.md](runtime.md). The
 around it is [running_evals.md](running_evals.md) and the command that reaches it is
 [cli.md](cli.md). The cheaper alternative is [environments.md](environments.md).
 
-The container, the image digest, the argument lists, the parity probe and the fixture are
-built. The `cowork_evals` command over them is not: today the image is built by
-`scripts/image.sh` and a run goes through `cowork_evals.docker.Docker.run`. What is built
-is the status table in [running_evals.md](running_evals.md).
+What of this is built is the status table in [running_evals.md](running_evals.md). Until the
+command reaches the container, `scripts/image.sh` builds the image and a run goes through
+`cowork_evals.docker.Docker.run`.
 
 ## Usage
 

@@ -19,8 +19,7 @@ package is built, so that one mirror serves the command and the development scri
 
 ## Building it
 
-The `cowork_evals` routes are design and are not built. The `scripts/` routes are built and
-are what builds the mirror today. See the status table in
+Which of the routes below is built is the status table in
 [running_evals.md](running_evals.md).
 
 ```bash

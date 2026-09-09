@@ -8,8 +8,8 @@ The measured application internals it couples to are in
 filesystem layout, the authorizations table and the coupling list to re-probe after an
 update. Do not restate them here.
 
-The driver is built. The CoWork backend above it is not. What is built is the status table
-in [running_evals.md](running_evals.md).
+What of this is built is the status table in
+[running_evals.md](running_evals.md).
 
 This file is the contract the driver is built to: the sequence, the API, the configuration,
 the reading rules, the session document, the grader mapping and the failure taxonomy. Every

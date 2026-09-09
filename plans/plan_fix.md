@@ -241,12 +241,16 @@ Five findings that can produce a wrong result rather than a wrong reading.
 [`../CLAUDE.md`](../CLAUDE.md) says each index owns its rules and nothing restates them.
 Each item below names the one file that should own the fact.
 
-- [ ] Build status appears in eleven files, against `docs/running_evals.md:15`, "Nothing
+- [x] Build status appears in eleven files, against `docs/running_evals.md:15`, "Nothing
       else carries one; they link here". The restatements are at `README.md:19-20`,
       `docs/approaches.md:6-7` and `:132-135`, `docs/cli.md:6`, `docs/library.md:9-11`,
       `docs/docker.md:11-14`, `docs/cowork_driver.md:11-12`, `docs/environments.md:22-24`,
       `docs/staged_runtime.md:7`, `docs/README.md:41-43`, `plugins/README.md:20` and `:26`.
       Replace each with a link. `docs/running_evals.md` owns build status.
+      All eleven held. A twelfth was in the same file and had the same owner:
+      `docs/library.md:100` said the 3.10 and import check is "not designed and not built",
+      which is a row of that table, and it is now a link too. `docs/README.md:37-40` had to
+      follow, because it named `environments.md` as a file that marks its own routes built.
 - [ ] `docs/running_evals.md:21` bundles the package and the CLI into one `no` row. The
       package exists on disk; only `[project.scripts]` is missing, which
       `docs/library.md:30` states correctly. Split the row in two.

@@ -3,7 +3,7 @@
 Three ways to run an eval against a CoWork skill. They answer different questions. None
 replaces another.
 
-The Docker row is built; the other two are design. What is built is the status table in
+Which of the three is built is the status table in
 [running_evals.md](running_evals.md).
 
 | Approach                   | Runs on                      | Proves                                     | Design                               |
@@ -129,7 +129,6 @@ This is the cadence a consumer repository follows. It is the one copy;
 | Before opening a PR | `cowork_evals run --venv <plugin>/evals`, per plugin       | the PR template       |
 | Before a release    | `cowork_evals run --docker <root>`, then a CoWork smoke set | the release checklist |
 
-The container backend is built and the command over it is not, so the `--docker` row runs
-today through `cowork_evals.docker.Docker.run` rather than through `cowork_evals run`. The
-other two rows have no backend yet. See the status table in
-[running_evals.md](running_evals.md).
+Which of these commands is built is the status table in
+[running_evals.md](running_evals.md), and [docker.md](docker.md) says what reaches the
+container until the `--docker` one is.

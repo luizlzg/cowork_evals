@@ -6,8 +6,7 @@ points it at its own tree.
 
 This file is the boundary. The command surface is [cli.md](cli.md).
 
-Design, except the package tree, the CoWork driver, the configuration file and the
-container backend, which are built. What is built is the status table in
+What of it is built is the status table in
 [running_evals.md](running_evals.md).
 
 ## The two repositories
@@ -97,7 +96,7 @@ Nothing in this package runs in a session. It drives CoWork from outside, so no 
 reaches it: not the interpreter version, not the wheel set, not the image.
 
 Enforcing the first two rows on the code under test is a separate check from running an
-eval. It is not designed and not built; see the status table in
+eval. Whether that check is designed or built is the status table in
 [running_evals.md](running_evals.md).
 
 ## The two roots
