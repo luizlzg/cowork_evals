@@ -1,8 +1,20 @@
 # Eval case format
 
+## Summary
+
 What a case is made of: the tree, the file names, the frontmatter, the graders and the
-authoring traps. This is the authoring contract for every eval in this repository, on every
-backend.
+authoring traps. This is the authoring contract for every eval in this repository, on both
+backends.
+
+- **A case is a directory**: a `prompt.md` with frontmatter and a prompt body, a `graders/`
+  directory, and an optional `case.yaml`.
+- **Two addressability keys are required**, `tags` and `plugins`, and both are checked.
+- **Graders come in two classes.** Structural graders are deterministic and carry the gate;
+  judged graders call a model and are printed. Prefer a structural one.
+- **Only two grader types choose what they look at, and they use different keys.** `regex`
+  uses `target`, `llm` uses `focus`.
+- **Writing out a key a backend cannot honour skips the case there.** Leaving it out does not.
+- **Every trap in the last section has a silent failure mode.** Read it before writing a case.
 
 The format is `claude plugin eval`'s own, so a case needs no adapter to run under that
 harness. What the CLI does with a case is [plugin_eval.md](plugin_eval.md). How this
@@ -11,8 +23,8 @@ field is [approaches.md](approaches.md). The full field-by-field reference is ve
 [claude_code/plugin_eval_reference.md](claude_code/plugin_eval_reference.md), and it is the
 authority where this file is silent.
 
-Two rules here are this repository's own and not the harness's: the `<skill>` layer
-under `evals/`, and the two addressability keys below. Everything else is the harness.
+Two rules here are this repository's own and not the harness's: the `<skill>` layer under
+`evals/`, and the two addressability keys below. Everything else is the harness.
 `docs/claude_code/eval_smoke/` is deliberately outside all of it; see
 [claude_code/eval_smoke/README.md](claude_code/eval_smoke/README.md).
 
@@ -134,7 +146,7 @@ Each of these has a silent failure mode, and each is fixed by editing the case.
   files merely modified.
 - **`llm` graders refuse binaries.** A `.pptx` is a ZIP. Render to an image, or write text.
   An image file is shown to the judge as an image, except on the CoWork backend, where an
-  image focus is a grader skip. See [cowork_driver.md](cowork_driver.md).
+  image focus is a grader skip. See [cowork_backend.md](cowork_backend.md).
 - **Scaffolds run in an empty working directory** with a minimal environment, no
   credentials, and a 2-minute cap. Reference resources as `$(dirname "$0")/...`.
 - **`context.add_dirs` must stay inside the case directory.** Naming the eval directory, a

@@ -1,6 +1,12 @@
 # Claude Code reference
 
-Reference material for `claude plugin eval`. Two of the three files here are vendored.
+## Summary
+
+Reference material for `claude plugin eval`. Two of the three files here are vendored from the
+CLI binary and are never edited; the third was written here.
+
+Read [`../plugin_eval.md`](../plugin_eval.md) first. Come here for a detail it does not carry,
+and prefer `claude plugin eval --help` in your own build over both when they disagree.
 
 | File                                                   | Is                                          | Ours |
 | ------------------------------------------------------- | -------------------------------------------- | ---- |
@@ -36,6 +42,4 @@ for m in re.finditer(re.escape(b"\x28\xb5\x2f\xfd"), b):
 ```
 
 [`../plugin_eval.md`](../plugin_eval.md) is this repository's own summary of the same
-material, written to the rules in `CLAUDE.md`. Read that first. Come here for a detail it
-does not carry, and prefer `claude plugin eval --help` in your own build over both when
-they disagree.
+material, written to the rules in `CLAUDE.md`.

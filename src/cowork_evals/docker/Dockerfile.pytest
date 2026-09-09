@@ -1,0 +1,15 @@
+# One layer over the eval image: pytest and the four packages it needs that the CoWork
+# inventory does not carry. See docs/cowork_test.md for the design and the measurement.
+#
+# The build context is this directory's sibling `data/`, the same one the eval image uses.
+# The base tag arrives as a build argument off docker/pytest_image.py, so this file names
+# no image of its own and cannot be built against a stale base.
+
+ARG BASE_TAG
+FROM ${BASE_TAG}
+
+# --no-deps against an exact pinned list. A bare `pip install pytest` may move a pin that
+# is in the inventory, and a moved pin voids what the test image claims to be.
+COPY requirements_test.txt /tmp/requirements_test.txt
+RUN python3 -m pip install --no-deps --no-cache-dir -r /tmp/requirements_test.txt \
+  && rm /tmp/requirements_test.txt

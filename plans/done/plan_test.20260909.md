@@ -110,14 +110,14 @@ The inventory in [`../docs/runtime.md`](../docs/runtime.md) already carries
 `packaging==26.3` and `attrs==21.2.0`. pytest on 3.10 also needs `pluggy`, `iniconfig`,
 `exceptiongroup` and `tomli`, none of which is in the inventory.
 
-- [ ] Run `pip install --dry-run pytest` inside a container off the current
+- [x] Run `pip install --dry-run pytest` inside a container off the current
       `cowork-evals:<digest>`, and record what it would install and what it would move.
-- [ ] `src/cowork_evals/data/requirements_test.txt`: `pytest` and every package the previous
+- [x] `src/cowork_evals/data/requirements_test.txt`: `pytest` and every package the previous
       box says is absent from the image, each pinned to an exact version. A package already
       in the inventory is never listed, whatever version pytest would prefer.
-- [ ] The measurement, with its capture date, goes into `docs/cowork_test.md` in phase 7 as
+- [x] The measurement, with its capture date, goes into `docs/cowork_test.md` in phase 7 as
       a snapshot.
-- [ ] **If the measurement fails**, meaning no pytest version is satisfied by the inventory's
+- [x] **If the measurement fails**, meaning no pytest version is satisfied by the inventory's
       `packaging` and `attrs`, the pin is still not moved. What ships instead is a virtual
       environment at `/opt/pytest`, built `--system-site-packages`, holding pytest and its
       needs and invoked by absolute path. The image's own `site-packages` is then untouched,
@@ -128,25 +128,25 @@ The inventory in [`../docs/runtime.md`](../docs/runtime.md) already carries
 
 `src/cowork_evals/docker/Dockerfile.pytest` and `src/cowork_evals/docker/pytest_image.py`.
 
-- [ ] `Dockerfile.pytest`: `FROM ${BASE_TAG}`, then one `COPY` of
+- [x] `Dockerfile.pytest`: `FROM ${BASE_TAG}`, then one `COPY` of
       `requirements_test.txt` and one `pip install --no-deps --no-cache-dir -r` over it. It
       declares `ARG BASE_TAG` and nothing else, and its build context is the same `data/`
       directory the base image uses.
-- [ ] `PytestImage` in `pytest_image.py`, constructed from a `Config` like `Docker`, holding
+- [x] `PytestImage` in `pytest_image.py`, constructed from a `Config` like `Docker`, holding
       a `Docker` for the base tag. Frozen configuration, no work at construction.
-- [ ] `digest`: the sha256 of the base image's digest, `Dockerfile.pytest`,
+- [x] `digest`: the sha256 of the base image's digest, `Dockerfile.pytest`,
       `requirements_test.txt` and the platform, truncated to `DIGEST_LENGTH`. A rebuilt base
       image is therefore a different test tag, never a stale hit over an old base.
-- [ ] `tag`: `cowork-evals-test:<digest>`. There is no `latest`.
-- [ ] `build_argv()` and `build()`, mirroring `Docker`. The base image being absent is a
+- [x] `tag`: `cowork-evals-test:<digest>`. There is no `latest`.
+- [x] `build_argv()` and `build()`, mirroring `Docker`. The base image being absent is a
       failure naming `Docker.tag`, not an implicit base build.
-- [ ] `image_is_present()` and `check()`, returning the same `(Condition, message)` pairs
+- [x] `image_is_present()` and `check()`, returning the same `(Condition, message)` pairs
       `Docker.check()` returns, reusing `Condition` and `remedy` from `docker/__init__.py`.
       `Condition.CREDENTIAL` is never returned: there is no login in this path.
-- [ ] `tests/unit/test_environments.py` grows: `requirements_test.txt` lists no package that
+- [x] `tests/unit/test_environments.py` grows: `requirements_test.txt` lists no package that
       `requirements.txt` already pins. That is the assertion that keeps the install additive,
       checked without a daemon.
-- [ ] `tests/unit/test_pytest_image.py`: the digest changes when the base digest, the
+- [x] `tests/unit/test_pytest_image.py`: the digest changes when the base digest, the
       Dockerfile, the pinned list or the platform changes, and is stable otherwise; the tag
       shape; the build argument list; and that `check()` never returns `CREDENTIAL`. No
       daemon is started.
@@ -155,31 +155,31 @@ The inventory in [`../docs/runtime.md`](../docs/runtime.md) already carries
 
 Still `pytest_image.py`. One container, one pytest invocation, nothing between the two.
 
-- [ ] `run_argv(target, *, pytest_args=())`: `docker run --rm`, the platform, the host uid
+- [x] `run_argv(target, *, pytest_args=())`: `docker run --rm`, the platform, the host uid
       and gid, `HOME`, the extra CA environment when one is configured, the plugin root
       mounted read-write at `CONTAINER_PLUGIN`, `-w CONTAINER_PLUGIN`, the tag, then
       `python3 -m pytest <container target> <pytest args>`.
-- [ ] That command line carries no option this package chose. Everything after
+- [x] That command line carries no option this package chose. Everything after
       `python3 -m pytest` is the resolved target and then the caller's tail, verbatim and in
       that order.
-- [ ] No `PYTHONPATH` is set. The image sets its own, for pyuno, and overwriting it would
+- [x] No `PYTHONPATH` is set. The image sets its own, for pyuno, and overwriting it would
       remove `import uno` from the runtime this verb claims to reproduce. The working
       directory is the plugin root, so pytest's rootdir is the plugin root and the
       consumer's configuration file there is the one that is read.
-- [ ] The plugin root and the container-side relative target are resolved with
+- [x] The plugin root and the container-side relative target are resolved with
       `docker.plugin_root`, which is `cases.plugin_root`. Every backend resolves a target the
       same way and this one does not get its own rule.
-- [ ] No credential mount, no `--security-opt`, no enablement variable, no `--network` flag
+- [x] No credential mount, no `--security-opt`, no enablement variable, no `--network` flag
       and no log mount.
-- [ ] `extra_ca_env_argv` and `plugin_root` are reused from `docker/__init__.py`. Neither is
+- [x] `extra_ca_env_argv` and `plugin_root` are reused from `docker/__init__.py`. Neither is
       reimplemented here.
-- [ ] `run(target, *, pytest_args=()) -> int` runs it with the terminal inherited, so
+- [x] `run(target, *, pytest_args=()) -> int` runs it with the terminal inherited, so
       pytest's output reaches it as pytest wrote it, and returns
       `subprocess.run(...).returncode` unchanged. It maps nothing, prints nothing of its own
       and raises on no exit code. A red suite is a result, not an error.
-- [ ] A daemon that cannot be reached, or an absent image, raises `DockerError` before any
+- [x] A daemon that cannot be reached, or an absent image, raises `DockerError` before any
       container starts. That is a precondition, and the caller turns it into exit 3.
-- [ ] `tests/unit/test_pytest_image.py` grows: the argument list with and without a pytest
+- [x] `tests/unit/test_pytest_image.py` grows: the argument list with and without a pytest
       tail, for a plugin root target and for a subdirectory target; the absence of the
       credential mounts, the sandbox options, the enablement variable and any pytest option;
       and that the mount is `rw`.
@@ -189,19 +189,19 @@ Still `pytest_image.py`. One container, one pytest invocation, nothing between t
 `scripts/cowork_pytest.sh`. It is `scripts/image.sh` for this image, and it goes away as a
 route for a consumer the moment the verb exists. It stays as a development task.
 
-- [ ] `scripts/cowork_pytest.sh [--check | --recreate] [<path>] [-- <pytest args>]`,
+- [x] `scripts/cowork_pytest.sh [--check | --recreate] [<path>] [-- <pytest args>]`,
       following the conventions in [`../scripts/README.md`](../scripts/README.md):
       `set -euo pipefail`, `lib.sh` on the second line, the header block as the help text,
       `die` for a one-line failure.
-- [ ] With no flag and a path, it verifies the image and runs the container, exiting on
+- [x] With no flag and a path, it verifies the image and runs the container, exiting on
       pytest's code unchanged. `--check` verifies the digest and writes nothing.
       `--recreate` builds with `--no-cache`. A missing image is a `die` naming the script
       with no arguments, never an implicit build.
-- [ ] A row for it in [`../scripts/README.md`](../scripts/README.md), and a line saying it
+- [x] A row for it in [`../scripts/README.md`](../scripts/README.md), and a line saying it
       is the image's half of what `scripts/image.sh` is for the eval image. The name carries
       the `cowork_` prefix the other two runtime scripts carry, so it is not read as a
       sibling of `scripts/test.sh`, which runs this repository's own tests.
-- [ ] `tests/unit/test_environments.py` grows a row for the new script, alongside the ones it
+- [x] `tests/unit/test_environments.py` grows a row for the new script, alongside the ones it
       already asserts.
 
 ## Phase 5: The fixture
@@ -209,15 +209,15 @@ route for a consumer the moment the verb exists. It stays as a development task.
 `plugins/smoke/tests/`. It is what the integration tier runs, and it exists to prove the
 container is the CoWork image and not a plain Python container.
 
-- [ ] `plugins/smoke/tests/test_runtime.py`: `sys.version_info[:2] == (3, 10)`, an import of
+- [x] `plugins/smoke/tests/test_runtime.py`: `sys.version_info[:2] == (3, 10)`, an import of
       `uno`, which resolves only from the LibreOffice deb set's own program directory, and an
       import of one wheel from `requirements.txt` that no plain image carries.
-- [ ] `plugins/smoke/tests/test_fails.py`: one test that fails on purpose, used by the
+- [x] `plugins/smoke/tests/test_fails.py`: one test that fails on purpose, used by the
       integration tier to prove exit 1. It is outside `testpaths`, so `scripts/test.sh` never
       collects it.
-- [ ] The directory sits in the plugin that already holds `evals/`, so one plugin root
+- [x] The directory sits in the plugin that already holds `evals/`, so one plugin root
       carries both and the target resolution reaches each without a rule of its own.
-- [ ] A line in [`../plugins/README.md`](../plugins/README.md) saying what the directory is
+- [x] A line in [`../plugins/README.md`](../plugins/README.md) saying what the directory is
       and that it is a fixture, not a suite.
 
 ## Phase 6: The integration tier
@@ -227,57 +227,57 @@ already built by `scripts/cowork_pytest.sh`. It builds nothing, and a missing pr
 fails it rather than skipping it. It spends nothing and is not `live`: there is no model in
 it.
 
-- [ ] The passing fixture returns 0, and its output names the three assertions.
-- [ ] The failing fixture returns 1.
-- [ ] A path that collects no test returns 5, pytest's own code for it, and not 1.
-- [ ] `python3 -V` inside the container reports the version
+- [x] The passing fixture returns 0, and its output names the three assertions.
+- [x] The failing fixture returns 1.
+- [x] A path that collects no test returns 5, pytest's own code for it, and not 1.
+- [x] `python3 -V` inside the container reports the version
       [`../docs/runtime.md`](../docs/runtime.md) records.
-- [ ] A test that writes a file into the tree succeeds, and the file is on the host owned by
+- [x] A test that writes a file into the tree succeeds, and the file is on the host owned by
       the developer, not by root.
-- [ ] `-- --junitxml=report.xml` in the tail leaves the report in the plugin root on the
+- [x] `-- --junitxml=report.xml` in the tail leaves the report in the plugin root on the
       host. Nothing in this package arranged for it.
-- [ ] The test image's `pip freeze`, minus exactly the names in `requirements_test.txt`,
+- [x] The test image's `pip freeze`, minus exactly the names in `requirements_test.txt`,
       equals the eval image's `pip freeze`. This is the assertion the whole plan rests on.
-- [ ] A row for the file in [`../tests/README.md`](../tests/README.md)'s table, and its
+- [x] A row for the file in [`../tests/README.md`](../tests/README.md)'s table, and its
       preconditions in the section that holds the container tier's.
 
 ## Phase 7: Documentation
 
 One commit. Every decision above lands in a file that owns it, and nothing is restated.
 
-- [ ] `docs/cowork_test.md`, new. What the verb is for, the two images and the rule that
+- [x] `docs/cowork_test.md`, new. What the verb is for, the two images and the rule that
       splits them, the pinned list and the phase 1 snapshot with its capture date, the
       container's mounts and what is deliberately absent from them, the exit codes, and the
       rule that keeps the mirror and CoWork out of it. It links
       [`../docs/docker.md`](../docs/docker.md) for the base image and
       [`../docs/runtime.md`](../docs/runtime.md) for the inventory, and restates neither.
-- [ ] `docs/README.md`: a row for `cowork_test.md` in the index table, and a sentence in
+- [x] `docs/README.md`: a row for `cowork_test.md` in the index table, and a sentence in
       "The run, and the mechanisms" placing it as a mechanism file. The opening paragraph
       says this repository runs evals; it gains the second thing it runs.
-- [ ] `docs/cli.md` is not touched here. The verb's surface is written by
+- [x] `docs/cli.md` is not touched here. The verb's surface is written by
       [`plan_cli.md`](plan_cli.md)'s phase 8, which owns that file, and the statements it
       writes are the `test` rows of this plan's decision table.
-- [ ] `docs/docker.md`: one sentence saying the eval image carries no pytest and why, linking
+- [x] `docs/docker.md`: one sentence saying the eval image carries no pytest and why, linking
       `cowork_test.md`. The parity section is unchanged and says so.
-- [ ] `docs/environments.md`: "Two requirements files" becomes three, and the table gains
+- [x] `docs/environments.md`: "Two requirements files" becomes three, and the table gains
       `requirements_test.txt` with what it pins and what reads it. That section owns the
       split, so the rule deciding which of the three a new pin goes in is written there and
       nowhere else.
-- [ ] `docs/approaches.md`: one sentence saying `test` is not a fourth backend, and why.
-- [ ] `docs/running_evals.md`: two rows in the status table, for the test image and for the
+- [x] `docs/approaches.md`: one sentence saying `test` is not a fourth backend, and why.
+- [x] `docs/running_evals.md`: two rows in the status table, for the test image and for the
       `test` verb, the second reading `no` until `plan_cli.md` builds it.
-- [ ] `docs/library.md`: `requirements_test.txt`, `Dockerfile.pytest` and `pytest_image.py`
+- [x] `docs/library.md`: `requirements_test.txt`, `Dockerfile.pytest` and `pytest_image.py`
       in the "What ships" table, and a row in "Where state lives" for the test image tag.
       The "Where the restrictions are" table gains the consumer's `tests/`, which the wheel
       set does not bind.
-- [ ] `CLAUDE.md`: the "Two kinds of code, two sets of rules" table gains a third row for a
+- [x] `CLAUDE.md`: the "Two kinds of code, two sets of rules" table gains a third row for a
       consumer's `tests/`, which runs in the test image on 3.10 and may import pytest. The
       "Two tiers of test" rule is about this repository's own tests and gains one sentence
       saying so, because the new verb runs a consumer's.
-- [ ] `../README.md`, the repository index: the opening line and the "Using it" block. The
+- [x] `../README.md`, the repository index: the opening line and the "Using it" block. The
       package runs evals and runs a consumer's tests in the same runtime, and both go
       through one command.
-- [ ] [`README.md`](README.md), the plan index: its row, its section and the renumbering are
+- [x] [`README.md`](README.md), the plan index: its row, its section and the renumbering are
       already written, ahead of this plan, so the index says what is being built while it is
       built. What is left here is the link to `docs/cowork_test.md`, which that file
       describes without linking until this phase creates it. The status becomes

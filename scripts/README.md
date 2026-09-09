@@ -14,6 +14,7 @@ its own header. `lib.sh` is sourced, never executed.
 | `cowork_venv.sh` | Build or verify the CoWork image mirror                 |
 | `cowork_run.sh`  | Run one command under the mirror                        |
 | `image.sh`       | Build or verify the container image                     |
+| `cowork_pytest.sh` | Build or verify the test image, and run a pytest suite in it |
 | `login.sh`       | Log in once in a container, for the login this package owns |
 | `parity.sh`      | Probe the image and compare it against the inventory    |
 | `test.sh`        | Run the test suite under `.venv`                        |
@@ -23,6 +24,12 @@ its own header. `lib.sh` is sourced, never executed.
 `image.sh` and `parity.sh` are the image's half of what `cowork_venv.sh` is for the mirror.
 Run `image.sh` and then `login.sh` before the integration tier: those tests need the image
 and the login, and create neither. See [`../docs/docker.md`](../docs/docker.md).
+
+`cowork_pytest.sh` is the test image's half of what `image.sh` is for the eval image, and
+it also runs a suite in it. Run it before the integration tier for the same reason. It
+carries the `cowork_` prefix the other two runtime scripts carry, so it is not read as a
+sibling of `test.sh`, which runs this repository's own tests under `.venv`. See
+[`../docs/cowork_test.md`](../docs/cowork_test.md).
 
 The three eval backends, the gate and the case validator are not here. They are library
 code, they are reached through the `cowork_evals` command, and a row is never added below

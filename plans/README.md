@@ -31,7 +31,7 @@ not the system's: what is built and usable is
 | 2 | [`done/plan_docker.20260908.md`](done/plan_docker.20260908.md) | The image, its digest, `scripts/parity.sh`, and the harness run inside a container | implemented | `feat/docker`         |
 | 3 | `plan_venv.md`           | The staged relocatable 3.10 runtime, and the harness run under it                 | skipped     |                       |
 | 4 | [`done/plan_cowork_backend.20260909.md`](done/plan_cowork_backend.20260909.md) | The case reader, the CoWork grader and the v1 result document over the driver     | implemented | `feat/cowork-backend` |
-| 5 | `plan_test.md`           | The test image, and a consumer's pytest suite run on the CoWork runtime            | written     | `feat/test`           |
+| 5 | [`done/plan_test.20260909.md`](done/plan_test.20260909.md) | The test image, and a consumer's pytest suite run on the CoWork runtime            | implemented | `feat/test`           |
 | 6 | `plan_cli.md`            | Scope resolution, the run directory, the gate, and the command                    | written     | `feat/cli`            |
 | - | [`done/plan_fix.20260909.md`](done/plan_fix.20260909.md) | Nothing. One configuration file, one name per artifact, and the false statements  | implemented | `feat/fix-consistency` |
 
@@ -42,11 +42,12 @@ not the system's: what is built and usable is
 | `implemented` | Every box is ticked and the branch is merged. The file is in `done/`       |
 | `skipped`     | The developer decided not to write it. What it would build stays designed in `docs/` and unbuilt |
 
-Plan 3 is skipped, so the venv backend is not built. The design of it stays where it is, in
-[`../docs/staged_runtime.md`](../docs/staged_runtime.md) and
-[`../docs/environments.md`](../docs/environments.md), and the status table in
-[`../docs/running_evals.md`](../docs/running_evals.md) is what says it is unbuilt. Nothing
-is removed from `docs/` for a skipped plan.
+Plan 3 is skipped, so the venv backend is not built. Its design stays in
+[`../docs/staged_runtime.md`](../docs/staged_runtime.md), which is titled and opens as not
+implemented, and the status table in
+[`../docs/running_evals.md`](../docs/running_evals.md) carries the one row that says so.
+Nothing is removed from `docs/` for a skipped plan, but the command surface names none of it:
+there is no `--venv` on any verb.
 
 Every section below describes each plan as it is written, plan 3 included. What plan 3
 describes is designed and not built.
@@ -56,8 +57,8 @@ inside the container, with no model, no case tree and no result document, so tha
 destined for a skill is exercised on the CoWork runtime before an eval is written over it.
 The rule that separates it from the other five is in
 [`../tests/README.md`](../tests/README.md): if a failure can be caught by pytest, it is not
-an eval. That plan writes its mechanism into `docs/`, and plan 6 builds the verb that
-reaches it.
+an eval. Its mechanism is [`../docs/cowork_test.md`](../docs/cowork_test.md), and plan 6
+builds the verb that reaches it.
 
 Plans 2 and 3 each build one backend whole. Running an eval on those two backends is
 `claude plugin eval`, which discovers the cases, runs them, grades them and writes
@@ -96,7 +97,7 @@ Plan 4 is separate because CoWork is not symmetric with the other two. The drive
 session document for one prompt. Reading the case tree, deciding which case the backend can
 honour, grading it and writing the v1 result document are all built there, and are what the
 harness provides for free elsewhere. See
-[`../docs/cowork_driver.md`](../docs/cowork_driver.md).
+[`../docs/cowork_backend.md`](../docs/cowork_backend.md).
 
 Docker comes before the venv, although the venv is cheaper to build.
 [`../docs/staged_runtime.md`](../docs/staged_runtime.md) records that a `Bash`-granting run is

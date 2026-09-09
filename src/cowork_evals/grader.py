@@ -6,7 +6,7 @@ anything, so a grader re-runs over a stored session document for free.
 The semantics are the grader table in
 [docs/claude_code/plugin_eval_reference.md](../../docs/claude_code/plugin_eval_reference.md),
 and matching them exactly is what makes a case portable between backends. Where this
-backend diverges, [docs/cowork_driver.md](../../docs/cowork_driver.md) records it.
+backend diverges, [docs/cowork_backend.md](../../docs/cowork_backend.md) records it.
 
 No failure here raises. A pattern that will not compile, a file that will not read and a
 grader type nothing knows are each a failed grader carrying the reason.
@@ -141,7 +141,7 @@ def _trace(document: dict[str, Any]) -> str:
     """The session as JSON, one object per line: every turn, then every tool call.
 
     This rendering is this backend's, not the harness's `trace.jsonl`, so a regex grader
-    on `target: trace` is not portable between backends. docs/cowork_driver.md.
+    on `target: trace` is not portable between backends. docs/cowork_backend.md.
     """
     entries = [*(document.get("turns") or []), *(document.get("tool_calls") or [])]
     return "\n".join(json.dumps(entry) for entry in entries)
@@ -182,7 +182,7 @@ def compile_pattern(pattern: Any, flags: Any = "") -> re.Pattern[str]:
     `re.ASCII` is what makes `\\d` and `\\w` ASCII-only as they are in JavaScript, so it is
     on unless the flags ask for Unicode. Every pattern in the format compiles through this
     one function, `input_match` on `tool_used` and `tool_order` included. The divergence
-    between the two engines is docs/cowork_driver.md.
+    between the two engines is docs/cowork_backend.md.
     """
     written = flags if isinstance(flags, str) else ""
     compiled = re.ASCII if not set(written) & set(UNICODE_FLAGS) else 0

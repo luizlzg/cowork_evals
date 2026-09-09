@@ -1,12 +1,29 @@
-# Staged runtime
+# Staged runtime: designed, not implemented
 
-A relocatable Python 3.10 interpreter carrying the CoWork wheel set, copied into the plugin
-directory under test before a run. The venv backend puts its `bin` first on `PATH`, so a
-bare `python3` in a granted `Bash` call resolves to 3.10 with the CoWork wheels.
+## Summary
 
-The measurements in this file are a snapshot. The mirror it is built from is
-[environments.md](environments.md), and whether the venv backend that stages it is built is
-the status table in [running_evals.md](running_evals.md). The sandbox rules it satisfies are
+**Nothing in this file is built.** The developer decided not to implement the venv backend.
+No `--venv` flag exists on any verb, and no command in [cli.md](cli.md) reaches any of this.
+The file is kept as the design and the measurements behind it, so the work is not redone from
+scratch if the decision changes. The status row is in
+[running_evals.md](running_evals.md).
+
+What it would be: a relocatable Python 3.10 interpreter carrying the CoWork wheel set, copied
+into the plugin directory under test before a run. The venv backend would put its `bin` first
+on `PATH`, so a bare `python3` in a granted `Bash` call resolves to 3.10 with the CoWork
+wheels.
+
+The three things worth keeping from it:
+
+- **A virtual environment is a pointer, not an installation.** Copying one into the plugin
+  copies `site-packages` and leaves the interpreter and standard library behind.
+- **The sandbox readable set** a `Bash` grant turns on, which is why the plugin directory is
+  the only place a staged interpreter can go.
+- **A `Bash`-granting run is refused on a host that runs a credential process.** Measured, and
+  the reason the container was built before this.
+
+The measurements are snapshots, taken while the design was being evaluated. The mirror it
+would be built from is [environments.md](environments.md). The sandbox rules it satisfies are
 the "How the sandbox works" section of
 [claude_code/plugin_eval_reference.md](claude_code/plugin_eval_reference.md).
 
@@ -15,7 +32,7 @@ the "How the sandbox works" section of
 Granting `Bash` in any form turns on Claude Code's OS-level sandbox, seatbelt on macOS and
 bubblewrap on Linux. Inside it the readable set is the per-run sandbox, the plugin directory
 under test, the case's `context.add_dirs` entries, and the `PATH` directories inside those.
-The home directory and its siblings are unreadable. This is the one copy of that set.
+The home directory and its siblings are unreadable.
 
 A virtual environment is a pointer, not an installation. The mirror at `.venv_cowork` holds
 no interpreter and no standard library. Measured 2026-09-04:
@@ -83,14 +100,12 @@ Their versions are not the image's, and [runtime.md](runtime.md) holds the image
 
 ## Lifecycle
 
-The backend stages `.cowork-runtime/` before the harness starts and removes it when the run
-ends. [library.md](library.md) says why a build product inside the consumer checkout is
-allowed here and what the consumer git-ignores.
+The backend would stage `.cowork-runtime/` before the harness starts and remove it when the
+run ends. That is the one build product this repository ever proposed to write into a
+consumer checkout, and it is not written, because the backend is not built.
 
-The backend refuses to run when the resulting `python3 -V` is not 3.10. One rule covers both
-hosts: on a laptop a missing or stale mirror fails preflight instead of running against the
-host interpreter, and in the container there is nothing to stage because the system
-interpreter is already 3.10. See [docker.md](docker.md).
+The backend would refuse to run when the resulting `python3 -V` is not 3.10. The container
+needs no equivalent: its system interpreter is already 3.10. See [docker.md](docker.md).
 
 ## Measurements
 
@@ -155,10 +170,11 @@ Re-measured 2026-09-04, same CLI. Nothing lifts it on that host:
 The last row is why the host cannot be worked around. The configuration the sandbox cannot
 exclude is also the one that authenticates Claude Code there.
 
-It binds the venv backend, which pins `--allow-tools Bash` and runs the harness on the
+It would bind the venv backend, which pins `--allow-tools Bash` and runs the harness on the
 developer's host. It does not bind the container backend, which runs the harness inside the
 image, where no such configuration exists. Nothing in this repository lifts it: the host's
-AWS configuration belongs to the developer.
+AWS configuration belongs to the developer. This measurement is why the container was built
+first, and it is a standing argument against building the venv backend on this host.
 
 ## What is not measured
 

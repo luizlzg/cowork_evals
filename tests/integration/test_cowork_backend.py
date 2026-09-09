@@ -122,7 +122,7 @@ def test_the_profile_is_walked_and_both_facts_are_measured() -> None:
 def test_one_run_provokes_whichever_fact_the_profile_does_not_show() -> None:
     """One prompt that asks for both. A profile already showing both costs nothing here.
 
-    The two facts are recorded in docs/cowork_driver.md. A false one is not a failure: it
+    The two facts are recorded in docs/cowork_backend.md. A false one is not a failure: it
     means that grader cannot be used on this backend, and that file drops the row.
     """
     driver = CoWork(real_profile())

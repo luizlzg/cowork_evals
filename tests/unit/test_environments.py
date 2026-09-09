@@ -19,6 +19,7 @@ COWORK = ROOT / ".venv_cowork"
 DATA = ROOT / "src" / "cowork_evals" / "data"
 REQUIREMENTS = DATA / "requirements.txt"
 INSTALLABLE = DATA / "requirements_installable.txt"
+TEST_ONLY = DATA / "requirements_test.txt"
 
 # The nine pins that cannot install off the CoWork VM. docs/environments.md.
 NOT_INSTALLABLE = {
@@ -51,6 +52,7 @@ def interpreter(venv: Path) -> str:
 def test_requirements_files_exist():
     assert REQUIREMENTS.is_file()
     assert INSTALLABLE.is_file()
+    assert TEST_ONLY.is_file()
 
 
 def test_requirements_files_resolve_as_package_data():
@@ -68,6 +70,16 @@ def test_installable_is_the_freeze_minus_the_nine():
     assert {k: full[k] for k in installable} == installable
 
 
+def test_the_test_layer_adds_packages_and_moves_none():
+    """No pin of `requirements_test.txt` is already in the image.
+
+    The test image installs it with `--no-deps`, so a name on both lists would either be
+    reinstalled at the wrong version or silently do nothing. docs/environments.md owns
+    which of the three files a pin goes in.
+    """
+    assert set(pins(TEST_ONLY)) & set(pins(REQUIREMENTS)) == set()
+
+
 def test_repo_venv_is_python_314():
     assert (VENV / "bin" / "python").exists(), ".venv not built. Run scripts/venv.sh"
     assert interpreter(VENV) == "3.14"
@@ -82,6 +94,13 @@ def test_cowork_mirror_is_python_310():
 def test_tests_run_under_the_repo_venv_not_the_mirror():
     """A 3.10 interpreter here means the suite was launched through cowork_run.sh."""
     assert sys.version_info[:2] >= (3, 14)
+
+
+def test_scripts_readme_carries_a_row_for_every_script():
+    """The index owns the task list, so a new script cannot be reachable and unlisted."""
+    index = (ROOT / "scripts" / "README.md").read_text()
+    for script in sorted((ROOT / "scripts").glob("*.sh")):
+        assert f"`{script.name}`" in index, f"{script.name} has no row in scripts/README.md"
 
 
 def test_every_script_is_executable_and_parses():

@@ -1,37 +1,50 @@
 # Running evals
 
+## Summary
+
 The eval system behind the command: what is built, the pinned harness flags, the gate, the
 logs, the cadence and the cost. This file is the design. It is true whether or not a given
 piece is built yet.
 
+- **This file carries the build status of the whole system.** No other file carries one; they
+  link here.
+- **Flags are pinned, not defaulted.** Every flag in the pinned list would bite at its
+  default.
+- **The gate decides pass and fail, not the harness.** It reads the result document, so one
+  gate covers both backends. Structural graders gate; judged graders are printed.
+- **A skip fails the gate**, so a backend cannot go green by honouring nothing.
+- **Every invocation keeps everything it printed**, in one directory per invocation.
+- **Nothing here runs on CI.** A person runs the sweep and reads the summary.
+
 The command surface is [cli.md](cli.md) and the packaging boundary is
 [library.md](library.md). A case is written once, in the format at
-[eval_format.md](eval_format.md), and runs on any of the three backends. Which backend
-honours which part of it is [approaches.md](approaches.md). The harness is
-[plugin_eval.md](plugin_eval.md). Do not restate any of them here.
+[eval_format.md](eval_format.md), and runs on either backend. Which backend honours which part
+of it is [approaches.md](approaches.md). The harness is [plugin_eval.md](plugin_eval.md). Do
+not restate any of them here.
 
 ## Status
 
-This table is the build status of the whole system. Nothing else carries one; they link
-here.
-
-| Piece                                     | Built | Designed in                                |
-| ----------------------------------------- | ----- | ------------------------------------------- |
-| The 3.10 mirror, as a development script  | yes   | [environments.md](environments.md)          |
-| The `cowork_evals` package, as a distribution | yes | [library.md](library.md)                 |
-| The `cowork_evals` executable and its verbs | no  | [cli.md](cli.md)                           |
-| `cowork_evals.yaml` and the `Config` over it | yes | [library.md](library.md)                    |
-| The pinned harness argument list          | yes   | this file                                   |
-| The venv backend                          | no    | [staged_runtime.md](staged_runtime.md)      |
-| The staged runtime                        | no    | [staged_runtime.md](staged_runtime.md)      |
-| The gate                                  | no    | this file                                   |
-| The case validator                        | no    | [eval_format.md](eval_format.md)            |
-| The 3.10 and import check over code under test | no | nowhere. Not designed, and no plan builds it |
-| The container backend and its Dockerfile  | yes   | [docker.md](docker.md)                      |
+| Piece                                         | Built    | Designed in                                  |
+| --------------------------------------------- | -------- | -------------------------------------------- |
+| The 3.10 mirror, as a development script      | yes      | [environments.md](environments.md)           |
+| The `cowork_evals` package, as a distribution | yes      | [library.md](library.md)                     |
+| The `cowork_evals` executable and its verbs   | no       | [cli.md](cli.md)                             |
+| `cowork_evals.yaml` and the `Config` over it  | yes      | [library.md](library.md)                     |
+| The pinned harness argument list              | yes      | this file                                    |
+| The gate                                      | no       | this file                                    |
+| The case validator                            | no       | [eval_format.md](eval_format.md)             |
+| The 3.10 and import check over code under test | no      | nowhere. Not designed, and no plan builds it |
+| The container backend and its Dockerfile      | yes      | [docker.md](docker.md)                       |
 | `scripts/parity.sh` and `tests/unit/test_parity.py` | yes | [docker.md](docker.md)                     |
-| The CoWork driver                         | yes   | [cowork_driver.md](cowork_driver.md)        |
-| The CoWork backend over it                | yes   | [cowork_driver.md](cowork_driver.md)        |
-| `plugins/smoke/`, the fixture the container and CoWork backends fire | yes | [../plugins/README.md](../plugins/README.md) |
+| The CoWork driver                             | yes      | [cowork_driver.md](cowork_driver.md)         |
+| The CoWork backend over it                    | yes      | [cowork_backend.md](cowork_backend.md)       |
+| `plugins/smoke/`, the fixture both backends fire | yes   | [../plugins/README.md](../plugins/README.md) |
+| The test image, `cowork-evals-test:<digest>`  | yes      | [cowork_test.md](cowork_test.md)             |
+| The `test` verb over it                       | no       | [cowork_test.md](cowork_test.md)             |
+| The venv backend and the runtime it stages    | deferred | [staged_runtime.md](staged_runtime.md)       |
+
+`deferred` means the design stands and the developer decided not to build it. Nothing in the
+command surface reaches it.
 
 ## The cases it runs
 
@@ -43,58 +56,58 @@ There is no marketplace-wide suite. The harness loads one plugin per run, so a c
 case is not expressible. A path holding several plugins means every plugin's suite in turn,
 each its own harness invocation, gated once.
 
-There is no sweep on CoWork. One case there costs a VM boot plus a full agentic run and
-counts against the driver's `max_runs` ceiling, so a sweep is a smoke set named case by
-case. That is why [cli.md](cli.md) makes a multi-plugin path a usage error on `--cowork`.
+There is no sweep on CoWork. One case there costs a VM boot plus a full agentic run and counts
+against the driver's `max_runs` ceiling, so a sweep is a smoke set named case by case. That is
+why [cli.md](cli.md) makes a multi-plugin path a usage error on `--cowork`.
 
 The CoWork backend does not call `claude plugin eval`. It reads the same case tree, submits
 each case's prompt body through the driver, grades the session document with the CoWork
 grader, and writes the same `aggregate-result.json`. A case runs as many times as it wrote
 `runs`, and once when it wrote none. Of the pinned flags below it uses only
-`eval.judge_model`, for judged graders. The rest configure the CLI, and the CLI is not in
-the path. See [cowork_driver.md](cowork_driver.md).
+`eval.judge_model`, for judged graders. The rest configure the CLI, and the CLI is not in the
+path. See [cowork_backend.md](cowork_backend.md).
 
 ### What counts as a case the backend cannot honour
 
 A backend reads the keys the case file writes, never the merged defaults. `runs: 3` is the
-default for every case, so treating a default as a request would skip every case on CoWork
-and leave the gate permanently red.
+default for every case, so treating a default as a request would skip every case on CoWork and
+leave the gate permanently red.
 
-| In the case file                                        | On CoWork                        |
-| --------------------------------------------------------- | ---------------------------------- |
-| No `runs` key                                           | Runs once                        |
-| `runs: N`, written out                                  | Runs N times                     |
-| `timeout_seconds`, written out                          | That case's driver `run_timeout` |
+| In the case file                                        | On CoWork                                                                    |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| No `runs` key                                           | Runs once                                                                    |
+| `runs: N`, written out                                  | Runs N times                                                                 |
+| `timeout_seconds`, written out                          | That case's driver `run_timeout`                                             |
 | `arm: with-only` or `arm: both` on a grader             | Honoured. One arm runs, it is the with-arm, and every grader is scored in it |
-| `max_turns`, written out                                | Skipped                          |
-| `model`, `allowed_tools`, `append_system_prompt`, `env` | Skipped                          |
-| `context.*`, or a `mocks/` directory the case uses      | Skipped                          |
-| `target` or `focus` of `mock_calls` on a grader         | That grader is skipped, and the case still runs |
+| `max_turns`, written out                                | Skipped                                                                      |
+| `model`, `allowed_tools`, `append_system_prompt`, `env` | Skipped                                                                      |
+| `context.*`, or a `mocks/` directory the case uses      | Skipped                                                                      |
+| `target` or `focus` of `mock_calls` on a grader         | That grader is skipped, and the case still runs                              |
 
 A grader skip and a case skip are not one thing. A case skip submits nothing. A grader skip
 runs the case and drops that grader from the score, so the case does not fail for a grader
 that was never asked.
 
-The rule is the same for every backend: an explicit key is honoured when the backend's fixed
+The rule is the same for both backends: an explicit key is honoured when the backend's fixed
 behaviour already satisfies it, and skipped otherwise. Which key each backend can honour is
-[approaches.md](approaches.md). A skip is written into the result document with its reason
-and fails the gate, so a backend cannot go green by honouring nothing.
+[approaches.md](approaches.md). A skip is written into the result document with its reason and
+fails the gate, so a backend cannot go green by honouring nothing.
 
 ## Pinned flags
 
-Every flag below is pinned because its default would otherwise bite. What each flag does,
-and the harness behaviour behind it, is in [plugin_eval.md](plugin_eval.md). Which of them a
-command-line option overrides, and on which backend, is [cli.md](cli.md).
+Every flag below is pinned because its default would otherwise bite. What each flag does, and
+the harness behaviour behind it, is in [plugin_eval.md](plugin_eval.md). Which of them a
+command-line option overrides is [cli.md](cli.md).
 
-| Flag                                       | Pinned to                        | Configuration key, and its default |
-| ------------------------------------------ | -------------------------------- | ---------------------------------- |
-| `--model`                                  | the configured model             | `eval.model`, `sonnet`             |
-| `--judge-model`                            | the configured judge             | `eval.judge_model`, `haiku`        |
-| `--ablation`                               | `none`                           | none                               |
-| `--threshold`                              | `0`, so the local gate decides   | none                               |
-| `--max-cost-usd`                           | the configured ceiling           | `eval.max_cost_usd`, 5             |
-| `--output-dir`                             | the run's log directory          | none                               |
-| `--allow-tools`                            | the configured grant             | `eval.allow_tools`, `[Bash]`       |
+| Flag                                         | Pinned to                      | Configuration key, and its default |
+| -------------------------------------------- | ------------------------------ | ---------------------------------- |
+| `--model`                                    | the configured model           | `eval.model`, `sonnet`             |
+| `--judge-model`                              | the configured judge           | `eval.judge_model`, `haiku`        |
+| `--ablation`                                 | `none`                         | none                               |
+| `--threshold`                                | `0`, so the local gate decides | none                               |
+| `--max-cost-usd`                             | the configured ceiling         | `eval.max_cost_usd`, 5             |
+| `--output-dir`                               | the run's log directory        | none                               |
+| `--allow-tools`                              | the configured grant           | `eval.allow_tools`, `[Bash]`       |
 | `--no-publish`, `--no-scaffold`, `--verbose` | always                         | none                               |
 
 The target goes before every variadic flag: `--tag` and `--allow-tools` swallow a trailing
@@ -105,34 +118,34 @@ target.
 
 ### The baseline arm, and `arm:` on a grader
 
-`--ablation with-without` runs every case twice. The with-arm loads the plugin under test.
-The without-arm loads no plugin. The score delta between them is the evidence that the
-plugin changed behaviour, rather than the model answering well on its own.
+`--ablation with-without` runs every case twice. The with-arm loads the plugin under test. The
+without-arm loads no plugin. The score delta between them is the evidence that the plugin
+changed behaviour, rather than the model answering well on its own.
 
-A `tool_used: Skill` grader cannot pass in the without-arm, because no plugin is loaded and
-no skill can fire. The harness therefore drops such a grader from the score in both arms, so
-the two arms are compared on the same graders. It still reports it, as an indicator carrying
+A `tool_used: Skill` grader cannot pass in the without-arm, because no plugin is loaded and no
+skill can fire. The harness therefore drops such a grader from the score in both arms, so the
+two arms are compared on the same graders. It still reports it, as an indicator carrying
 `withOnly: true` and `scored: false`.
 
 `arm:` on a grader is the case author's control over that.
 
-| Value               | Scores in                                       |
-| ------------------- | ----------------------------------------------- |
-| `with-only`         | The with-arm only                               |
-| `both`              | Every arm that runs                             |
+| Value                                  | Scores in                                                               |
+| -------------------------------------- | ----------------------------------------------------------------------- |
+| `with-only`                            | The with-arm only                                                       |
+| `both`                                 | Every arm that runs                                                     |
 | Absent, on a `tool_used: Skill` grader | The with-arm only. That is the harness default for this one grader shape |
-| Absent, on anything else | Every arm that runs                        |
+| Absent, on anything else               | Every arm that runs                                                     |
 
-A case whose graders are all with-only is the exception. There is nothing left to compare,
-so the harness scores them normally in both arms.
+A case whose graders are all with-only is the exception. There is nothing left to compare, so
+the harness scores them normally in both arms.
 
 `--ablation none` runs one arm, and that arm is the with-arm. Nothing is dropped from the
 score, so a `tool_used: Skill` grader is scored and the gate reads it. That is why it is
 pinned. `arm:` then satisfies itself whichever value it carries, and a case sets it only to
 stay portable to a suite that does run the baseline arm.
 
-A baseline arm is an investigation, run by calling the harness by hand, and it is not a run
-of this command. It doubles the agent runs, and the table in
+A baseline arm is an investigation, run by calling the harness by hand, and it is not a run of
+this command. It doubles the agent runs, and the table in
 [plugin_eval.md](plugin_eval.md) counts them.
 
 `--allow-tools` is pinned because a case cannot grant itself `Bash`, `Write`, `Edit`,
@@ -141,36 +154,36 @@ the tool rather than failing loudly. `Bash` is the default because a skill that 
 needs it. Widen it through `eval.allow_tools` or `--allow-tools`, which replace the value
 rather than adding to it, so the widened value has to name `Bash` again.
 
-The two Claude Code backends export `CLAUDE_CODE_WALNUT_SPIRE`, the early-access enablement
-variable, so no developer sets it by hand. It is a constant in `harness.py` and not a
-configuration key. See [plugin_eval.md](plugin_eval.md).
+The Docker backend exports `CLAUDE_CODE_WALNUT_SPIRE`, the early-access enablement variable,
+so no developer sets it by hand. It is a constant in `harness.py` and not a configuration key.
+See [plugin_eval.md](plugin_eval.md).
 
 `--json` is never passed, for the reason in [plugin_eval.md](plugin_eval.md).
 
 ## The gate
 
 The gate decides pass and fail, not the harness. It reads the result document, so one gate
-covers all three backends, and it always runs in the `cowork_evals` process on the host.
+covers both backends, and it always runs in the `cowork_evals` process on the host.
 
-| Condition                                                             | Result       |
-| --------------------------------------------------------------------- | ------------ |
+| Condition                                                            | Result       |
+| -------------------------------------------------------------------- | ------------ |
 | Any `regex`, `tool_used`, `tool_order` or `file_exists` grader failed | exit 1       |
-| Any case or grader reported skipped                                   | exit 1       |
-| `partial: true`: `partialReason` `cost_ceiling` or `auth_failed`      | exit 1       |
+| Any case or grader reported skipped                                  | exit 1       |
+| `partial: true`: `partialReason` `cost_ceiling` or `auth_failed`     | exit 1       |
 | A CoWork case that the driver could not run or collect                | exit 1       |
-| A results document is missing or unparsable                           | exit 1       |
-| Any `llm` or `baseline` grader failed                                 | printed only |
-| Otherwise                                                             | exit 0       |
+| A results document is missing or unparsable                          | exit 1       |
+| Any `llm` or `baseline` grader failed                                | printed only |
+| Otherwise                                                            | exit 0       |
 
 Structural graders gate because a judged grader over a non-deterministic agent is a flaky
 gate. A skip gates so that a backend cannot go green by honouring nothing.
 
-The gate reads every `<plugin>/aggregate-result.json` under the run directory and decides
-once for the whole invocation, so a sweep gates once and not once per plugin.
+The gate reads every `<plugin>/aggregate-result.json` under the run directory and decides once
+for the whole invocation, so a sweep gates once and not once per plugin.
 
 It reads the `with` arm only. A run's grader results carry `name`, `passed` and `scored`,
-never `type`, so the gate joins each result to that case's grader definition by name to
-learn which of the two classes it is in.
+never `type`, so the gate joins each result to that case's grader definition by name to learn
+which of the two classes it is in.
 
 The gate reads `schemaVersion: 1` documents and tolerates unknown fields. The contract is
 additive-only.
@@ -191,36 +204,36 @@ logs/evals/<yyyymmdd-hhmmss>-<scope>/
 logs/evals/latest                # symlink to the newest directory
 ```
 
-The log root is the working directory unless `--out` overrides it, and `<scope>` is named
-from the path argument. Both are [cli.md](cli.md). Run directories older than 30 days are
-deleted at the start of every run.
+The log root is the working directory unless `--out` overrides it, and `<scope>` is named from
+the path argument. Both are [cli.md](cli.md). Run directories older than 30 days are deleted
+at the start of every run.
 
 A CoWork run writes `<plugin>/aggregate-result.json` and nothing else. There is no
 `report.html` and no `debug.txt` on that backend: the first is the harness's, and the second
-is `claude --debug-file`, and the harness is not in that path. The gate reads only the
-result document, so it decides identically for all three backends.
+is `claude --debug-file`, and the harness is not in that path. The gate reads only the result
+document, so it decides identically for both backends.
 
 The debug log exists only when the run is given one:
-`claude --debug-file <path> plugin eval ... --verbose`. The flag goes before `plugin`, and
-it must be `--debug-file`: a bare `--debug` there swallows the subcommand name as its
-filter. `--verbose` writes to that file only and never to the terminal.
+`claude --debug-file <path> plugin eval ... --verbose`. The flag goes before `plugin`, and it
+must be `--debug-file`: a bare `--debug` there swallows the subcommand name as its filter.
+`--verbose` writes to that file only and never to the terminal.
 
 ## Cadence
 
 An eval is not a commit-time check. `git commit` runs nothing, and there is no hook.
 
-Which command runs at which moment is the table in
-[approaches.md](approaches.md). Who enforces it is the consumer repository: the author while
-writing a case, the PR template before a PR, the release checklist before a release.
+Which command runs at which moment is the table in [approaches.md](approaches.md). Who
+enforces it is the consumer repository: the author while writing a case, the PR template
+before a PR, the release checklist before a release.
 
 That cadence is for a consumer repository. Nothing here runs against this repository's own
 fixtures except the smoke case that proves the backend reaches a running case.
 
 ## Nothing here runs on CI
 
-No hook, no PR job, no workflow shipped by this package. A person runs the sweep and reads
-the summary. The reason is not cost: a red gate over cases nobody trusts gets routed around
-rather than fixed.
+No hook, no PR job, no workflow shipped by this package. A person runs the sweep and reads the
+summary. The reason is not cost: a red gate over cases nobody trusts gets routed around rather
+than fixed.
 
 A consumer automates it when all four of these hold, and not before:
 
@@ -236,10 +249,10 @@ A consumer automates it when all four of these hold, and not before:
 [plugin_eval.md](plugin_eval.md) counts the model calls a suite makes. This file sets the
 ceilings on what they may cost.
 
-| Ceiling                      | Default | Binds                | Reached through        |
-| ---------------------------- | ------- | -------------------- | ---------------------- |
-| `eval.max_cost_usd`          | 5       | one plugin's suite   | `--max-cost-usd`       |
-| `eval.max_cost_total_usd`    | 25      | the whole invocation | the key only, no flag  |
+| Ceiling                   | Default | Binds                | Reached through       |
+| ------------------------- | ------- | -------------------- | --------------------- |
+| `eval.max_cost_usd`       | 5       | one plugin's suite   | `--max-cost-usd`      |
+| `eval.max_cost_total_usd` | 25      | the whole invocation | the key only, no flag |
 
 The total binds first: five plugins at 5 USD each is 25. A sweep sums `costUsd` from each
 plugin's result document and checks the total before every plugin, the first included, so a
@@ -249,16 +262,15 @@ failure, never a pass.
 The total has no command-line option because it governs an invocation rather than a run, and
 [cli.md](cli.md) lists only the options a run takes.
 
-| Measurement                    | Wall clock       | costUsd          |
-| ------------------------------ | ---------------- | ---------------- |
-| Smoke case, `runs: 1`, local   | not yet measured | not yet measured |
-| Smoke case, `runs: 1`, Docker  | 3 s              | 0.057            |
-| Full sweep, local              | not yet measured | not yet measured |
+| Measurement                   | Wall clock       | costUsd          |
+| ----------------------------- | ---------------- | ---------------- |
+| Smoke case, `runs: 1`, Docker | 3 s              | 0.057            |
+| Full sweep, Docker            | not yet measured | not yet measured |
 
 A row reading `not yet measured` has not been run. The ceilings above were chosen, not
 measured.
 
-The Docker row is a snapshot, 2026-09-08. It is `durationSeconds` and `costUsd` read from
-the `aggregate-result.json` of the passing container run [docker.md](docker.md) records, on
-CLI 2.1.265, `sonnet` and the `haiku` judge. The wall clock is the harness's own, so it
-excludes the image build and the container start.
+The Docker row is a snapshot, 2026-09-08. It is `durationSeconds` and `costUsd` read from the
+`aggregate-result.json` of the passing container run [docker.md](docker.md) records, on CLI
+2.1.265, `sonnet` and the `haiku` judge. The wall clock is the harness's own, so it excludes
+the image build and the container start.
