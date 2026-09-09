@@ -156,6 +156,20 @@ def test_an_absent_image_raises_before_any_container_starts():
         absent.run(PASSES)
 
 
+def test_check_reports_an_absent_image_and_never_the_credential(image):
+    """`check` reads the daemon and both image tags, so it belongs in this tier.
+
+    There is no login in this path, so no state of this machine can make it ask for one.
+    The base tag below names an image no build produced, which is the one unmet condition
+    a machine with a reachable daemon and both images can still be shown.
+    """
+    assert image.check() == [], f"both images are present: {image.tag}"
+    absent = PytestImage(Config(docker=DockerSection(claude_code_version="0.0.0-absent")))
+    unmet = absent.check()
+    assert [condition for condition, _ in unmet] == [Condition.IMAGE]
+    assert absent.docker.tag in unmet[0][1]
+
+
 # What the container is.
 
 

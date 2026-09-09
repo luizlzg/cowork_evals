@@ -1,7 +1,9 @@
 """The test image's digest and its argument lists. docs/cowork_test.md.
 
-Nothing here starts a container or reaches a daemon. A function that starts one is
-covered in tests/integration/test_pytest_image.py.
+Nothing here reaches a daemon. Every test builds a `PytestImage` and reads a digest, a tag
+or an argument list, and none of them runs a subprocess. `build`, `run`,
+`image_is_present` and `check` all shell out to the `docker` CLI, so all four are covered
+in tests/integration/test_pytest_image.py and none of them here.
 """
 
 from __future__ import annotations
@@ -17,7 +19,6 @@ from cowork_evals.docker import (
     CONTAINER_HOME,
     CONTAINER_PLUGIN,
     DATA,
-    Condition,
     DockerError,
 )
 from cowork_evals.docker.pytest_image import (
@@ -155,20 +156,6 @@ def test_the_dockerfile_installs_the_pinned_list_with_no_deps():
     assert "--no-deps" in text
     assert "-r /tmp/requirements_test.txt" in text
     assert text.count("python3 -m pip install") == 1, "one install layer, and one only"
-
-
-# The check.
-
-
-def test_check_never_returns_the_credential_condition():
-    """There is no login in this path, so nothing here can want one.
-
-    It reads the daemon and the two image tags, whatever this machine's state is, and
-    starts no container.
-    """
-    conditions = [condition for condition, _ in image().check()]
-    assert Condition.CREDENTIAL not in conditions
-    assert set(conditions) <= {Condition.DAEMON, Condition.IMAGE}
 
 
 # The run argument list.
