@@ -16,7 +16,7 @@ while the work happens.
 
 ## Plans
 
-Six plans. Five build something and are numbered in build order, and one of those five is
+Seven plans. Six build something and are numbered in build order, and one of those six is
 skipped. `plan_fix` builds nothing, so it carries no number: it corrects what the others
 wrote, and it ran before `plan_cowork_backend.md` because it changes what that plan and
 `plan_cli.md` both read. The order is the order they are built in, not a gate: a plan is
@@ -30,8 +30,9 @@ not the system's: what is built and usable is
 | 1 | [`done/plan_cowork_tools.20260908.md`](done/plan_cowork_tools.20260908.md) | The CoWork driver: submit one prompt, wait, return what the session produced      | implemented | `feat/cowork-tools`   |
 | 2 | [`done/plan_docker.20260908.md`](done/plan_docker.20260908.md) | The image, its digest, `scripts/parity.sh`, and the harness run inside a container | implemented | `feat/docker`         |
 | 3 | `plan_venv.md`           | The staged relocatable 3.10 runtime, and the harness run under it                 | skipped     |                       |
-| 4 | `plan_cowork_backend.md` | The case reader, the CoWork grader and the v1 result document over the driver     | written     | `feat/cowork-backend` |
-| 5 | `plan_cli.md`            | Scope resolution, the run directory, the gate, and the command                    | written     | `feat/cli`            |
+| 4 | [`done/plan_cowork_backend.20260909.md`](done/plan_cowork_backend.20260909.md) | The case reader, the CoWork grader and the v1 result document over the driver     | implemented | `feat/cowork-backend` |
+| 5 | `plan_test.md`           | The test image, and a consumer's pytest suite run on the CoWork runtime            | written     | `feat/test`           |
+| 6 | `plan_cli.md`            | Scope resolution, the run directory, the gate, and the command                    | written     | `feat/cli`            |
 | - | [`done/plan_fix.20260909.md`](done/plan_fix.20260909.md) | Nothing. One configuration file, one name per artifact, and the false statements  | implemented | `feat/fix-consistency` |
 
 | Status        | Means                                                                     |
@@ -50,6 +51,14 @@ is removed from `docs/` for a skipped plan.
 Every section below describes each plan as it is written, plan 3 included. What plan 3
 describes is designed and not built.
 
+Plan 5 is the one plan that builds no part of an eval. It runs a consumer's Python tests
+inside the container, with no model, no case tree and no result document, so that code
+destined for a skill is exercised on the CoWork runtime before an eval is written over it.
+The rule that separates it from the other five is in
+[`../tests/README.md`](../tests/README.md): if a failure can be caught by pytest, it is not
+an eval. That plan writes its mechanism into `docs/`, and plan 6 builds the verb that
+reaches it.
+
 Plans 2 and 3 each build one backend whole. Running an eval on those two backends is
 `claude plugin eval`, which discovers the cases, runs them, grades them and writes
 `aggregate-result.json` itself, so there is nothing above the backend to put in a plan of its
@@ -58,14 +67,16 @@ own. Only the host changes between them. See
 
 ### What a backend plan builds, and what it does not
 
-Plans 1, 2 and 3 build mechanisms. They build the way to reach a running agent: the desktop
-driver, the container, and the staged 3.10 runtime. None of them writes an eval, runs a
+Plans 1, 2, 3 and 5 build mechanisms. The first three build the way to reach a running
+agent: the desktop driver, the container, and the staged 3.10 runtime. Plan 5 builds the way
+to reach no agent at all, which is why it fires nothing in the table below. None of them writes an eval, runs a
 suite, or introduces a cadence. Those belong to the consumer repository, and the rule is in
 [`../CLAUDE.md`](../CLAUDE.md).
 
 A mechanism still has to be shown to work, and some facts about one cannot be reached by
 reading a file. Each of plans 2, 3 and 4 therefore ends by firing `plugins/smoke/` once,
-from the integration tier, and recording what that settled.
+from the integration tier, and recording what that settled. Plan 5 fires nothing: every
+fact it needs is a container with a fixed command and a fixed expected output.
 
 | Plan | Fires once to establish                                                              |
 | ---- | -------------------------------------------------------------------------------------- |
@@ -97,15 +108,17 @@ the cheaper build.
 Plan 4 waits on neither. It reads `plugins/smoke/`, `src/cowork_evals/config.py` and the
 driver, all of which exist, and it needs nothing the venv backend would have built.
 
-### The contract that keeps plan 5 last
+### The contract that keeps the command plan last
 
 A backend is a function. It takes a case path and an output directory, and it returns the
 path to the `aggregate-result.json` it produced.
 
 A backend never names the run directory, never writes `env.txt` or the `latest` symlink,
-never prunes, never parses an option and never decides pass or fail. Plan 5 owns all of it.
+never prunes, never parses an option and never decides pass or fail. Plan 6 owns all of it.
 
-Plans 2 and 4 hold to that, so plan 5 assembles what exists and rebuilds none of it. A
+Plans 2 and 4 hold to that, so plan 6 assembles what exists and rebuilds none of it. Plan 5
+holds to the same shape without being a backend: it returns an exit code rather than a
+result document, and plan 6 adds the verb over it. A
 backend that writes a log layout of its own breaks the one gate that covers all three. The
 layout and the gate are [`../docs/running_evals.md`](../docs/running_evals.md), and the
 command is [`../docs/cli.md`](../docs/cli.md).
