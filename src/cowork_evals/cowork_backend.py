@@ -76,9 +76,7 @@ def skips(case: Case, plugin_root: Path | str) -> Skips:
         f"{key}: {why}" for key, why in UNHONOURED_CASE_KEYS.items() if key in case.frontmatter_keys
     ]
     reasons += [
-        f"{key}: {CONTEXT_REASON}"
-        for key in case.case_yaml_keys
-        if key.startswith(CONTEXT_PREFIX)
+        f"{key}: {CONTEXT_REASON}" for key in case.case_yaml_keys if key.startswith(CONTEXT_PREFIX)
     ]
     reasons += [
         f"{directory / MOCKS_DIR}: stand-ins are the harness's, and the MCP servers here are real"
@@ -110,9 +108,6 @@ def _mock_layers(case_dir: Path, plugin_root: Path) -> list[Path]:
     """
     case_dir = case_dir.resolve()
     evals = (plugin_root.resolve() / EVAL_DIR).resolve()
-    chain = [case_dir, *case_dir.parents]
-    if evals in chain:
-        chain = chain[: chain.index(evals) + 1]
-    else:
-        chain = [case_dir]
+    above = [case_dir, *case_dir.parents]
+    chain = above[: above.index(evals) + 1] if evals in above else [case_dir]
     return [directory for directory in reversed(chain) if (directory / MOCKS_DIR).is_dir()]
