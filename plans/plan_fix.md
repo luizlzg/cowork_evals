@@ -199,12 +199,16 @@ Five findings that can produce a wrong result rather than a wrong reading.
       answers differently: deleting `systempaths=unconfined` fails
       `tests/unit/test_docker.py`, and none of the integration tests that prove bubblewrap
       starts, which is the half of the claim that holds.
-- [ ] `src/cowork_evals/docker/__init__.py:42-53` sets `CONTAINER_HOME`, `CONTAINER_PLUGIN`,
+- [x] `src/cowork_evals/docker/__init__.py:42-53` sets `CONTAINER_HOME`, `CONTAINER_PLUGIN`,
       `CONTAINER_LOGS`, `EXTRA_CA_SECRET` and `CONTAINER_EXTRA_CA`, and
       `docker/Dockerfile:101`, `:102` and `:167-168` write the same five literals again.
       `Docker.digest` hashes the Dockerfile but not the Python constants, so editing the
       Python side leaves a cached image that never created the path. Pass them to the
       Dockerfile as `ARG`s from `build_argv`, or at minimum add them to the digest input.
+      Both, through one `Docker.build_args` mapping that `build_argv` emits and `digest`
+      hashes. The Dockerfile holds no path literal, and `CONTAINER_WORK` is now a constant
+      too, because `WORKDIR` cannot compute `/work` from the other two. The secret id is
+      the one string left on both sides, and a unit test asserts the two agree.
 - [ ] `scripts/image.sh:35` filters `Docker.check()` output with
       `not line.startswith("no credential")`. `check()` returns free text, and rewording the
       message at `docker/__init__.py:347` silently changes what `image.sh --check` reports.

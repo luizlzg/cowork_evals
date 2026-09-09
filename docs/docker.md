@@ -159,8 +159,9 @@ intercept, and nothing is passed. The certificate itself never enters this repos
 public repository rule in [../README.md](../README.md) covers it, and a corporate root names
 the employer.
 
-The image digest does not cover it. It is a property of the host that built the image, not
-of the inventory the image reproduces.
+The image digest does not cover the certificate. It is a property of the host that built the
+image, not of the inventory the image reproduces. The path it is installed at is a build
+argument and is covered.
 
 ## How Docker is driven
 
@@ -334,10 +335,15 @@ them.
 ## Image tagging
 
 The image is tagged `cowork-evals:<digest>`, where `<digest>` is the first 12 characters of
-the sha256 of the Dockerfile, both requirements files, the resolved
-`docker.claude_code_version` and the resolved `docker.platform`. Without the platform an `arm64` and an `amd64` image share one
-tag. Every build input is in the digest, including the build argument, so two CLI versions
-cannot share one tag and no change can be served from a stale image.
+the sha256 of the Dockerfile, both requirements files, every build argument and the resolved
+`docker.platform`. Without the platform an `arm64` and an `amd64` image share one tag.
+
+The build arguments are `Docker.build_args`: the resolved `docker.claude_code_version` and
+the five container paths, which are `CONTAINER_HOME`, `CONTAINER_WORK`, `CONTAINER_PLUGIN`,
+`CONTAINER_LOGS` and `CONTAINER_EXTRA_CA` in `docker/__init__.py`. The Dockerfile writes
+none of the five for itself, so a path cannot be changed in Python and left uncreated in the
+image. Every build input is in the digest, so two CLI versions cannot share one tag and no
+change can be served from a stale image.
 
 There is no `latest` tag. Nothing reads one: `run` and `check` resolve the digest tag, and a
 `latest` left behind by an older build points at an image no command would choose.

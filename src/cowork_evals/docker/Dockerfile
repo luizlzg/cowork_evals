@@ -98,7 +98,12 @@ RUN apt-get update \
 # An optional extra root CA, for a host whose network inspects TLS. It arrives as a build
 # secret named by docker.extra_ca_file, never through the build context, and is absent on a
 # network that does not intercept. docs/docker.md.
-ENV EXTRA_CA_FILE=/usr/local/share/ca-certificates/extra_ca.crt
+#
+# The secret id below is the one container-side string this file still holds. Every other
+# one is a build argument off docker/__init__.py, and a unit test asserts this id against
+# EXTRA_CA_SECRET there.
+ARG CONTAINER_EXTRA_CA
+ENV EXTRA_CA_FILE=${CONTAINER_EXTRA_CA}
 RUN --mount=type=secret,id=extra_ca \
   set -eux; \
   if [ -s /run/secrets/extra_ca ]; then \
@@ -163,9 +168,16 @@ RUN set -eux; \
 RUN npm install -g "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"
 
 # The container runs with the host user's numeric uid and gid, which has no passwd entry.
-# HOME is set to the first of these at run time, and the two mounts land under the second.
-RUN mkdir -p /tmp/eval-home /work/plugin /work/logs \
-  && chmod 0777 /tmp/eval-home /work /work/plugin /work/logs
+# HOME is set to CONTAINER_HOME at run time, and the two mounts land under CONTAINER_WORK.
+# All four are build arguments rather than literals: docker/__init__.py holds them, passes
+# them here from Docker.build_args and hashes the same mapping into the image digest, so a
+# path cannot be changed there and left uncreated here.
+ARG CONTAINER_HOME
+ARG CONTAINER_WORK
+ARG CONTAINER_PLUGIN
+ARG CONTAINER_LOGS
+RUN mkdir -p "${CONTAINER_HOME}" "${CONTAINER_PLUGIN}" "${CONTAINER_LOGS}" \
+  && chmod 0777 "${CONTAINER_HOME}" "${CONTAINER_WORK}" "${CONTAINER_PLUGIN}" "${CONTAINER_LOGS}"
 
 # /run/shm as a real directory. jammy ships it as a symlink to /dev/shm, and bubblewrap
 # mounts a tmpfs there: the symlink resolves against a new root whose /dev is not staged
@@ -175,4 +187,4 @@ RUN mkdir -p /tmp/eval-home /work/plugin /work/logs \
 # symlink, and running bwrap without that mount does not reach the failure.
 RUN rm -f /run/shm && mkdir -p /run/shm && chmod 1777 /run/shm
 
-WORKDIR /work
+WORKDIR ${CONTAINER_WORK}

@@ -15,8 +15,12 @@ from cowork_evals.config import Config, DockerSection
 from cowork_evals.docker import (
     CONTAINER_EXTRA_CA,
     CONTAINER_HOME,
+    CONTAINER_LOGS,
+    CONTAINER_PLUGIN,
+    CONTAINER_WORK,
     DATA,
     DOCKERFILE,
+    EXTRA_CA_SECRET,
     Docker,
     DockerError,
     plugin_root,
@@ -119,6 +123,30 @@ def test_build_argv_carries_the_platform_the_tag_and_the_build_argument():
     assert build_arg(argv, "--platform") == "linux/arm64"
     assert build_arg(argv, "--build-arg") == "CLAUDE_CODE_VERSION=2.1.259"
     assert build_arg(argv, "-t") == docker.tag
+
+
+def test_build_argv_carries_every_container_path_as_a_build_argument():
+    """The Dockerfile takes them from here, so the two sides cannot name different paths."""
+    argv = backend().build_argv()
+    passed = [argv[i + 1] for i, value in enumerate(argv) if value == "--build-arg"]
+    assert f"CONTAINER_HOME={CONTAINER_HOME}" in passed
+    assert f"CONTAINER_WORK={CONTAINER_WORK}" in passed
+    assert f"CONTAINER_PLUGIN={CONTAINER_PLUGIN}" in passed
+    assert f"CONTAINER_LOGS={CONTAINER_LOGS}" in passed
+    assert f"CONTAINER_EXTRA_CA={CONTAINER_EXTRA_CA}" in passed
+
+
+def test_the_dockerfile_holds_no_container_path_of_its_own():
+    """A literal reintroduced there is a path the image creates and this package never uses."""
+    dockerfile = DOCKERFILE.read_text()
+    for path in (CONTAINER_HOME, CONTAINER_WORK, CONTAINER_PLUGIN, CONTAINER_LOGS):
+        assert path not in dockerfile, f"{path} is written in the Dockerfile as well"
+    assert CONTAINER_EXTRA_CA not in dockerfile
+
+
+def test_the_secret_id_the_dockerfile_mounts_is_the_one_build_argv_passes():
+    """The one string still written on both sides. It is not a build argument."""
+    assert f"--mount=type=secret,id={EXTRA_CA_SECRET}" in DOCKERFILE.read_text()
 
 
 def test_build_argv_carries_one_tag_and_no_latest():

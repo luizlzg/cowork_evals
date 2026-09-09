@@ -38,9 +38,12 @@ CREDENTIALS_FILE_NAME = ".credentials.json"
 PLUGIN_MANIFEST = Path(".claude-plugin") / "plugin.json"
 
 # Inside the container. The uid the run carries has no passwd entry, so HOME is explicit.
+# The Dockerfile creates all four and writes none of them: it takes them as build arguments
+# from `build_args`, which is also what the digest hashes.
 CONTAINER_HOME = "/tmp/eval-home"
-CONTAINER_PLUGIN = "/work/plugin"
-CONTAINER_LOGS = "/work/logs"
+CONTAINER_WORK = "/work"
+CONTAINER_PLUGIN = f"{CONTAINER_WORK}/plugin"
+CONTAINER_LOGS = f"{CONTAINER_WORK}/logs"
 
 # What the harness leaves behind, and the only thing a backend returns. docs/running_evals.md.
 RESULT_NAME = "aggregate-result.json"
@@ -48,6 +51,10 @@ RESULT_NAME = "aggregate-result.json"
 # An optional extra root CA, for a host whose network inspects TLS. The host path is
 # `docker.extra_ca_file`, and the certificate itself never enters this repository. The
 # Dockerfile installs it under this path. docs/docker.md.
+#
+# The secret id is the one string the Dockerfile still writes for itself. It is not a
+# build argument, so `tests/unit/test_docker.py` reads the Dockerfile and asserts the two
+# are the same string.
 EXTRA_CA_SECRET = "extra_ca"
 CONTAINER_EXTRA_CA = "/usr/local/share/ca-certificates/extra_ca.crt"
 
@@ -104,7 +111,25 @@ class Docker:
     def credentials_file(self) -> Path:
         return self.claude_dir / CREDENTIALS_FILE_NAME
 
-    # The digest, and the tag over it.
+    # The build arguments, the digest, and the tag over it.
+
+    @property
+    def build_args(self) -> dict[str, str]:
+        """Every `ARG` the Dockerfile declares, and the only source of each value.
+
+        The container paths are here rather than in the Dockerfile so that the Python
+        constant and the path the image creates cannot differ. The digest hashes this
+        mapping, so changing one is a different tag rather than a hit on an image built at
+        the old path.
+        """
+        return {
+            "CLAUDE_CODE_VERSION": self.claude_code_version,
+            "CONTAINER_HOME": CONTAINER_HOME,
+            "CONTAINER_WORK": CONTAINER_WORK,
+            "CONTAINER_PLUGIN": CONTAINER_PLUGIN,
+            "CONTAINER_LOGS": CONTAINER_LOGS,
+            "CONTAINER_EXTRA_CA": CONTAINER_EXTRA_CA,
+        }
 
     @property
     def digest(self) -> str:
@@ -113,8 +138,9 @@ class Docker:
         for path in (DOCKERFILE, REQUIREMENTS, INSTALLABLE):
             sha.update(path.read_bytes())
             sha.update(b"\0")
-        sha.update(self.claude_code_version.encode())
-        sha.update(b"\0")
+        for name, value in self.build_args.items():
+            sha.update(f"{name}={value}".encode())
+            sha.update(b"\0")
         sha.update(self.platform.encode())
         return sha.hexdigest()[:DIGEST_LENGTH]
 
@@ -133,11 +159,10 @@ class Docker:
             self.platform,
             "-f",
             str(DOCKERFILE),
-            "--build-arg",
-            f"CLAUDE_CODE_VERSION={self.claude_code_version}",
-            "-t",
-            self.tag,
         ]
+        for name, value in self.build_args.items():
+            argv += ["--build-arg", f"{name}={value}"]
+        argv += ["-t", self.tag]
         if self.extra_ca_file is not None:
             argv += ["--secret", f"id={EXTRA_CA_SECRET},src={self.extra_ca_file}"]
         if no_cache:
