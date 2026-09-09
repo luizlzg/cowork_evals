@@ -14,7 +14,10 @@
 #   --recreate    delete and rebuild from scratch
 #   --check       verify only, no writes, non-zero exit on drift
 #
-# Shell, not Python: it runs before and independently of the repo environment.
+# Shell, not Python: it builds the environment that the 3.10 code runs under, and does not
+# run under it. Verifying it calls .venv once, for the PEP 503 name normalization in
+# cowork_evals.requirements, so the shell and the package cannot disagree on what
+# `foo__bar` normalizes to. scripts/init.sh builds .venv first.
 set -euo pipefail
 # shellcheck source=lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
@@ -39,10 +42,18 @@ case "${1-}" in
   *) die "unknown argument '$1' (expected --recreate, --check or none)" ;;
 esac
 
-# Lower-case the distribution name and fold _ and . to -, per PEP 503. Versions are
-# left alone. Lines without a == pin are dropped.
+# One pin per line, the distribution name PEP 503 canonical. Versions are left alone, and
+# a line without a == pin is dropped. The package owns the normalization: an awk that folds
+# each of - _ . on its own reads foo__bar as foo--bar and reports drift that is not there.
 normalize_pins() {
-  awk -F'==' 'NF == 2 { name = tolower($1); gsub(/[_.]/, "-", name); print name "==" $2 }'
+  uv run --project "$ROOT" python3 -c '
+import sys
+
+from cowork_evals.requirements import pins
+
+for name, version in pins(sys.stdin.read()).items():
+    print(f"{name}=={version}")
+'
 }
 
 fail() {

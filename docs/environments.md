@@ -33,8 +33,12 @@ scripts/cowork_venv.sh         # development: the mirror, after a requirements c
 scripts/cowork_venv.sh --check # development: verify the mirror, no writes
 ```
 
-`scripts/cowork_venv.sh` owns the mirror during development. Shell, not Python: it runs
-before and independently of `.venv`.
+`scripts/cowork_venv.sh` owns the mirror during development. Shell, not Python: it builds
+the environment the 3.10 code runs under and does not run under it. Verifying it calls
+`.venv` once, through `uv run`, for the PEP 503 name normalization in
+`cowork_evals.requirements`. That is the one implementation of it: the mirror, the container
+parity comparison and the tests all read a pinned requirements file through it, so no two of
+them can disagree on what `foo__bar` normalizes to.
 
 | Invocation   | Does                                                             |
 | ------------ | ---------------------------------------------------------------- |

@@ -225,13 +225,16 @@ Five findings that can produce a wrong result rather than a wrong reading.
       one is a note. The assertion is over `probe.VERSION_COMMANDS` and not over the
       document's `tools`: `tests/data/docker/probe_clean.json` predates the probe's `socat`
       row, and only a real probe of the image could add it.
-- [ ] Three implementations of PEP 503 name normalisation disagree:
+- [x] Three implementations of PEP 503 name normalisation disagree:
       `docker/parity.py:60-68` uses `packaging.canonicalize_name`,
       `tests/unit/test_environments.py:36-47` uses a local `re.sub`, and
       `scripts/cowork_venv.sh:43-45` uses awk. The awk one does not fold a run of separators
       to one hyphen, so `foo__bar` normalises differently in the shell than in Python. Put
       one `normalize()` in the package, import it in the test, and have `cowork_venv.sh`
       call it through `uv run python3 -c`.
+      `src/cowork_evals/requirements.py` holds `normalize` and the `pins` reader over it,
+      which was itself written twice. All three callers read it. `cowork_venv.sh` now
+      depends on `.venv`, which its header and `docs/environments.md` say.
 
 ## Phase 5: Facts written more than once
 

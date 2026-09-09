@@ -6,8 +6,9 @@ absent turning up present, `import uno`, because unoserver and headless conversi
 capability the container exists to prove, and a tool probe.py probes that no table here
 records, whose result would otherwise be read by nothing.
 
-No page under `docs/` is parsed. The pins come from the shipped `requirements.txt`, and
-the expected non-Python versions are the table below, which cites docs/runtime.md.
+No page under `docs/` is parsed. The pins come from the shipped `requirements.txt`, read
+by cowork_evals.requirements, and the expected non-Python versions are the table below,
+which cites docs/runtime.md.
 
     python3 -m cowork_evals.docker.parity probe.json
 """
@@ -19,8 +20,7 @@ import json
 import sys
 from pathlib import Path
 
-from packaging.utils import canonicalize_name
-
+from ..requirements import pins
 from . import probe
 
 REQUIREMENTS = Path(__file__).parent.parent / "data" / "requirements.txt"
@@ -67,17 +67,6 @@ EXPECTED_FONT_FAMILIES = 118
 EXPECTED_OS_ID = "ubuntu"
 EXPECTED_OS_VERSION_ID = "22.04"
 EXPECTED_ARCHITECTURE = "aarch64"
-
-
-def pins(text: str) -> dict[str, str]:
-    """A requirements file or a `pip freeze`, as canonical name to version."""
-    out = {}
-    for line in text.splitlines():
-        line = line.strip()
-        if "==" in line and not line.startswith("#"):
-            name, _, version = line.partition("==")
-            out[canonicalize_name(name)] = version.strip()
-    return out
 
 
 def compare(document: dict, expected: dict[str, str]) -> tuple[list[str], list[str]]:

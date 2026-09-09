@@ -18,8 +18,8 @@ from cowork_evals.docker.parity import (
     REQUIREMENTS,
     compare,
     main,
-    pins,
 )
+from cowork_evals.requirements import pins
 
 DATA = Path(__file__).resolve().parents[1] / "data" / "docker"
 

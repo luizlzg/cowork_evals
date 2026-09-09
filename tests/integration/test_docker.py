@@ -19,8 +19,9 @@ from pathlib import Path
 import pytest
 
 from cowork_evals.docker import Docker, probe
-from cowork_evals.docker.parity import REQUIREMENTS, compare, pins
+from cowork_evals.docker.parity import REQUIREMENTS, compare
 from cowork_evals.harness import RunOptions
+from cowork_evals.requirements import pins
 
 ROOT = Path(__file__).resolve().parents[2]
 SMOKE = ROOT / "plugins" / "smoke"
