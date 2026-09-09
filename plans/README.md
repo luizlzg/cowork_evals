@@ -34,7 +34,7 @@ not the system's: what is built and usable is
 | 5 | [`done/plan_test.20260909.md`](done/plan_test.20260909.md) | The test image, and a consumer's pytest suite run on the CoWork runtime            | implemented | `feat/test`           |
 | 6 | [`done/plan_cli.20260909.md`](done/plan_cli.20260909.md) | Scope resolution, the run directory, the gate, and the command                    | implemented | `feat/cli`            |
 | - | [`done/plan_fix.20260909.md`](done/plan_fix.20260909.md) | Nothing. One configuration file, one name per artifact, and the false statements  | implemented | `feat/fix-consistency` |
-| 7 | [`plan_consumer.md`](plan_consumer.md) | The shipped documentation, the `docs` and `init` verbs, and the eval-authoring skill | written     | `feat/consumer`       |
+| 7 | [`done/plan_consumer.20260909.md`](done/plan_consumer.20260909.md) | The shipped documentation, the `docs` and `init` verbs, and the eval-authoring skill | implemented | `feat/consumer`       |
 
 | Status        | Means                                                                     |
 | ------------- | --------------------------------------------------------------------------- |
