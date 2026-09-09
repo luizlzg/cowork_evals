@@ -19,16 +19,17 @@ from pathlib import Path
 import pytest
 
 from cowork_evals.docker import Docker, probe
-from cowork_evals.docker.parity import REQUIREMENTS, compare
+from cowork_evals.docker.parity import EXPECTED_VERSIONS, REQUIREMENTS, compare
 from cowork_evals.harness import RunOptions
 from cowork_evals.requirements import pins
 
 ROOT = Path(__file__).resolve().parents[2]
 SMOKE = ROOT / "plugins" / "smoke"
 
-# docs/runtime.md, the core runtime table. A patch bump in jammy fails here first, and the
-# fixture's grader is updated with that page in the same commit.
-PYTHON_VERSION = "Python 3.10.12"
+# docs/runtime.md, the core runtime table, read through the one place that records it. A
+# patch bump in jammy fails here first, and the fixture's grader is a literal that is updated
+# in the same commit.
+PYTHON_VERSION = f"Python {EXPECTED_VERSIONS['python3']}"
 
 # docs/plugin_eval.md, the enablement self-test. `early access` there means the harness is
 # not enabled for this credential, which a passing eval run cannot tell from a broken image.

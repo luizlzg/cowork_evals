@@ -292,11 +292,16 @@ Each item below names the one file that should own the fact.
       `.env`, and nothing else". `cowork_evals.yaml` names a profile, which is an
       identifier, and this repository's own `.gitignore:29` ignores it. After phase 1 every
       consumer has one. Correct the list. `.env` comes out of it in phase 1.
-- [ ] `3.10.12` is written in `docker/parity.py:32`,
+- [x] `3.10.12` is written in `docker/parity.py:32`,
       `tests/integration/test_docker.py:30`, and the smoke grader's pattern and filename.
       Have the integration test read `parity.EXPECTED_VERSIONS["python3"]`. The grader has
       to stay a literal, because it runs in the sandbox, so give it a comment naming
       `parity.py` as the sibling to update.
+      The comment is a YAML one inside the grader's frontmatter, which parses to the same
+      four keys it did before. The grader's file name still carries the version, which is
+      the phase 6 item that renames it. That comment is also where
+      `tests/integration/test_docker.py` called a file a page; the line was rewritten and
+      the word is gone, but the phase 6 item that names the other three stays open.
 - [ ] `src/cowork_evals/harness.py:20` holds `DEBUG_FILE_NAME` and
       `docker/__init__.py:47` holds `RESULT_NAME`. Both are rows of the log layout at
       `docs/running_evals.md:264-266` and both belong to the harness, not to one backend:
