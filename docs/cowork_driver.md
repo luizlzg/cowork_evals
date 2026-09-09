@@ -105,8 +105,6 @@ called again when a stored run has to be re-parsed.
 A calling script pairs `submit` with a later `collect` when it must not hold a process open
 for the length of an agentic run. Everything else uses `run`.
 
-A command line over this library is not built and belongs to its own plan.
-
 ## The sequence
 
 `run` performs these steps in order. Each step names the taxonomy code it raises on failure.

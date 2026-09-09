@@ -129,7 +129,7 @@ it. `Config` becomes the whole file, holding three frozen nested dataclasses. `C
 Each of these says something the repository contradicts. They are first because a reader
 acts on them.
 
-- [ ] `docs/cowork_driver.md:106` says "A command line over this library is not built and
+- [x] `docs/cowork_driver.md:106` says "A command line over this library is not built and
       belongs to its own plan." [`../CLAUDE.md`](../CLAUDE.md) forbids a second entry point,
       `docs/cowork_driver.md:40` already says the driver has no console script, and
       `plans/README.md` lists no such plan. Delete the sentence. The driver is reached
