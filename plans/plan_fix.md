@@ -167,7 +167,8 @@ written into "the result document", which those seventeen keys have no room for.
 belongs in `aggregate-result.json`, which `docs/running_evals.md:228` and
 `docs/cli.md:157` also call "the result document".
 
-- [ ] Confirm both uses exist and refer to different artifacts.
+- [x] Confirm both uses exist and refer to different artifacts.
+      Both exist. The driver's document holds sixteen keys, not seventeen.
 - [ ] Rename the driver's output to **session document** throughout
       `docs/cowork_driver.md`: the section title at `:258`, the method table at `:69-72`,
       and `:26`, `:286` and `:297`.
