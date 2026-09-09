@@ -18,16 +18,18 @@ from pathlib import Path
 
 import pytest
 
-from cowork_evals.docker import CONTAINER_HOME, Docker, probe
-from cowork_evals.docker.parity import REQUIREMENTS, compare, pins
+from cowork_evals.docker import Condition, Docker, probe, remedy
+from cowork_evals.docker.parity import EXPECTED_VERSIONS, REQUIREMENTS, compare
 from cowork_evals.harness import RunOptions
+from cowork_evals.requirements import pins
 
 ROOT = Path(__file__).resolve().parents[2]
 SMOKE = ROOT / "plugins" / "smoke"
 
-# docs/runtime.md, the core runtime table. A patch bump in jammy fails here first, and the
-# fixture's grader is updated with that page in the same commit.
-PYTHON_VERSION = "Python 3.10.12"
+# docs/runtime.md, the core runtime table, read through the one place that records it. A
+# patch bump in jammy fails here first, and the fixture's grader is a literal that is updated
+# in the same commit.
+PYTHON_VERSION = f"Python {EXPECTED_VERSIONS['python3']}"
 
 # docs/plugin_eval.md, the enablement self-test. `early access` there means the harness is
 # not enabled for this credential, which a passing eval run cannot tell from a broken image.
@@ -38,9 +40,11 @@ NO_CASES = "No eval cases found"
 def docker() -> Docker:
     """The daemon and the image, asserted once. Nothing here builds either."""
     configured = Docker()
-    assert configured.daemon_is_reachable(), "the docker daemon is not reachable"
+    assert configured.daemon_is_reachable(), (
+        f"docker daemon is not reachable: {remedy(Condition.DAEMON)}"
+    )
     assert configured.image_is_present(), (
-        f"{configured.tag} is absent: run scripts/image.sh, which no test here runs"
+        f"{configured.tag} is absent: {remedy(Condition.IMAGE)}, which no test here runs"
     )
     return configured
 
@@ -48,34 +52,19 @@ def docker() -> Docker:
 @pytest.fixture
 def credentialled(docker: Docker) -> Docker:
     """The same, for a test that reads the credential. A missing one fails it."""
-    assert docker.has_credential(), "no credential: run `Docker().login()` once. docs/docker.md."
+    assert docker.has_credential(), (
+        f"no credential: {remedy(Condition.CREDENTIAL)}. docs/docker.md."
+    )
     return docker
 
 
 def run_argv(docker: Docker, *command: str, mounts: tuple[str, ...] = ()) -> list[str]:
-    """One container, the run's own options, one fixed command in place of the harness."""
-    return [
-        "docker",
-        "run",
-        "--rm",
-        "--platform",
-        docker.platform,
-        "--user",
-        f"{os.getuid()}:{os.getgid()}",
-        "--env",
-        f"HOME={CONTAINER_HOME}",
-        "--env",
-        "CLAUDE_CODE_WALNUT_SPIRE=1",
-        "--security-opt",
-        "seccomp=unconfined",
-        "--security-opt",
-        "systempaths=unconfined",
-        *docker.extra_ca_env_argv(),
-        *docker.credential_argv(),
-        *mounts,
-        docker.tag,
-        *command,
-    ]
+    """The backend's own run preamble, its own mounts, one fixed command in place of the harness.
+
+    Written this way rather than as a second argument list: a preamble copied here would
+    let every sandbox test below pass over options the backend no longer passes.
+    """
+    return [*docker.run_preamble(), *mounts, docker.tag, *command]
 
 
 def container(docker: Docker, *command: str, mounts: tuple[str, ...] = ()) -> str:
@@ -90,7 +79,7 @@ def container(docker: Docker, *command: str, mounts: tuple[str, ...] = ()) -> st
 
 def test_the_daemon_is_reachable_and_the_image_is_present(docker):
     assert docker.daemon_is_reachable()
-    assert docker.image_is_present(), f"{docker.tag} is absent: run scripts/image.sh"
+    assert docker.image_is_present(), f"{docker.tag} is absent: {remedy(Condition.IMAGE)}"
 
 
 def test_python3_reports_the_recorded_version(docker):

@@ -9,6 +9,7 @@
 #   --recreate  delete and rebuild from scratch
 #   --check     verify the lock is current, no writes
 set -euo pipefail
+# shellcheck source=lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 need uv
 

@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote, urlencode
 
-from .config import PROMPT_LIMIT, Config, CoWorkError, _override
+from .config import PROMPT_LIMIT, Config, CoWorkError, CoWorkSection, _override
 
 # A session directory is exactly three levels below the sessions root and holds an
 # audit.jsonl. docs/cowork_desktop.md.
@@ -59,17 +59,18 @@ POLL_SECONDS = 1.0
 class CoWork:
     """The driver. One instance holds one resolved configuration."""
 
-    def __init__(self, config: Config | None = None, **overrides: Any) -> None:
-        self._config = Config.load(**overrides) if config is None else _override(config, overrides)
+    def __init__(self, config: CoWorkSection | None = None, **overrides: Any) -> None:
+        base = Config.load().cowork if config is None else config
+        self._config = _override(base, overrides)
         self._log_file: Path | None = None
 
     @classmethod
     def from_file(cls, path: Path | str, **overrides: Any) -> CoWork:
         """Build from a named configuration file rather than the working directory's."""
-        return cls(Config.load(path, **overrides))
+        return cls(Config.load(path).cowork, **overrides)
 
     @property
-    def config(self) -> Config:
+    def config(self) -> CoWorkSection:
         return self._config
 
     # Reading. None of these fires anything, and none needs a profile except through
@@ -88,7 +89,7 @@ class CoWork:
         return _read_jsonl(path)
 
     def collect(self, session_dir: Path | str, *, prompt: str | None = None) -> dict[str, Any]:
-        """Build the result document from one session directory already on disk."""
+        """Build the session document from one session directory already on disk."""
         directory = Path(session_dir)
         audit = _read_jsonl(directory / AUDIT)
         transcript, other, subagents = _transcripts(directory)
@@ -132,7 +133,7 @@ class CoWork:
         return f"{DEEP_LINK}?{urlencode(query, quote_via=quote, safe='')}"
 
     def run(self, prompt: str) -> dict[str, Any]:
-        """Submit, wait for the run to finish, and collect the result document."""
+        """Submit, wait for the run to finish, and collect the session document."""
         with self._diagnostics():
             session_dir = self._submit(prompt)
             self._wait(session_dir)

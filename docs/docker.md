@@ -8,20 +8,19 @@ The image inventory this container has to match is [runtime.md](runtime.md). The
 around it is [running_evals.md](running_evals.md) and the command that reaches it is
 [cli.md](cli.md). The cheaper alternative is [environments.md](environments.md).
 
-The container, the image digest, the argument lists, the parity probe and the fixture are
-built. The `cowork_evals` command over them is not: today the image is built by
-`scripts/image.sh` and a run goes through `cowork_evals.docker.Docker.run`. What is built
-is the status table in [running_evals.md](running_evals.md).
+What of this is built is the status table in [running_evals.md](running_evals.md). Until the
+command reaches the container, `scripts/image.sh` builds the image and a run goes through
+`cowork_evals.docker.Docker.run`.
 
 ## Usage
 
 ```bash
-cowork_evals setup --docker                                   # build for EVAL_PLATFORM
+cowork_evals setup --docker                                   # build for docker.platform
 cowork_evals check --docker                                   # daemon, image digest, credential
 cowork_evals run --docker path/to/plugin/evals/<skill>        # one skill, in the container
 cowork_evals run --docker path/to/repo                        # every plugin, in the container
 
-scripts/image.sh                                              # development: build for EVAL_PLATFORM
+scripts/image.sh                                              # development: build for docker.platform
 scripts/image.sh --check                                      # development: the digest is present, no writes
 scripts/login.sh                                              # development: log in once, in a container
 scripts/login.sh --check                                      # development: a login is present, no writes
@@ -111,7 +110,7 @@ conversion is broken.
 The recorded image is `aarch64`. `--platform linux/arm64` matches it natively on an ARM Mac
 and needs qemu emulation elsewhere, which is correct but several times slower.
 
-The build takes `--platform` from `EVAL_PLATFORM`, default `linux/arm64`. The parity report
+The build takes `--platform` from `docker.platform`, default `linux/arm64`. The parity report
 records the platform actually used, so an x86 run is never mistaken for an aarch64 one.
 
 The upstream LibreOffice archive is named by the kernel architecture, not by Docker's, and
@@ -142,25 +141,26 @@ a TLS-inspecting proxy the container has no issuer for any of them and the build
 the first fetch. PyPI and the npm registry were not intercepted on the host measured below,
 so the pins and the CLI install either way.
 
-The build takes an extra root CA from `SSL_CERT_FILE`, which such a host already sets for
-its own tooling. It is passed as a BuildKit secret, never through the build context, and
+The build takes an extra root CA from `docker.extra_ca_file`, which such a host names in
+`cowork_evals.yaml`. It is passed as a BuildKit secret, never through the build context, and
 the Dockerfile installs it into the image CA store. Both the fetches above and the Claude
 Code CLI inside the container then trust it: `claude.ai` is intercepted on that host too, so
 the login route needs it as much as the build does.
 
 | Layer                     | Reads it from                                    |
 | ------------------------- | ------------------------------------------------ |
-| `build_argv`              | `--secret id=extra_ca,src=$SSL_CERT_FILE`        |
+| `build_argv`              | `--secret id=extra_ca,src=<docker.extra_ca_file>` |
 | The Dockerfile            | `/run/secrets/extra_ca`, once, into the CA store |
 | `run_argv`, `login_argv`  | `--env NODE_EXTRA_CA_CERTS`, because Node carries its own root store |
 
-`SSL_CERT_FILE` unset, or naming a file that is not there, is a host that does not
+`docker.extra_ca_file` unset, or naming a file that is not there, is a host that does not
 intercept, and nothing is passed. The certificate itself never enters this repository: the
 public repository rule in [../README.md](../README.md) covers it, and a corporate root names
 the employer.
 
-The image digest does not cover it. It is a property of the host that built the image, not
-of the inventory the image reproduces.
+The image digest does not cover the certificate. It is a property of the host that built the
+image, not of the inventory the image reproduces. The path it is installed at is a build
+argument and is covered.
 
 ## How Docker is driven
 
@@ -182,9 +182,8 @@ that list is built either way. See [cli.md](cli.md).
 
 The harness is not part of the CoWork image, so it is not in the inventory above. The
 container installs it as a global npm package, `@anthropic-ai/claude-code`, at the version
-in the `CLAUDE_CODE_VERSION` build argument. The default is 2.1.265, and
-`CLAUDE_CODE_VERSION` in the environment or in `.env` moves it. It is in the image digest,
-so two versions cannot share one tag.
+in the `CLAUDE_CODE_VERSION` build argument. `docker.claude_code_version` supplies it,
+default 2.1.265. It is in the image digest, so two versions cannot share one tag.
 
 Not every version runs here. 2.1.259, the version [plugin_eval.md](plugin_eval.md) is
 written against, cannot run a Bash-granting case on Linux at all. Its sandbox masks
@@ -303,7 +302,7 @@ plus a `chown -R` of `/work/logs` on the way out, is not used.
 
 The CoWork mirror is neither mounted nor built in the image: system `python3` is already 3.10
 with the full pin set. The mirror rule holds unchanged here and is stated in
-[running_evals.md](running_evals.md).
+[staged_runtime.md](staged_runtime.md).
 
 ## The Bash sandbox
 
@@ -335,10 +334,15 @@ them.
 ## Image tagging
 
 The image is tagged `cowork-evals:<digest>`, where `<digest>` is the first 12 characters of
-the sha256 of the Dockerfile, both requirements files, the resolved `CLAUDE_CODE_VERSION`
-and the resolved platform. Without the platform an `arm64` and an `amd64` image share one
-tag. Every build input is in the digest, including the build argument, so two CLI versions
-cannot share one tag and no change can be served from a stale image.
+the sha256 of the Dockerfile, both requirements files, every build argument and the resolved
+`docker.platform`. Without the platform an `arm64` and an `amd64` image share one tag.
+
+The build arguments are `Docker.build_args`: the resolved `docker.claude_code_version` and
+the five container paths, which are `CONTAINER_HOME`, `CONTAINER_WORK`, `CONTAINER_PLUGIN`,
+`CONTAINER_LOGS` and `CONTAINER_EXTRA_CA` in `docker/__init__.py`. The Dockerfile writes
+none of the five for itself, so a path cannot be changed in Python and left uncreated in the
+image. Every build input is in the digest, so two CLI versions cannot share one tag and no
+change can be served from a stale image.
 
 There is no `latest` tag. Nothing reads one: `run` and `check` resolve the digest tag, and a
 `latest` left behind by an older build points at an image no command would choose.
@@ -364,9 +368,17 @@ to that file is carried into the table by hand, in the same commit.
 | A non-Python tool version differs              | printed, does not fail | A jammy point release moves a patch version and must not block |
 | A tool recorded as not present is present      | exit 1                 | A skill can call it here and not in a session                  |
 | `import uno` fails                             | exit 1                 | unoserver and headless conversion are broken                   |
+| A tool the probe probes that no table records  | exit 1                 | Its result is compared against nothing and read by nobody      |
+| A tool recorded present with no version is absent | printed, does not fail | There is no version to compare it against                   |
 
 The tools recorded as not present are `wkhtmltopdf`, `weasyprint`, `exiftool`, `docker` and
-the `sqlite3` CLI.
+the `sqlite3` CLI. The three recorded present with no version are `ssh`, which
+[runtime.md](runtime.md) lists without one, and `bwrap` and `socat`, the two deltas above,
+which it does not record at all.
+
+Every tool `probe.py` probes is in exactly one of the three tables in `parity.py`. Which
+table a new one goes in is decided by what is recorded for it: a version, presence alone, or
+absence.
 
 The probe writes one JSON document. `tests/unit/test_parity.py` asserts over recorded copies
 of it under `tests/data/docker/`, one per row of the table above, so the tests start no

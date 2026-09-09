@@ -11,6 +11,7 @@
 #
 # It needs the image built: run scripts/image.sh first.
 set -euo pipefail
+# shellcheck source=lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 need uv
 need docker

@@ -5,8 +5,8 @@ configuration and does no work at construction, so `Docker().digest` answers on 
 with no daemon.
 
 Docker is driven through its CLI with `subprocess`, not through `docker-py`, for the
-reason in that page. Nothing here names a run directory, writes a symlink, prunes or
-decides pass and fail: that is the CLI's, in `plan_cli.md`.
+reason in that file. Nothing here names a run directory, writes a symlink, prunes or
+decides pass and fail: that is the CLI's, in [docs/cli.md](../../../docs/cli.md).
 """
 
 from __future__ import annotations
@@ -14,10 +14,11 @@ from __future__ import annotations
 import hashlib
 import os
 import subprocess
+from enum import StrEnum
 from pathlib import Path
 
-from ..env import setting
-from ..harness import RunOptions, eval_argv
+from ..config import Config
+from ..harness import ENABLEMENT_ENV, RESULT_NAME, RunOptions, eval_argv
 
 DOCKERFILE = Path(__file__).parent / "Dockerfile"
 DATA = Path(__file__).parent.parent / "data"
@@ -28,9 +29,8 @@ INSTALLABLE = DATA / "requirements_installable.txt"
 REPOSITORY = "cowork-evals"
 DIGEST_LENGTH = 12
 
-# The configuration directory this package owns, and the CLI state file beside it. Never
-# the developer's own ~/.claude. docs/docker.md.
-DEFAULT_LOGIN_DIR = Path("~/.cache/cowork_evals/claude")
+# The configuration directory this package owns holds these two, and never the developer's
+# own ~/.claude. Its path is `docker.login_dir`. docs/docker.md.
 CLAUDE_DIR_NAME = ".claude"
 STATE_FILE_NAME = ".claude.json"
 CREDENTIALS_FILE_NAME = ".credentials.json"
@@ -39,18 +39,53 @@ CREDENTIALS_FILE_NAME = ".credentials.json"
 PLUGIN_MANIFEST = Path(".claude-plugin") / "plugin.json"
 
 # Inside the container. The uid the run carries has no passwd entry, so HOME is explicit.
+# The Dockerfile creates all four and writes none of them: it takes them as build arguments
+# from `build_args`, which is also what the digest hashes.
 CONTAINER_HOME = "/tmp/eval-home"
-CONTAINER_PLUGIN = "/work/plugin"
-CONTAINER_LOGS = "/work/logs"
+CONTAINER_WORK = "/work"
+CONTAINER_PLUGIN = f"{CONTAINER_WORK}/plugin"
+CONTAINER_LOGS = f"{CONTAINER_WORK}/logs"
 
-# What the harness leaves behind, and the only thing a backend returns. docs/running_evals.md.
-RESULT_NAME = "aggregate-result.json"
-
-# An optional extra root CA, for a host whose network inspects TLS. The host path comes
-# from SSL_CERT_FILE, which such a host already sets for its own tooling, and never from
-# this repository. The Dockerfile installs it under this path. docs/docker.md.
+# An optional extra root CA, for a host whose network inspects TLS. The host path is
+# `docker.extra_ca_file`, and the certificate itself never enters this repository. The
+# Dockerfile installs it under this path. docs/docker.md.
+#
+# The secret id is the one string the Dockerfile still writes for itself. It is not a
+# build argument, so `tests/unit/test_docker.py` reads the Dockerfile and asserts the two
+# are the same string.
 EXTRA_CA_SECRET = "extra_ca"
 CONTAINER_EXTRA_CA = "/usr/local/share/ca-certificates/extra_ca.crt"
+
+
+class Condition(StrEnum):
+    """What `Docker.check` reports unmet.
+
+    The condition is what a caller selects on, and the message beside it is for a person to
+    read. `scripts/image.sh --check` drops `CREDENTIAL`, so rewording a message changes
+    nothing any caller matches.
+    """
+
+    DAEMON = "daemon"
+    IMAGE = "image"
+    CREDENTIAL = "credential"
+
+
+def remedy(condition: Condition) -> str:
+    """The one command that fixes each condition.
+
+    Every caller reads it here: `check` below, `scripts/login.sh` and the integration
+    tier. `scripts/image.sh` reads it through the messages `check` builds. It names a
+    development script under `scripts/`, because `cowork_evals setup --docker` is not
+    built. docs/cli.md holds the command that replaces it, and `scripts/README.md` holds
+    the scripts.
+    """
+    match condition:
+        case Condition.DAEMON:
+            return "start Docker Desktop or Rancher Desktop"
+        case Condition.IMAGE:
+            return "run scripts/image.sh"
+        case Condition.CREDENTIAL:
+            return "run scripts/login.sh"
 
 
 class DockerError(Exception):
@@ -73,31 +108,22 @@ def plugin_root(target: Path | str) -> Path:
 class Docker:
     """One resolved container configuration."""
 
-    def __init__(
-        self,
-        *,
-        platform: str | None = None,
-        claude_code_version: str | None = None,
-        login_dir: Path | str | None = None,
-    ) -> None:
-        self.platform = platform if platform is not None else setting("EVAL_PLATFORM")
-        self.claude_code_version = (
-            claude_code_version
-            if claude_code_version is not None
-            else setting("CLAUDE_CODE_VERSION")
-        )
-        self.login_dir = (
-            Path(login_dir).expanduser() if login_dir else DEFAULT_LOGIN_DIR.expanduser()
-        )
+    def __init__(self, config: Config | None = None) -> None:
+        """Every setting resolved once, so a `Docker` is frozen configuration.
 
-    @property
-    def extra_ca_file(self) -> Path | None:
-        """The host's extra root CA, or None on a network that does not inspect TLS."""
-        value = setting("SSL_CERT_FILE")
-        if not value:
-            return None
-        path = Path(value).expanduser()
-        return path if path.is_file() else None
+        `config` defaults to `cowork_evals.yaml` in the working directory. A configured
+        `extra_ca_file` that is not on disk is a host that does not intercept TLS.
+        """
+        self._config = config if config is not None else Config.load()
+        settings = self._config.docker
+        self.platform = settings.platform
+        self.claude_code_version = settings.claude_code_version
+        self.login_dir = settings.login_dir
+        self.extra_ca_file: Path | None = (
+            settings.extra_ca_file
+            if settings.extra_ca_file is not None and settings.extra_ca_file.is_file()
+            else None
+        )
 
     # The login this package owns. Both paths are mounted read-write, because the CLI
     # refreshes its token and rewrites its state file on every start.
@@ -114,7 +140,25 @@ class Docker:
     def credentials_file(self) -> Path:
         return self.claude_dir / CREDENTIALS_FILE_NAME
 
-    # The digest, and the tag over it.
+    # The build arguments, the digest, and the tag over it.
+
+    @property
+    def build_args(self) -> dict[str, str]:
+        """Every `ARG` the Dockerfile declares, and the only source of each value.
+
+        The container paths are here rather than in the Dockerfile so that the Python
+        constant and the path the image creates cannot differ. The digest hashes this
+        mapping, so changing one is a different tag rather than a hit on an image built at
+        the old path.
+        """
+        return {
+            "CLAUDE_CODE_VERSION": self.claude_code_version,
+            "CONTAINER_HOME": CONTAINER_HOME,
+            "CONTAINER_WORK": CONTAINER_WORK,
+            "CONTAINER_PLUGIN": CONTAINER_PLUGIN,
+            "CONTAINER_LOGS": CONTAINER_LOGS,
+            "CONTAINER_EXTRA_CA": CONTAINER_EXTRA_CA,
+        }
 
     @property
     def digest(self) -> str:
@@ -123,8 +167,9 @@ class Docker:
         for path in (DOCKERFILE, REQUIREMENTS, INSTALLABLE):
             sha.update(path.read_bytes())
             sha.update(b"\0")
-        sha.update(self.claude_code_version.encode())
-        sha.update(b"\0")
+        for name, value in self.build_args.items():
+            sha.update(f"{name}={value}".encode())
+            sha.update(b"\0")
         sha.update(self.platform.encode())
         return sha.hexdigest()[:DIGEST_LENGTH]
 
@@ -143,11 +188,10 @@ class Docker:
             self.platform,
             "-f",
             str(DOCKERFILE),
-            "--build-arg",
-            f"CLAUDE_CODE_VERSION={self.claude_code_version}",
-            "-t",
-            self.tag,
         ]
+        for name, value in self.build_args.items():
+            argv += ["--build-arg", f"{name}={value}"]
+        argv += ["-t", self.tag]
         if self.extra_ca_file is not None:
             argv += ["--secret", f"id={EXTRA_CA_SECRET},src={self.extra_ca_file}"]
         if no_cache:
@@ -186,6 +230,39 @@ class Docker:
             "--claudeai",
         ]
 
+    def run_preamble(self) -> list[str]:
+        """One run's container, up to the mounts, the tag and the command.
+
+        The one place the run's platform, uid, home, enablement variable, sandbox options
+        and credential mounts are written. `run_argv` adds the two mounts and the harness;
+        tests/integration/test_docker.py adds its own mounts and a fixed command, so what
+        that tier proves about the sandbox it proves about this list.
+        """
+        return [
+            "docker",
+            "run",
+            "--rm",
+            "--platform",
+            self.platform,
+            "--user",
+            f"{os.getuid()}:{os.getgid()}",
+            "--env",
+            f"HOME={CONTAINER_HOME}",
+            # The process in the container is the harness itself, with no wrapper to
+            # export the enablement variable. docs/plugin_eval.md.
+            "--env",
+            ENABLEMENT_ENV,
+            # Granting Bash turns on the OS sandbox, and bubblewrap needs two things the
+            # default container profile denies: unprivileged user namespaces unfiltered,
+            # and a /proc it can mount over. docs/docker.md.
+            "--security-opt",
+            "seccomp=unconfined",
+            "--security-opt",
+            "systempaths=unconfined",
+            *self.extra_ca_env_argv(),
+            *self.credential_argv(),
+        ]
+
     def run_argv(
         self, target: Path | str, output_dir: Path | str, options: RunOptions
     ) -> list[str]:
@@ -201,28 +278,7 @@ class Docker:
         if relative != Path("."):
             container_target = f"{CONTAINER_PLUGIN}/{relative.as_posix()}"
         return [
-            "docker",
-            "run",
-            "--rm",
-            "--platform",
-            self.platform,
-            "--user",
-            f"{os.getuid()}:{os.getgid()}",
-            "--env",
-            f"HOME={CONTAINER_HOME}",
-            # The process in the container is the harness itself, with no wrapper to
-            # export the enablement variable. docs/plugin_eval.md.
-            "--env",
-            f"CLAUDE_CODE_WALNUT_SPIRE={setting('CLAUDE_CODE_WALNUT_SPIRE')}",
-            # Granting Bash turns on the OS sandbox, and bubblewrap needs two things the
-            # default container profile denies: unprivileged user namespaces unfiltered,
-            # and a /proc it can mount over. docs/docker.md.
-            "--security-opt",
-            "seccomp=unconfined",
-            "--security-opt",
-            "systempaths=unconfined",
-            *self.extra_ca_env_argv(),
-            *self.credential_argv(),
+            *self.run_preamble(),
             "-v",
             f"{root}:{CONTAINER_PLUGIN}:ro",
             "-v",
@@ -298,7 +354,7 @@ class Docker:
         itself a failure: the harness exits 1 below threshold and 2 on partial results,
         and the gate reads the document either way. No document at all is.
         """
-        options = options if options is not None else RunOptions.resolve()
+        options = options if options is not None else RunOptions.resolve(self._config)
         output_dir = Path(output_dir).resolve()
         completed = subprocess.run(self.run_argv(target, output_dir, options))
         result = output_dir / RESULT_NAME
@@ -331,18 +387,25 @@ class Docker:
     def has_credential(self) -> bool:
         return self.credentials_file.is_file()
 
-    def check(self) -> list[str]:
+    def check(self) -> list[tuple[Condition, str]]:
         """The unmet conditions, in order, each with the command that fixes it.
 
         An empty list means ready. It writes nothing and builds nothing.
         """
-        unmet: list[str] = []
+        unmet: list[tuple[Condition, str]] = []
         if not self.daemon_is_reachable():
-            unmet.append("docker daemon is not reachable: start Docker Desktop or Rancher Desktop")
+            unmet.append(
+                (
+                    Condition.DAEMON,
+                    f"docker daemon is not reachable: {remedy(Condition.DAEMON)}",
+                )
+            )
         # The image is unreadable without a daemon, so a second line about it would name a
         # condition this run cannot know. The credential is on the host and is read either way.
         elif not self.image_is_present():
-            unmet.append(f"image {self.tag} is absent: run `cowork_evals setup --docker`")
+            unmet.append(
+                (Condition.IMAGE, f"image {self.tag} is absent: {remedy(Condition.IMAGE)}")
+            )
         if not self.has_credential():
-            unmet.append("no credential: run `cowork_evals setup --docker` to log in")
+            unmet.append((Condition.CREDENTIAL, f"no credential: {remedy(Condition.CREDENTIAL)}"))
         return unmet

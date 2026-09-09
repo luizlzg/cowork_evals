@@ -26,6 +26,14 @@ before changing anything under it. Never restate one of these in another file; l
 - **One command.** Everything a consumer does goes through `cowork_evals`, and a consumer
   never invokes `claude plugin eval`. Never add a second entry point or a per-backend
   executable. The surface is `docs/cli.md`.
+- **One config file.** `cowork_evals.yaml` holds every setting this repository defines: the
+  driver's, each backend's, the models, the tool grants, the ceilings. There is no second
+  route. Nothing is read from the process environment. There is no `.env`. A command-line
+  option beats the file. The file beats the built-in default. See `docs/library.md`.
+- **A split needs a rule.** Wherever one thing is divided across two files, two modules or
+  two mechanisms, write down the rule that decides which side a new item goes on. It holds
+  for every item already there. A split with no such rule is a defect. Build order is not a
+  rule. Derive a fact in one place. Give a default one home.
 - **Two kinds of code, two sets of rules.** This package runs on a laptop and controls
   CoWork. The code under test runs inside the CoWork VM. What binds one does not bind the
   other, and the two are never conflated.

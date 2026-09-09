@@ -7,7 +7,7 @@ name = "cowork-evals"
 version = "0.1.0"
 description = "Run evals for Claude CoWork skills and plugins"
 requires-python = ">=3.14"
-dependencies = ["PyYAML>=6", "packaging>=24", "python-dotenv>=1"]
+dependencies = ["PyYAML>=6", "packaging>=24"]
 
 [dependency-groups]
 dev = [

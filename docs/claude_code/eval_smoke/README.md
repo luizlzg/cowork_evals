@@ -19,7 +19,8 @@ It also proves the enablement variable works, because it exports it.
 
 Not a plugin under test. It lives under `docs/` because it is reference material, and it is
 never released, registered or packaged. `plugins/smoke/` is the separate case that proves
-the staged 3.10 runtime reaches a running case; this one proves only the harness.
+a case reaches a running command on the interpreter the container backend put there; this
+one proves only the harness.
 
 ## It does not follow this repository's case format
 

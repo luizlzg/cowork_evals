@@ -1,8 +1,10 @@
 # tests
 
 Tests for this repository's own code. Python 3.14 under `.venv`, run by `scripts/test.sh`.
-Scope as each piece is built: the environments, the CLI's option surface and backend
-mapping, the result gate, the case validator, the CoWork driver and its grader.
+Scope as each piece is built: the environments, the configuration file, the harness
+argument list, the container image and its parity probe, the CoWork driver, the CLI's option
+surface and backend mapping, the result gate, the case validator and the CoWork grader. The
+table below lists the files that exist today.
 
 These are not evals. An eval needs a model in the loop. If a failure can be caught by
 pytest, it is not an eval.
@@ -34,9 +36,8 @@ A skipped test reports as a pass and hides the thing it was written to catch.
 | File                              | Covers                                                     | Exists |
 | --------------------------------- | ---------------------------------------------------------- | ------ |
 | `unit/test_environments.py`       | Both interpreters, the two requirements files, the scripts | yes    |
-| `unit/test_config.py`             | `cowork_evals.yaml` and the `Config` it produces           | yes    |
+| `unit/test_config.py`             | `cowork_evals.yaml`, its three sections, and the `Config`  | yes    |
 | `unit/test_cowork.py`             | The CoWork driver: reading, refusing, submitting, waiting  | yes    |
-| `unit/test_env.py`                | `.env` and the three settings layers                       | yes    |
 | `unit/test_harness.py`            | The `claude plugin eval` argument list                     | yes    |
 | `unit/test_docker.py`             | The image digest, and the build, login and run argument lists | yes |
 | `unit/test_parity.py`             | Recorded container probes against the image inventory      | yes    |

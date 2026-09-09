@@ -8,21 +8,21 @@ The measured application internals it couples to are in
 filesystem layout, the authorizations table and the coupling list to re-probe after an
 update. Do not restate them here.
 
-The driver is built. The CoWork backend above it is not. What is built is the status table
-in [running_evals.md](running_evals.md).
+What of this is built is the status table in
+[running_evals.md](running_evals.md).
 
 This file is the contract the driver is built to: the sequence, the API, the configuration,
-the reading rules, the result document, the grader mapping and the failure taxonomy. Every
+the reading rules, the session document, the grader mapping and the failure taxonomy. Every
 statement is a design decision, not a measurement, except where it cites
 [cowork_desktop.md](cowork_desktop.md).
 
 ## Scope
 
-The driver is the transport. One prompt in, one JSON document out. It holds no case format,
-no graders and no pass or fail.
+The driver is the transport. One prompt in, one session document out. It holds no case
+format, no graders and no pass or fail.
 
 The CoWork backend is the layer above it and holds all three. It reads the same case tree as
-every other backend, submits each case's prompt body through this driver, grades the result
+every other backend, submits each case's prompt body through this driver, grades the session
 document with the CoWork grader below, and writes the same `aggregate-result.json` v1
 document into the same log directory. It is reached as `cowork_evals run --cowork <path>`;
 see [cli.md](cli.md), [running_evals.md](running_evals.md), and
@@ -46,18 +46,20 @@ Two modules, and PyYAML.
 
 | Module                     | Holds                                                       |
 | -------------------------- | ------------------------------------------------------------ |
-| `cowork_evals.config`      | `cowork_evals.yaml`, the frozen `Config`, and `CoWorkError` |
+| `cowork_evals.config`      | `cowork_evals.yaml`, the frozen `Config` and its sections, and `CoWorkError` |
 | `cowork_evals.cowork`      | `CoWork`, the driver                                        |
 
-`Config`, `CoWork` and `CoWorkError` are the whole public surface, and they are re-exported
-from `cowork_evals`. There is no module level function, so a caller passes a configuration
-once and calls methods on the object that holds it.
+`Config`, its three sections, `CoWork` and `CoWorkError` are the whole public surface, and
+they are re-exported from `cowork_evals`. There is no module level function, so a caller
+passes a configuration once and calls methods on the object that holds it. A `CoWork` takes
+the `cowork:` section, `CoWorkSection`, and never the whole file.
 
 ```python
 from cowork_evals import Config, CoWork, CoWorkError
 
 cw = CoWork()  # reads cowork_evals.yaml
 cw = CoWork(profile="...", max_runs=10)  # the same, with overrides
+cw = CoWork(Config.load().cowork)  # from a configuration already loaded
 cw = CoWork.from_file("other.yaml")
 
 doc = cw.run("Reply with exactly: PONG")  # submit, wait, collect
@@ -66,10 +68,10 @@ doc = cw.run("Reply with exactly: PONG")  # submit, wait, collect
 | Method                              | Does                                        | Returns                          | Fires |
 | ----------------------------------- | --------------------------------------------- | --------------------------------- | ----- |
 | `from_file(path, **overrides)`      | Builds from a named configuration file      | A `CoWork`                       | no    |
-| `run(prompt)`                       | `submit`, then `wait`, then `collect`       | The result document              | yes   |
+| `run(prompt)`                       | `submit`, then `wait`, then `collect`       | The session document             | yes   |
 | `submit(prompt)`                    | Steps 1 to 7 of the sequence                | The attributed session directory | yes   |
 | `wait(session_dir)`                 | Step 8, the completion signal               | The same directory               | no    |
-| `collect(session_dir, prompt=None)` | Step 9, reading one session already on disk | The result document              | no    |
+| `collect(session_dir, prompt=None)` | Step 9, reading one session already on disk | The session document             | no    |
 | `sessions(root=None)`               | Every session directory under a root        | Paths, sorted                    | no    |
 | `history(run_log=None)`             | The run log                                 | One dictionary per line, oldest first | no |
 | `deep_link(prompt)`                 | Builds the URL, percent-encoding the prompt | The URL                          | no    |
@@ -93,7 +95,7 @@ Rules that hold for all of them:
   [../tests/README.md](../tests/README.md).
 - `collect` takes `prompt` when the caller knows what was submitted, which fills `prompt`
   and `prompt_sha256`. Without it those two come from the audit record.
-- Every public callable is fully type hinted, and the result document is JSON-serializable:
+- Every public callable is fully type hinted, and the session document is JSON-serializable:
   dictionaries, lists, strings, numbers and `None`, with every path a string.
 
 `collect` is the only method that needs no authorization beyond read access to the profile.
@@ -103,15 +105,13 @@ called again when a stored run has to be re-parsed.
 A calling script pairs `submit` with a later `collect` when it must not hold a process open
 for the length of an agentic run. Everything else uses `run`.
 
-A command line over this library is not built and belongs to its own plan.
-
 ## The sequence
 
 `run` performs these steps in order. Each step names the taxonomy code it raises on failure.
 
 | # | Step                | Does                                                                                | Fails as |
 | - | ------------------- | ----------------------------------------------------------------------------------- | -------- |
-| 1 | Refuse              | Check the configuration, the rate ceiling and the 14336 cap                         | 2        |
+| 1 | Refuse              | Check the configuration, the rate ceiling and the prompt cap                        | 2        |
 | 2 | Record the baseline | List the session directories that already exist                                     |          |
 | 3 | Fire the deep link  | `open claude://claude.ai/new?q=<prompt>&surface=<surface>`                          | 3        |
 | 4 | Settle              | Sleep `settle_seconds` while the window navigates and focuses the composer          |          |
@@ -119,7 +119,7 @@ A command line over this library is not built and belongs to its own plan.
 | 6 | Discover            | Poll for a session directory that is not in the baseline                            | 4, 5     |
 | 7 | Attribute           | Compare the recorded prompt with the submitted one                                  | 6        |
 | 8 | Wait                | Block until the completion signal fires                                             | 7        |
-| 9 | Collect             | Build the result document from the session directory                                | 8        |
+| 9 | Collect             | Build the session document from the session directory                               | 8        |
 
 Step 5 sends the keystroke to the frontmost application. Nothing may steal focus between
 steps 3 and 5.
@@ -150,9 +150,10 @@ fires. It can fire during a long pause mid-run, which is why `idle_seconds` is r
 
 ## Configuration
 
-One file, `cowork_evals.yaml`, in the working directory. It is the only configuration route.
-No machine fact is hardcoded, and the driver reads no environment variable. `.env` carries
-credentials and not configuration; see [library.md](library.md).
+The `cowork:` section of `cowork_evals.yaml`, in the working directory. That file is the
+only configuration route, and the sections beside this one belong to other readers; see
+[library.md](library.md). No machine fact is hardcoded, and the driver reads no environment
+variable.
 
 ```yaml
 cowork:
@@ -179,17 +180,10 @@ cowork:
 | `run_log`         | `~/.cowork-runs.jsonl` | The run log, outside the profile               |
 | `log_dir`         | `logs`                 | Diagnostic logs. `null` turns them off         |
 
-Loading rules:
-
-| Rule                                                                                     |
-| ------------------------------------------------------------------------------------------ |
-| A missing `cowork_evals.yaml` is not an error. Every field falls back to its default      |
-| A file named to `Config.load` or `CoWork.from_file` must exist, so a mistyped path is never a silent set of defaults |
-| An unknown key inside `cowork:` is an error, so a typo is never a silent default          |
-| A value of the wrong type is an error, wherever the `Config` was built from                |
-| An unknown top level section is ignored, so a later backend adds its own without touching this loader |
-| An override passed to the `CoWork` constructor or to `Config.load` beats the file, which beats the default |
-| `~` in a path is expanded. A relative path resolves against the working directory          |
+The loading rules are [library.md](library.md), which owns the file. Two are the driver's
+own: a file named to `Config.load` or `CoWork.from_file` must exist, so a mistyped path is
+never a silent set of defaults, and an override passed to the `CoWork` constructor beats
+the file.
 
 `profile` has no default on purpose. A wrong guess drives the wrong account. An unset or
 unreadable one is refused at step 1, as code 2, before anything is fired. A bare name
@@ -227,12 +221,14 @@ counter suffix.
 
 ## Identifying its own run
 
-The `user` record in `audit.jsonl` carries the submitted prompt verbatim in
-`message.content`. The driver compares it and refuses any session that does not match. That
-is what makes a collected result attributable to a submission.
+The driver compares the prompt recorded in `audit.jsonl` against the one it submitted, and
+refuses any session that does not match. That the record carries the prompt verbatim is
+measured in [cowork_desktop.md](cowork_desktop.md), and the comparison is what makes a
+collected result attributable to a submission.
 
-The application caps the deep link prompt at 14336 characters and truncates silently above
-it, so the driver refuses a longer prompt rather than grade an altered one.
+The driver refuses a prompt longer than the deep link cap
+[cowork_desktop.md](cowork_desktop.md) measures, rather than fire one and grade an altered
+prompt.
 
 ## Reading a session
 
@@ -244,18 +240,19 @@ Rules the reader follows. The record shapes they act on are in
   merged into it.
 - An unparsable line is skipped. Both `audit.jsonl` and the transcript are appended while
   the run is live, so the last line can be partial.
-- `message.content` is a string or a list of blocks. Both carry turn text.
-- A `tool_result` attaches to its `tool_use` by `tool_use_id`. Positional pairing is wrong:
-  results arrive in later records, and parallel calls interleave.
+- Both forms `message.content` takes are read for turn text.
+- A `tool_result` is paired to its `tool_use` by id, never by position: results arrive in
+  later records, and parallel calls interleave.
 - A `tool_result` whose call is absent from this transcript belongs to a subagent and is
   dropped.
-- Only `user` and `assistant` records carry a turn. Every other record type in the
-  transcript is ignored, because the set is open. A `thinking` block is not turn text.
+- Turns are read from `user` and `assistant` records only. Every other record type is
+  ignored, because [cowork_desktop.md](cowork_desktop.md) measures that set as open. A
+  thinking block is not read as turn text.
 - `final_text` is the last assistant text turn. A run with none raises code 8.
 - A session directory with no transcript directory yet is tolerated, and raises code 8 for
   the same reason.
 
-## The result document
+## The session document
 
 One dictionary, and it holds exactly these keys.
 
@@ -278,12 +275,13 @@ One dictionary, and it holds exactly these keys.
 | `outputs`               | Files under `outputs/`, relative to the session directory              |
 | `log_file`              | The diagnostic log of the call that produced it, or `null`             |
 
-## Grading the result document
+## Grading the session document
 
 The CoWork grader evaluates a case's graders, defined in
-[eval_format.md](eval_format.md), against the document above. It takes the result document
+[eval_format.md](eval_format.md), against the document above. It takes the session document
 and the case directory as arguments, runs on the host inside the `cowork_evals` process, and
-prints one result per grader. It submits nothing, so it re-runs over a stored document for free.
+prints one result per grader. It submits nothing, so it re-runs over a stored session
+document for free.
 
 | Grader        | Read from                                    |
 | ------------- | -------------------------------------------- |
@@ -294,10 +292,10 @@ prints one result per grader. It submits nothing, so it re-runs over a stored do
 | `llm`         | a judge call on the same target, 2 of 3      |
 | `baseline`    | a judge call against `baseline_file`, 2 of 3 |
 
-Grader targets map onto the document as `last_message` to `final_text`, `trace` to `turns`
-and `tool_calls`, `files` to `outputs`, and `{source: file, path}` to that file under the
-session directory. `mock_calls` has no equivalent here, because the MCP servers are the real
-ones.
+Grader targets map onto the session document as `last_message` to `final_text`, `trace` to
+`turns` and `tool_calls`, `files` to `outputs`, and `{source: file, path}` to that file
+under the session directory. `mock_calls` has no equivalent here, because the MCP servers
+are the real ones.
 
 Skips are recorded, never silent. A grader with no equivalent, and a case whose frontmatter
 writes out a key this backend cannot honour, are both written into the result document as

@@ -35,7 +35,7 @@ or `DISABLE_GROWTHBOOK` set. It needs CLI 2.1.207 or later.
 Every backend that calls this command exports it, so no developer sets anything by hand:
 
 ```sh
-export CLAUDE_CODE_WALNUT_SPIRE="${CLAUDE_CODE_WALNUT_SPIRE:-1}"
+export CLAUDE_CODE_WALNUT_SPIRE=1
 ```
 
 It cannot be committed to a repository's `.claude/settings.json` `env`: only allowlisted

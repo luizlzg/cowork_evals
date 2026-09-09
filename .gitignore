@@ -22,9 +22,8 @@ tmp/
 
 # Local machine state
 .claude/settings.local.json
-.env
 
-# Driver configuration. Names a CoWork profile, which is an identifier.
+# Configuration. Names a CoWork profile, which is an identifier.
 # See README.md, the public repository rule.
 cowork_evals.yaml
 .DS_Store

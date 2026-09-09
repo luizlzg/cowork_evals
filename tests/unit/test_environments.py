@@ -6,11 +6,12 @@ with scripts/init.sh before running the suite.
 
 from __future__ import annotations
 
-import re
 import subprocess
 import sys
 from importlib.resources import files
 from pathlib import Path
+
+from cowork_evals.requirements import pins as read_pins
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 VENV = ROOT / ".venv"
@@ -33,18 +34,9 @@ NOT_INSTALLABLE = {
 }
 
 
-def normalize(name: str) -> str:
-    """PEP 503 name normalization."""
-    return re.sub(r"[-_.]+", "-", name).lower()
-
-
 def pins(path: Path) -> dict[str, str]:
-    out = {}
-    for line in path.read_text().splitlines():
-        if "==" in line:
-            name, _, version = line.partition("==")
-            out[normalize(name)] = version
-    return out
+    """The package's own reader, over a path. scripts/cowork_venv.sh calls the same one."""
+    return read_pins(path.read_text())
 
 
 def interpreter(venv: Path) -> str:
@@ -93,8 +85,17 @@ def test_tests_run_under_the_repo_venv_not_the_mirror():
 
 
 def test_every_script_is_executable_and_parses():
-    scripts = sorted(p for p in (ROOT / "scripts").glob("*.sh"))
-    assert scripts, "no scripts found"
+    """Every `*.sh` in the repository, outside a dot directory.
+
+    `scripts/lint.sh` selects by the same rule, so no shell file is checked here and
+    unlinted there. The rule excludes `.venv_cowork/`, which carries a vendored one.
+    """
+    scripts = sorted(
+        path
+        for path in ROOT.rglob("*.sh")
+        if not any(part.startswith(".") for part in path.relative_to(ROOT).parts)
+    )
+    assert scripts, "no shell files found"
     for script in scripts:
         # lib.sh is sourced, never executed, so it needs no executable bit.
         if script.name != "lib.sh":

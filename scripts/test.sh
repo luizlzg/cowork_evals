@@ -10,6 +10,7 @@
 #   test.sh -m "integration and not live"    the real-system tests that spend nothing
 #   test.sh tests/unit/test_cowork.py -k name -vv
 set -euo pipefail
+# shellcheck source=lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 need uv
 

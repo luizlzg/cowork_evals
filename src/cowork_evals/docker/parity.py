@@ -1,12 +1,14 @@
 """Compare a probe document against the image inventory. Runs on the host.
 
-The delta table in [docs/docker.md](../../../docs/docker.md) is applied exactly, and only
-two things fail: a pin that is missing or at another version, and one of the five tools
-recorded as absent turning up present. A third failure is `import uno`, because unoserver
-and headless conversion are the capability the container exists to prove.
+The delta table in [docs/docker.md](../../../docs/docker.md) is applied exactly, and four
+things fail: a pin that is missing or at another version, one of the five tools recorded as
+absent turning up present, `import uno`, because unoserver and headless conversion are the
+capability the container exists to prove, and a tool probe.py probes that no table here
+records, whose result would otherwise be read by nothing.
 
-No page under `docs/` is parsed. The pins come from the shipped `requirements.txt`, and
-the expected non-Python versions are the table below, which cites docs/runtime.md.
+No file under `docs/` is parsed. The pins come from the shipped `requirements.txt`, read
+by cowork_evals.requirements, and the expected non-Python versions are the table below,
+which cites docs/runtime.md.
 
     python3 -m cowork_evals.docker.parity probe.json
 """
@@ -18,13 +20,23 @@ import json
 import sys
 from pathlib import Path
 
-from packaging.utils import canonicalize_name
+from ..requirements import pins
+from . import probe
 
 REQUIREMENTS = Path(__file__).parent.parent / "data" / "requirements.txt"
+
+# Every tool probe.py probes is in exactly one of the three tables below, and compare()
+# fails when one is in none of them. Which table a new tool goes in is decided by what is
+# recorded for it: a version, presence alone, or absence.
 
 # The five docs/runtime.md records as not present. A skill can call one here and not in a
 # session, so finding one is a failure.
 ABSENT = ("wkhtmltopdf", "weasyprint", "exiftool", "docker", "sqlite3")
+
+# Recorded present with no version to compare. docs/runtime.md lists `ssh` without one, and
+# `bwrap` and `socat` are the two harness deltas docs/docker.md records: neither is a
+# fidelity claim about the CoWork image, and neither fails.
+PRESENT = ("ssh", "bwrap", "socat")
 
 # What docs/runtime.md records for each tool, for the report. A difference is printed and
 # does not fail: a jammy point release moves a patch version and must not block.
@@ -57,17 +69,6 @@ EXPECTED_OS_VERSION_ID = "22.04"
 EXPECTED_ARCHITECTURE = "aarch64"
 
 
-def pins(text: str) -> dict[str, str]:
-    """A requirements file or a `pip freeze`, as canonical name to version."""
-    out = {}
-    for line in text.splitlines():
-        line = line.strip()
-        if "==" in line and not line.startswith("#"):
-            name, _, version = line.partition("==")
-            out[canonicalize_name(name)] = version.strip()
-    return out
-
-
 def compare(document: dict, expected: dict[str, str]) -> tuple[list[str], list[str]]:
     """The failures and the notes, in the order docs/docker.md's delta table lists them."""
     failures: list[str] = []
@@ -83,6 +84,11 @@ def compare(document: dict, expected: dict[str, str]) -> tuple[list[str], list[s
         notes.append(f"extra package: {name}=={found[name]}")
 
     tools = document.get("tools", {})
+    unlisted = sorted(
+        set(probe.VERSION_COMMANDS) - set(EXPECTED_VERSIONS) - set(ABSENT) - set(PRESENT)
+    )
+    if unlisted:
+        failures.append(f"tool probed and never compared: {', '.join(unlisted)}")
     for name in ABSENT:
         if tools.get(name, {}).get("present"):
             failures.append(f"tool recorded as absent is present: {name}")
@@ -102,6 +108,10 @@ def compare(document: dict, expected: dict[str, str]) -> tuple[list[str], list[s
             notes.append(
                 f"tool version differs: {name} {reported.get('version')}, expected {version}"
             )
+
+    for name in PRESENT:
+        if not tools.get(name, {}).get("present"):
+            notes.append(f"tool absent: {name}, no version recorded")
 
     families = document.get("font_families")
     if families != EXPECTED_FONT_FAMILIES:

@@ -1,8 +1,8 @@
 # Running evals
 
-The eval system behind the command: the mirror on `PATH`, the pinned harness flags, the
-gate, the logs, the cadence and the cost. This file is the design. It is true whether or not
-a given piece is built yet.
+The eval system behind the command: what is built, the pinned harness flags, the gate, the
+logs, the cadence and the cost. This file is the design. It is true whether or not a given
+piece is built yet.
 
 The command surface is [cli.md](cli.md) and the packaging boundary is
 [library.md](library.md). A case is written once, in the format at
@@ -18,19 +18,20 @@ here.
 | Piece                                     | Built | Designed in                                |
 | ----------------------------------------- | ----- | ------------------------------------------- |
 | The 3.10 mirror, as a development script  | yes   | [environments.md](environments.md)          |
-| The `cowork_evals` package and CLI        | no    | [library.md](library.md), [cli.md](cli.md)  |
-| `.env` and the settings over it           | yes   | [library.md](library.md)                    |
+| The `cowork_evals` package, as a distribution | yes | [library.md](library.md)                 |
+| The `cowork_evals` executable and its verbs | no  | [cli.md](cli.md)                           |
+| `cowork_evals.yaml` and the `Config` over it | yes | [library.md](library.md)                    |
 | The pinned harness argument list          | yes   | this file                                   |
-| The venv backend                          | no    | this file                                   |
+| The venv backend                          | no    | [staged_runtime.md](staged_runtime.md)      |
 | The staged runtime                        | no    | [staged_runtime.md](staged_runtime.md)      |
 | The gate                                  | no    | this file                                   |
 | The case validator                        | no    | [eval_format.md](eval_format.md)            |
-| The 3.10 and import check over code under test | no | nowhere yet                                 |
+| The 3.10 and import check over code under test | no | nowhere. Not designed, and no plan builds it |
 | The container backend and its Dockerfile  | yes   | [docker.md](docker.md)                      |
 | `scripts/parity.sh` and `tests/unit/test_parity.py` | yes | [docker.md](docker.md)                     |
 | The CoWork driver                         | yes   | [cowork_driver.md](cowork_driver.md)        |
 | The CoWork backend over it                | no    | [cowork_driver.md](cowork_driver.md)        |
-| `plugins/smoke/`, the fixture both Claude Code backends fire | yes | [../plugins/README.md](../plugins/README.md) |
+| `plugins/smoke/`, the fixture the container backend fires | yes | [../plugins/README.md](../plugins/README.md) |
 
 ## The cases it runs
 
@@ -47,9 +48,9 @@ counts against the driver's `max_runs` ceiling, so a sweep is a smoke set named 
 case. That is why [cli.md](cli.md) makes a multi-plugin path a usage error on `--cowork`.
 
 The CoWork backend does not call `claude plugin eval`. It reads the same case tree, submits
-each case's prompt body through the driver, grades the driver's result document with the
-CoWork grader, and writes the same `aggregate-result.json`. It pins one run per case. Of the
-pinned flags below it uses only `EVAL_JUDGE_MODEL`, for judged graders. The rest configure
+each case's prompt body through the driver, grades the session document with the CoWork
+grader, and writes the same `aggregate-result.json`. It pins one run per case. Of the
+pinned flags below it uses only `eval.judge_model`, for judged graders. The rest configure
 the CLI, and the CLI is not in the path. See [cowork_driver.md](cowork_driver.md).
 
 ### What counts as a case the backend cannot honour
@@ -72,107 +73,22 @@ behaviour already satisfies it, and skipped otherwise. Which key each backend ca
 [approaches.md](approaches.md). A skip is written into the result document with its reason
 and fails the gate, so a backend cannot go green by honouring nothing.
 
-## The staged runtime on PATH
-
-The venv backend stages a relocatable 3.10 interpreter carrying the CoWork wheels inside the
-plugin directory under test, then puts its `bin` first on `PATH` before calling the harness.
-A case that shells out to a bare `python3` gets 3.10 and the CoWork wheel set. What is
-staged, how, and what has been measured about it is
-[staged_runtime.md](staged_runtime.md).
-
-The mirror itself is never staged. It is a virtual environment, so its interpreter and
-standard library stay under the home directory, which the OS sandbox cannot read. That is
-the whole reason the runtime is staged rather than put on `PATH` where it is built.
-
-It refuses to run when the resulting `python3 -V` is not 3.10. One rule covers both hosts:
-on a laptop a missing or stale mirror fails preflight instead of running against the host
-interpreter, and in the container there is nothing to stage because the system interpreter
-is already 3.10. See [docker.md](docker.md).
-
-### Why the plugin directory is the only place it can go
-
-Granting `Bash` in any form turns on Claude Code's OS-level Bash sandbox, seatbelt on macOS
-and bubblewrap on Linux. Inside it the readable set is the per-run sandbox, the plugin
-directory under test, the case's `context.add_dirs` entries, and the `PATH` directories
-inside those. The home directory and its siblings are unreadable.
-
-`--allow-tools` is pinned to `Bash` because a skill that shells out needs it, so every run
-is subject to this.
-
-| Candidate location                          | Usable                                                             |
-| ------------------------------------------- | ------------------------------------------------------------------ |
-| The plugin directory under test             | Yes. Readable, and `PATH` directories inside it stay readable      |
-| `~/.cache/cowork_evals/`, where it is built | No. Under the home directory                                       |
-| A `context.add_dirs` entry                  | No. [eval_format.md](eval_format.md) refuses an entry outside the case directory, and the reference refuses one naming anything but a fixture directory |
-| An operator `--allow-tools` read grant      | No. Grants a read path, not an exec path into the sandbox          |
-
-Staging into the plugin directory writes a build product into the consumer checkout. It is
-the one exception to the rule in [library.md](library.md), the backend removes it when the
-run ends, and the consumer git-ignores it.
-
-
-### A Bash-granting run is refused on a host that runs a credential process
-
-Snapshot, 2026-09-03, CLI 2.1.260, macOS. A case granted `Bash` fails before the child
-starts, so no case body runs and the run costs nothing:
-
-```
-a credentials file in this environment (the AWS config / shared credentials file, the GCP
-application-default credentials, a kubeconfig, or an Anthropic profile config) could not be
-followed (an AWS credential_process / credential_source cannot be excluded from the shell),
-so the Bash sandbox cannot exclude the files it points at - a Bash-granting evaluation
-cannot run here
-```
-
-The harness excludes credential files from the OS sandbox before it grants `Bash`. A
-`credential_process` or `credential_source` entry names a command, not a file, so there is
-nothing to exclude, and the harness refuses the run rather than leave that entry reachable
-from the shell.
-
-Three runs of one throwaway case separate the cause:
-
-| Run                                            | Result                    |
-| ---------------------------------------------- | ------------------------- |
-| `--allow-tools Bash`, mirror first on `PATH`   | refused, no child started |
-| `--allow-tools Bash`, host `PATH`              | refused, no child started |
-| No `--allow-tools`, otherwise identical        | ran, 12 s, 0.06 USD       |
-
-The `Bash` grant alone causes it. Neither the mirror nor `scripts/cowork_run.sh` is
-involved.
-
-Re-measured 2026-09-04, same CLI. Nothing lifts it on that host:
-
-| Attempt                                                     | Result                              |
-| ------------------------------------------------------------ | ------------------------------------- |
-| `AWS_CONFIG_FILE` and `AWS_SHARED_CREDENTIALS_FILE` at empty files | still refused                   |
-| `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1`                        | still refused                        |
-| Every `CLAUDE_CODE_*` and `CLAUDECODE` variable unset       | still refused, so nesting inside a session is not the cause |
-| `HOME` at an empty directory                                | refusal gone, run fails `Not logged in`. Plain `claude -p` fails the same way |
-
-The last row is why the host cannot be worked around. The configuration the sandbox cannot
-exclude is also the one that authenticates Claude Code there.
-
-It binds the venv backend, which pins `--allow-tools Bash` and runs the harness on the
-developer's host. It does not bind the container backend, which runs the harness inside the
-image, where no such configuration exists. Nothing in this repository lifts it: the host's
-AWS configuration belongs to the developer.
-
 ## Pinned flags
 
 Every flag below is pinned because its default would otherwise bite. What each flag does,
 and the harness behaviour behind it, is in [plugin_eval.md](plugin_eval.md). Which of them a
 command-line option overrides, and on which backend, is [cli.md](cli.md).
 
-| Flag                                       | Pinned to                        |
-| ------------------------------------------ | -------------------------------- |
-| `--model`                                  | `${EVAL_MODEL:-sonnet}`          |
-| `--judge-model`                            | `${EVAL_JUDGE_MODEL:-haiku}`     |
-| `--ablation`                               | `none`                           |
-| `--threshold`                              | `0`, so the local gate decides   |
-| `--max-cost-usd`                           | `${EVAL_MAX_COST_USD:-5}`        |
-| `--output-dir`                             | the run's log directory          |
-| `--allow-tools`                            | `${EVAL_ALLOW_TOOLS:-Bash}`      |
-| `--no-publish`, `--no-scaffold`, `--verbose` | always                         |
+| Flag                                       | Pinned to                        | Configuration key, and its default |
+| ------------------------------------------ | -------------------------------- | ---------------------------------- |
+| `--model`                                  | the configured model             | `eval.model`, `sonnet`             |
+| `--judge-model`                            | the configured judge             | `eval.judge_model`, `haiku`        |
+| `--ablation`                               | `none`                           | none                               |
+| `--threshold`                              | `0`, so the local gate decides   | none                               |
+| `--max-cost-usd`                           | the configured ceiling           | `eval.max_cost_usd`, 5             |
+| `--output-dir`                             | the run's log directory          | none                               |
+| `--allow-tools`                            | the configured grant             | `eval.allow_tools`, `[Bash]`       |
+| `--no-publish`, `--no-scaffold`, `--verbose` | always                         | none                               |
 
 The target goes before every variadic flag: `--tag` and `--allow-tools` swallow a trailing
 target.
@@ -215,11 +131,12 @@ of this command. It doubles the agent runs, and the table in
 `--allow-tools` is pinned because a case cannot grant itself `Bash`, `Write`, `Edit`,
 `WebFetch` or an MCP tool. The operator grant is the only route, and an ungranted case loses
 the tool rather than failing loudly. `Bash` is the default because a skill that shells out
-needs it. Widen it through `EVAL_ALLOW_TOOLS` or `--allow-tools`, which replace the value
+needs it. Widen it through `eval.allow_tools` or `--allow-tools`, which replace the value
 rather than adding to it, so the widened value has to name `Bash` again.
 
 The two Claude Code backends export `CLAUDE_CODE_WALNUT_SPIRE`, the early-access enablement
-variable, so no developer sets it by hand. See [plugin_eval.md](plugin_eval.md).
+variable, so no developer sets it by hand. It is a constant in `harness.py` and not a
+configuration key. See [plugin_eval.md](plugin_eval.md).
 
 `--json` is never passed, for the reason in [plugin_eval.md](plugin_eval.md).
 
@@ -307,10 +224,10 @@ A consumer automates it when all four of these hold, and not before:
 [plugin_eval.md](plugin_eval.md) counts the model calls a suite makes. This file sets the
 ceilings on what they may cost.
 
-| Ceiling                   | Default | Binds                | Reached through            |
-| ------------------------- | ------- | -------------------- | -------------------------- |
-| `EVAL_MAX_COST_USD`       | 5       | one plugin's suite   | `--max-cost-usd`           |
-| `EVAL_MAX_COST_TOTAL_USD` | 25      | the whole invocation | the variable only, no flag |
+| Ceiling                      | Default | Binds                | Reached through        |
+| ---------------------------- | ------- | -------------------- | ---------------------- |
+| `eval.max_cost_usd`          | 5       | one plugin's suite   | `--max-cost-usd`       |
+| `eval.max_cost_total_usd`    | 25      | the whole invocation | the key only, no flag  |
 
 The total binds first: five plugins at 5 USD each is 25. A sweep sums `costUsd` from each
 plugin's result document and checks the total before every plugin, the first included, so a
@@ -323,8 +240,13 @@ The total has no command-line option because it governs an invocation rather tha
 | Measurement                    | Wall clock       | costUsd          |
 | ------------------------------ | ---------------- | ---------------- |
 | Smoke case, `runs: 1`, local   | not yet measured | not yet measured |
-| Smoke case, `runs: 1`, Docker  | not yet measured | not yet measured |
+| Smoke case, `runs: 1`, Docker  | 3 s              | 0.057            |
 | Full sweep, local              | not yet measured | not yet measured |
 
 A row reading `not yet measured` has not been run. The ceilings above were chosen, not
 measured.
+
+The Docker row is a snapshot, 2026-09-08. It is `durationSeconds` and `costUsd` read from
+the `aggregate-result.json` of the passing container run [docker.md](docker.md) records, on
+CLI 2.1.265, `sonnet` and the `haiku` judge. The wall clock is the harness's own, so it
+excludes the image build and the container start.

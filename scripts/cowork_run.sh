@@ -11,6 +11,7 @@
 # NEVER run `uv run` through this: uv resolves against the project and will use or
 # create the 3.14 .venv, ignoring VIRTUAL_ENV. See docs/environments.md.
 set -euo pipefail
+# shellcheck source=lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 case "${1-}" in

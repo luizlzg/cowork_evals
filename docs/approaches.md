@@ -3,12 +3,12 @@
 Three ways to run an eval against a CoWork skill. They answer different questions. None
 replaces another.
 
-The Docker row is built; the other two are design. What is built is the status table in
+Which of the three is built is the status table in
 [running_evals.md](running_evals.md).
 
 | Approach                   | Runs on                      | Proves                                     | Design                               |
 | -------------------------- | ---------------------------- | ------------------------------------------ | ------------------------------------- |
-| Claude Code, mirrored venv | Local `claude`, Python 3.10  | Skill logic, activation, hook gates        | [running_evals.md](running_evals.md) |
+| Claude Code, mirrored venv | Local `claude`, Python 3.10  | Skill logic, activation, hook gates        | [staged_runtime.md](staged_runtime.md) |
 | Claude Code, Docker        | Local `claude`, Ubuntu 22.04 | The above plus rendering, OCR, fonts, CLIs | [docker.md](docker.md)               |
 | CoWork, driven directly    | The real CoWork VM           | The deployed stack, end to end             | [cowork_driver.md](cowork_driver.md) |
 
@@ -86,10 +86,10 @@ wheel set a session provides, and nothing else. It catches an import that does n
 the image and an API that changed between versions. Cheap and fast. What it leaves diverging
 is in [environments.md](environments.md).
 
-The mirror is not put on `PATH` as it is built. Granting `Bash` turns on an OS sandbox that
-cannot read under the home directory, and a virtual environment leaves its interpreter and
-standard library there. The backend copies a relocatable interpreter and the mirror's
-`site-packages` into the plugin under test and puts that on `PATH`. See
+The mirror is not put on `PATH` as it is built. Granting `Bash` turns on an OS sandbox whose
+readable set leaves out a virtual environment's interpreter and standard library. The backend
+copies a relocatable interpreter and the mirror's `site-packages` into the plugin under test
+and puts that on `PATH`. That set, and the copy, are
 [staged_runtime.md](staged_runtime.md).
 
 **Docker.** A container from `ubuntu:22.04` with the same interpreter, wheels, document
@@ -129,7 +129,6 @@ This is the cadence a consumer repository follows. It is the one copy;
 | Before opening a PR | `cowork_evals run --venv <plugin>/evals`, per plugin       | the PR template       |
 | Before a release    | `cowork_evals run --docker <root>`, then a CoWork smoke set | the release checklist |
 
-The container backend is built and the command over it is not, so the `--docker` row runs
-today through `cowork_evals.docker.Docker.run` rather than through `cowork_evals run`. The
-other two rows have no backend yet. See the status table in
-[running_evals.md](running_evals.md).
+Which of these commands is built is the status table in
+[running_evals.md](running_evals.md), and [docker.md](docker.md) says what reaches the
+container until the `--docker` one is.

@@ -10,7 +10,16 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from cowork_evals.docker.parity import REQUIREMENTS, compare, main, pins
+from cowork_evals.docker import probe
+from cowork_evals.docker.parity import (
+    ABSENT,
+    EXPECTED_VERSIONS,
+    PRESENT,
+    REQUIREMENTS,
+    compare,
+    main,
+)
+from cowork_evals.requirements import pins
 
 DATA = Path(__file__).resolve().parents[1] / "data" / "docker"
 
@@ -50,6 +59,18 @@ def test_a_differing_tool_version_is_printed_and_does_not_fail():
 def test_a_tool_recorded_as_absent_being_present_fails():
     failures, _ = probed("probe_absent_tool_present")
     assert failures == ["tool recorded as absent is present: exiftool"]
+
+
+def test_every_tool_the_probe_probes_is_in_one_of_the_three_tables():
+    """The row compare() fails on. It is over the package's own tables, not over a document."""
+    assert set(probe.VERSION_COMMANDS) == set(EXPECTED_VERSIONS) | set(ABSENT) | set(PRESENT)
+
+
+def test_a_tool_with_no_recorded_version_is_printed_when_it_is_absent():
+    """bwrap, socat and ssh have no version in the tables. compare() still reads them."""
+    failures, notes = probed("probe_sandbox_tool_absent")
+    assert failures == []
+    assert "tool absent: bwrap, no version recorded" in notes
 
 
 def test_import_uno_failing_fails():

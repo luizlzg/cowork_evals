@@ -13,7 +13,8 @@ from pathlib import Path
 
 import pytest
 
-from cowork_evals import Config, CoWork, CoWorkError
+from cowork_evals import CoWork, CoWorkError, CoWorkSection
+from cowork_evals.config import CONFIG_FILENAME
 
 ROOT = Path(__file__).resolve().parent.parent / "data" / "cowork" / "sessions"
 PROFILE = ROOT / "acct0000" / "prof0000"
@@ -22,7 +23,7 @@ PROFILE = ROOT / "acct0000" / "prof0000"
 @pytest.fixture
 def driver() -> CoWork:
     """A driver with no profile, which is what an archived session is read with."""
-    return CoWork(Config())
+    return CoWork(CoWorkSection())
 
 
 @pytest.fixture(autouse=True)
@@ -56,21 +57,21 @@ def test_sessions_on_an_absent_root_is_empty(driver: CoWork, tmp_path: Path) -> 
 
 def test_sessions_defaults_to_the_configured_root() -> None:
     """A driver with no profile refuses at the call that needs one, not at construction."""
-    driver = CoWork(Config())
+    driver = CoWork(CoWorkSection())
     with pytest.raises(CoWorkError) as raised:
         driver.sessions()
     assert raised.value.code == 2
 
 
-def test_the_document_carries_exactly_the_documented_keys(
-    driver: CoWork, document_keys: set[str]
+def test_the_session_document_carries_exactly_the_documented_keys(
+    driver: CoWork, session_document_keys: set[str]
 ) -> None:
     document = driver.collect(PROFILE / "one_turn")
-    assert set(document) == document_keys
+    assert set(document) == session_document_keys
     assert "exit_code" not in document
 
 
-def test_the_document_is_json_serializable_with_no_profile(driver: CoWork) -> None:
+def test_the_session_document_is_json_serializable_with_no_profile(driver: CoWork) -> None:
     assert driver.config.profile is None
     text = json.dumps(driver.collect(PROFILE / "one_turn"))
     assert json.loads(text)["final_text"] == "PONG"
@@ -173,14 +174,40 @@ def test_a_known_prompt_beats_the_audit_record(driver: CoWork) -> None:
 
 
 def test_a_constructor_override_beats_the_configuration() -> None:
-    driver = CoWork(Config(profile="Fixture"), max_runs=3)
+    driver = CoWork(CoWorkSection(profile="Fixture"), max_runs=3)
     assert driver.config.max_runs == 3
     assert driver.config.profile == "Fixture"
 
 
 def test_an_unknown_constructor_override_raises() -> None:
     with pytest.raises(CoWorkError) as raised:
-        CoWork(Config(), nonsense=1)
+        CoWork(CoWorkSection(), nonsense=1)
+    assert raised.value.code == 2
+
+
+def test_from_file_reads_the_named_file_and_not_the_working_directory(
+    working_directory, tmp_path: Path
+) -> None:
+    named = tmp_path / "other.yaml"
+    named.write_text("cowork:\n  profile: Named\n  max_runs: 7\n", encoding="utf-8")
+    (tmp_path / CONFIG_FILENAME).write_text("cowork:\n  profile: Working\n", encoding="utf-8")
+    with working_directory(tmp_path):
+        driver = CoWork.from_file(named)
+    assert driver.config.profile == "Named"
+    assert driver.config.max_runs == 7
+
+
+def test_from_file_takes_the_same_overrides_as_the_constructor(tmp_path: Path) -> None:
+    named = tmp_path / "other.yaml"
+    named.write_text("cowork:\n  profile: Named\n  max_runs: 7\n", encoding="utf-8")
+    driver = CoWork.from_file(named, max_runs=3)
+    assert driver.config.profile == "Named"
+    assert driver.config.max_runs == 3
+
+
+def test_from_file_refuses_a_path_that_does_not_exist(tmp_path: Path) -> None:
+    with pytest.raises(CoWorkError) as raised:
+        CoWork.from_file(tmp_path / "absent.yaml")
     assert raised.value.code == 2
 
 
@@ -197,11 +224,11 @@ def build(tmp_path: Path, **overrides: object) -> CoWork:
         "log_dir": str(tmp_path / "logs"),
     }
     values.update(overrides)
-    return CoWork(Config(**values))  # type: ignore[arg-type]
+    return CoWork(CoWorkSection(**values))  # type: ignore[arg-type]
 
 
 def test_an_unset_profile_is_refused_before_anything_fires(tmp_path: Path) -> None:
-    driver = CoWork(Config(run_log=tmp_path / "runs.jsonl"))
+    driver = CoWork(CoWorkSection(run_log=tmp_path / "runs.jsonl"))
     with pytest.raises(CoWorkError) as raised:
         driver._check("Reply with exactly: PONG")
     assert raised.value.code == 2
@@ -209,7 +236,9 @@ def test_an_unset_profile_is_refused_before_anything_fires(tmp_path: Path) -> No
 
 
 def test_an_unreadable_profile_is_refused(tmp_path: Path) -> None:
-    driver = CoWork(Config(profile=str(tmp_path / "absent"), run_log=tmp_path / "runs.jsonl"))
+    driver = CoWork(
+        CoWorkSection(profile=str(tmp_path / "absent"), run_log=tmp_path / "runs.jsonl")
+    )
     with pytest.raises(CoWorkError) as raised:
         driver._check("Reply with exactly: PONG")
     assert raised.value.code == 2
@@ -303,7 +332,7 @@ def test_log_dir_null_writes_no_file(tmp_path: Path) -> None:
     assert not (tmp_path / "logs").exists()
 
 
-def test_the_document_names_the_diagnostic_log(tmp_path: Path) -> None:
+def test_the_session_document_names_the_diagnostic_log(tmp_path: Path) -> None:
     driver = build(tmp_path)
     with driver._diagnostics() as path:
         document = driver.collect(PROFILE / "one_turn")
@@ -367,14 +396,14 @@ def stepping(tmp_path: Path, **overrides: object) -> CoWork:
 
 
 def test_deep_link_percent_encodes_the_prompt() -> None:
-    driver = CoWork(Config())
+    driver = CoWork(CoWorkSection())
     assert driver.deep_link("two words\nand a line") == (
         "claude://claude.ai/new?q=two%20words%0Aand%20a%20line&surface=cowork"
     )
 
 
 def test_deep_link_omits_an_empty_surface() -> None:
-    assert CoWork(Config(surface="")).deep_link("PING") == "claude://claude.ai/new?q=PING"
+    assert CoWork(CoWorkSection(surface="")).deep_link("PING") == "claude://claude.ai/new?q=PING"
 
 
 def test_no_session_directory_raises_code_4(tmp_path: Path) -> None:

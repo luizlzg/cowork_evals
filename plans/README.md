@@ -1,7 +1,8 @@
 # plans
 
 Work in progress. Each plan is executed on its own branch off `main` and merged back when
-its checklist is complete.
+its checklist is complete. A plan that is done moves to [`done/`](done), and everything in
+that directory is frozen.
 
 **A plan is never deleted by Claude.** The developer decides when a plan goes, and says so.
 A completed plan stays until then, because it is the record of which decisions were asked
@@ -15,25 +16,29 @@ while the work happens.
 
 ## Plans
 
-Five plans, in build order. One is skipped. The order is the order they are built in, not a
-gate: a plan is written whenever the developer decides to write it, and a plan whose inputs
-already exist is executable whether or not the plan before it is finished. `status` is the
-plan's own state, not the system's: what is built and usable is
+Six plans. Five build something and are numbered in build order, and one of those five is
+skipped. `plan_fix` builds nothing, so it carries no number: it corrects what the others
+wrote, and it ran before `plan_cowork_backend.md` because it changes what that plan and
+`plan_cli.md` both read. The order is the order they are built in, not a gate: a plan is
+written whenever the developer decides to write it, and a plan whose inputs already exist is
+executable whether or not the plan before it is finished. `status` is the plan's own state,
+not the system's: what is built and usable is
 [`../docs/running_evals.md`](../docs/running_evals.md).
 
 | # | Plan                     | Builds                                                                            | Status      | Branch                |
 | - | ------------------------ | ----------------------------------------------------------------------------------- | ----------- | --------------------- |
-| 1 | `plan_cowork_tools.md`   | The CoWork driver: submit one prompt, wait, return what the session produced      | implemented | `feat/cowork-tools`   |
-| 2 | `plan_docker.md`         | The image, its digest, `scripts/parity.sh`, and the harness run inside a container | implemented | `feat/docker`         |
+| 1 | [`done/plan_cowork_tools.20260908.md`](done/plan_cowork_tools.20260908.md) | The CoWork driver: submit one prompt, wait, return what the session produced      | implemented | `feat/cowork-tools`   |
+| 2 | [`done/plan_docker.20260908.md`](done/plan_docker.20260908.md) | The image, its digest, `scripts/parity.sh`, and the harness run inside a container | implemented | `feat/docker`         |
 | 3 | `plan_venv.md`           | The staged relocatable 3.10 runtime, and the harness run under it                 | skipped     |                       |
 | 4 | `plan_cowork_backend.md` | The case reader, the CoWork grader and the v1 result document over the driver     | written     | `feat/cowork-backend` |
 | 5 | `plan_cli.md`            | Scope resolution, the run directory, the gate, and the command                    | written     | `feat/cli`            |
+| - | [`done/plan_fix.20260909.md`](done/plan_fix.20260909.md) | Nothing. One configuration file, one name per artifact, and the false statements  | implemented | `feat/fix-consistency` |
 
 | Status        | Means                                                                     |
 | ------------- | --------------------------------------------------------------------------- |
 | `not written` | The plan file does not exist yet                                           |
 | `written`     | The plan file exists, and its checklist is not finished                    |
-| `implemented` | Every box is ticked and the branch is merged. The file stays               |
+| `implemented` | Every box is ticked and the branch is merged. The file is in `done/`       |
 | `skipped`     | The developer decided not to write it. What it would build stays designed in `docs/` and unbuilt |
 
 Plan 3 is skipped, so the venv backend is not built. The design of it stays where it is, in
@@ -41,6 +46,9 @@ Plan 3 is skipped, so the venv backend is not built. The design of it stays wher
 [`../docs/environments.md`](../docs/environments.md), and the status table in
 [`../docs/running_evals.md`](../docs/running_evals.md) is what says it is unbuilt. Nothing
 is removed from `docs/` for a skipped plan.
+
+Every section below describes each plan as it is written, plan 3 included. What plan 3
+describes is designed and not built.
 
 Plans 2 and 3 each build one backend whole. Running an eval on those two backends is
 `claude plugin eval`, which discovers the cases, runs them, grades them and writes
@@ -80,13 +88,13 @@ harness provides for free elsewhere. See
 [`../docs/cowork_driver.md`](../docs/cowork_driver.md).
 
 Docker comes before the venv, although the venv is cheaper to build.
-[`../docs/running_evals.md`](../docs/running_evals.md) records that a `Bash`-granting run is
+[`../docs/staged_runtime.md`](../docs/staged_runtime.md) records that a `Bash`-granting run is
 refused on this host, and every case that shells out needs that grant. The container installs
 bubblewrap and runs with `seccomp=unconfined` and `systempaths=unconfined`, so it may be the
 only backend on this machine that can grant `Bash`. Measuring that early is worth more than
 the cheaper build.
 
-Plan 4 waits on neither. It reads `plugins/smoke/`, `src/cowork_evals/env.py` and the
+Plan 4 waits on neither. It reads `plugins/smoke/`, `src/cowork_evals/config.py` and the
 driver, all of which exist, and it needs nothing the venv backend would have built.
 
 ### The contract that keeps plan 5 last
@@ -113,14 +121,39 @@ plan.
 - It is complete. No open question, no TBD, no decision left to the reader. Where a fact
   was unknown at writing time, the plan says which phase measures it and what ships if the
   measurement fails.
-- Every phase is one commit. Finish a phase before starting the next.
+- Phases are worked in order. Finish one before starting the next.
 - Testing and documentation are phases, not afterthoughts.
 
 ## How a plan is executed
 
 Work one box, verify it, tick it in the plan file, commit. Do not batch ticks. The plan
-file is the state, so a cleared context can resume from it.
+file is the state, so a cleared context can resume from it, and at every instant the ticks
+say exactly what is done. Where a box cannot leave the suite green on its own, because the
+refactor around it is mid-flight, the tick still goes in immediately and the next green
+commit carries it and names in its message which boxes it carries.
 
 A measurement is written into the file under `docs/` that owns it, not into the plan. The plan
 file stays, but nothing durable may live only in it. A row in `docs/` still reading
 `not yet measured` means the box that fills it is not ticked.
+
+## How a plan is retired
+
+A plan is done when every box is ticked and its branch is merged. Neither half alone is
+enough: a full checklist on an unmerged branch is still work in progress.
+
+On the merge, move the file to `done/` and rename it `plan_<name>.<YYYYMMDD>.md`. The date
+is the date it was merged, so `plan_docker.md` merged on 2026-09-08 becomes
+`done/plan_docker.20260908.md`. Update its row in the table above to the new path. The date
+is in the name because two plans over the same subject are told apart by when they ran, and
+because the name then says how old the account is without opening it.
+
+**A plan in `done/` is never edited again**, by Claude or by anyone. It records how the work
+was done at the time and which decisions the developer asked for. It is not documentation.
+It is not maintained, and it is allowed to go stale: a statement in it that later work made
+false stays as written, because correcting it would destroy the record of what was believed
+when the decision was made. What is currently true is in `docs/`, and a reader who wants
+that reads `docs/`.
+
+Two consequences follow. A sweep that corrects false statements across the repository skips
+`done/` entirely. And nothing outside `done/` may depend on a file inside it: `docs/` never
+links to a plan at all, and the table above is the only route in.

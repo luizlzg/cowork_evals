@@ -14,8 +14,12 @@
 #   --recreate    delete and rebuild from scratch
 #   --check       verify only, no writes, non-zero exit on drift
 #
-# Shell, not Python: it runs before and independently of the repo environment.
+# Shell, not Python: it builds the environment that the 3.10 code runs under, and does not
+# run under it. Verifying it calls .venv through uv run for the PEP 503 name normalization
+# in cowork_evals.requirements, so the shell and the package cannot disagree on what
+# `foo__bar` normalizes to. scripts/init.sh builds .venv first.
 set -euo pipefail
+# shellcheck source=lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 need uv
 
@@ -27,7 +31,6 @@ PYTHON_VERSION="3.10"
 # mirror. Code under test must not import one of these: it would pass here and fail
 # in a session.
 TEST_ONLY_DIRECT=(pytest pytest-timeout)
-TEST_ONLY_ALL="pytest pytest-timeout pluggy iniconfig exceptiongroup tomli"
 
 MODE="sync"
 case "${1-}" in
@@ -38,10 +41,34 @@ case "${1-}" in
   *) die "unknown argument '$1' (expected --recreate, --check or none)" ;;
 esac
 
-# Lower-case the distribution name and fold _ and . to -, per PEP 503. Versions are
-# left alone. Lines without a == pin are dropped.
+# One pin per line, the distribution name PEP 503 canonical. Versions are left alone, and
+# a line without a == pin is dropped. The package owns the normalization: an awk that folds
+# each of - _ . on its own reads foo__bar as foo--bar and reports drift that is not there.
 normalize_pins() {
-  awk -F'==' 'NF == 2 { name = tolower($1); gsub(/[_.]/, "-", name); print name "==" $2 }'
+  uv run --project "$ROOT" python3 -c '
+import sys
+
+from cowork_evals.requirements import pins
+
+for name, version in pins(sys.stdin.read()).items():
+    print(f"{name}=={version}")
+'
+}
+
+# The transitive closure of TEST_ONLY_DIRECT, read from the metadata already installed in
+# the mirror. Hand-writing the closure means a pytest release that gains a dependency
+# reports that dependency as a package on neither list.
+test_only_closure() {
+  local package
+  local args=()
+  for package in "${TEST_ONLY_DIRECT[@]}"; do
+    args+=(--package "$package")
+  done
+  uv pip tree --python "$PY" "${args[@]}" 2> /dev/null \
+    | sed -nE 's/^[^A-Za-z0-9]*([A-Za-z0-9._-]+) v([^ ]+).*$/\1==\2/p' \
+    | normalize_pins \
+    | cut -d= -f1 \
+    | sort -u
 }
 
 fail() {
@@ -63,37 +90,38 @@ verify() {
     fail "interpreter is $actual_version, expected $PYTHON_VERSION"
   fi
 
-  local expected actual missing extra absent
+  local expected actual missing extra absent test_only
   expected="$(normalize_pins < "$REQUIREMENTS" | sort -u)"
   actual="$(uv pip freeze --python "$PY" | normalize_pins | sort -u)"
 
   missing="$(comm -23 <(echo "$expected") <(echo "$actual"))"
   if [ -n "$missing" ]; then
     fail "$(echo "$missing" | wc -l | tr -d ' ') pins missing or at the wrong version:"
-    echo "$missing" | sed 's/^/  /' >&2
+    awk '{ print "  " $0 }' <<< "$missing" >&2
   fi
 
   # An extra is anything installed that is neither a pin nor a test-only package, at
   # any version.
+  test_only="$(test_only_closure)"
   extra="$(
     comm -13 <(echo "$expected") <(echo "$actual") \
       | cut -d= -f1 \
-      | grep -vxF -e "${TEST_ONLY_ALL// /$'\n'}" || true
+      | grep -vxF -e "$test_only" || true
   )"
   if [ -n "$extra" ]; then
     fail "$(echo "$extra" | wc -l | tr -d ' ') packages installed that are on neither list:"
-    echo "$extra" | sed 's/^/  /' >&2
+    awk '{ print "  " $0 }' <<< "$extra" >&2
   fi
 
   # Without this a package added to TEST_ONLY_DIRECT is never installed: it is not a
-  # pin, so it cannot be missing, and it is on TEST_ONLY_ALL, so it is not an extra.
+  # pin, so it cannot be missing, and it is in the closure, so it is not an extra.
   absent="$(
     printf '%s\n' "${TEST_ONLY_DIRECT[@]}" \
       | grep -vxF -e "$(echo "$actual" | cut -d= -f1)" || true
   )"
   if [ -n "$absent" ]; then
     fail "$(echo "$absent" | wc -l | tr -d ' ') test-only packages not installed:"
-    echo "$absent" | sed 's/^/  /' >&2
+    awk '{ print "  " $0 }' <<< "$absent" >&2
   fi
 
   [ "$DRIFT" -eq 0 ]

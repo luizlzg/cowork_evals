@@ -19,8 +19,7 @@ package is built, so that one mirror serves the command and the development scri
 
 ## Building it
 
-The `cowork_evals` routes are design and are not built. The `scripts/` routes are built and
-are what builds the mirror today. See the status table in
+Which of the routes below is built is the status table in
 [running_evals.md](running_evals.md).
 
 ```bash
@@ -33,8 +32,12 @@ scripts/cowork_venv.sh         # development: the mirror, after a requirements c
 scripts/cowork_venv.sh --check # development: verify the mirror, no writes
 ```
 
-`scripts/cowork_venv.sh` owns the mirror during development. Shell, not Python: it runs
-before and independently of `.venv`.
+`scripts/cowork_venv.sh` owns the mirror during development. Shell, not Python: it builds
+the environment the 3.10 code runs under and does not run under it. Verifying it calls
+`.venv` through `uv run` for the PEP 503 name normalization in
+`cowork_evals.requirements`. That is the one implementation of it: the mirror, the container
+parity comparison and the tests all read a pinned requirements file through it, so no two of
+them can disagree on what `foo__bar` normalizes to.
 
 | Invocation   | Does                                                             |
 | ------------ | ---------------------------------------------------------------- |
@@ -86,9 +89,9 @@ holds, and [docker.md](docker.md) for the container that does reproduce them.
 The mirror does not itself reach an eval case. `scripts/cowork_run.sh` puts it on `PATH` for
 a command you run yourself, and that works. Inside a run the OS sandbox that a `Bash` grant
 turns on cannot read it, because a virtual environment leaves its interpreter and standard
-library under the home directory. The venv backend therefore copies a relocatable
-interpreter and this mirror's `site-packages` into the plugin under test instead. See
-[staged_runtime.md](staged_runtime.md).
+library outside that sandbox's readable set. The venv backend therefore copies a relocatable
+interpreter and this mirror's `site-packages` into the plugin under test instead. The
+readable set and the copy are both [staged_runtime.md](staged_runtime.md).
 
 ## Two requirements files
 

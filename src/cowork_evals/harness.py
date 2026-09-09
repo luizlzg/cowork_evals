@@ -13,11 +13,21 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .env import setting
+from .config import Config
 
 # The debug log's name inside the run's output directory. The log layout fixes it.
 # docs/running_evals.md.
 DEBUG_FILE_NAME = "debug.txt"
+
+# The result document's name in the same directory, from the same layout. Every backend
+# writes one, not only the two that run this command line, so it is here and not under one
+# of them. docs/running_evals.md.
+RESULT_NAME = "aggregate-result.json"
+
+# The early-access enablement variable, as `--env` takes it. The package exports it into
+# the child, and no developer chooses it, so it is a constant and not a setting.
+# docs/plugin_eval.md.
+ENABLEMENT_ENV = "CLAUDE_CODE_WALNUT_SPIRE=1"
 
 # Two pinned flags have no option and no setting. `--threshold 0` hands pass and fail to
 # the gate; `--ablation none` keeps a `tool_used: Skill` grader scored.
@@ -40,6 +50,7 @@ class RunOptions:
     @classmethod
     def resolve(
         cls,
+        config: Config | None = None,
         *,
         model: str | None = None,
         judge_model: str | None = None,
@@ -49,22 +60,18 @@ class RunOptions:
         tags: tuple[str, ...] = (),
         case: str | None = None,
     ) -> RunOptions:
-        """An explicit value beats the setting, which beats the built-in default.
+        """An explicit argument beats the file, which beats the built-in default.
 
-        `EVAL_ALLOW_TOOLS` is whitespace-separated and replaces the value rather than
-        adding to it, so a widened value names `Bash` again.
+        `config` defaults to `cowork_evals.yaml` in the working directory. `allow_tools`
+        replaces the configured value rather than adding to it, so a widened value names
+        `Bash` again.
         """
+        settings = (config if config is not None else Config.load()).eval
         return cls(
-            model=model if model is not None else setting("EVAL_MODEL"),
-            judge_model=judge_model if judge_model is not None else setting("EVAL_JUDGE_MODEL"),
-            max_cost_usd=(
-                max_cost_usd if max_cost_usd is not None else setting("EVAL_MAX_COST_USD")
-            ),
-            allow_tools=(
-                allow_tools
-                if allow_tools is not None
-                else tuple(setting("EVAL_ALLOW_TOOLS").split())
-            ),
+            model=model if model is not None else settings.model,
+            judge_model=judge_model if judge_model is not None else settings.judge_model,
+            max_cost_usd=(max_cost_usd if max_cost_usd is not None else str(settings.max_cost_usd)),
+            allow_tools=allow_tools if allow_tools is not None else settings.allow_tools,
             runs=runs,
             tags=tags,
             case=case,

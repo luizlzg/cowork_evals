@@ -3,7 +3,7 @@
 The command. One executable, four verbs, three backends. It is the whole surface a consumer
 repository sees; the boundary behind it is [library.md](library.md).
 
-Design. Nothing here is built. What is built is the status table in
+What of this command is built is the status table in
 [running_evals.md](running_evals.md).
 
 ## Synopsis
@@ -39,8 +39,8 @@ A multi-plugin path is a usage error on `--cowork`. There is no sweep on that ba
 the reason in [running_evals.md](running_evals.md).
 
 `run --venv` writes `.cowork-runtime/` into each plugin root it runs, and removes it when
-that plugin's run ends. It is the only thing this command writes into a consumer checkout.
-See [staged_runtime.md](staged_runtime.md).
+that plugin's run ends. [library.md](library.md) says why that is the one write into a
+consumer checkout, and [staged_runtime.md](staged_runtime.md) says what is in it.
 
 A case's `plugins: ["../../.."]` frontmatter states the plugin root a second time.
 The case validator checks that the two resolve to the same directory, because the harness
@@ -64,12 +64,13 @@ runs on two backends of three, so a pass-through would be silently ignored on th
 | `--build-missing`         | yes      | yes        | refused, nothing to build         |
 | `--dry-run`               | yes      | yes        | yes                               |
 
-Defaults come from the `EVAL_*` variables in [running_evals.md](running_evals.md), which
-also says which underlying flag each option maps to and why that flag is pinned. Those
-variables are read from the environment and from `.env`, and the precedence between the two
-is [library.md](library.md). Two pinned flags have no option: `--threshold`, because the
-gate decides, and `--ablation`, because a baseline arm changes which graders are scored.
-`EVAL_MAX_COST_TOTAL_USD` has no option either; it bounds the invocation rather than a run.
+Defaults come from the `eval:` section of `cowork_evals.yaml`, in
+[running_evals.md](running_evals.md), which also says which underlying flag each option maps
+to and why that flag is pinned. An option beats the file, and the file beats the built-in
+default; the ladder is [library.md](library.md). Two pinned flags have no option:
+`--threshold`, because the gate decides, and `--ablation`, because a baseline arm changes
+which graders are scored. `eval.max_cost_total_usd` has no option either; it bounds the
+invocation rather than a run.
 
 An option the chosen backend cannot honour is refused at parse time. That is an operator
 mistake, so it is a usage error. A *case* that needs a field the backend cannot honour is

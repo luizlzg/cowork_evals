@@ -16,8 +16,8 @@ format, because it drives a live session rather than the harness.
 
 [`docs/approaches.md`](docs/approaches.md) says what each one proves and what it does
 not, which subset, and links each to its design.
-[`docs/running_evals.md`](docs/running_evals.md) says what is built: today, the 3.10 mirror,
-the CoWork driver and the container backend.
+[`docs/running_evals.md`](docs/running_evals.md) carries the status table, which says what is
+built today.
 
 The code under test is bound to Python 3.10 and the CoWork wheel set. Nothing in this
 package is; it runs on a laptop. See [`docs/runtime.md`](docs/runtime.md).
@@ -27,9 +27,9 @@ package is; it runs on a laptop. See [`docs/runtime.md`](docs/runtime.md).
 ```bash
 uv add --dev cowork-evals            # or: pip install cowork-evals
 
-cowork_evals setup --venv            # build the 3.10 CoWork mirror
+cowork_evals setup --docker          # build the container image, and log in once
 cowork_evals check --all             # what each backend still needs
-cowork_evals run --venv path/to/plugin/evals
+cowork_evals run --docker path/to/plugin/evals
 ```
 
 The command takes one path, and the path is the scope: a case, a skill, a plugin's suite, or
@@ -50,7 +50,7 @@ Desktop, and the CoWork desktop application. `cowork_evals check` reports what i
 | [`plugins/`](plugins/README.md) | Fixture plugins for this repository's own tests                     |
 | [`tests/`](tests/README.md)     | Deterministic tests for this repository's own code                  |
 | `logs/`                         | Eval run output. Git-ignored, and absent until a run creates it     |
-| `cowork_evals.yaml`             | The CoWork driver's configuration. Git-ignored: it names a profile  |
+| `cowork_evals.yaml`             | Every setting, in three sections. Git-ignored: it names a profile   |
 
 ## Public repository
 
@@ -68,14 +68,13 @@ written without an identifier does not go in the repository.
 ```bash
 scripts/init.sh                 # builds .venv (3.14, tooling) and the 3.10 CoWork mirror
 scripts/test.sh                 # the unit tests
-scripts/image.sh                # builds the container image the integration tier needs
-scripts/parity.sh               # probes that image against the CoWork inventory
-scripts/test.sh -m integration  # the real-system tests. Boots a CoWork VM, and spends on two eval runs
-scripts/lint.sh
+scripts/lint.sh                 # --fix applies
 ```
 
-[`scripts/README.md`](scripts/README.md) is the task index. Every script takes `--help`.
-Those scripts are for working on this repository and are not part of the distribution.
+That is a first clone. [`scripts/README.md`](scripts/README.md) is the task index and lists
+every other script, the integration tier's preconditions included. Every script takes
+`--help`. Those scripts are for working on this repository and are not part of the
+distribution.
 
 [`CLAUDE.md`](CLAUDE.md) holds the working rules and the writing rules. Each directory has a
 `README.md` that indexes it and owns the rules for it.
