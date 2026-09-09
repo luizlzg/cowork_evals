@@ -9,6 +9,9 @@ description = "Run evals for Claude CoWork skills and plugins"
 requires-python = ">=3.14"
 dependencies = ["PyYAML>=6", "packaging>=24", "python-frontmatter>=1.1"]
 
+[project.scripts]
+cowork_evals = "cowork_evals.cli:console_main"
+
 [dependency-groups]
 dev = [
   "pytest>=8.3",

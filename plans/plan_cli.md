@@ -321,34 +321,34 @@ builds nothing.
 [`../docs/cli.md`](../docs/cli.md), and this phase builds the parse and the refusals only.
 The verbs do their work in phase 6.
 
-- [ ] `[project.scripts] cowork_evals = "cowork_evals.cli:console_main"` in
+- [x] `[project.scripts] cowork_evals = "cowork_evals.cli:console_main"` in
       `pyproject.toml`. `main(argv=None) -> int` returns a code, `console_main` calls
       `sys.exit` on it, and nothing else in the package exits.
-- [ ] Five subparsers: `run`, `test`, `setup`, `check`, `prune`. `--version` prints the
+- [x] Five subparsers: `run`, `test`, `setup`, `check`, `prune`. `--version` prints the
       installed distribution version from `importlib.metadata`.
-- [ ] The backend is a mutually exclusive group, required and with no default, and its
+- [x] The backend is a mutually exclusive group, required and with no default, and its
       members differ per verb: `run` takes `--docker` and `--cowork`, `test` takes
       `--docker` alone, `setup` takes `--docker`, and `check` takes both backends plus
       `--all`. `run --all` is a usage error, and so is `test --cowork`: that backend is not
       a member, so `argparse` exits 2 and there is no refusal message to write.
       `prune` takes any combination of its selection flags and requires at least one.
-- [ ] Every option in the table in [`../docs/cli.md`](../docs/cli.md), with no raw argument
+- [x] Every option in the table in [`../docs/cli.md`](../docs/cli.md), with no raw argument
       tail and no pass-through to `claude plugin eval`. `--older-than` is on `prune` alone,
       and `--out` is on `run` and `prune`.
-- [ ] `--require-coverage` on `run`, off by default, accepted on both backends. It reads the
+- [x] `--require-coverage` on `run`, off by default, accepted on both backends. It reads the
       tree and not a backend, so no backend refuses it.
-- [ ] `test` takes a path, `--build-missing`, `--dry-run` and a pytest tail as
+- [x] `test` takes a path, `--build-missing`, `--dry-run` and a pytest tail as
       `nargs=argparse.REMAINDER` after the path, separated by `--`. It takes no other
       option: each of the others configures a harness run.
-- [ ] The refusals: `--runs`, `--judge-model` and `--timeout-seconds` accepted on
+- [x] The refusals: `--runs`, `--judge-model` and `--timeout-seconds` accepted on
       `--cowork`; `--model`, `--allow-tools`, `--max-cost-usd` and `--build-missing` refused
       there; `--timeout-seconds` refused on `--docker`. An option the chosen backend refuses
       exits 2, naming the option and the backend.
-- [ ] Defaults come from `RunOptions.resolve` over the loaded `Config`. An option beats the
+- [x] Defaults come from `RunOptions.resolve` over the loaded `Config`. An option beats the
       file, the file beats the built-in default, and there is no third layer. No option is
       ever read from the process environment.
-- [ ] `KeyboardInterrupt` returns 130.
-- [ ] `tests/unit/test_cli.py`: each verb's parse tree, every refusal above, `--venv` on
+- [x] `KeyboardInterrupt` returns 130.
+- [x] `tests/unit/test_cli.py`: each verb's parse tree, every refusal above, `--venv` on
       each verb as `SystemExit(2)`, an unknown option as `SystemExit(2)`, `run` with no path
       as `SystemExit(2)`, `run` with no backend as `SystemExit(2)`, `check` with no backend
       as `SystemExit(2)`, `test --cowork` as `SystemExit(2)`, a `test` tail surviving `--`

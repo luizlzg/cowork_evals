@@ -147,7 +147,7 @@ def write_env(run_directory: Path | str, backend: str, image: str | None = None)
     it. `image` is the container backend's, and is absent on every other.
     """
     rows = [
-        ("cowork_evals", _distribution_version()),
+        ("cowork_evals", distribution_version()),
         ("claude", _command_version(["claude", "--version"])),
         ("python3", _command_version(["python3", "-V"])),
         ("backend", backend),
@@ -159,7 +159,12 @@ def write_env(run_directory: Path | str, backend: str, image: str | None = None)
     return path
 
 
-def _distribution_version() -> str:
+def distribution_version() -> str:
+    """The installed distribution's version, which `--version` prints and `env.txt` records.
+
+    A checkout that is not installed says so rather than raising: a log that names the
+    reason is worth more than an invocation that stops for it.
+    """
     try:
         return metadata.version(DISTRIBUTION)
     except metadata.PackageNotFoundError as error:
