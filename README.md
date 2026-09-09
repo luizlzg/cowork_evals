@@ -20,8 +20,8 @@ order, which files the agent created, and a rubric a judge model votes on. The f
 graders are deterministic and carry the gate. The two judged ones are printed.
 
 The CoWork backend honours a subset of the format, because it drives a live session rather
-than the harness. [`docs/approaches.md`](docs/approaches.md) says which subset, and what each
-backend proves.
+than the harness. [`docs/approaches.md`](docs/approaches.md) says which subset, what each
+backend proves, and what each costs to run.
 
 Evals are not written here. This is a library, installed by the repository that owns the
 plugins under test. That repository writes the cases and the tests, and points this one at
@@ -58,7 +58,150 @@ The distribution is `cowork-evals`. The command it installs is `cowork_evals`.
 `cowork_evals check --all` reports what each backend is still missing, and names the command
 that supplies it.
 
-## Using it
+A CoWork run also takes the keyboard. Each case activates the application and sends Return to
+the frontmost window, so the machine is not yours while a suite runs, and there is no headless
+route and no CI. A container run costs none of that, and runs the code in your checkout rather
+than the code deployed to the account. The whole comparison is
+[`docs/approaches.md`](docs/approaches.md).
+
+## Quickstart
+
+Three parts: install the package and build a backend, write and run an eval, and run a
+plugin's own pytest suite on the CoWork runtime.
+
+Everything below is the container backend, and it needs no `cowork_evals.yaml`: every key has
+a built-in default, and only the CoWork backend requires a file at all. Every name is the
+example's own. The plugin is `notes`, it sits at `plugins/notes`, and it has one skill,
+`summarize`. Substitute yours throughout.
+
+### 1. Install
+
+Install the package as above, then build the container backend:
+
+```bash
+cowork_evals setup --docker   # two images, and one interactive login. Minutes, and once only
+cowork_evals check --docker   # exits 0 when the backend is ready
+```
+
+### 2. Evals
+
+A case is a directory:
+
+```
+plugins/notes/.claude-plugin/plugin.json
+plugins/notes/skills/summarize/SKILL.md
+plugins/notes/evals/summarize/one-paragraph/prompt.md
+plugins/notes/evals/summarize/one-paragraph/graders/skill-fired.md
+plugins/notes/evals/summarize/one-paragraph/graders/one-paragraph.md
+```
+
+The layer under `evals/` is a skill directory name, `plugin` for a case that crosses skills,
+or `mocks`. Nothing else.
+
+`prompt.md` is frontmatter, then the prompt the agent receives:
+
+```markdown
+---
+name: one-paragraph
+description: The skill fires, and the answer is one paragraph.
+tags: [summarize]
+plugins: ["../../.."]
+runs: 3
+---
+
+Summarize `notes/standup.md` in one paragraph.
+```
+
+`tags` names the case's own directory, so it is `summarize` here. `plugins` counts up to the
+plugin root, three levels from a case at this depth, and that count is the same for every case
+whatever the plugin is called. Both keys are required and both are checked.
+
+A grader is one file under `graders/`. This one asserts the skill fired:
+
+```markdown
+---
+type: tool_used
+tool: Skill
+input_match: '"skill"\s*:\s*"(?:[\w-]+:)?summarize"'
+---
+```
+
+This one asserts the shape of the answer:
+
+```markdown
+---
+type: regex
+target: last_message
+pattern: '\n\s*\n'
+match: not_contains
+---
+```
+
+Both are structural, so both decide the exit code. A grader file without the `---` delimiters
+is read as a note and is silently ignored.
+
+Run it:
+
+```bash
+cowork_evals run --docker plugins/notes/evals/summarize/one-paragraph
+```
+
+The path is the scope. It selects a case, a skill's cases at `evals/summarize/`, a plugin's
+whole suite at `evals/`, or every plugin under a directory holding several. `--dry-run` prints
+the command line and spends nothing.
+
+The exit code is the gate's:
+
+| Exit | Means                                                            |
+| ---- | ---------------------------------------------------------------- |
+| 0    | the gate passed                                                  |
+| 1    | a structural grader failed, or a case or grader was skipped      |
+| 2    | usage error                                                      |
+| 3    | the preflight failed. Nothing ran, and the message names the fix |
+
+The invocation keeps everything it printed:
+
+```
+logs/evals/latest/
+  gate.txt                       # one line per finding, each carrying FAIL or NOTE
+  run.log                        # everything the invocation printed
+  notes/report.html              # the harness's own report
+  notes/aggregate-result.json    # what the gate read
+```
+
+Then widen it:
+
+| To                                     | Add                                                                 |
+| -------------------------------------- | ------------------------------------------------------------------- |
+| Run the plugin's whole suite           | point at `plugins/notes/evals`                                      |
+| Select one skill across a sweep        | `--tag summarize`                                                   |
+| Give the agent more than `Bash`        | `--allow-tools`, which replaces the grant and so names `Bash` again |
+| Run the same cases on the real product | `--cowork`, after `cowork.profile` is set in `cowork_evals.yaml`    |
+
+### 3. Tests
+
+`cowork_evals test` is the other half, and it is not an eval. It runs the plugin's own pytest
+suite inside the CoWork image: Python 3.10, the image wheel set, no model, no case tree, no
+grader and no gate. That is what says a plugin's Python behaves in a session, which a suite
+passing on a 3.14 laptop does not.
+
+```bash
+cowork_evals test --docker plugins/notes/tests
+cowork_evals test --docker plugins/notes/tests -- -k parser -x
+```
+
+Every token after `--` reaches pytest in order and unmodified, and the command returns
+pytest's exit code unchanged. The path is one plugin root's; a path covering several is a
+usage error, because pytest takes one rootdir. It writes no run directory and reads no
+`evals/`, so a malformed case never blocks a test run.
+
+The format, field by field, is [`docs/eval_format.md`](docs/eval_format.md). Every option and
+every exit code is [`docs/cli.md`](docs/cli.md). What the gate reads, and what a run costs, is
+[`docs/running_evals.md`](docs/running_evals.md). The runtime your pytest suite gets is
+[`docs/cowork_test.md`](docs/cowork_test.md). Which backend to reach for, and what each one
+costs to run, is [`docs/approaches.md`](docs/approaches.md).
+
+## The command
 
 ```bash
 cowork_evals setup --docker          # build the container images, and log in once
@@ -67,9 +210,6 @@ cowork_evals run  --docker path/to/plugin          # an eval: a model, graders, 
 cowork_evals test --docker path/to/plugin/tests    # pytest on the CoWork runtime, no model
 cowork_evals prune --docker          # delete what setup built
 ```
-
-The command takes one path, and the path is the scope: a case, a skill, a plugin's suite, or a
-directory of plugins.
 
 `run` grades what a model produced and exits non-zero when the gate fails. `test` runs no model,
 runs your own pytest suite inside the CoWork runtime, and returns pytest's exit code unchanged.

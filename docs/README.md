@@ -23,7 +23,7 @@ build; the last three are external material and one deferred design.
 | ------------------------------------------ | ---------------------------------------------------------------- |
 | [`library.md`](library.md)                 | The boundary: what ships, how it installs, where state lives    |
 | [`cli.md`](cli.md)                         | The `cowork_evals` command: verbs, backends, scope, exit codes  |
-| [`approaches.md`](approaches.md)           | The two backends, the one case format, and what each proves     |
+| [`approaches.md`](approaches.md)           | The two backends, what each proves, and what each costs to run  |
 | [`eval_format.md`](eval_format.md)         | What a case file contains: tree, frontmatter, graders, traps    |
 | [`running_evals.md`](running_evals.md)     | The run: status, pinned flags, the gate, logs, cadence, cost    |
 | [`cowork_test.md`](cowork_test.md)         | The other thing this repository runs: a consumer's pytest suite, on the CoWork runtime |

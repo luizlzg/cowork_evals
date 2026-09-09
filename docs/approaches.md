@@ -9,6 +9,8 @@ replaces the other.
   iteration loop and the pre-release gate.
 - **CoWork**: the real desktop application, driven directly. The pre-release confirmation,
   run by a person on purpose. Never a commit gate.
+- **Docker costs a container start. CoWork costs a VM boot, the keyboard and a permanent
+  session in a real account**, and has no headless route.
 - One case format serves both. The backend changes, the case does not.
 - The CoWork backend honours a subset of the format, because it drives a live session rather
   than the harness.
@@ -78,6 +80,24 @@ runs once rather than skipping; the exact rule is in [running_evals.md](running_
 command-line option a backend cannot honour is a usage error instead, and the difference is
 stated in [cli.md](cli.md).
 
+## What each one costs
+
+The table above says what each backend proves. This one says what it costs to run. None of
+the CoWork costs is reduced by better engineering: each is a property of driving a desktop
+application that exposes no scriptable entry point.
+
+| | Docker | CoWork |
+| ------------------------- | ------------------------------------ | ------------------------------------ |
+| Runs the code             | the plugin files in your checkout    | the plugin set already deployed to the signed in account. A local edit is invisible until it is deployed |
+| Per case                  | a container start plus the agent run | a VM boot plus the agent run, so minutes |
+| Headless                  | yes                                  | no. The submit step is a synthetic keystroke behind a macOS Accessibility grant, so there is no CI route at all. See [cowork_desktop.md](cowork_desktop.md) |
+| The machine while it runs | free. A container is not the desktop | yours only between cases. Each submission activates the application and sends Return to the frontmost window, and nothing may steal focus while it does. See [cowork_driver.md](cowork_driver.md) |
+| The account               | a container login this package owns  | a live account. A case can reach real mail, and every run leaves a permanent session in that account's history. See [cowork_driver.md](cowork_driver.md) |
+| What bounds the spend     | `--max-cost-usd`, per run            | nothing the host can observe. The driver's `max_runs` ceiling bounds submissions instead |
+| Several plugins at once   | yes                                  | a usage error. See [cli.md](cli.md)  |
+| The case format           | all of it                            | the subset above                     |
+| Couples to                | the image definition in this repository | application internals that no release promises to keep. See [cowork_desktop.md](cowork_desktop.md) |
+
 ## Claude Code as a proxy for CoWork
 
 `claude plugin eval` loads one plugin into a fresh isolated session, runs each case, and
@@ -102,16 +122,6 @@ entry point, so the only route is to drive the desktop application: submit a pro
 its `claude://` URL scheme, press Return with a synthetic keystroke, and read the transcript,
 audit log and outputs the session writes to the host filesystem. See
 [cowork_desktop.md](cowork_desktop.md).
-
-The costs. None is reduced by better engineering.
-
-| Cost                                                        | Detail                                 |
-| ----------------------------------------------------------- | -------------------------------------- |
-| Couples to application internals no release promises to keep | [cowork_desktop.md](cowork_desktop.md) |
-| Needs a macOS Accessibility grant, so no headless and no CI  | [cowork_desktop.md](cowork_desktop.md) |
-| Drives a live account, so a case can reach real mail         | [cowork_driver.md](cowork_driver.md)   |
-| Leaves a permanent session in that account's history         | [cowork_driver.md](cowork_driver.md)   |
-| Costs a VM boot plus a full agentic run, so minutes per case | [cowork_desktop.md](cowork_desktop.md) |
 
 **The plugin under test is not loaded by this backend.** The deep link carries a prompt, and
 nothing on the host writes into the VM's configuration, so a CoWork run exercises the plugin
