@@ -95,16 +95,16 @@ reason the requirements files are: `init` reads it at run time on a machine with
 
 ### Phase 4: the example file and the init verb
 
-- [ ] `cowork_evals.example.yaml` moves to `src/cowork_evals/data/`, and `docs/library.md` records it as shipped data
-- [ ] `cowork_evals init` writes `cowork_evals.yaml`, `.claude/skills/cowork-evals/SKILL.md` and a pointer block in `CLAUDE.md`, into the working directory
-- [ ] `init` writes only what is absent, leaves what exists untouched, and prints one line per target saying which of the two it did
-- [ ] `docs/cli.md`: the verb, what it writes, and its exit codes
+- [x] `cowork_evals.example.yaml` moves to `src/cowork_evals/data/`, and `docs/library.md` records it as shipped data
+- [x] `cowork_evals init` writes `cowork_evals.yaml`, `.claude/skills/cowork-evals/SKILL.md` and a pointer block in `CLAUDE.md`, into the working directory
+- [x] `init` writes only what is absent, leaves what exists untouched, and prints one line per target saying which of the two it did
+- [x] `docs/cli.md`: the verb, what it writes, and its exit codes
 
 ### Phase 5: the skill
 
-- [ ] `src/cowork_evals/data/skill/SKILL.md`: the case tree, the two addressability keys, the four structural grader types, the two judged ones, the traps, and `cowork_evals docs` as the route to the rest
-- [ ] The `CLAUDE.md` block `init` appends: the command, the two new verbs, and the runtime constraint on the code under test
-- [ ] `docs/cli.md` links neither. The skill is named in `docs/library.md` as shipped data
+- [x] `src/cowork_evals/data/skill/SKILL.md`: the case tree, the two addressability keys, the four structural grader types, the two judged ones, the traps, and `cowork_evals docs` as the route to the rest
+- [x] The `CLAUDE.md` block `init` appends: the command, the two new verbs, and the runtime constraint on the code under test
+- [x] `docs/cli.md` links neither. The skill is named in `docs/library.md` as shipped data
 
 ### Phase 6: check --all
 

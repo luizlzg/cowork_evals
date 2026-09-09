@@ -33,6 +33,33 @@ CONFIG_NAME = "cowork_evals.yaml"
 SKILL_TARGET = Path(".claude") / "skills" / "cowork-evals" / "SKILL.md"
 MEMORY_NAME = "CLAUDE.md"
 
+# The block `init` appends to the consumer's CLAUDE.md, and the marker that says it is
+# already there. The marker is the heading, so an edited block is still recognised and is
+# never appended twice. docs/cli.md.
+MEMORY_MARKER = "## Evals, with cowork_evals"
+MEMORY_BLOCK = """
+## Evals, with cowork_evals
+
+Evals for the plugins in this repository run through the `cowork_evals` command. Everything
+it does goes through that one executable.
+
+- `cowork_evals docs` prints where its documentation is, and `cowork_evals docs <name>`
+  prints one document's path. `docs eval_format` is the case format, `docs cli` the command.
+- `cowork_evals run --docker <path>` runs a case tree and gates on it.
+  `cowork_evals test --docker <path>/tests` runs a plugin's own pytest suite on the CoWork
+  runtime, with no model.
+- `cowork_evals check --all` reports what each backend still needs.
+- The case format and the authoring traps are the `cowork-evals` skill in
+  `.claude/skills/cowork-evals/`.
+
+A CoWork session is Python 3.10 with a fixed wheel set. Every skill, command, agent and hook
+under a path passed to `cowork_evals run` imports only what that image carries. Read
+`cowork_evals docs runtime` before adding an import to plugin code.
+
+`cowork_evals.yaml` holds every setting and is the only route: nothing is read from the
+process environment, and there is no `.env`.
+"""
+
 # The documentation tree, tried in this order. The first that is a directory wins.
 _DOCS_CANDIDATES = (
     PACKAGE / "docs",  # an install: the wheel places the tree beside the modules

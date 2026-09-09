@@ -43,6 +43,8 @@ for member in \
   cowork_evals/data/requirements.txt \
   cowork_evals/data/requirements_installable.txt \
   cowork_evals/data/requirements_test.txt \
+  cowork_evals/data/cowork_evals.example.yaml \
+  cowork_evals/data/skill/SKILL.md \
   cowork_evals/docker/Dockerfile \
   cowork_evals/docker/Dockerfile.pytest \
   cowork_evals/docs/eval_format.md \

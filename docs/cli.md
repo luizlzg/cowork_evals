@@ -36,7 +36,7 @@ cowork_evals setup --docker
 cowork_evals check (--docker | --cowork | --all)
 cowork_evals prune [--docker] [--logs] [--older-than DAYS] [--out DIR]
 cowork_evals docs  [<name>]
-cowork_evals init  [--force]
+cowork_evals init
 cowork_evals --version
 ```
 
@@ -315,6 +315,34 @@ ship, and `docs claude_code/README` says what they are.
 Where the tree sits differs between an install and a checkout, which is why a document is
 found through this verb rather than by a relative path. That rule, and the two reference
 rules that follow from it, are in [library.md](library.md).
+
+## init
+
+`init` writes what a consumer repository needs to use this command, into the working
+directory. It takes no backend and no option.
+
+| Target                                  | Is                                                          |
+| --------------------------------------- | ----------------------------------------------------------- |
+| `cowork_evals.yaml`                     | Every key and every default, and a placeholder for `cowork.profile` |
+| `.claude/skills/cowork-evals/SKILL.md`  | The eval-authoring skill: the tree, the keys, the graders, the traps |
+| `CLAUDE.md`                             | A block naming the command, the `docs` verb and the runtime constraint |
+
+It never overwrites. A target that exists is reported as kept and is left exactly as it is,
+so a second run changes nothing and a consumer's own edits survive. `CLAUDE.md` is appended
+to when it exists and does not carry the block, and created when it is absent; the block's
+own heading is the marker, so an edited block is recognised and never appended twice.
+
+Regenerating a target means deleting it first. That is the operator's act, and there is no
+option here that overwrites a file.
+
+| Condition                                | Prints                                 | Exit |
+| ---------------------------------------- | -------------------------------------- | ---- |
+| a target was written                     | one `wrote` line per target            | 0    |
+| every target was already there           | one `kept` line per target, then a summary | 0    |
+| a source is missing from the installation | one line saying so, on stderr          | 3    |
+
+`cowork_evals.yaml` names a profile, which is an identifier. Add it to the repository's
+ignore list. See [library.md](library.md).
 
 ## Exit codes
 

@@ -1,5 +1,6 @@
-# Copy to cowork_evals.yaml, then set cowork.profile. Every other line below is the
-# built-in default, so a copy with the rest commented out behaves as no file at all.
+# `cowork_evals init` writes this file to cowork_evals.yaml in the working directory. Set
+# cowork.profile there. Every other line below is the built-in default, so a copy with the
+# rest commented out behaves as no file at all.
 #
 # The three sections, the ladder over them and the rules the loader applies are in
 # docs/library.md. Each section links to the file that owns its keys.

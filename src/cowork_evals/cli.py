@@ -87,6 +87,7 @@ def build_parser() -> argparse.ArgumentParser:
     _check_parser(verbs)
     _prune_parser(verbs)
     _docs_parser(verbs)
+    _init_parser(verbs)
     return parser
 
 
@@ -187,6 +188,11 @@ def _prune_parser(verbs: Any) -> None:
     verb.add_argument("--out", help="the log root, replacing logs/evals")
 
 
+def _init_parser(verbs: Any) -> None:
+    """`init` takes no backend and no option. It writes three targets and overwrites none."""
+    verbs.add_parser("init", help="write the config, the skill and a CLAUDE.md block")
+
+
 def _docs_parser(verbs: Any) -> None:
     """`docs` takes no backend. It reads the shipped tree and writes nothing."""
     verb = verbs.add_parser("docs", help="print where the shipped documentation is")
@@ -260,6 +266,8 @@ def _dispatch(args: argparse.Namespace, config: Config) -> int:
         return _check(args, config)
     if args.verb == "docs":
         return _docs(args)
+    if args.verb == "init":
+        return _init()
     return _prune(args, config)
 
 
@@ -584,6 +592,56 @@ def _docs(args: argparse.Namespace) -> int:
         )
     print(path)
     return OK
+
+
+def _init() -> int:
+    """Write the configuration file, the skill and the `CLAUDE.md` block, into the working
+    directory.
+
+    It never overwrites. A target that exists is left exactly as it is and reported, so a
+    second run changes nothing and a consumer's own edits survive. Regenerating one means
+    deleting it first, which is the operator's act and not this verb's. docs/cli.md.
+    """
+    written = 0
+    for source, target in (
+        (resources.EXAMPLE_CONFIG, Path(resources.CONFIG_NAME)),
+        (resources.SKILL, resources.SKILL_TARGET),
+    ):
+        if target.exists():
+            print(f"kept {target}")
+            continue
+        if not source.is_file():
+            return _refuse([f"{source.name} is missing from this installation"], PREFLIGHT_FAILED)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(source.read_text())
+        print(f"wrote {target}")
+        written += 1
+
+    written += _init_memory()
+    if written == 0:
+        print("nothing to do: every target was already there")
+    return OK
+
+
+def _init_memory() -> int:
+    """Append the pointer block to `CLAUDE.md`, creating the file when it is absent.
+
+    The marker is the block's own heading. A file already carrying it is left alone, whatever
+    the block below the heading has since been edited to say.
+    """
+    target = Path(resources.MEMORY_NAME)
+    if target.is_file():
+        existing = target.read_text()
+        if resources.MEMORY_MARKER in existing:
+            print(f"kept {target}: it already carries the block")
+            return 0
+        separator = "" if existing.endswith("\n") else "\n"
+        target.write_text(existing + separator + resources.MEMORY_BLOCK)
+        print(f"appended to {target}")
+        return 1
+    target.write_text(resources.MEMORY_BLOCK.lstrip("\n"))
+    print(f"wrote {target}")
+    return 1
 
 
 def _prune(args: argparse.Namespace, config: Config) -> int:
