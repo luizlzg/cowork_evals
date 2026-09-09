@@ -32,11 +32,11 @@ done < <(find . -name '*.sh' -not -path './.*' | sort)
 if [ "$FIX" -eq 1 ]; then
   uv run ruff check --fix .
   uv run ruff format .
-  command -v shfmt > /dev/null 2>&1 && shfmt -w -i 2 -ci "${SHELL_FILES[@]}"
+  command -v shfmt > /dev/null 2>&1 && shfmt -w -i 2 -ci -sr -bn "${SHELL_FILES[@]}"
 else
   uv run ruff check .
   uv run ruff format --check .
-  command -v shfmt > /dev/null 2>&1 && shfmt -d -i 2 -ci "${SHELL_FILES[@]}"
+  command -v shfmt > /dev/null 2>&1 && shfmt -d -i 2 -ci -sr -bn "${SHELL_FILES[@]}"
 fi
 command -v shellcheck > /dev/null 2>&1 && shellcheck -x -P scripts "${SHELL_FILES[@]}"
 
