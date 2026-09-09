@@ -179,6 +179,8 @@ docker:
 
 `cowork_evals.yaml` names a profile, which is an identifier, so it is never committed. The
 public repository rule in [../README.md](../README.md) applies to every value in it.
+`../cowork_evals.example.yaml` is the committed template: every key, every default, and a
+placeholder for the profile.
 
 ## Where state lives
 

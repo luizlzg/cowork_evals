@@ -55,6 +55,7 @@ what is missing.
 | [`tests/`](tests/README.md)     | Deterministic tests for this repository's own code                 |
 | `logs/`                         | Eval run output. Git-ignored, and absent until a run creates it     |
 | `cowork_evals.yaml`             | Every setting, in three sections. Git-ignored: it names a profile   |
+| `cowork_evals.example.yaml`     | The template for it: every key, every default, no identifier       |
 
 ## Public repository
 

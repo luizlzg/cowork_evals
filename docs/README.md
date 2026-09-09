@@ -71,18 +71,5 @@ against. The three requirements files are measurements too and are not here: the
 data at [`../src/cowork_evals/data/`](../src/cowork_evals/data/), and
 [`environments.md`](environments.md) owns the split between them.
 
-## Provenance
-
-Adapted from an internal marketplace repository, which is not public. Absolute paths are
-redacted, because this repository is public.
-
-| Source document             | Adapted into                                             |
-| --------------------------- | -------------------------------------------------------- |
-| `dev/environment.md`        | [`environments.md`](environments.md)                     |
-| `dev/runtime.md`            | [`runtime.md`](runtime.md)                               |
-| `dev/data/requirements*`    | [`../src/cowork_evals/data/`](../src/cowork_evals/data/) |
-| `plan_evals_claude_code.md` | [`plugin_eval.md`](plugin_eval.md)                       |
-| `plan_run_cowork.md`        | [`cowork_desktop.md`](cowork_desktop.md)                 |
-
 Writing rules are in [`../CLAUDE.md`](../CLAUDE.md). The public repository rule is in
 [`../README.md`](../README.md), and it applies to every file here.

@@ -1,0 +1,41 @@
+# Copy to cowork_evals.yaml, then set cowork.profile. Every other line below is the
+# built-in default, so a copy with the rest commented out behaves as no file at all.
+#
+# The three sections, the ladder over them and the rules the loader applies are in
+# docs/library.md. Each section links to the file that owns its keys.
+#
+# cowork_evals.yaml is git-ignored. It names a profile, which is an identifier, and the
+# public repository rule in README.md applies to every value in it. This example file is
+# committed and carries no value that identifies a machine, an account or a network.
+
+# The CoWork driver. docs/cowork_driver.md.
+cowork:
+  # Required by the CoWork backend, and the one key with no default. A bare name resolves
+  # under ~/Library/Application Support. An absolute path is taken as it stands.
+  profile: <the Application Support profile directory name>
+  # surface: cowork
+  # settle_seconds: 3.0
+  # session_timeout: 120.0
+  # idle_seconds: 20.0
+  # run_timeout: 1800.0
+  # max_runs: 50
+  # run_log: ~/.cowork-runs.jsonl
+  # log_dir: logs
+
+# The claude plugin eval argument list, and the CoWork backend's judge model.
+# docs/running_evals.md.
+eval:
+  # model: sonnet
+  # judge_model: haiku
+  # allow_tools: [Bash]
+  # max_cost_usd: 5
+  # max_cost_total_usd: 25
+
+# The container backend. docs/docker.md.
+docker:
+  # platform: linux/arm64
+  # claude_code_version: 2.1.265
+  # login_dir: ~/.cache/cowork_evals/claude
+  # An extra root CA, for a host whose network inspects TLS. Unset, or naming a file that
+  # is not there, passes nothing. The certificate never enters this repository.
+  # extra_ca_file: ~/extra_root_ca.pem
