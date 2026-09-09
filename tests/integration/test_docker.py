@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from cowork_evals.docker import Docker, probe
+from cowork_evals.docker import Condition, Docker, probe, remedy
 from cowork_evals.docker.parity import EXPECTED_VERSIONS, REQUIREMENTS, compare
 from cowork_evals.harness import RunOptions
 from cowork_evals.requirements import pins
@@ -40,9 +40,11 @@ NO_CASES = "No eval cases found"
 def docker() -> Docker:
     """The daemon and the image, asserted once. Nothing here builds either."""
     configured = Docker()
-    assert configured.daemon_is_reachable(), "the docker daemon is not reachable"
+    assert configured.daemon_is_reachable(), (
+        f"docker daemon is not reachable: {remedy(Condition.DAEMON)}"
+    )
     assert configured.image_is_present(), (
-        f"{configured.tag} is absent: run scripts/image.sh, which no test here runs"
+        f"{configured.tag} is absent: {remedy(Condition.IMAGE)}, which no test here runs"
     )
     return configured
 
@@ -50,7 +52,9 @@ def docker() -> Docker:
 @pytest.fixture
 def credentialled(docker: Docker) -> Docker:
     """The same, for a test that reads the credential. A missing one fails it."""
-    assert docker.has_credential(), "no credential: run `Docker().login()` once. docs/docker.md."
+    assert docker.has_credential(), (
+        f"no credential: {remedy(Condition.CREDENTIAL)}. docs/docker.md."
+    )
     return docker
 
 
@@ -75,7 +79,7 @@ def container(docker: Docker, *command: str, mounts: tuple[str, ...] = ()) -> st
 
 def test_the_daemon_is_reachable_and_the_image_is_present(docker):
     assert docker.daemon_is_reachable()
-    assert docker.image_is_present(), f"{docker.tag} is absent: run scripts/image.sh"
+    assert docker.image_is_present(), f"{docker.tag} is absent: {remedy(Condition.IMAGE)}"
 
 
 def test_python3_reports_the_recorded_version(docker):

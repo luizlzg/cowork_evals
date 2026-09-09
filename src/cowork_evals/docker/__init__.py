@@ -70,6 +70,23 @@ class Condition(StrEnum):
     CREDENTIAL = "credential"
 
 
+def remedy(condition: Condition) -> str:
+    """The one command that fixes each condition.
+
+    Every caller reads it here: `check` below, `scripts/image.sh`, `scripts/login.sh` and
+    the integration tier. It names a development script under `scripts/`, because
+    `cowork_evals setup --docker` is not built. docs/cli.md holds the command that replaces
+    it, and `scripts/README.md` holds the scripts.
+    """
+    match condition:
+        case Condition.DAEMON:
+            return "start Docker Desktop or Rancher Desktop"
+        case Condition.IMAGE:
+            return "run scripts/image.sh"
+        case Condition.CREDENTIAL:
+            return "run scripts/login.sh"
+
+
 class DockerError(Exception):
     """A container backend failure, carrying a message and nothing else."""
 
@@ -379,17 +396,15 @@ class Docker:
             unmet.append(
                 (
                     Condition.DAEMON,
-                    "docker daemon is not reachable: start Docker Desktop or Rancher Desktop",
+                    f"docker daemon is not reachable: {remedy(Condition.DAEMON)}",
                 )
             )
         # The image is unreadable without a daemon, so a second line about it would name a
         # condition this run cannot know. The credential is on the host and is read either way.
         elif not self.image_is_present():
             unmet.append(
-                (Condition.IMAGE, f"image {self.tag} is absent: run `cowork_evals setup --docker`")
+                (Condition.IMAGE, f"image {self.tag} is absent: {remedy(Condition.IMAGE)}")
             )
         if not self.has_credential():
-            unmet.append(
-                (Condition.CREDENTIAL, "no credential: run `cowork_evals setup --docker` to log in")
-            )
+            unmet.append((Condition.CREDENTIAL, f"no credential: {remedy(Condition.CREDENTIAL)}"))
         return unmet

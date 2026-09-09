@@ -307,11 +307,16 @@ Each item below names the one file that should own the fact.
       `docs/running_evals.md:264-266` and both belong to the harness, not to one backend:
       the CoWork and venv backends write `aggregate-result.json` too. Move `RESULT_NAME`
       into `harness.py`.
-- [ ] One condition has four remedies. `docker/__init__.py:345` and `:347` print
+- [x] One condition has four remedies. `docker/__init__.py:345` and `:347` print
       `cowork_evals setup --docker`, which does not exist yet; `scripts/login.sh:36` says
       `scripts/login.sh`; `tests/integration/test_docker.py:43` and `:93` say
       `scripts/image.sh`; `scripts/README.md:24` says both scripts. One function should
       return the remedy per condition, and it names the script until the command exists.
+      `docker.remedy(condition)`, a match over the phase 4 `Condition`. `check` builds every
+      message from it, `scripts/login.sh` and the three integration assertions call it, and
+      `scripts/image.sh` reads it through `check`. `scripts/README.md:24` already named both
+      scripts and needed no edit. A fourth condition, the daemon, had two wordings and now
+      has one.
 
 ## Phase 6: Smaller items
 

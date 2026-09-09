@@ -30,11 +30,11 @@ if [ "${1-}" = "--check" ]; then
   exec uv run --project "$ROOT" python3 -c '
 import sys
 
-from cowork_evals.docker import Docker
+from cowork_evals.docker import Condition, Docker, remedy
 
 docker = Docker()
 if not docker.has_credential():
-    print("FAIL: no login: run scripts/login.sh", file=sys.stderr)
+    print(f"FAIL: no login: {remedy(Condition.CREDENTIAL)}", file=sys.stderr)
     sys.exit(1)
 print(f"OK: logged in at {docker.credentials_file}")
 '
