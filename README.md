@@ -3,16 +3,29 @@
 Run evals for Claude CoWork skills and plugins, and run a plugin's own Python tests on the
 CoWork runtime.
 
-Neither is written here. This is a library, installed by the repository that owns the plugins
-under test. That repository writes the cases and the tests, and points this one at them.
+## Summary
 
-CoWork exposes no scriptable entry point, so there is no single way to run an eval against it.
-This package holds two: Claude Code inside a container that reproduces the CoWork image, and
-the real CoWork desktop application driven directly.
+Four problems stand between a CoWork skill and a test suite. This is what this package does
+about each.
 
-An eval is written once, in the `claude plugin eval` case format, and runs on either. The
-backend changes, the case does not. The CoWork backend honours a subset of the format, because
-it drives a live session rather than the harness.
+| Problem                                                                                   | How this solves it                                                                        |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| CoWork has no scriptable entry point, so a skill can only be exercised by a person clicking | Two backends execute a case from the command line: Claude Code inside a container that reproduces the CoWork image, and the real desktop application driven directly |
+| A container is not the product, and the product cannot be run on every commit             | Both. Docker is the iteration loop and the pre-release gate. CoWork is the confirmation on the real stack, run by a person on purpose, and never a commit gate |
+| Two backends would mean two eval formats and two sets of results                          | One format, `claude plugin eval`'s own. The same case tree runs on both, both write the same result document, and one gate reads it |
+| A CoWork session is Python 3.10 with a fixed wheel set, so a plugin's tests passing on a laptop prove nothing about the session | `cowork_evals test` runs the plugin's own pytest suite inside that runtime, with no model in the loop |
+
+A case asserts what a unit test cannot reach: the answer text, which tools ran and in what
+order, which files the agent created, and a rubric a judge model votes on. The four structural
+graders are deterministic and carry the gate. The two judged ones are printed.
+
+The CoWork backend honours a subset of the format, because it drives a live session rather
+than the harness. [`docs/approaches.md`](docs/approaches.md) says which subset, and what each
+backend proves.
+
+Evals are not written here. This is a library, installed by the repository that owns the
+plugins under test. That repository writes the cases and the tests, and points this one at
+them.
 
 ## Install
 
