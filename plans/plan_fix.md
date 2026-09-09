@@ -370,10 +370,13 @@ Each item below names the one file that should own the fact.
       Two were left. `tests/unit/test_env.py` went in phase 1 and
       `tests/integration/test_docker.py:29` was rewritten in phase 5. The word is now
       nowhere in the repository except the rule in `CLAUDE.md` that forbids it.
-- [ ] `max_cost_total_usd` is defaulted, documented and tested, and read nowhere. After
+- [x] `max_cost_total_usd` is defaulted, documented and tested, and read nowhere. After
       phase 1 it is a YAML key nothing reads. Mark it in `config.py` as belonging to the
       unbuilt gate, naming `plan_cli.md` phase 6 as what will read it, or leave it out until
       then.
+      Marked, and the mark names `docs/running_evals.md`, not the plan. That file owns the
+      ceiling, the sweep that sums `costUsd` and the gate's build status, and no code links
+      to a plan.
 - [ ] The smoke grader matches `Python 3\.10\.12`, but `docs/staged_runtime.md:118` records
       the staged interpreter as 3.10.16, and `docs/running_evals.md:33` says the fixture
       serves both Claude Code backends. It cannot serve the venv one as written. Loosen the
