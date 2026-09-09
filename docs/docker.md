@@ -24,9 +24,11 @@ The image inventory this container has to match is [runtime.md](runtime.md). The
 around it is [running_evals.md](running_evals.md) and the command that reaches it is
 [cli.md](cli.md).
 
-What of this is built is the status table in [running_evals.md](running_evals.md). Until the
-command reaches the container, `scripts/image.sh` builds the image and a run goes through
-`cowork_evals.docker.Docker.run`.
+What of this is built is the status table in [running_evals.md](running_evals.md).
+`cowork_evals setup --docker` builds the image and `cowork_evals run --docker` runs through
+it. `scripts/image.sh` and `scripts/login.sh` stay as development tasks for this repository.
+A failed check names the command a consumer runs, which is `cowork_evals setup --docker` for
+both an absent image and an absent login, and never a script under `scripts/`.
 
 ## Configuration
 

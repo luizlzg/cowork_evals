@@ -17,18 +17,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from .cases import PLUGIN_MANIFEST, Case, CaseError, discover, plugin_root
+from .cases import EVAL_DIR, JUDGED, Case, CaseError, discover, plugin_roots
 from .config import Config, CoWorkError
 from .cowork import CoWork
 from .grader import grade as grade_structural
 from .grader import skipped as skipped_result
-from .judge import JUDGED, resolve_model
 from .judge import grade as grade_judged
+from .judge import resolve_model
 from .results import CaseResult, Run, build, write
-
-# The eval directory the harness defaults to, and this repository never configures another.
-# docs/eval_format.md.
-EVAL_DIR = "evals"
 
 # The MCP stand-in directory. Its three layers, suite, group and case, are
 # docs/claude_code/plugin_eval_reference.md.
@@ -173,11 +169,16 @@ class Plan:
         return self.submissions + self.recent > self.max_runs
 
     @property
-    def refusal(self) -> str:
+    def arithmetic(self) -> str:
+        """The three numbers the ceiling compares. `--dry-run --cowork` prints it."""
         return (
-            f"the rate ceiling would be exceeded: {self.submissions} submissions planned, "
+            f"{self.submissions} submissions planned, "
             f"{self.recent} already made in the last 24 hours, max_runs is {self.max_runs}"
         )
+
+    @property
+    def refusal(self) -> str:
+        return f"the rate ceiling would be exceeded: {self.arithmetic}"
 
 
 def plan(
@@ -344,17 +345,11 @@ def _one_plugin_root(target: Path | str) -> Path:
     exits: there is no sweep on this backend, for the reason in docs/running_evals.md.
     """
     resolved = Path(target).resolve()
-    below = {
-        manifest.parent.parent.resolve()
-        for manifest in resolved.rglob(str(PLUGIN_MANIFEST))
-        if manifest.is_file()
-    }
-    if len(below) > 1:
-        named = ", ".join(str(root) for root in sorted(below))
+    roots = plugin_roots(resolved)
+    if len(roots) > 1:
+        named = ", ".join(str(root) for root in roots)
         raise CaseError(f"{resolved} covers more than one plugin root: {named}")
-    if len(below) == 1:
-        return below.pop()
-    return plugin_root(resolved)
+    return roots[0]
 
 
 def _effective_runs(case: Case, override: int | None) -> int:

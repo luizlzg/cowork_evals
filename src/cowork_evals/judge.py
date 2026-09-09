@@ -26,9 +26,6 @@ from .cases import Grader
 from .config import Config
 from .grader import GraderResult, failed, produced_file, resolve_target, skipped
 
-# The grader types this module answers for. The four structural ones are grader.py's.
-JUDGED = ("llm", "baseline")
-
 # Three votes, and a majority of them. docs/eval_format.md.
 VOTES = 3
 MAJORITY = 2

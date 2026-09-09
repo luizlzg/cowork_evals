@@ -133,5 +133,5 @@ This is the cadence a consumer repository follows. It is the one copy;
 | Before a release    | `cowork_evals run --docker <root>`, then a CoWork smoke set   | the release checklist |
 
 Which of these commands is built is the status table in
-[running_evals.md](running_evals.md), and [docker.md](docker.md) says what reaches the
-container until the `--docker` one is.
+[running_evals.md](running_evals.md), and what reaches the container is
+[docker.md](docker.md).

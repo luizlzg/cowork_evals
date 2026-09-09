@@ -154,34 +154,34 @@ every one of them into that file.
 [`../docs/eval_format.md`](../docs/eval_format.md) calls an error. It writes nothing and
 runs no case.
 
-- [ ] `Violation` frozen: `path`, `rule`, `detail`. `violations(root)` returns them sorted
+- [x] `Violation` frozen: `path`, `rule`, `detail`. `violations(root)` returns them sorted
       by path, and an empty list means the tree is valid.
-- [ ] `uncovered(root) -> list[str]`, one line per directory under `<plugin>/skills/` with
+- [x] `uncovered(root) -> list[str]`, one line per directory under `<plugin>/skills/` with
       no directory of that name under `evals/`. It is a second return value and never a
       violation: coverage is not a rule of the format, and `--require-coverage` in phase 5
       is what turns it into a failure.
-- [ ] The `<skill>` layer, both directions. A directory directly under `evals/` is `plugin`,
+- [x] The `<skill>` layer, both directions. A directory directly under `evals/` is `plugin`,
       `mocks`, or the name of a directory under `<plugin>/skills/`. A plugin with no
       `skills/` directory admits only `plugin` and `mocks`.
-- [ ] `tags` names the case's own `<skill>` directory.
-- [ ] `plugins: ["../../.."]` resolves, from the case directory, to the same directory
+- [x] `tags` names the case's own `<skill>` directory.
+- [x] `plugins: ["../../.."]` resolves, from the case directory, to the same directory
       `cases.plugin_root` resolved. [`../docs/cli.md`](../docs/cli.md) requires the
       cross-check.
-- [ ] `name` is present. `tags` and `plugins` are present.
-- [ ] Any frontmatter key outside the table in
+- [x] `name` is present. `tags` and `plugins` are present.
+- [x] Any frontmatter key outside the table in
       [`../docs/eval_format.md`](../docs/eval_format.md) is a violation, `context.*`
       in `prompt.md` included.
-- [ ] The caps: `runs` at most 50, `max_turns` at most 200, `timeout_seconds` at most 3600.
+- [x] The caps: `runs` at most 50, `max_turns` at most 200, `timeout_seconds` at most 3600.
       Each `env` key starts with `EVAL_`. That key is the case's execution environment for
       the agent under test, which the harness reads. It is not this package's configuration.
-- [ ] `case.yaml` carries `schema_version: "1.1"` and `name`, and no key outside
+- [x] `case.yaml` carries `schema_version: "1.1"` and `name`, and no key outside
       `context.scaffold_script`, `context.history_file` and `context.add_dirs`.
-- [ ] A `context.add_dirs` entry that resolves outside its own case directory is a
+- [x] A `context.add_dirs` entry that resolves outside its own case directory is a
       violation.
-- [ ] A grader `weight` is greater than 0. An unknown grader `type` is a violation.
-- [ ] A file under `graders/` with no `---` block is a violation. The harness ignores it, so
+- [x] A grader `weight` is greater than 0. An unknown grader `type` is a violation.
+- [x] A file under `graders/` with no `---` block is a violation. The harness ignores it, so
       the case runs with fewer graders than it appears to have.
-- [ ] `tests/unit/test_validate.py` over hand-written trees under `tests/data/validate/`:
+- [x] `tests/unit/test_validate.py` over hand-written trees under `tests/data/validate/`:
       one clean tree, one violation of every rule above, and one tree whose only finding is
       an uncovered skill, which returns no violation.
 
@@ -191,38 +191,38 @@ runs no case.
 [`../docs/running_evals.md`](../docs/running_evals.md), and one module writes all of it, so
 no backend has to.
 
-- [ ] `scope_name(target, roots)`: `<plugin>-<skill>-<case>` for a case directory,
+- [x] `scope_name(target, roots)`: `<plugin>-<skill>-<case>` for a case directory,
       `<plugin>-<skill>` for a skill directory, `<plugin>` for an `evals/` directory, `all`
       for a path covering more than one plugin root, and `<plugin>` for any other path
       inside one root, the plugin root itself included. The plugin name is
       `.claude-plugin/plugin.json`'s `name`, and the folder basename when that file names
       none.
-- [ ] `slug(name)`: every character outside `[A-Za-z0-9._-]` becomes `-`. Both a scope name
+- [x] `slug(name)`: every character outside `[A-Za-z0-9._-]` becomes `-`. Both a scope name
       and a per-plugin directory name go through it.
-- [ ] `run_dir(root, scope)`: `<root>/<yyyymmdd-hhmmss>-<scope>`, local time. A second
+- [x] `run_dir(root, scope)`: `<root>/<yyyymmdd-hhmmss>-<scope>`, local time. A second
       invocation inside the same second appends `-2`, then `-3`.
-- [ ] `plugin_dir(run_dir, name)`: `<run_dir>/<slug>`, with the same `-2` suffix on a
+- [x] `plugin_dir(run_dir, name)`: `<run_dir>/<slug>`, with the same `-2` suffix on a
       collision. Two plugins in one sweep whose manifests carry the same `name` get two
       directories, so neither document is overwritten and the gate reads both.
-- [ ] The root is `<cwd>/logs/evals`, and `--out DIR` replaces it with `DIR`.
-- [ ] `write_env(run_dir, backend, image=None)`: one `name: value` line per row, for
+- [x] The root is `<cwd>/logs/evals`, and `--out DIR` replaces it with `DIR`.
+- [x] `write_env(run_dir, backend, image=None)`: one `name: value` line per row, for
       `cowork_evals` from `importlib.metadata`, `claude --version`, `python3 -V`, `backend`,
       and `image` on the container backend. A command that does not run records the failure
       on its line rather than raising.
-- [ ] `point_latest(root, run_dir)`: a relative symlink at `<root>/latest`, replaced through
+- [x] `point_latest(root, run_dir)`: a relative symlink at `<root>/latest`, replaced through
       a temporary name and `os.replace`, so it is never absent between two runs.
-- [ ] `prune(root, days)`: delete directories whose name matches the stamp pattern and whose
+- [x] `prune(root, days)`: delete directories whose name matches the stamp pattern and whose
       stamp is older than `days`. Read the stamp from the name, never the modification time,
       which a later read moves. Nothing else under the root is touched, and `latest` is
       re-pointed or removed when it dangles.
-- [ ] `tee(run_dir)`: a context manager over `run.log`. It opens a pipe, dups the write end
+- [x] `tee(run_dir)`: a context manager over `run.log`. It opens a pipe, dups the write end
       onto file descriptors 1 and 2, and runs a thread that copies bytes to both the saved
       terminal descriptor and the file. It restores both descriptors and joins the thread on
       the way out. A child process inherits descriptors 1 and 2, so the harness's and the
       container's output reaches the file. Wrapping `sys.stdout` does not, which is why this
       is at the descriptor level.
-- [ ] The copy is bytes and is never decoded, so a progress carriage return survives.
-- [ ] `tests/unit/test_logs.py`: the five scope shapes, the slug rule, both collision
+- [x] The copy is bytes and is never decoded, so a progress carriage return survives.
+- [x] `tests/unit/test_logs.py`: the five scope shapes, the slug rule, both collision
       suffixes, the `env.txt` lines, the symlink replacement, pruning by name with a fixture
       whose modification time contradicts its name, a dangling `latest`, and a real
       `subprocess.run` whose output is asserted in `run.log`.
@@ -233,40 +233,40 @@ no backend has to.
 invocation. The conditions are the gate table in
 [`../docs/running_evals.md`](../docs/running_evals.md).
 
-- [ ] `GateResult` frozen: `passed`, `lines`. `gate(run_dir, *, extra=())` reads every
+- [x] `GateResult` frozen: `passed`, `lines`. `gate(run_dir, *, extra=())` reads every
       `<plugin>/aggregate-result.json` one level under the run directory. `extra` is a
       failure line the caller already has, which is how the cost ceiling reaches the gate
       without a second code path.
-- [ ] A missing or unparsable document is a failure naming the path. So is a document whose
+- [x] A missing or unparsable document is a failure naming the path. So is a document whose
       `schemaVersion` is not 1. An unknown field is ignored: the contract is additive-only.
-- [ ] The `with` arm only.
-- [ ] A grader result carries `name`, `passed` and `scored`, never `type`. Join it to that
+- [x] The `with` arm only.
+- [x] A grader result carries `name`, `passed` and `scored`, never `type`. Join it to that
       case's grader definition by name to learn its class. A result with no matching
       definition is a failure naming it.
-- [ ] A failed `regex`, `tool_used`, `tool_order` or `file_exists` grader fails the gate.
-- [ ] A failed `llm` or `baseline` grader is printed and does not fail the gate.
-- [ ] A case carrying `skipped: true`, a grader result carrying `skipped: true`, and a
+- [x] A failed `regex`, `tool_used`, `tool_order` or `file_exists` grader fails the gate.
+- [x] A failed `llm` or `baseline` grader is printed and does not fail the gate.
+- [x] A case carrying `skipped: true`, a grader result carrying `skipped: true`, and a
       grader result carrying `scored: false` each fail the gate, with the reason on the
       line.
-- [ ] `partial: true` fails the gate, whatever `partialReason` says. Correct the row in
+- [x] `partial: true` fails the gate, whatever `partialReason` says. Correct the row in
       [`../docs/running_evals.md`](../docs/running_evals.md) in phase 8, which names two
       reasons today and misses `interrupted`.
-- [ ] A run carrying `error` fails the gate, on every backend. It is the CoWork case the
+- [x] A run carrying `error` fails the gate, on every backend. It is the CoWork case the
       driver could not run or collect, and it is also a harness run that timed out, hit the
       turn cap or exited non-zero: those are graded on what they produced, so the score
       alone does not catch them. Correct the row in
       [`../docs/running_evals.md`](../docs/running_evals.md) in phase 8, which names only
       the CoWork case.
-- [ ] A document whose `aggregates.casesTotal` is 0 is not a failure. A `--tag` sweep
+- [x] A document whose `aggregates.casesTotal` is 0 is not a failure. A `--tag` sweep
       matches no case in most plugins, and failing on that would make every filtered sweep
       red. The whole selection matching nothing is refused in phase 6, before anything runs.
       Record it in [`../docs/running_evals.md`](../docs/running_evals.md) in phase 8, beside
       the gate table.
-- [ ] One line per failure, then one summary line with the case counts and the overall
+- [x] One line per failure, then one summary line with the case counts and the overall
       score. Over a sweep the counts are summed across plugins and the score is the mean of
       each document's `aggregates.overallScore`. The caller writes the text to `gate.txt`
       and prints it.
-- [ ] `tests/unit/test_gate.py` over hand-written documents under `tests/data/results/`:
+- [x] `tests/unit/test_gate.py` over hand-written documents under `tests/data/results/`:
       a pass, each structural grader failing, a judged grader failing under an otherwise
       passing document, a skipped case, `scored: false`, `partial: true`, a run with an
       `error` under an otherwise passing document, an empty document passing, a missing
@@ -285,33 +285,33 @@ builds nothing.
 | `--cowork` | macOS, `claude` on `PATH`, a loadable `cowork_evals.yaml` naming a profile, a readable sessions root, and the Accessibility grant |
 | `test`     | `PytestImage.check()`. The same daemon condition, the test image, and never the container login |
 
-- [ ] `remedy()` in `src/cowork_evals/docker/__init__.py` names `cowork_evals setup --docker`
+- [x] `remedy()` in `src/cowork_evals/docker/__init__.py` names `cowork_evals setup --docker`
       for both `IMAGE` and `CREDENTIAL`, and its docstring loses the sentence saying that
       command is not built. It names `scripts/image.sh` and `scripts/login.sh` today, and a
       consumer never sees `scripts/`. `tests/unit/test_docker.py` asserts the new strings,
       and `scripts/image.sh --check` and `scripts/login.sh --check` still read `remedy()`.
-- [ ] `checks(backend) -> list[str]`, and `checks_all()` covering both. Each takes the
+- [x] `checks(backend) -> list[str]`, and `checks_all()` covering both. Each takes the
       loaded `Config`, so `cowork_evals.yaml` is read once per invocation and every verb and
       every backend sees the same one. `Docker.check()` already returns one
       `(Condition, message)` pair per unmet condition and is reused as it stands.
-- [ ] The CoWork profile condition comes from `Config.load()` and then `profile_dir` on its
+- [x] The CoWork profile condition comes from `Config.load()` and then `profile_dir` on its
       `cowork:` section. Construction validates only the file, and a missing `profile` is
       refused by the first property that needs one, so both calls are made here.
       `CoWorkError` code 2 becomes one line carrying its message.
-- [ ] The Accessibility grant is probed with
+- [x] The Accessibility grant is probed with
       `osascript -e 'tell application "System Events" to get the name of the first process'`.
       It submits nothing and starts no session. A non-zero exit, or error 1002 on stderr, is
       the missing grant, which is what
       [`../docs/cowork_driver.md`](../docs/cowork_driver.md) records for it.
-- [ ] `cowork_ceiling(target, **overrides) -> list[str]`, called by `run` and not by
+- [x] `cowork_ceiling(target, **overrides) -> list[str]`, called by `run` and not by
       `check`. It calls `cowork_backend.plan`, which submits nothing, and returns one line
       when the plan's submission count plus `CoWork.recent()` is above `max_runs`. The
       arithmetic is `plan()`'s; this compares its three numbers. `cowork_backend.run` raises
       `CoWorkError(2, ...)` on the same condition, which is that backend's own guard and is
       unreachable behind this check.
-- [ ] `validate.violations` is not called here. Case validation needs a resolved target, so
+- [x] `validate.violations` is not called here. Case validation needs a resolved target, so
       `run` calls it after scope resolution, in phase 6.
-- [ ] `tests/unit/test_preflight.py`: the shape of each returned list, the CoWork lines
+- [x] `tests/unit/test_preflight.py`: the shape of each returned list, the CoWork lines
       against a configuration file written to `tmp_path`, and the ceiling line against a
       hand-written case tree and run log. Nothing here starts a daemon or a session.
 
@@ -321,34 +321,34 @@ builds nothing.
 [`../docs/cli.md`](../docs/cli.md), and this phase builds the parse and the refusals only.
 The verbs do their work in phase 6.
 
-- [ ] `[project.scripts] cowork_evals = "cowork_evals.cli:console_main"` in
+- [x] `[project.scripts] cowork_evals = "cowork_evals.cli:console_main"` in
       `pyproject.toml`. `main(argv=None) -> int` returns a code, `console_main` calls
       `sys.exit` on it, and nothing else in the package exits.
-- [ ] Five subparsers: `run`, `test`, `setup`, `check`, `prune`. `--version` prints the
+- [x] Five subparsers: `run`, `test`, `setup`, `check`, `prune`. `--version` prints the
       installed distribution version from `importlib.metadata`.
-- [ ] The backend is a mutually exclusive group, required and with no default, and its
+- [x] The backend is a mutually exclusive group, required and with no default, and its
       members differ per verb: `run` takes `--docker` and `--cowork`, `test` takes
       `--docker` alone, `setup` takes `--docker`, and `check` takes both backends plus
       `--all`. `run --all` is a usage error, and so is `test --cowork`: that backend is not
       a member, so `argparse` exits 2 and there is no refusal message to write.
       `prune` takes any combination of its selection flags and requires at least one.
-- [ ] Every option in the table in [`../docs/cli.md`](../docs/cli.md), with no raw argument
+- [x] Every option in the table in [`../docs/cli.md`](../docs/cli.md), with no raw argument
       tail and no pass-through to `claude plugin eval`. `--older-than` is on `prune` alone,
       and `--out` is on `run` and `prune`.
-- [ ] `--require-coverage` on `run`, off by default, accepted on both backends. It reads the
+- [x] `--require-coverage` on `run`, off by default, accepted on both backends. It reads the
       tree and not a backend, so no backend refuses it.
-- [ ] `test` takes a path, `--build-missing`, `--dry-run` and a pytest tail as
+- [x] `test` takes a path, `--build-missing`, `--dry-run` and a pytest tail as
       `nargs=argparse.REMAINDER` after the path, separated by `--`. It takes no other
       option: each of the others configures a harness run.
-- [ ] The refusals: `--runs`, `--judge-model` and `--timeout-seconds` accepted on
+- [x] The refusals: `--runs`, `--judge-model` and `--timeout-seconds` accepted on
       `--cowork`; `--model`, `--allow-tools`, `--max-cost-usd` and `--build-missing` refused
       there; `--timeout-seconds` refused on `--docker`. An option the chosen backend refuses
       exits 2, naming the option and the backend.
-- [ ] Defaults come from `RunOptions.resolve` over the loaded `Config`. An option beats the
+- [x] Defaults come from `RunOptions.resolve` over the loaded `Config`. An option beats the
       file, the file beats the built-in default, and there is no third layer. No option is
       ever read from the process environment.
-- [ ] `KeyboardInterrupt` returns 130.
-- [ ] `tests/unit/test_cli.py`: each verb's parse tree, every refusal above, `--venv` on
+- [x] `KeyboardInterrupt` returns 130.
+- [x] `tests/unit/test_cli.py`: each verb's parse tree, every refusal above, `--venv` on
       each verb as `SystemExit(2)`, an unknown option as `SystemExit(2)`, `run` with no path
       as `SystemExit(2)`, `run` with no backend as `SystemExit(2)`, `check` with no backend
       as `SystemExit(2)`, `test --cowork` as `SystemExit(2)`, a `test` tail surviving `--`
@@ -379,92 +379,92 @@ One table, because the two backends take different arguments and nothing else st
 
 ### run
 
-- [ ] Resolve the target to a list of plugin roots. A path at or under one root is that
+- [x] Resolve the target to a list of plugin roots. A path at or under one root is that
       root. A path covering several is every directory below it holding
       `.claude-plugin/plugin.json` with a sibling `evals/`, sorted by path.
-- [ ] More than one plugin root on `--cowork` is a usage error, exit 2.
-- [ ] Preflight the backend. On `--docker` with `--build-missing`, an absent or stale image
+- [x] More than one plugin root on `--cowork` is a usage error, exit 2.
+- [x] Preflight the backend. On `--docker` with `--build-missing`, an absent or stale image
       is built here instead of failing; every other unmet condition still fails, the
       container login included, because that login is interactive.
-- [ ] On `--cowork`, preflight also calls `preflight.cowork_ceiling`, so a suite too large
+- [x] On `--cowork`, preflight also calls `preflight.cowork_ceiling`, so a suite too large
       for `max_runs` is refused before anything is created.
-- [ ] Validate every selected plugin root, not only the target. Any violation prints the
+- [x] Validate every selected plugin root, not only the target. Any violation prints the
       file and the rule and exits 3.
-- [ ] Print `validate.uncovered` for every selected root. It fails nothing on its own. Under
+- [x] Print `validate.uncovered` for every selected root. It fails nothing on its own. Under
       `--require-coverage` an uncovered skill exits 3, like any other preflight condition.
-- [ ] Count the selection: `cases.discover` over every selected root with `--tag` and
+- [x] Count the selection: `cases.discover` over every selected root with `--tag` and
       `--case` applied. Zero across all of them is a usage error, exit 2, naming the path
       and the filters. A mistyped `--tag` must not read as a pass, and this catches it
       before a container starts. One root of several matching zero is normal under a filter
       and is not an error.
-- [ ] Any unmet condition, violation or empty selection exits before anything is created and
+- [x] Any unmet condition, violation or empty selection exits before anything is created and
       before anything is deleted.
-- [ ] Resolve the log root and prune directories older than 30 days. It happens after every
+- [x] Resolve the log root and prune directories older than 30 days. It happens after every
       refusal above, so exit 2 and exit 3 leave the root untouched, and before the
       `--dry-run` exit, so an unattended dry run still reclaims space.
-- [ ] `--dry-run` exits 0 here. On `--docker` it prints `Docker.run_argv`, one argument per
+- [x] `--dry-run` exits 0 here. On `--docker` it prints `Docker.run_argv`, one argument per
       line. On `--cowork` it prints one line per case with its run count, its timeout and
       its `Skips`, then the ceiling arithmetic, all from `cowork_backend.plan`. The skips
       are the point of the dry run: a skipped case fails the gate, so an operator reads
       which ones before spending. Neither creates a run directory.
-- [ ] Create the run directory, open the tee, write `env.txt`, and point `latest`.
-- [ ] Per plugin root, in order: sum `costUsd` over the documents written so far, stop when
+- [x] Create the run directory, open the tee, write `env.txt`, and point `latest`.
+- [x] Per plugin root, in order: sum `costUsd` over the documents written so far, stop when
       the sum has reached `eval.max_cost_total_usd`, create the plugin directory with
       `logs.plugin_dir`, and call the backend through the mapping above. The check runs
       before the first plugin, so a ceiling of 0 stops the invocation before it spends
       anything. On `--cowork` that sum is the judge spend alone, because the session is
       billed to the account and is not observable from the host, so the ceiling that binds
       there is the driver's `max_runs` in preflight and not this one.
-- [ ] A stop on the ceiling becomes one `extra` line to the gate. The gate then reads the
+- [x] A stop on the ceiling becomes one `extra` line to the gate. The gate then reads the
       documents written so far, adds that line, and the invocation exits 1. A sweep that
       stops on the ceiling is never a pass.
-- [ ] A `DockerError` or a `CaseError` raised while running a plugin prints, and the sweep
+- [x] A `DockerError` or a `CaseError` raised while running a plugin prints, and the sweep
       continues with the next plugin. The gate then reads a missing document and exits 1.
-- [ ] A `CoWorkError` raised while running a case reaches the result document, which is what
+- [x] A `CoWorkError` raised while running a case reaches the result document, which is what
       `plan_cowork_backend.md` built.
-- [ ] Gate the run directory once, write `gate.txt`, print it, and return 0 or 1.
+- [x] Gate the run directory once, write `gate.txt`, print it, and return 0 or 1.
 
 ### test
 
 The verb is a preflight and one call. Nothing between the two inspects, wraps or interprets
 what pytest produced. [`../docs/cowork_test.md`](../docs/cowork_test.md) is the mechanism.
 
-- [ ] Resolve the path to one plugin root with `cases.plugin_root`. A path covering several
+- [x] Resolve the path to one plugin root with `cases.plugin_root`. A path covering several
       is a usage error, exit 2.
-- [ ] Preflight `PytestImage.check()`: the daemon and the test image, never the container
+- [x] Preflight `PytestImage.check()`: the daemon and the test image, never the container
       login. Any unmet condition prints and returns 3, having created nothing.
-- [ ] `--build-missing` builds the test image, and the base image first when that is absent
+- [x] `--build-missing` builds the test image, and the base image first when that is absent
       too. Without it, either being absent or stale returns 3 naming
       `cowork_evals setup --docker`.
-- [ ] No case validation, no log directory, no `env.txt`, no `latest`, no pruning and no
+- [x] No case validation, no log directory, no `env.txt`, no `latest`, no pruning and no
       gate. The verb writes nothing on the host.
-- [ ] `--dry-run` prints `PytestImage.run_argv`, one argument per line, and returns 0
+- [x] `--dry-run` prints `PytestImage.run_argv`, one argument per line, and returns 0
       without starting a container.
-- [ ] Return `PytestImage.run(target, pytest_args=...)` unchanged. `main` returns it and
+- [x] Return `PytestImage.run(target, pytest_args=...)` unchanged. `main` returns it and
       `console_main` exits on it. A failing suite is a result, not an error, and nothing
       here remaps a code.
 
 ### setup, check and prune
 
-- [ ] `setup --docker`: `Docker.build()` when the image is absent, then `PytestImage.build()`
+- [x] `setup --docker`: `Docker.build()` when the image is absent, then `PytestImage.build()`
       when the test image is absent, then the interactive
       login when `has_credential()` is false. An image already at its current digest prints
       `current` and returns 0.
-- [ ] `check` prints the unmet conditions from phase 4 and returns 0 when every named
+- [x] `check` prints the unmet conditions from phase 4 and returns 0 when every named
       backend is ready, 3 otherwise. `check --all` covers both backends, so a ready machine
       returns 0. `check --docker` reports both images and the container login: the login is
       unmet for `run` and is not read by `test`'s preflight.
-- [ ] `prune --logs` deletes run directories under the resolved root older than
+- [x] `prune --logs` deletes run directories under the resolved root older than
       `--older-than`, default 30.
-- [ ] `Docker.images()` returns each `cowork-evals:*` and `cowork-evals-test:*` tag with its
+- [x] `Docker.images()` returns each `cowork-evals:*` and `cowork-evals-test:*` tag with its
       creation date, from `docker image ls`. `Docker.remove_image(tag)` removes one, from
       `docker image rm`. Both live in the docker module, because nothing outside it builds a
       `docker` argument list.
-- [ ] `prune --docker` removes every image `Docker.images()` returns except the current
+- [x] `prune --docker` removes every image `Docker.images()` returns except the current
       digest of each of the two, restricted by `--older-than` against the creation date. The
       container login is left alone.
-- [ ] `prune` with no selection flag returns 2.
-- [ ] `tests/unit/test_cli.py` grows: the sweep's plugin root resolution over a
+- [x] `prune` with no selection flag returns 2.
+- [x] `tests/unit/test_cli.py` grows: the sweep's plugin root resolution over a
       hand-written two-plugin tree, two plugins sharing a manifest name getting two
       directories, the multi-plugin refusal on `--cowork`, the empty selection refusal and a
       filtered sweep where one root of two matches nothing and the invocation proceeds, the
@@ -472,7 +472,7 @@ what pytest produced. [`../docs/cowork_test.md`](../docs/cowork_test.md) is the 
       `--dry-run` outputs, the multi-plugin refusal on `test`, the ceiling arithmetic
       against hand-written documents, and each `setup`, `check` and `prune` return code that
       needs no daemon.
-- [ ] `tests/unit/test_docker.py` grows: the `images()` and `remove_image()` argument lists,
+- [x] `tests/unit/test_docker.py` grows: the `images()` and `remove_image()` argument lists,
       asserted without a daemon.
 
 ## Phase 7: The integration tier
@@ -483,30 +483,30 @@ profile. A missing precondition fails the test and never skips it.
 
 The fixture is `plugins/smoke/evals`, unchanged. Nothing new is added to `plugins/`.
 
-- [ ] `check --docker` returns 0 on a ready machine, and its lines name the fix when it does
+- [x] `check --docker` returns 0 on a ready machine, and its lines name the fix when it does
       not. Marked `integration`, not `live`.
-- [ ] `cowork_evals run --docker plugins/smoke/evals` returns 0. Assert the run directory
+- [x] `cowork_evals run --docker plugins/smoke/evals` returns 0. Assert the run directory
       holds `run.log`, `env.txt`, `gate.txt`, `smoke/aggregate-result.json`,
       `smoke/report.html` and `smoke/debug.txt`, and that `latest` points at it. Marked
       `live`.
-- [ ] Assert, over that same run and not a second one, that `run.log` holds a line the
+- [x] Assert, over that same run and not a second one, that `run.log` holds a line the
       harness printed. That is the descriptor-level tee proven against a real child, and it
       cannot be reached without one.
-- [ ] No live CoWork run here. `plan_cowork_backend.md` phase 7 already fires
+- [x] No live CoWork run here. `plan_cowork_backend.md` phase 7 already fires
       `plugins/smoke/` through `cowork_backend.run` against a real session, and everything
       this plan builds above that backend is backend-neutral and is proven on `--docker`
       above: the run directory, the tee, `env.txt`, `latest` and the gate. What is left is
       the option mapping, covered by `--dry-run --cowork` in the unit tier, and the absence
       of `report.html`, which is an assertion about a file the backend never writes. A VM
       boot, a ceiling entry and a permanent session in the account buy none of it.
-- [ ] `cowork_evals test --docker plugins/smoke/tests` returns 0, and the same path with the
+- [x] `cowork_evals test --docker plugins/smoke/tests` returns 0, and the same path with the
       failing fixture returns 1, both through the real executable. It costs a container and
       no model call, so it is `integration` and not `live`. What the container itself proves
       is `plan_test.md`'s integration tier; this proves only that the verb reaches it and
       returns its code.
-- [ ] The failing-gate path is asserted in the unit tier over a hand-written document. A
+- [x] The failing-gate path is asserted in the unit tier over a hand-written document. A
       second eval run buys nothing the gate tests do not already cover.
-- [ ] The Docker smoke row in the cost table of
+- [x] The Docker smoke row in the cost table of
       [`../docs/running_evals.md`](../docs/running_evals.md) is already measured through
       `Docker.run`. Re-record it with a new capture date only if the run above differs; the
       command adds no model call, so a difference is a finding. The two local rows stay
@@ -518,33 +518,33 @@ The fixture is `plugins/smoke/evals`, unchanged. Nothing new is added to `plugin
 
 Nothing durable may survive only in this file.
 
-- [ ] [`../docs/cli.md`](../docs/cli.md), the venv removal: the synopsis, the `--venv`
+- [x] [`../docs/cli.md`](../docs/cli.md), the venv removal: the synopsis, the `--venv`
       column of the option table, the `--venv` preflight row, the `setup --venv` and
       `setup --all` rows, the `prune --venv` row, and the sentence saying `run --venv`
       writes `.cowork-runtime/` into each plugin root. One sentence replaces them: the venv
       backend is designed in
       [`../docs/staged_runtime.md`](../docs/staged_runtime.md) and has no flag until a plan
       builds it.
-- [ ] [`../docs/cli.md`](../docs/cli.md), the `test` verb: the synopsis line, "four verbs"
+- [x] [`../docs/cli.md`](../docs/cli.md), the `test` verb: the synopsis line, "four verbs"
       becoming five, a `test` section holding its options and its preflight row, the clause
       allowing a raw tail there beside the sentence forbidding one on `run`, the second
       image in the `setup --docker` and `prune` rows, and the one exception to "the exit
       code is the CLI's" in the exit table. The mechanism behind it is
       [`../docs/cowork_test.md`](../docs/cowork_test.md), which `plan_test.md` wrote, and it
       is linked and not restated.
-- [ ] [`../docs/cli.md`](../docs/cli.md): write in every row of the decisions table above.
+- [x] [`../docs/cli.md`](../docs/cli.md): write in every row of the decisions table above.
       That includes `--require-coverage`, the empty selection, the `--older-than` and
       `--out` scopes, what `--build-missing` does and does not build, that `check` requires
       a backend, and the exit-3 row, which keeps `Nothing ran and nothing was written`
       because the CoWork ceiling moved into preflight and pruning moved behind it.
-- [ ] [`../docs/cli.md`](../docs/cli.md), the two tables phase 2 and phase 4 made
+- [x] [`../docs/cli.md`](../docs/cli.md), the two tables phase 2 and phase 4 made
       incomplete: the scope table, which tabulates four shapes and not the fifth, a path
       inside a plugin root that is neither a case, a skill nor `evals/`; and the `--cowork`
       preflight row, which names the desktop application where phase 4 checks a configured
       profile and a readable sessions root.
-- [ ] [`../docs/cli.md`](../docs/cli.md), the `--dry-run` paragraph, which says the command
+- [x] [`../docs/cli.md`](../docs/cli.md), the `--dry-run` paragraph, which says the command
       line is printed on every backend.
-- [ ] [`../docs/running_evals.md`](../docs/running_evals.md): mark the executable and its
+- [x] [`../docs/running_evals.md`](../docs/running_evals.md): mark the executable and its
       verbs, the gate and the case validator built; correct the `partial` row, which misses
       `interrupted`; correct the `error` row, which names only the CoWork case; record that
       an empty document passes the gate and that an empty selection is refused before the
@@ -552,32 +552,32 @@ Nothing durable may survive only in this file.
       rather than `logs/evals` under it; add the `backend` and `image` lines to `env.txt` in
       the log layout; and state that coverage, its fourth automation precondition, is
       reported by `run` and enforced by `--require-coverage`.
-- [ ] [`../docs/approaches.md`](../docs/approaches.md): the `cowork_evals run --venv` row of
+- [x] [`../docs/approaches.md`](../docs/approaches.md): the `cowork_evals run --venv` row of
       the command table and the two `--venv` rows of the cadence table, which tell an author
       to run a flag that does not parse. The three approaches stay; the cadence moves to
       `--docker` until the venv backend is built. And the sentence saying `docker.md` says
       what reaches the container until the `--docker` command is built.
-- [ ] [`../docs/library.md`](../docs/library.md): the five new modules in the ships table,
+- [x] [`../docs/library.md`](../docs/library.md): the five new modules in the ships table,
       `[project.scripts]` now present, which removes the sentence saying it is not in
       `pyproject.toml` yet, the two rows of the state table naming `setup --venv` and
       `run --venv`, and the sentence saying the two requirements files are read at run time
       by `setup --venv`.
-- [ ] [`../docs/docker.md`](../docs/docker.md): the sentence saying that until the command
+- [x] [`../docs/docker.md`](../docs/docker.md): the sentence saying that until the command
       reaches the container a run goes through `cowork_evals.docker.Docker.run`, and the
       `remedy()` change, which makes `setup --docker` the command a failed check names.
-- [ ] [`../docs/eval_format.md`](../docs/eval_format.md): which rules the validator
+- [x] [`../docs/eval_format.md`](../docs/eval_format.md): which rules the validator
       enforces, and that a skill with no eval directory is reported and is not a violation.
-- [ ] [`../docs/environments.md`](../docs/environments.md): the usage block offering
+- [x] [`../docs/environments.md`](../docs/environments.md): the usage block offering
       `setup --venv` and `check --venv` as the shipped route, and the row of the
       requirements table naming `setup --venv`. The design stays; the commands become what a
       plan that builds it would add. [`../docs/staged_runtime.md`](../docs/staged_runtime.md)
       names no `--venv` command and needs no change.
-- [ ] [`../README.md`](../README.md): check the usage block against the built surface.
+- [x] [`../README.md`](../README.md): check the usage block against the built surface.
       `check --all` now returns 0 on a ready machine, so it stays.
-- [ ] [`../tests/README.md`](../tests/README.md): a row per new test file, and the new tier
+- [x] [`../tests/README.md`](../tests/README.md): a row per new test file, and the new tier
       preconditions.
-- [ ] [`../docs/cowork_test.md`](../docs/cowork_test.md): the sentence naming
+- [x] [`../docs/cowork_test.md`](../docs/cowork_test.md): the sentence naming
       `scripts/cowork_pytest.sh` as the route until the verb exists, which the verb now
       replaces. The script stays as a development task.
-- [ ] Re-read every touched file for a statement this plan made false.
-- [ ] [`README.md`](README.md): mark this plan `implemented`.
+- [x] Re-read every touched file for a statement this plan made false.
+- [x] [`README.md`](README.md): mark this plan `implemented`.

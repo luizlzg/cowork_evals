@@ -12,6 +12,7 @@ to build. `CaseError` is for a tree that cannot be read at all.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from fnmatch import fnmatchcase
 from pathlib import Path
@@ -29,12 +30,24 @@ GRADERS_DIR = "graders"
 # What makes a directory a plugin root. docs/eval_format.md.
 PLUGIN_MANIFEST = Path(".claude-plugin") / "plugin.json"
 
+# The eval directory the harness defaults to, and this repository never configures another.
+# It is here rather than under a backend because every reader of a case tree needs it.
+# docs/eval_format.md.
+EVAL_DIR = "evals"
+
 # Directories the harness never descends into during discovery. Matching it is what keeps
 # the case set identical on every backend. docs/claude_code/plugin_eval_reference.md.
 PRUNED = frozenset({"node_modules", ".git", ".claude", "results"})
 
 # A grader's default weight. docs/eval_format.md.
 DEFAULT_WEIGHT = 1
+
+# Every grader type the format defines, split into the two classes the gate reads: a
+# structural grader is deterministic and gates, and a judged grader calls a model and is
+# printed. docs/eval_format.md, docs/running_evals.md.
+STRUCTURAL = ("regex", "tool_used", "tool_order", "file_exists")
+JUDGED = ("llm", "baseline")
+GRADER_TYPES = frozenset(STRUCTURAL + JUDGED)
 
 # `source` in the v1 result document. A case is discovered by its `prompt.md`, so
 # `case_yaml` cannot occur here. docs/claude_code/plugin_eval_reference.md.
@@ -94,6 +107,41 @@ def plugin_root(target: Path | str) -> Path:
         if (candidate / PLUGIN_MANIFEST).is_file():
             return candidate
     raise CaseError(f"no {PLUGIN_MANIFEST} at or above {resolved}")
+
+
+def plugin_name(root: Path | str) -> str:
+    """The manifest's `name`, and the folder basename when the manifest names none.
+
+    Every reader of a plugin root names it this way: the result document, and the scope
+    the run directory is named for. docs/eval_format.md.
+    """
+    resolved = Path(root).resolve()
+    try:
+        manifest = json.loads((resolved / PLUGIN_MANIFEST).read_text(encoding="utf-8"))
+    except OSError, ValueError:
+        return resolved.name
+    if not isinstance(manifest, dict):
+        return resolved.name
+    named = manifest.get("name")
+    return named if isinstance(named, str) and named else resolved.name
+
+
+def plugin_roots(target: Path | str) -> list[Path]:
+    """Every plugin root the target covers, sorted by path.
+
+    A path at or under one root is that root. A path covering several is every directory
+    below it holding `.claude-plugin/plugin.json` with a sibling `evals/`, which is how a
+    marketplace repository is swept without a fixed `plugins/*` glob. docs/library.md.
+    """
+    resolved = Path(target).resolve()
+    below = sorted(
+        {
+            manifest.parent.parent.resolve()
+            for manifest in resolved.rglob(str(PLUGIN_MANIFEST))
+            if manifest.is_file() and (manifest.parent.parent / EVAL_DIR).is_dir()
+        }
+    )
+    return below if below else [plugin_root(resolved)]
 
 
 def discover(

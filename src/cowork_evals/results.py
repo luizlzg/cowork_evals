@@ -22,7 +22,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .cases import PLUGIN_MANIFEST, Case, Grader
+from .cases import JUDGED, PLUGIN_MANIFEST, Case, Grader, plugin_name
 from .grader import GraderResult
 from .harness import RESULT_NAME
 
@@ -46,9 +46,6 @@ GRADER_DEFAULTS: dict[str, dict[str, Any]] = {
     "file_exists": {"exists": True},
     "llm": {"focus": "last_message"},
 }
-
-# The two grader types whose rubric is embedded, so a report shows what was judged.
-JUDGED_TYPES = ("llm", "baseline")
 
 # The case keys the document records as declared, and their camelCase names. They are the
 # case's own values and never an override: what actually ran is read from `arms.with` and
@@ -252,6 +249,24 @@ def write(output_dir: Path | str, document: dict[str, Any]) -> Path:
     return path
 
 
+def spend(run_dir: Path | str) -> float:
+    """`costUsd` summed over every result document one level under a run directory.
+
+    It is what a sweep compares against `eval.max_cost_total_usd` before each plugin. A
+    document that is missing or unreadable contributes nothing: the gate is what reports
+    it, and a sweep never stops early because it could not read one.
+    """
+    total = 0.0
+    for plugin in sorted(Path(run_dir).iterdir()):
+        try:
+            document = json.loads((plugin / RESULT_NAME).read_text(encoding="utf-8"))
+        except OSError, ValueError:
+            continue
+        if isinstance(document, dict) and isinstance(document.get("costUsd"), int | float):
+            total += float(document["costUsd"])
+    return total
+
+
 def version() -> str:
     """The host `claude --version`, as its first token."""
     try:
@@ -290,10 +305,10 @@ def _grader_definition(grader: Grader) -> dict[str, Any]:
         "type": grader.type,
         "weight": grader.weight,
     }
-    if grader.type in JUDGED_TYPES:
+    if grader.type in JUDGED:
         definition["graderMarkdown"] = grader.markdown
     config = {**GRADER_DEFAULTS.get(grader.type, {}), **grader.config}
-    if grader.type in JUDGED_TYPES and "criteria" not in config:
+    if grader.type in JUDGED and "criteria" not in config:
         config["criteria"] = grader.markdown
     definition["config"] = config
     return definition
@@ -319,17 +334,14 @@ def _grader_result(result: GraderResult) -> dict[str, Any]:
 
 
 def _plugin(root: Path) -> dict[str, Any]:
-    """The plugin under test, from its manifest. The folder basename is the name fallback."""
-    entry: dict[str, Any] = {"name": root.name, "path": str(root)}
+    """The plugin under test, from its manifest. `cases.plugin_name` decides the name."""
+    entry: dict[str, Any] = {"name": plugin_name(root), "path": str(root)}
     try:
         manifest = json.loads((root / PLUGIN_MANIFEST).read_text(encoding="utf-8"))
     except OSError, ValueError:
         return entry
     if not isinstance(manifest, dict):
         return entry
-    named = manifest.get("name")
-    if isinstance(named, str) and named:
-        entry["name"] = named
     version_named = manifest.get("version")
     if isinstance(version_named, str) and version_named:
         entry["version"] = version_named

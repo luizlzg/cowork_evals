@@ -1,0 +1,4 @@
+schema_version: "1.0"
+expected_outcome: pass
+context:
+  add_dirs: ["fixtures"]

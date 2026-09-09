@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import re
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -22,11 +23,19 @@ from cowork_evals.docker import (
     DATA,
     DOCKERFILE,
     EXTRA_CA_SECRET,
+    Condition,
     Docker,
     DockerError,
+    images_argv,
+    parse_images,
     plugin_root,
+    remedy,
+    remove_image_argv,
 )
 from cowork_evals.harness import RunOptions
+
+# The zone `docker image ls` printed in the recorded listing below.
+EDT = timezone(timedelta(hours=-4))
 
 
 def build_arg(argv: list[str], flag: str) -> str:
@@ -392,3 +401,81 @@ def test_seed_login_dir_keeps_a_state_file_the_cli_already_wrote(tmp_path):
     docker.state_file.write_text('{"kept": true}')
     docker.seed_login_dir()
     assert docker.state_file.read_text() == '{"kept": true}'
+
+
+# The remedy. Every caller reads it here, and it names what a consumer runs.
+
+
+def test_the_remedy_for_a_missing_image_is_the_setup_verb():
+    assert remedy(Condition.IMAGE) == "run cowork_evals setup --docker"
+
+
+def test_the_remedy_for_a_missing_login_is_the_same_verb():
+    """`setup --docker` builds the image and then logs in, so one command fixes both."""
+    assert remedy(Condition.CREDENTIAL) == "run cowork_evals setup --docker"
+
+
+def test_the_remedy_for_an_unreachable_daemon_names_no_command_of_this_package():
+    assert remedy(Condition.DAEMON) == "start Docker Desktop or Rancher Desktop"
+
+
+def test_no_remedy_names_a_development_script():
+    """A consumer never sees `scripts/`. docs/library.md."""
+    assert not [condition for condition in Condition if "scripts/" in remedy(condition)]
+
+
+# The image inventory, for `prune --docker`. Both argument lists are asserted here, with
+# no daemon: this module is the one place a `docker` argument list is built.
+
+
+def test_the_image_listing_names_every_repository_it_was_given():
+    assert images_argv("cowork-evals", "cowork-evals-test") == [
+        "docker",
+        "image",
+        "ls",
+        "--filter",
+        "reference=cowork-evals:*",
+        "--filter",
+        "reference=cowork-evals-test:*",
+        "--format",
+        "{{.Repository}}:{{.Tag}}\t{{.CreatedAt}}",
+    ]
+
+
+def test_the_image_removal_names_one_tag():
+    assert remove_image_argv("cowork-evals:0123456789ab") == [
+        "docker",
+        "image",
+        "rm",
+        "cowork-evals:0123456789ab",
+    ]
+
+
+def test_a_recorded_listing_parses_into_tags_and_dates():
+    """One `docker image ls` listing, recorded 2026-09-09 on `linux/arm64`, a snapshot."""
+    listing = (
+        "cowork-evals-test:0eafee9a4184\t2026-09-09 05:15:58 -0400 EDT\n"
+        "cowork-evals:57f48ba2adac\t2026-09-09 04:08:37 -0400 EDT\n"
+        "cowork-evals:9e9d75cdfb6e\t2026-09-08 16:47:25 -0400 EDT\n"
+    )
+    assert parse_images(listing) == [
+        ("cowork-evals-test:0eafee9a4184", datetime(2026, 9, 9, 5, 15, 58, tzinfo=EDT)),
+        ("cowork-evals:57f48ba2adac", datetime(2026, 9, 9, 4, 8, 37, tzinfo=EDT)),
+        ("cowork-evals:9e9d75cdfb6e", datetime(2026, 9, 8, 16, 47, 25, tzinfo=EDT)),
+    ]
+
+
+def test_a_row_in_no_format_this_reads_is_dropped():
+    """It is not an image to delete, and a guessed age would delete the wrong one."""
+    assert parse_images("cowork-evals:abc\tyesterday\nnot a row at all\n") == []
+
+
+def test_the_listing_is_sorted_by_tag():
+    listing = (
+        "cowork-evals:ff78131ca4c5\t2026-09-08 18:38:34 -0400 EDT\n"
+        "cowork-evals:0b8b9652310f\t2026-09-08 17:56:46 -0400 EDT\n"
+    )
+    assert [tag for tag, _ in parse_images(listing)] == [
+        "cowork-evals:0b8b9652310f",
+        "cowork-evals:ff78131ca4c5",
+    ]

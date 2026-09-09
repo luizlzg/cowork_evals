@@ -28,11 +28,11 @@ not restate any of them here.
 | --------------------------------------------- | -------- | -------------------------------------------- |
 | The 3.10 mirror, as a development script      | yes      | [environments.md](environments.md)           |
 | The `cowork_evals` package, as a distribution | yes      | [library.md](library.md)                     |
-| The `cowork_evals` executable and its verbs   | no       | [cli.md](cli.md)                             |
+| The `cowork_evals` executable and its verbs   | yes      | [cli.md](cli.md)                             |
 | `cowork_evals.yaml` and the `Config` over it  | yes      | [library.md](library.md)                     |
 | The pinned harness argument list              | yes      | this file                                    |
-| The gate                                      | no       | this file                                    |
-| The case validator                            | no       | [eval_format.md](eval_format.md)             |
+| The gate                                      | yes      | this file                                    |
+| The case validator                            | yes      | [eval_format.md](eval_format.md)             |
 | The 3.10 and import check over code under test | no      | nowhere. Not designed, and no plan builds it |
 | The container backend and its Dockerfile      | yes      | [docker.md](docker.md)                       |
 | `scripts/parity.sh` and `tests/unit/test_parity.py` | yes | [docker.md](docker.md)                     |
@@ -40,7 +40,7 @@ not restate any of them here.
 | The CoWork backend over it                    | yes      | [cowork_backend.md](cowork_backend.md)       |
 | `plugins/smoke/`, the fixture both backends fire | yes   | [../plugins/README.md](../plugins/README.md) |
 | The test image, `cowork-evals-test:<digest>`  | yes      | [cowork_test.md](cowork_test.md)             |
-| The `test` verb over it                       | no       | [cowork_test.md](cowork_test.md)             |
+| The `test` verb over it                       | yes      | [cowork_test.md](cowork_test.md)             |
 | The venv backend and the runtime it stages    | deferred | [staged_runtime.md](staged_runtime.md)       |
 
 `deferred` means the design stands and the developer decided not to build it. Nothing in the
@@ -168,15 +168,36 @@ covers both backends, and it always runs in the `cowork_evals` process on the ho
 | Condition                                                            | Result       |
 | -------------------------------------------------------------------- | ------------ |
 | Any `regex`, `tool_used`, `tool_order` or `file_exists` grader failed | exit 1       |
-| Any case or grader reported skipped                                  | exit 1       |
-| `partial: true`: `partialReason` `cost_ceiling` or `auth_failed`     | exit 1       |
-| A CoWork case that the driver could not run or collect                | exit 1       |
-| A results document is missing or unparsable                          | exit 1       |
+| Any case or grader reported skipped, or a grader reported `scored: false` | exit 1   |
+| `partial: true`, whatever `partialReason` says                       | exit 1       |
+| A run carrying `error`, on either backend                            | exit 1       |
+| A sweep stopped by `eval.max_cost_total_usd`                         | exit 1       |
+| A results document is missing, unparsable, or of another `schemaVersion` | exit 1   |
+| A grader result naming no grader the case defines                    | exit 1       |
 | Any `llm` or `baseline` grader failed                                | printed only |
+| A document whose `aggregates.casesTotal` is 0                        | exit 0       |
 | Otherwise                                                            | exit 0       |
 
 Structural graders gate because a judged grader over a non-deterministic agent is a flaky
-gate. A skip gates so that a backend cannot go green by honouring nothing.
+gate. A skip gates so that a backend cannot go green by honouring nothing. `scored: false` is
+a skip here: `--ablation none` drops no grader from the score, so a grader that was not scored
+was not asked.
+
+`partial: true` gates whatever the reason. The harness names `cost_ceiling` and `auth_failed`,
+and `interrupted` is a third; the gate reads the flag and not the reason.
+
+A run carrying `error` gates on every backend, not only on CoWork. There it is a case the
+driver could not run or collect. On the harness it is a run that timed out, hit the turn cap
+or exited non-zero, each of which is still graded on what it produced, so the score alone does
+not catch it.
+
+An empty document passes. A `--tag` sweep matches no case in most plugins, and failing on that
+would make every filtered sweep red. A selection matching no case *anywhere* is refused before
+the run instead, with exit 2. See [cli.md](cli.md).
+
+Every line the gate prints carries `FAIL` or `NOTE`, so a judged failure is never read as the
+cause of exit 1. The last line is the case counts and the overall score, summed and averaged
+across every plugin in the run directory.
 
 The gate reads every `<plugin>/aggregate-result.json` under the run directory and decides once
 for the whole invocation, so a sweep gates once and not once per plugin.
@@ -197,16 +218,22 @@ per plugin: runs are non-deterministic, and a per-plugin file overwrites the pre
 logs/evals/<yyyymmdd-hhmmss>-<scope>/
   run.log                        # stdout and stderr of the whole invocation, tee'd live
   gate.txt                       # the gate's output
-  env.txt                        # cowork_evals --version, claude --version, python3 -V
+  env.txt                        # cowork_evals --version, claude --version, python3 -V,
+                                 #   the backend, and the image on the container backend
   <plugin>/aggregate-result.json # the v1 result document
   <plugin>/report.html           # the self-contained HTML report
   <plugin>/debug.txt             # claude --debug-file output
 logs/evals/latest                # symlink to the newest directory
 ```
 
-The log root is the working directory unless `--out` overrides it, and `<scope>` is named from
-the path argument. Both are [cli.md](cli.md). Run directories older than 30 days are deleted
-at the start of every run.
+The log root is `logs/evals` under the working directory unless `--out DIR` replaces it whole,
+and `<scope>` is named from the path argument. Both are [cli.md](cli.md). Run directories
+older than 30 days are deleted at the start of every run, after every refusal and before the
+`--dry-run` exit, so a refused invocation deletes nothing and an unattended dry run still
+reclaims space.
+
+`run.log` is captured at the file descriptor level, so a child process inherits it and the
+harness's own output and the container's reach the file.
 
 A CoWork run writes `<plugin>/aggregate-result.json` and nothing else. There is no
 `report.html` and no `debug.txt` on that backend: the first is the harness's, and the second
@@ -239,7 +266,7 @@ A consumer automates it when all four of these hold, and not before:
 
 | Condition                                                              | Read from         |
 | ---------------------------------------------------------------------- | ----------------- |
-| Every skill under test has at least one case                           | the `evals/` tree |
+| Every skill under test has at least one case                           | the `evals/` tree, reported by `run` and enforced by `--require-coverage` |
 | Structural graders carry the gate, with a measured flake rate          | `logs/evals/*/`   |
 | The cost and wall-clock time of a full sweep are measured and accepted | the table below   |
 | A credential and a pinned CLI on a runner have an owner                | a decision        |
@@ -264,13 +291,19 @@ The total has no command-line option because it governs an invocation rather tha
 
 | Measurement                   | Wall clock       | costUsd          |
 | ----------------------------- | ---------------- | ---------------- |
-| Smoke case, `runs: 1`, Docker | 3 s              | 0.057            |
+| Smoke case, `runs: 1`, Docker | 8 s              | 0.057            |
 | Full sweep, Docker            | not yet measured | not yet measured |
 
 A row reading `not yet measured` has not been run. The ceilings above were chosen, not
-measured.
+measured. The sweep row stays unmeasured here: this repository holds one fixture plugin, so
+a sweep measurement belongs to a consumer.
 
-The Docker row is a snapshot, 2026-09-08. It is `durationSeconds` and `costUsd` read from the
-`aggregate-result.json` of the passing container run [docker.md](docker.md) records, on CLI
+The Docker row is a snapshot, 2026-09-09. It is `durationSeconds` and `costUsd` read from the
+`aggregate-result.json` of a passing `cowork_evals run --docker plugins/smoke`, on CLI
 2.1.265, `sonnet` and the `haiku` judge. The wall clock is the harness's own, so it excludes
 the image build and the container start.
+
+The cost is unchanged from the 2026-09-08 snapshot, which ran the same case through
+`Docker.run` rather than through the command. The command adds no model call, so an
+unchanged cost is what it should be. The wall clock moved from 3 s to 8 s, and that is the
+agent's own variance across runs rather than anything the command added.

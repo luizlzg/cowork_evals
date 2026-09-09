@@ -32,9 +32,10 @@ scripts/cowork_pytest.sh --recreate                        # development: build 
 scripts/cowork_pytest.sh path/to/plugin/tests -- -v        # development: run a suite
 ```
 
-`scripts/cowork_pytest.sh` is the development route until the verb exists, exactly as
-`scripts/image.sh` is for the eval image. It is a development task for this repository and
-is not part of the command. See [../scripts/README.md](../scripts/README.md).
+`cowork_evals test --docker` is the shipped route, and `cowork_evals setup --docker` builds
+the image behind it. `scripts/cowork_pytest.sh` stays as a development task for this
+repository, exactly as `scripts/image.sh` is for the eval image, and is not part of the
+command. See [../scripts/README.md](../scripts/README.md).
 
 ## Transparency
 
@@ -56,10 +57,10 @@ not ask for, so a caller that wants one passes it in the tail.
 
 ## Two images
 
-| Tag                          | Is                                            | Built by                     |
-| ---------------------------- | --------------------------------------------- | ---------------------------- |
-| `cowork-evals:<digest>`      | The CoWork image an eval runs in              | `scripts/image.sh`           |
-| `cowork-evals-test:<digest>` | That image plus one install layer             | `scripts/cowork_pytest.sh`   |
+| Tag                          | Is                                | Built by                                         |
+| ---------------------------- | --------------------------------- | ------------------------------------------------ |
+| `cowork-evals:<digest>`      | The CoWork image an eval runs in  | `setup --docker`, or `scripts/image.sh`          |
+| `cowork-evals-test:<digest>` | That image plus one install layer | `setup --docker`, or `scripts/cowork_pytest.sh`  |
 
 The eval image never carries pytest. That keeps `scripts/parity.sh` and
 `tests/unit/test_parity.py` untouched and the inventory in [runtime.md](runtime.md) exact:

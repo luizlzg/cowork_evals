@@ -134,6 +134,31 @@ tool: Skill
 input_match: '"skill"\s*:\s*"(?:[\w-]+:)?<skill>"'
 ```
 
+## What the validator enforces
+
+`cowork_evals run` validates every selected plugin root before it runs anything, and a
+violation exits 3. It validates the whole root and not only the target, so a malformed
+sibling case blocks a single-case run. There is no option to skip it. See
+[cli.md](cli.md).
+
+| Rule                                                                        |
+| ------------------------------------------------------------------------------ |
+| A directory directly under `evals/` is `plugin`, `mocks`, or a directory under `<plugin>/skills/` |
+| `name`, `tags` and `plugins` are present in `prompt.md`                     |
+| `tags` names the case's own `<skill>` directory                             |
+| `plugins` resolves, from the case directory, to the plugin root             |
+| Every `prompt.md` frontmatter key is in the table above, `context.*` included |
+| `runs` is at most 50, `max_turns` at most 200, `timeout_seconds` at most 3600 |
+| Every `env` key starts with `EVAL_`                                         |
+| `case.yaml` carries `schema_version: "1.1"` and `name`, and no key outside the three above |
+| Every `context.add_dirs` entry resolves inside its own case directory       |
+| Every grader has a `type` the table above lists, and a `weight` above 0     |
+| Every file under `graders/` carries a `---` block                           |
+
+A skill under `<plugin>/skills/` with no directory of that name under `evals/` is reported and
+is not a violation. Coverage is not a rule of this format, so it fails nothing on its own.
+`cowork_evals run --require-coverage` is what turns a report into a preflight failure.
+
 ## Authoring traps
 
 Each of these has a silent failure mode, and each is fixed by editing the case.

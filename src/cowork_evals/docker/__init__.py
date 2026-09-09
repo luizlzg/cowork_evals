@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 import subprocess
+from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 
@@ -73,23 +74,85 @@ class Condition(StrEnum):
 def remedy(condition: Condition) -> str:
     """The one command that fixes each condition.
 
-    Every caller reads it here: `check` below, `scripts/login.sh` and the integration
-    tier. `scripts/image.sh` reads it through the messages `check` builds. It names a
-    development script under `scripts/`, because `cowork_evals setup --docker` is not
-    built. docs/cli.md holds the command that replaces it, and `scripts/README.md` holds
-    the scripts.
+    Every caller reads it here: `check` below, `preflight.py`, `scripts/login.sh` and the
+    integration tier. `scripts/image.sh` reads it through the messages `check` builds. It
+    names what a consumer runs, and never a development script under `scripts/`, which a
+    consumer never sees. docs/cli.md.
     """
     match condition:
         case Condition.DAEMON:
             return "start Docker Desktop or Rancher Desktop"
         case Condition.IMAGE:
-            return "run scripts/image.sh"
+            return "run cowork_evals setup --docker"
         case Condition.CREDENTIAL:
-            return "run scripts/login.sh"
+            return "run cowork_evals setup --docker"
 
 
 class DockerError(Exception):
     """A container backend failure, carrying a message and nothing else."""
+
+
+# The image inventory, for `prune --docker`. Both are module functions and take the
+# repositories to list, because one module owns each image and neither may import the
+# other: `pytest_image.py` imports this file. Nothing outside this module builds a
+# `docker` argument list. docs/cowork_test.md.
+
+# What `docker image ls` prints per row, and how the second half parses.
+IMAGE_FORMAT = "{{.Repository}}:{{.Tag}}\t{{.CreatedAt}}"
+CREATED_FORMAT = "%Y-%m-%d %H:%M:%S %z"
+CREATED_LENGTH = 25
+
+
+def images_argv(*repositories: str) -> list[str]:
+    """Every tag of each named repository, with its creation date. One row per image."""
+    argv = ["docker", "image", "ls"]
+    for repository in repositories:
+        argv += ["--filter", f"reference={repository}:*"]
+    return argv + ["--format", IMAGE_FORMAT]
+
+
+def parse_images(output: str) -> list[tuple[str, datetime]]:
+    """What `docker image ls` printed, as tags and creation dates, sorted by tag.
+
+    A row in a format this cannot parse is dropped: it is not an image to delete, and a
+    prune that guessed at its age would delete the wrong one. Separate from `images` so a
+    test asserts the parse against a recorded listing rather than against a daemon.
+    """
+    found = []
+    for line in output.splitlines():
+        tag, _, created = line.partition("\t")
+        try:
+            when = datetime.strptime(created[:CREATED_LENGTH], CREATED_FORMAT)
+        except ValueError:
+            continue
+        found.append((tag, when))
+    return sorted(found)
+
+
+def images(*repositories: str) -> list[tuple[str, datetime]]:
+    """Each tag and the moment it was built, sorted by tag."""
+    try:
+        completed = subprocess.run(
+            images_argv(*repositories), capture_output=True, text=True, check=False
+        )
+    except OSError as error:
+        raise DockerError(f"docker image ls could not run: {error}") from error
+    if completed.returncode != 0:
+        raise DockerError(f"docker image ls exited {completed.returncode}: {completed.stderr}")
+    return parse_images(completed.stdout)
+
+
+def remove_image_argv(tag: str) -> list[str]:
+    return ["docker", "image", "rm", tag]
+
+
+def remove_image(tag: str) -> None:
+    """Remove one image. A non-zero exit raises, so a prune says which tag it could not."""
+    completed = subprocess.run(remove_image_argv(tag), capture_output=True, text=True, check=False)
+    if completed.returncode != 0:
+        raise DockerError(
+            f"docker image rm {tag} exited {completed.returncode}: {completed.stderr}"
+        )
 
 
 def plugin_root(target: Path | str) -> Path:
