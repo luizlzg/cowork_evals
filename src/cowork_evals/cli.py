@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from . import cowork_backend, docker, gate, logs, preflight, resources, results, validate
+from . import cowork_backend, docker, gate, logs, preflight, resources, results, traces, validate
 from .cases import CaseError, discover, plugin_name, plugin_roots
 from .config import Config, CoWorkError
 from .docker import Docker, DockerError, pytest_image
@@ -47,15 +47,27 @@ OPTION_ATTRIBUTES = {
     "--judge-model": "judge_model",
     "--allow-tools": "allow_tools",
     "--max-cost-usd": "max_cost_usd",
+    "--keep-traces": "keep_traces",
     "--build-missing": "build_missing",
 }
+
+# What an option's attribute carries when the option was not typed, wherever that is not
+# `None`. `_given` reads it, so a three-state option whose false value is `False` is not
+# mistaken for one that was never typed.
+UNTYPED = {"--build-missing": False}
 
 # What each backend cannot honour. An option here is an operator mistake, so it is a usage
 # error. A *case* that needs a field the backend cannot honour is reported skipped and
 # fails the gate instead, and the two are never conflated. docs/cli.md.
 REFUSED = {
     DOCKER: ("--timeout-seconds",),
-    COWORK: ("--model", "--allow-tools", "--max-cost-usd", "--build-missing"),
+    COWORK: (
+        "--model",
+        "--allow-tools",
+        "--max-cost-usd",
+        "--keep-traces",
+        "--build-missing",
+    ),
 }
 
 # Why each is refused, so a message says more than that it was.
@@ -64,6 +76,7 @@ REFUSAL_REASONS = {
     "--model": "the session decides its model",
     "--allow-tools": "the session decides its tools",
     "--max-cost-usd": "the session is billed to the account and is not observable here",
+    "--keep-traces": "the CoWork backend builds no harness sandbox to keep",
     "--build-missing": "there is nothing to build on that backend",
 }
 
@@ -121,6 +134,14 @@ def _run_parser(verbs: Any) -> None:
     verb.add_argument("--judge-model", help="the model behind llm and baseline graders")
     verb.add_argument("--allow-tools", nargs="+", help="the tool grant, on --docker")
     verb.add_argument("--max-cost-usd", type=float, help="one suite's ceiling, on --docker")
+    # Three-state, so `--no-keep-traces` beats a file that turned it on and `--keep-traces`
+    # beats a file that turned it off. Both forms count as typed. docs/cli.md.
+    verb.add_argument(
+        "--keep-traces",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="keep each run's trace and final message under the log directory, on --docker",
+    )
     verb.add_argument("--tag", action="append", help="keep cases carrying this tag, repeatable")
     verb.add_argument("--case", help="a glob over the case name")
     verb.add_argument("--out", help="the log root, replacing logs/evals")
@@ -208,17 +229,21 @@ def _docs_parser(verbs: Any) -> None:
 # The refusals.
 
 
-def _given(args: argparse.Namespace, attribute: str) -> bool:
-    """Whether an option was typed. Every default is `None` or `False`."""
-    value = getattr(args, attribute, None)
-    return value is not None and value is not False
+def _given(args: argparse.Namespace, option: str) -> bool:
+    """Whether an option was typed, against what its attribute carries when it was not.
+
+    That is `None` for every option but the `store_true` ones in `UNTYPED`, which carry
+    `False`. It is compared by identity, so a three-state option set to `False` is typed.
+    """
+    value = getattr(args, OPTION_ATTRIBUTES[option], None)
+    return value is not UNTYPED.get(option)
 
 
 def refusal(args: argparse.Namespace) -> str | None:
     """The one line naming an option the chosen backend refuses, or `None`."""
     backend = getattr(args, "backend", None)
     for option in REFUSED.get(backend, ()):
-        if _given(args, OPTION_ATTRIBUTES[option]):
+        if _given(args, option):
             return f"{option} is not accepted on --{backend}: {REFUSAL_REASONS[option]}"
     return None
 
@@ -475,6 +500,7 @@ def _options(args: argparse.Namespace, config: Config, tags: tuple) -> RunOption
         judge_model=args.judge_model,
         max_cost_usd=None if args.max_cost_usd is None else str(args.max_cost_usd),
         allow_tools=None if args.allow_tools is None else tuple(args.allow_tools),
+        keep_traces=args.keep_traces,
         runs=args.runs,
         tags=tags,
         case=args.case,
@@ -544,6 +570,13 @@ def _each_plugin(
         except (DockerError, CaseError) as error:
             # The gate reads the missing document and fails, so the sweep goes on.
             print(f"{plugin}: {error}", file=sys.stderr)
+        finally:
+            # In a `finally`, because a run that left no result document still left
+            # sandboxes, and one kept sandbox is unreadable until it is collected. A
+            # collection problem is a warning and never turns a passing run into a failure.
+            if image is not None:
+                for warning in traces.collect(output):
+                    print(f"trace: {warning}", file=sys.stderr)
     return ()
 
 
