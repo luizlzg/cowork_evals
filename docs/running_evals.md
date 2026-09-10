@@ -13,7 +13,8 @@ piece is built yet.
 - **The gate decides pass and fail, not the harness.** It reads the result document, so one
   gate covers both backends. Structural graders gate; judged graders are printed.
 - **A skip fails the gate**, so a backend cannot go green by honouring nothing.
-- **Every invocation keeps everything it printed**, in one directory per invocation.
+- **Every invocation keeps everything it printed**, in one directory per invocation, and
+  every run's transcript with it.
 - **Nothing here runs on CI.** A person runs the sweep and reads the summary.
 
 The command surface is [cli.md](cli.md) and the packaging boundary is
@@ -31,6 +32,7 @@ not restate any of them here.
 | The `cowork_evals` executable and its verbs   | yes      | [cli.md](cli.md)                             |
 | `cowork_evals.yaml` and the `Config` over it  | yes      | [library.md](library.md)                     |
 | The pinned harness argument list              | yes      | this file                                    |
+| The run traces, kept under the log directory  | yes      | this file                                    |
 | The gate                                      | yes      | this file                                    |
 | The case validator                            | yes      | [eval_format.md](eval_format.md)             |
 | The 3.10 and import check over code under test | no      | nowhere. Not designed, and no plan builds it |
@@ -108,6 +110,7 @@ command-line option overrides is [cli.md](cli.md).
 | `--max-cost-usd`                             | the configured ceiling         | `eval.max_cost_usd`, 5             |
 | `--output-dir`                               | the run's log directory        | none                               |
 | `--allow-tools`                              | the configured grant           | `eval.allow_tools`, `[Bash]`       |
+| `--keep-temp`                                | on                             | `eval.keep_traces`, true           |
 | `--no-publish`, `--no-scaffold`, `--verbose` | always                         | none                               |
 
 The target goes before every variadic flag: `--tag` and `--allow-tools` swallow a trailing
@@ -160,6 +163,54 @@ See [plugin_eval.md](plugin_eval.md).
 
 `--json` is never passed, for the reason in [plugin_eval.md](plugin_eval.md).
 
+### Keeping the traces
+
+`--keep-temp` is pinned on. Without it the harness deletes each run's sandbox, the transcript
+in it is gone, and the only way to see what the model said is to run the suite again. A slow
+suite is 15 to 30 minutes, so a failure that cannot be read is a failure nobody investigates.
+
+The sandbox is created under the harness's `TMPDIR`, which the container backend points at the
+run's log mount. That is what puts it on the host: the container is started with `--rm`, and
+the default `/tmp` inside it goes with the container. See [docker.md](docker.md).
+
+Every run keeps the same three artefacts, whether it passed or failed:
+
+| Artefact                      | Is                                                      |
+| ----------------------------- | -------------------------------------------------------- |
+| `trace.jsonl`                 | The transcript                                           |
+| `last_message.txt`            | The final assistant message                              |
+| `workspace/`                  | The agent's working directory                            |
+
+A passing run is what a failing one is read against, so keeping less for one than for the
+other would drop half of every comparison. A case that passed on two runs of three is read the
+same way, and which of the three is which is not known before the run.
+
+The rest of the sandbox is removed: the child's configuration directory, its npm logs, its
+node compile cache and its sockets. None of it says anything about the run, and it is 40 times
+the size of what is kept. Snapshot 2026-09-10, the smoke case on the container backend: 12 KB
+kept per run, against roughly 500 KB dropped.
+
+`trace.jsonl` is the harness's own format, one JSON object per line: every assistant turn,
+every tool call with its input, every tool result, and a final `result` record.
+`last_message.txt` is that record's text, which is what a `target: last_message` grader read.
+No rendering of either is written: the harness writes the format, and a second one here would
+be a second thing to keep true.
+
+A collection problem is a warning on stderr and never a failed run. A sandbox that was not
+kept, a trace that will not read and a result document that will not parse are each one line
+saying so, and the run keeps whatever verdict it already had. Collection runs whether or not
+the backend raised, because a run that left no result document still left sandboxes behind,
+and a kept sandbox is read-only until something unseals it.
+
+Turning it off is `--no-keep-traces` or `eval.keep_traces: false`. The command line beats the
+file, as it does for every other option: [library.md](library.md). Off, nothing is created,
+nothing is collected and the harness deletes each sandbox as it always did.
+
+A measured cost, snapshot 2026-09-10, for the smoke case on the container backend: 12 KB per
+run, and 60 KB for a whole two-run suite including `run.log`, `report.html`, `debug.txt` and
+both workspaces. The `⚠ kept ...` notice the harness prints per sandbox goes to `run.log` and
+to the terminal, one line per run.
+
 ## The gate
 
 The gate decides pass and fail, not the harness. It reads the result document, so one gate
@@ -199,6 +250,17 @@ Every line the gate prints carries `FAIL` or `NOTE`, so a judged failure is neve
 cause of exit 1. The last line is the case counts and the overall score, summed and averaged
 across every plugin in the run directory.
 
+A line about what one run produced ends with `[artifacts: <dir>]`, naming the directory
+holding that run's transcript. It is on a failed structural grader, a failed judged grader and
+an errored run, which are the three lines somebody goes and reads a transcript over. A skipped
+case, a skipped grader and a grader naming no definition carry none: none of them is a verdict
+about what the model produced, and there is no transcript behind them.
+
+The directory comes from the run's `tracePath` and is printed only when it is on disk, so a
+document written before this was built, and a run whose trace was not collected, read exactly
+as they did before. On the container backend it is what `traces.py` collected; on CoWork it is
+the session's own transcript directory.
+
 The gate reads every `<plugin>/aggregate-result.json` under the run directory and decides once
 for the whole invocation, so a sweep gates once and not once per plugin.
 
@@ -223,6 +285,9 @@ logs/evals/<yyyymmdd-hhmmss>-<scope>/
   <plugin>/aggregate-result.json # the v1 result document
   <plugin>/report.html           # the self-contained HTML report
   <plugin>/debug.txt             # claude --debug-file output
+  <plugin>/traces/<case>/run-<n>/trace.jsonl       # the run's transcript
+  <plugin>/traces/<case>/run-<n>/last_message.txt  # its final assistant message
+  <plugin>/traces/<case>/run-<n>/workspace/        # the agent's working directory
 logs/evals/latest                # symlink to the newest directory
 ```
 
@@ -235,9 +300,18 @@ reclaims space.
 `run.log` is captured at the file descriptor level, so a child process inherits it and the
 harness's own output and the container's reach the file.
 
+`traces/` is written by the container backend alone, and the rule above says what goes in it.
+`<n>` is 1-based and is the same number the gate prints as `run N`. Nothing makes a case name
+unique inside a plugin, so a second case of the same name is suffixed `-2`, as a second plugin
+of one name is. The run's `tracePath` in
+the result document is rewritten to the collected trace, so the field that named it still
+names it.
+
 A CoWork run writes `<plugin>/aggregate-result.json` and nothing else. There is no
-`report.html` and no `debug.txt` on that backend: the first is the harness's, and the second
-is `claude --debug-file`, and the harness is not in that path. The gate reads only the result
+`report.html`, no `debug.txt` and no `traces/` on that backend: the first is the harness's,
+the second is `claude --debug-file`, and the third is a harness sandbox. The harness is in
+none of those paths. A CoWork run's transcript is already on the host, inside the session
+directory the run's `tracePath` names, and the gate names that directory the same way. The gate reads only the result
 document, so it decides identically for both backends.
 
 The debug log exists only when the run is given one:
