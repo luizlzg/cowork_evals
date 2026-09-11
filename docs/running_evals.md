@@ -110,7 +110,7 @@ command-line option overrides is [cli.md](cli.md).
 | `--max-cost-usd`                             | the configured ceiling         | `eval.max_cost_usd`, 5             |
 | `--output-dir`                               | the run's log directory        | none                               |
 | `--allow-tools`                              | the configured grant           | `eval.allow_tools`, `[Bash]`       |
-| `--keep-temp`                                | on                             | `eval.keep_traces`, true           |
+| `--keep-temp`                                | on, when the run keeps its traces | `eval.keep_traces`, true        |
 | `--no-publish`, `--no-scaffold`, `--verbose` | always                         | none                               |
 
 The target goes before every variadic flag: `--tag` and `--allow-tools` swallow a trailing
@@ -118,6 +118,11 @@ target.
 
 `--ablation` and `--threshold` have no command-line option and cannot be overridden.
 `--threshold 0` is what hands pass and fail to the gate below.
+
+`eval.keep_traces` is the one key in this table that is not only a flag. It decides this flag
+on the container backend, and it decides whether a run's artefacts are collected on both. The
+CoWork backend runs no command line, so there is nothing to pin there and the key still binds.
+See below.
 
 ### The baseline arm, and `arm:` on a grader
 
@@ -203,23 +208,37 @@ Nothing under a CoWork profile is written, moved or removed. The driver's rule h
 
 ### The two transcript formats
 
-`trace.jsonl` is the transcript in whatever format the backend that produced it writes, and
-neither is rewritten. They are close but not identical, so a reader that assumes one on both
-is wrong:
+`trace.jsonl` is the transcript the backend that produced it wrote, and neither is rewritten.
+One name, two formats. They are close, and a reader that assumes one of them on both is
+wrong.
 
-| In `trace.jsonl`               | `--docker`                              | `--cowork`                            |
-| ------------------------------ | ---------------------------------------- | -------------------------------------- |
-| One JSON object per line       | yes                                      | yes                                    |
-| A turn                         | `{type, message: {role, content}}`       | the same, plus `uuid` and `timestamp`  |
-| A tool call and its result     | `tool_use` and `tool_result` blocks      | the same                               |
-| A final `result` record        | yes, carrying the last message and cost  | no                                     |
-| The envelope                   | `system` init and `rate_limit_event` rows | `last-prompt` rows                    |
+| | `--docker` | `--cowork` |
+| ----------------------- | ------------------------------------------ | ------------------------------------- |
+| Written by              | `claude plugin eval`, into the run sandbox | the CoWork application, into the session |
+| The record shapes are in | [claude_code/plugin_eval_reference.md](claude_code/plugin_eval_reference.md) | [cowork_desktop.md](cowork_desktop.md) |
+| Read here by            | `traces.last_message`                      | `cowork.final_text`                    |
+
+What they share is the shape a reader needs: one JSON object per line, a `type`, and a
+`message` of `{role, content}` on a turn, where `content` is a string or a list of blocks and
+a tool call and its result are a `tool_use` and a `tool_result` block paired by id. That is
+why one `last_message.txt` means the same thing on both.
+
+Three differences matter:
+
+- **Only a harness trace ends in a `result` record**, and that record carries the final
+  message verbatim. A session transcript has none, so the final message there is the last
+  assistant text block. Each is read by whatever already parses that format, and neither
+  format is parsed twice.
+- **A session transcript carries an open set of record types**, listed and dated in
+  [cowork_desktop.md](cowork_desktop.md), and only `user` and `assistant` carry a `message`.
+  A reader takes turns from those two and ignores the rest.
+- **A harness trace carries the run's own envelope.** Types observed on the smoke case,
+  snapshot 2026-09-10, CLI 2.1.265: `system`, `assistant`, `user`, `rate_limit_event` and
+  `result`. Nothing else records this set, which is why it is measured here. A session's is
+  not restated here, because that file owns it.
 
 No rendering of either is written. Each format is the one the thing that produced it writes,
-and a rendering here would be a third format to keep true. The final message is read by
-whatever already parses that format: the `result` record for a harness trace, and
-`cowork.final_text` for a session transcript, which is the same function the driver reads it
-with. Neither format is parsed twice.
+and a rendering here would be a third format to keep true.
 
 ### When it cannot be done
 

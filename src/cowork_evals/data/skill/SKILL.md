@@ -196,8 +196,9 @@ FAIL smoke/one-paragraph: run 2: is-one-paragraph: the regex grader failed: patt
 | `workspace/`       | The agent's working directory                                         |
 
 The three names are the same on `--docker` and `--cowork`. `trace.jsonl` is whatever format
-the backend that produced it writes, and the two are close but not identical: a harness trace
-ends in a `result` record and a CoWork one does not. `--no-keep-traces` turns it off, and
+the backend that produced it wrote, and the two are close but not identical: a harness trace
+ends in a `result` record and a CoWork one does not. `cowork_evals docs running_evals` has the
+table, and it names the document that owns each format. `--no-keep-traces` turns it off, and
 `eval.keep_traces: false` does the same from the file.
 
 ## The runtime under test
