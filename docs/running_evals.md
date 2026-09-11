@@ -32,7 +32,7 @@ not restate any of them here.
 | The `cowork_evals` executable and its verbs   | yes      | [cli.md](cli.md)                             |
 | `cowork_evals.yaml` and the `Config` over it  | yes      | [library.md](library.md)                     |
 | The pinned harness argument list              | yes      | this file                                    |
-| The run traces, kept under the log directory  | yes      | this file                                    |
+| The run traces, kept under the log directory, on both backends | yes | this file                    |
 | The gate                                      | yes      | this file                                    |
 | The case validator                            | yes      | [eval_format.md](eval_format.md)             |
 | The 3.10 and import check over code under test | no      | nowhere. Not designed, and no plan builds it |
@@ -165,51 +165,83 @@ See [plugin_eval.md](plugin_eval.md).
 
 ### Keeping the traces
 
-`--keep-temp` is pinned on. Without it the harness deletes each run's sandbox, the transcript
-in it is gone, and the only way to see what the model said is to run the suite again. A slow
-suite is 15 to 30 minutes, so a failure that cannot be read is a failure nobody investigates.
+A failing case has to be readable after the fact. The failure line names the grader and the
+reason, and nothing else survives on its own: the harness deletes each run's sandbox, and a
+CoWork session is a directory in a profile nobody thinks to open. A slow suite is 15 to 30
+minutes, so a failure that cannot be read is a failure nobody investigates.
 
-The sandbox is created under the harness's `TMPDIR`, which the container backend points at the
-run's log mount. That is what puts it on the host: the container is started with `--rm`, and
-the default `/tmp` inside it goes with the container. See [docker.md](docker.md).
+Every run of either backend keeps the same three artefacts, under the same names, whether it
+passed or failed:
 
-Every run keeps the same three artefacts, whether it passed or failed:
+| Artefact           | Is                                                                |
+| ------------------ | ------------------------------------------------------------------ |
+| `trace.jsonl`      | The transcript                                                     |
+| `last_message.txt` | The final assistant message, which is what a `last_message` grader read |
+| `workspace/`       | The agent's working directory                                      |
 
-| Artefact                      | Is                                                      |
-| ----------------------------- | -------------------------------------------------------- |
-| `trace.jsonl`                 | The transcript                                           |
-| `last_message.txt`            | The final assistant message                              |
-| `workspace/`                  | The agent's working directory                            |
+One layout, so a case is read the same way whichever backend produced it, and a run on one
+can be held against a run on the other. A passing run is what a failing one is read against,
+so keeping less for one than for the other would drop half of every comparison: which of three
+runs failed is not known before the run.
 
-A passing run is what a failing one is read against, so keeping less for one than for the
-other would drop half of every comparison. A case that passed on two runs of three is read the
-same way, and which of the three is which is not known before the run.
+What differs is only where the three are read from, and whether they are moved or copied:
 
-The rest of the sandbox is removed: the child's configuration directory, its npm logs, its
-node compile cache and its sockets. None of it says anything about the run, and it is 40 times
-the size of what is kept. Snapshot 2026-09-10, the smoke case on the container backend: 12 KB
-kept per run, against roughly 500 KB dropped.
+| Backend    | The artefacts are in                                | And are | Because                                                     |
+| ---------- | ---------------------------------------------------- | ------- | ------------------------------------------------------------ |
+| `--docker` | the sandbox `--keep-temp` kept, on the host          | moved   | A sandbox is a throwaway directory, and moving empties it   |
+| `--cowork` | the CoWork session directory                         | copied  | A session is the account's own record, and is never written |
 
-`trace.jsonl` is the harness's own format, one JSON object per line: every assistant turn,
-every tool call with its input, every tool result, and a final `result` record.
-`last_message.txt` is that record's text, which is what a `target: last_message` grader read.
-No rendering of either is written: the harness writes the format, and a second one here would
-be a second thing to keep true.
+`--keep-temp` is pinned on for the container backend. The sandbox it keeps is created under
+the harness's `TMPDIR`, which that backend points at the run's log mount. That is what puts it
+on the host: the container is started with `--rm`, and the default `/tmp` inside it goes with
+the container. See [docker.md](docker.md). The rest of a sandbox is removed: the child's
+configuration directory, its npm logs, its node compile cache and its sockets. None of it says
+anything about the run, and it is 40 times the size of what is kept.
+
+Nothing under a CoWork profile is written, moved or removed. The driver's rule holds here:
+[cowork_driver.md](cowork_driver.md).
+
+### The two transcript formats
+
+`trace.jsonl` is the transcript in whatever format the backend that produced it writes, and
+neither is rewritten. They are close but not identical, so a reader that assumes one on both
+is wrong:
+
+| In `trace.jsonl`               | `--docker`                              | `--cowork`                            |
+| ------------------------------ | ---------------------------------------- | -------------------------------------- |
+| One JSON object per line       | yes                                      | yes                                    |
+| A turn                         | `{type, message: {role, content}}`       | the same, plus `uuid` and `timestamp`  |
+| A tool call and its result     | `tool_use` and `tool_result` blocks      | the same                               |
+| A final `result` record        | yes, carrying the last message and cost  | no                                     |
+| The envelope                   | `system` init and `rate_limit_event` rows | `last-prompt` rows                    |
+
+No rendering of either is written. Each format is the one the thing that produced it writes,
+and a rendering here would be a third format to keep true. The final message is read by
+whatever already parses that format: the `result` record for a harness trace, and
+`cowork.final_text` for a session transcript, which is the same function the driver reads it
+with. Neither format is parsed twice.
+
+### When it cannot be done
 
 A collection problem is a warning on stderr and never a failed run. A sandbox that was not
-kept, a trace that will not read and a result document that will not parse are each one line
-saying so, and the run keeps whatever verdict it already had. Collection runs whether or not
-the backend raised, because a run that left no result document still left sandboxes behind,
-and a kept sandbox is read-only until something unseals it.
+kept, a session the driver never reached, a trace that will not read and a result document
+that will not parse are each one line saying so, and the run keeps whatever verdict it
+already had. A run that already carries an `error` says nothing: the error is why there is
+nothing to collect, and the gate prints it.
 
-Turning it off is `--no-keep-traces` or `eval.keep_traces: false`. The command line beats the
-file, as it does for every other option: [library.md](library.md). Off, nothing is created,
-nothing is collected and the harness deletes each sandbox as it always did.
+Collection runs whether or not the backend raised, because a run that left no result document
+still left sandboxes behind, and a kept sandbox is read-only until something unseals it.
+
+Turning it off is `--no-keep-traces` or `eval.keep_traces: false`, on either backend. The
+command line beats the file, as it does for every other option: [library.md](library.md).
+Off, nothing is created and nothing is collected, and the harness deletes each sandbox as it
+always did.
 
 A measured cost, snapshot 2026-09-10, for the smoke case on the container backend: 12 KB per
 run, and 60 KB for a whole two-run suite including `run.log`, `report.html`, `debug.txt` and
-both workspaces. The `⚠ kept ...` notice the harness prints per sandbox goes to `run.log` and
-to the terminal, one line per run.
+both workspaces. A CoWork run's cost is the size of its `outputs/`, which is whatever the case
+made the session produce. The `⚠ kept ...` notice the harness prints per sandbox goes to
+`run.log` and to the terminal, one line per run.
 
 ## The gate
 
@@ -258,8 +290,9 @@ about what the model produced, and there is no transcript behind them.
 
 The directory comes from the run's `tracePath` and is printed only when it is on disk, so a
 document written before this was built, and a run whose trace was not collected, read exactly
-as they did before. On the container backend it is what `traces.py` collected; on CoWork it is
-the session's own transcript directory.
+as they did before. `traces.py` rewrites that field to the trace it collected on both backends,
+so the line says the same thing whichever one produced the run. A CoWork run's session
+directory is still in `cowork.sessionDir`.
 
 The gate reads every `<plugin>/aggregate-result.json` under the run directory and decides once
 for the whole invocation, so a sweep gates once and not once per plugin.
@@ -300,19 +333,18 @@ reclaims space.
 `run.log` is captured at the file descriptor level, so a child process inherits it and the
 harness's own output and the container's reach the file.
 
-`traces/` is written by the container backend alone, and the rule above says what goes in it.
-`<n>` is 1-based and is the same number the gate prints as `run N`. Nothing makes a case name
+`traces/` is written by both backends, with the same three names in it, and the rule above
+says what goes in each. `<n>` is 1-based and is the same number the gate prints as `run N`. Nothing makes a case name
 unique inside a plugin, so a second case of the same name is suffixed `-2`, as a second plugin
 of one name is. The run's `tracePath` in
 the result document is rewritten to the collected trace, so the field that named it still
 names it.
 
-A CoWork run writes `<plugin>/aggregate-result.json` and nothing else. There is no
-`report.html`, no `debug.txt` and no `traces/` on that backend: the first is the harness's,
-the second is `claude --debug-file`, and the third is a harness sandbox. The harness is in
-none of those paths. A CoWork run's transcript is already on the host, inside the session
-directory the run's `tracePath` names, and the gate names that directory the same way. The gate reads only the result
-document, so it decides identically for both backends.
+A CoWork run writes `<plugin>/aggregate-result.json` and `<plugin>/traces/`. There is no
+`report.html` and no `debug.txt` on that backend: the first is the harness's, the second is
+`claude --debug-file`, and the harness is in neither path. `traces/` is written by both, with
+the same three names in it. The gate reads only the result document, so it decides identically
+for both backends.
 
 The debug log exists only when the run is given one:
 `claude --debug-file <path> plugin eval ... --verbose`. The flag goes before `plugin`, and it

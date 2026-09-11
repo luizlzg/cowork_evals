@@ -1,8 +1,9 @@
-"""What is kept out of a harness sandbox, over hand-written sandboxes on disk.
+"""What is kept out of a run, over hand-written sandboxes and session directories on disk.
 
-Every sandbox here is written by the test, in the layout
-docs/claude_code/plugin_eval_reference.md records, and the collector that reads one is the
-real one. Nothing here runs a container. See ../README.md.
+Every source here is written by the test: a harness sandbox in the layout
+docs/claude_code/plugin_eval_reference.md records, and a CoWork session directory in the
+layout docs/cowork_desktop.md records. The collector that reads either is the real one.
+Nothing here runs a container or a session. See ../README.md.
 """
 
 from __future__ import annotations
@@ -63,6 +64,50 @@ def write_trace(directory: Path, records: list[dict] | None = None) -> Path:
         encoding="utf-8",
     )
     return trace
+
+
+# One CoWork session transcript. The record shape is docs/cowork_desktop.md, and it is not
+# the harness's: there is no `result` record, and the envelope carries a uuid and a session id.
+SESSION_TRACE = [
+    {"type": "user", "uuid": "tu-1", "message": {"role": "user", "content": "Run python3 -V"}},
+    {
+        "type": "assistant",
+        "uuid": "ta-1",
+        "message": {
+            "role": "assistant",
+            "content": [
+                {"type": "thinking", "thinking": "not text"},
+                {"type": "text", "text": "Python 3.10.12"},
+            ],
+        },
+    },
+]
+
+
+def write_session(root: Path, name: str = "s-0001", *, outputs: bool = True) -> Path:
+    """One CoWork session directory: an audit log, a transcript and produced files."""
+    session = root / name
+    (session / "audit.jsonl").parent.mkdir(parents=True, exist_ok=True)
+    (session / "audit.jsonl").write_text('{"state": "completed"}\n', encoding="utf-8")
+    transcripts = session / ".claude" / "projects" / "session"
+    transcripts.mkdir(parents=True)
+    (transcripts / "t-0001.jsonl").write_text(
+        "".join(json.dumps(record) + "\n" for record in SESSION_TRACE), encoding="utf-8"
+    )
+    if outputs:
+        (session / "outputs").mkdir()
+        (session / "outputs" / "report.md").write_text("what the agent wrote", encoding="utf-8")
+    return session
+
+
+def session_entry(session: Path, *, passed: bool = True, error: str | None = None) -> dict:
+    """One CoWork run of the document, as results.py writes it."""
+    return {
+        "passed": passed,
+        "error": error,
+        "tracePath": str(session / ".claude" / "projects" / "session" / "t-0001.jsonl"),
+        "cowork": {"sessionDir": str(session), "timeoutSeconds": 1800.0},
+    }
 
 
 def write_document(output_dir: Path, *runs: dict) -> Path:
@@ -280,3 +325,98 @@ def test_a_sandbox_holding_no_workspace_is_a_warning(tmp_path: Path) -> None:
     assert len(warnings) == 1
     assert "no workspace to collect" in warnings[0]
     assert (traces.run_dir(tmp_path, "python-version", 1) / traces.TRACE_NAME).is_file()
+
+
+# The CoWork backend. The same three names, out of a session directory instead of a sandbox.
+
+
+def test_a_cowork_run_keeps_the_same_three_artefacts(tmp_path: Path) -> None:
+    session = write_session(tmp_path / "profile")
+    output = tmp_path / "logs"
+    output.mkdir()
+    write_document(output, session_entry(session))
+
+    assert traces.collect(output) == []
+    kept = traces.run_dir(output, "python-version", 1)
+    assert (kept / traces.TRACE_NAME).is_file()
+    assert (kept / traces.LAST_MESSAGE_NAME).read_text(encoding="utf-8") == "Python 3.10.12"
+    assert (kept / traces.WORKSPACE_NAME / "report.md").read_text(
+        encoding="utf-8"
+    ) == "what the agent wrote"
+
+
+def test_the_session_directory_is_copied_and_never_emptied(tmp_path: Path) -> None:
+    """It is the account's own permanent record, and nothing here writes under the profile."""
+    session = write_session(tmp_path / "profile")
+    output = tmp_path / "logs"
+    output.mkdir()
+    write_document(output, session_entry(session))
+
+    traces.collect(output)
+    transcript = session / ".claude" / "projects" / "session" / "t-0001.jsonl"
+    assert transcript.is_file(), "the transcript was moved out of the session"
+    assert (session / "outputs" / "report.md").is_file(), "the produced files were moved"
+    assert (session / "audit.jsonl").is_file()
+
+
+def test_a_session_that_produced_no_file_is_not_a_warning(tmp_path: Path) -> None:
+    """A session holds `outputs/` only once the run produced one, unlike a kept sandbox."""
+    session = write_session(tmp_path / "profile", outputs=False)
+    output = tmp_path / "logs"
+    output.mkdir()
+    write_document(output, session_entry(session))
+
+    assert traces.collect(output) == []
+    kept = traces.run_dir(output, "python-version", 1)
+    assert (kept / traces.TRACE_NAME).is_file()
+    assert not (kept / traces.WORKSPACE_NAME).exists()
+
+
+def test_a_cowork_trace_path_is_rewritten_like_a_harness_one(tmp_path: Path) -> None:
+    """The gate then prints the same thing whichever backend produced the run."""
+    session = write_session(tmp_path / "profile")
+    output = tmp_path / "logs"
+    output.mkdir()
+    write_document(output, session_entry(session))
+
+    traces.collect(output)
+    written = collected(output)["cases"][0]["arms"]["with"][0]["tracePath"]
+    assert Path(written) == traces.run_dir(output, "python-version", 1) / traces.TRACE_NAME
+    assert collected(output)["cases"][0]["arms"]["with"][0]["cowork"]["sessionDir"] == str(
+        session
+    ), "the session directory is still named"
+
+
+def test_a_run_that_reached_no_session_and_carries_an_error_says_nothing(tmp_path: Path) -> None:
+    """The error already says why there is nothing to collect, and a second line is noise."""
+    output = tmp_path / "logs"
+    output.mkdir()
+    write_document(
+        output,
+        {
+            "passed": False,
+            "error": "5: no session directory appeared",
+            "cowork": {"sessionDir": None, "timeoutSeconds": 1800.0},
+        },
+    )
+    assert traces.collect(output) == []
+
+
+def test_a_run_that_reached_no_session_and_carries_no_error_warns(tmp_path: Path) -> None:
+    output = tmp_path / "logs"
+    output.mkdir()
+    write_document(output, {"passed": True, "cowork": {"sessionDir": None}})
+
+    assert traces.collect(output) == ["python-version: run 1: the run reached no session directory"]
+
+
+def test_the_cowork_key_and_not_its_value_decides_the_backend(tmp_path: Path) -> None:
+    """A run the driver could not start carries the key with a null `sessionDir`.
+
+    Read as a harness run it would say its `tracePath` names no sandbox, which is a line
+    about the wrong backend.
+    """
+    output = tmp_path / "logs"
+    output.mkdir()
+    write_document(output, {"passed": True, "cowork": {"sessionDir": None}})
+    assert "sandbox" not in traces.collect(output)[0]

@@ -19,7 +19,9 @@ A harness sandbox is written by the test rather than kept under `tests/data/`, b
 sandbox is a directory tree with modes on it and a checkout does not carry a mode-000
 directory. `unit/test_traces.py` builds one in `tmp_path` in the layout
 [../docs/claude_code/plugin_eval_reference.md](../docs/claude_code/plugin_eval_reference.md)
-records, and the collector that reads it is the real one.
+records, and a CoWork session directory beside it in the layout
+[../docs/cowork_desktop.md](../docs/cowork_desktop.md) records. The collector that reads
+either is the real one.
 
 ## Two tiers
 
@@ -61,7 +63,7 @@ A skipped test reports as a pass and hides the thing it was written to catch.
 | `unit/test_pytest_image.py`       | The test image digest, and the build and run argument lists | yes    |
 | `unit/test_validate.py`           | The case validator and the coverage report over hand-written trees | yes |
 | `unit/test_logs.py`               | The run directory, `env.txt`, `latest`, pruning and the tee | yes    |
-| `unit/test_traces.py`             | What is kept out of a harness sandbox, over sandboxes written by the test | yes |
+| `unit/test_traces.py`             | What is kept out of a run on either backend, over sandboxes and session directories written by the test | yes |
 | `unit/test_gate.py`               | The gate over hand-written result documents                | yes    |
 | `unit/test_preflight.py`          | Each backend's unmet conditions, and the rate ceiling      | yes    |
 | `unit/test_cli.py`                | The parser, the refusals, the verbs and the exit codes     | yes    |

@@ -61,13 +61,7 @@ UNTYPED = {"--build-missing": False}
 # fails the gate instead, and the two are never conflated. docs/cli.md.
 REFUSED = {
     DOCKER: ("--timeout-seconds",),
-    COWORK: (
-        "--model",
-        "--allow-tools",
-        "--max-cost-usd",
-        "--keep-traces",
-        "--build-missing",
-    ),
+    COWORK: ("--model", "--allow-tools", "--max-cost-usd", "--build-missing"),
 }
 
 # Why each is refused, so a message says more than that it was.
@@ -76,7 +70,6 @@ REFUSAL_REASONS = {
     "--model": "the session decides its model",
     "--allow-tools": "the session decides its tools",
     "--max-cost-usd": "the session is billed to the account and is not observable here",
-    "--keep-traces": "the CoWork backend builds no harness sandbox to keep",
     "--build-missing": "there is nothing to build on that backend",
 }
 
@@ -140,7 +133,7 @@ def _run_parser(verbs: Any) -> None:
         "--keep-traces",
         action=argparse.BooleanOptionalAction,
         default=None,
-        help="keep each run's trace and final message under the log directory, on --docker",
+        help="keep each run's trace, final message and workspace under the log directory",
     )
     verb.add_argument("--tag", action="append", help="keep cases carrying this tag, repeatable")
     verb.add_argument("--case", help="a glob over the case name")
@@ -234,9 +227,14 @@ def _given(args: argparse.Namespace, option: str) -> bool:
 
     That is `None` for every option but the `store_true` ones in `UNTYPED`, which carry
     `False`. It is compared by identity, so a three-state option set to `False` is typed.
+
+    A verb that does not carry the option has no attribute for it, and that is not typed
+    either: `check` takes a backend and nothing else, and `--build-missing` is `run`'s.
     """
-    value = getattr(args, OPTION_ATTRIBUTES[option], None)
-    return value is not UNTYPED.get(option)
+    attribute = OPTION_ATTRIBUTES[option]
+    if not hasattr(args, attribute):
+        return False
+    return getattr(args, attribute) is not UNTYPED.get(option)
 
 
 def refusal(args: argparse.Namespace) -> str | None:
@@ -500,11 +498,23 @@ def _options(args: argparse.Namespace, config: Config, tags: tuple) -> RunOption
         judge_model=args.judge_model,
         max_cost_usd=None if args.max_cost_usd is None else str(args.max_cost_usd),
         allow_tools=None if args.allow_tools is None else tuple(args.allow_tools),
-        keep_traces=args.keep_traces,
+        keep_traces=_keeping(args, config),
         runs=args.runs,
         tags=tags,
         case=args.case,
     )
+
+
+def _keeping(args: argparse.Namespace, config: Config) -> bool:
+    """Whether this run keeps its traces. Both backends read it here and nowhere else.
+
+    An option beats the file, and the file beats the built-in default: docs/library.md. It
+    reaches the container backend as a `RunOptions` field, because the harness command line
+    needs it too, and the CoWork backend through `_each_plugin` alone, because that backend
+    builds no command line. `RunOptions.resolve` is handed the answer rather than the
+    argument, so the ladder is walked once.
+    """
+    return args.keep_traces if args.keep_traces is not None else config.eval.keep_traces
 
 
 def _sweep(
@@ -574,7 +584,7 @@ def _each_plugin(
             # In a `finally`, because a run that left no result document still left
             # sandboxes, and one kept sandbox is unreadable until it is collected. A
             # collection problem is a warning and never turns a passing run into a failure.
-            if image is not None:
+            if _keeping(args, config):
                 for warning in traces.collect(output):
                     print(f"trace: {warning}", file=sys.stderr)
     return ()

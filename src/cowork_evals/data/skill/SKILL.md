@@ -180,9 +180,9 @@ case blocks a single-case run. There is no option to skip validation.
 
 ## Reading a failure
 
-Every run leaves its transcript on the host, passing runs included, so a failure is
-investigated without running the suite again and against a run that passed. A failing line
-names the directory:
+Every run leaves its transcript on the host, on either backend and passing runs included, so
+a failure is investigated without running the suite again, against a run that passed and
+against the same case on the other backend. A failing line names the directory:
 
 ```
 FAIL smoke/one-paragraph: run 2: is-one-paragraph: the regex grader failed: pattern not found
@@ -195,7 +195,10 @@ FAIL smoke/one-paragraph: run 2: is-one-paragraph: the regex grader failed: patt
 | `trace.jsonl`      | Every turn and every tool call, one JSON object per line              |
 | `workspace/`       | The agent's working directory                                         |
 
-`--no-keep-traces` turns it off, and `eval.keep_traces: false` does the same from the file.
+The three names are the same on `--docker` and `--cowork`. `trace.jsonl` is whatever format
+the backend that produced it writes, and the two are close but not identical: a harness trace
+ends in a `result` record and a CoWork one does not. `--no-keep-traces` turns it off, and
+`eval.keep_traces: false` does the same from the file.
 
 ## The runtime under test
 
