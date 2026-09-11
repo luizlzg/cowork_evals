@@ -89,6 +89,18 @@ def test_the_traces_option_reaches_the_harness_options() -> None:
     assert cli._options(untyped, Config(), ()).keep_traces is True
 
 
+@pytest.mark.parametrize("backend", ["--docker", "--cowork"])
+def test_the_same_ladder_decides_it_on_either_backend(backend) -> None:
+    """`_keeping` is the one place the option meets the file, for both backends."""
+    off = Config(eval=EvalSection(keep_traces=False))
+    assert cli._keeping(parse("run", backend, "plugin/evals"), Config()) is True
+    assert cli._keeping(parse("run", backend, "plugin/evals"), off) is False
+    assert cli._keeping(parse("run", backend, "plugin/evals", "--keep-traces"), off) is True
+    assert (
+        cli._keeping(parse("run", backend, "plugin/evals", "--no-keep-traces"), Config()) is False
+    )
+
+
 def test_run_defaults_every_option_to_nothing() -> None:
     args = parse("run", "--cowork", "plugin/evals")
     assert (args.runs, args.timeout_seconds, args.model, args.judge_model) == (
@@ -267,14 +279,17 @@ def test_build_missing_is_refused_on_cowork(capsys) -> None:
 
 
 @pytest.mark.parametrize("form", ["--keep-traces", "--no-keep-traces"])
-def test_either_form_of_the_traces_option_is_refused_on_cowork(form, capsys) -> None:
-    """`False` is a typed value here and not an untyped one, so both forms are refused."""
-    assert main(["run", "--cowork", "plugin/evals", form]) == USAGE
-    assert "--keep-traces is not accepted on --cowork" in capsys.readouterr().err
+def test_either_form_of_the_traces_option_is_accepted_on_both_backends(form) -> None:
+    """Both backends keep the same three artefacts, so neither refuses the option."""
+    for backend in ("--docker", "--cowork"):
+        typed = parse("run", backend, "plugin/evals", form).keep_traces
+        assert typed is (form == "--keep-traces")
 
 
-def test_the_traces_option_is_accepted_on_docker() -> None:
-    assert parse("run", "--docker", "plugin/evals", "--no-keep-traces").keep_traces is False
+@pytest.mark.parametrize("backend", ["--docker", "--cowork", "--all"])
+def test_a_verb_that_does_not_carry_a_refused_option_refuses_nothing(backend) -> None:
+    """`check` takes a backend and nothing else, so an option it never had is not typed."""
+    assert cli.refusal(parse("check", backend)) is None
 
 
 def test_timeout_seconds_is_refused_on_docker(capsys) -> None:

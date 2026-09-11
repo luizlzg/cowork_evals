@@ -194,9 +194,10 @@ logs/evals/latest/
   notes/traces/<case>/run-<n>/   # trace.jsonl, last_message.txt and the agent's workspace
 ```
 
-Every run leaves those three, whether it passed or failed, so a failing run is read against a
-passing one. A failing line names the directory holding the run behind it, so a failure is
-read without running the suite again. `--no-keep-traces` turns that off.
+Every run of either backend leaves those three, under the same names, whether it passed or
+failed. A failing run is read against a passing one, and a `--docker` run against a `--cowork`
+one. A failing line names the directory holding the run behind it, so a failure is read
+without running the suite again. `--no-keep-traces` turns that off.
 
 Then widen it:
 
