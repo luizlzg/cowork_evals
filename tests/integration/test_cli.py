@@ -24,12 +24,15 @@ import json
 import os
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 
 import pytest
+import yaml
 
 from cowork_evals import Config, logs, preflight, traces
 from cowork_evals.cli import main
+from cowork_evals.config import CONFIG_FILENAME
 from cowork_evals.docker import Condition, Docker, remedy
 from cowork_evals.docker.pytest_image import BUILD_REMEDY, PytestImage
 from cowork_evals.harness import RESULT_NAME
@@ -263,3 +266,77 @@ def test_one_ask_prints_a_non_empty_answer_and_names_a_session_that_exists(
     assert len(named) == 1
     assert Path(named[0].removeprefix("session: ")).is_dir()
     assert sorted(ROOT.iterdir()) == before
+
+
+# Environment passthrough. docs/docker.md.
+
+# A name no machine sets, and a token that is in no other file on this host. The variable is
+# set in this process, which is the environment the backend reads: it is a real variable and
+# not a seam. Nothing here prints the token.
+PROBE = "COWORK_EVALS_INTEGRATION_PROBE"
+
+
+def forwarding(tmp_path: Path) -> Path:
+    """This machine's configuration with `PROBE` forwarded, in a new working directory.
+
+    Every other key is this machine's own, so the login and any extra root CA are the ones
+    a run here already uses. `docker.login_dir` and `docker.extra_ca_file` are written back
+    as the loaded section resolved them, because a relative path in the source file would
+    otherwise resolve against this directory instead of the repository.
+    """
+    source = ROOT / CONFIG_FILENAME
+    assert source.is_file(), f"{CONFIG_FILENAME} is not in the repository root"
+    document = yaml.safe_load(source.read_text(encoding="utf-8")) or {}
+    settings = Config.load(source).docker
+    section = document.setdefault("docker", {})
+    section["login_dir"] = str(settings.login_dir)
+    if settings.extra_ca_file is not None:
+        section["extra_ca_file"] = str(settings.extra_ca_file)
+    section["env_passthrough"] = [PROBE]
+
+    (tmp_path / CONFIG_FILENAME).write_text(
+        yaml.safe_dump(document, sort_keys=False), encoding="utf-8"
+    )
+    return tmp_path
+
+
+@pytest.mark.live
+def test_a_forwarded_variable_reaches_a_run_and_its_value_reaches_no_artefact(
+    credentialled, tmp_path, monkeypatch
+) -> None:
+    """`plugins/smoke/` whole, with one variable forwarded, and the token grepped for after.
+
+    The grep is over every file the run left, not the named artefacts alone, so a kept trace
+    or a report is covered by the same assertion. What the container prints reaches `run.log`
+    and these cases print nothing of it; that limit is in ../../docs/docker.md.
+    """
+    token = uuid.uuid4().hex
+    monkeypatch.setenv(PROBE, token)
+    monkeypatch.chdir(forwarding(tmp_path))
+    root = tmp_path / "logs"
+
+    code = main(["run", "--docker", str(SMOKE), "--out", str(root)])
+    assert code == 0, (root / logs.LATEST / logs.VERDICT_FILE).read_text()
+
+    run = (root / logs.LATEST).resolve()
+    assert f"env_passthrough: {PROBE}\n" in (run / logs.ENV_FILE).read_text()
+    carrying = [
+        path.relative_to(run)
+        for path in sorted(run.rglob("*"))
+        if path.is_file() and not path.is_symlink() and token.encode() in path.read_bytes()
+    ]
+    assert carrying == []
+
+
+def test_a_forwarded_variable_the_host_has_not_set_refuses_before_anything_is_created(
+    credentialled, tmp_path, monkeypatch, capsys
+) -> None:
+    """Exit 3, the variable named, no value, and no log root. It spends nothing."""
+    monkeypatch.delenv(PROBE, raising=False)
+    monkeypatch.chdir(forwarding(tmp_path))
+    root = tmp_path / "logs"
+
+    assert main(["run", "--docker", str(SMOKE), "--out", str(root)]) == 3
+    printed = capsys.readouterr()
+    assert [line for line in printed.err.splitlines() if PROBE in line]
+    assert not root.exists()

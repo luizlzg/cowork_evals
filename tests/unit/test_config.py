@@ -73,6 +73,7 @@ def test_missing_file_yields_the_docker_defaults(working_directory, tmp_path: Pa
     assert section.claude_code_version == "2.1.265"
     assert section.login_dir == Path.home() / ".cache" / "cowork_evals" / "claude"
     assert section.extra_ca_file is None
+    assert section.env_passthrough == ()
 
 
 # The file over the defaults.
@@ -100,6 +101,21 @@ def test_a_section_the_file_omits_is_the_default(tmp_path: Path) -> None:
     file = write(tmp_path, "cowork:\n  profile: Fixture\n")
     assert Config.load(file).eval == EvalSection()
     assert Config.load(file).docker == DockerSection()
+
+
+def test_the_forwarded_names_are_read_as_written(tmp_path: Path) -> None:
+    file = write(tmp_path, "docker:\n  env_passthrough: [ACME_API_KEY, ACME_REGION]\n")
+    assert Config.load(file).docker.env_passthrough == ("ACME_API_KEY", "ACME_REGION")
+
+
+@pytest.mark.parametrize("name", ["1ACME", "acme-key", "acme key", "ACME=1", ""])
+def test_a_name_no_shell_would_accept_is_refused_at_load(tmp_path: Path, name: str) -> None:
+    """The message names the line, so a reader knows which one to change."""
+    file = write(tmp_path, f"docker:\n  env_passthrough: ['{name}']\n")
+    with pytest.raises(CoWorkError) as raised:
+        Config.load(file)
+    assert raised.value.code == 2
+    assert "docker.env_passthrough" in str(raised.value)
 
 
 def test_a_widened_allow_tools_replaces_the_default(tmp_path: Path) -> None:
@@ -154,6 +170,8 @@ def test_an_unknown_key_inside_a_known_section_raises(tmp_path: Path, body: str,
         ("eval:\n  max_cost_usd: five\n", "eval.max_cost_usd"),
         ("eval:\n  allow_tools: Bash Write\n", "eval.allow_tools"),
         ("docker:\n  platform: 3\n", "docker.platform"),
+        ("docker:\n  env_passthrough: ACME_KEY\n", "docker.env_passthrough"),
+        ("docker:\n  env_passthrough: [3]\n", "docker.env_passthrough"),
     ],
 )
 def test_a_wrongly_typed_value_raises(tmp_path: Path, body: str, key: str) -> None:

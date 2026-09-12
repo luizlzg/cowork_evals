@@ -9,7 +9,7 @@ points it at its own tree.
 - **Two repositories.** This one owns the backends, the CLI, the verdict, the validator, the
   pinned wheel set and the image. The consumer owns its plugins, its cases and its logs.
 - **One configuration file.** `cowork_evals.yaml` in the working directory. Nothing is read
-  from the process environment, and there is no `.env`.
+  from the process environment except the variables that file names, and there is no `.env`.
 - **Two roots.** The installed package holds the code and the pins. The consumer's working
   directory holds the plugins and the logs. Nothing resolves a path under test from the
   package root.
@@ -272,7 +272,22 @@ is [eval_format.md](eval_format.md), unchanged by which repository holds it.
 
 Options are flags, and their defaults are keys in `cowork_evals.yaml`, in the working
 directory, the directory `logs/` is resolved from. That file is the only configuration route:
-nothing is read from the process environment, and there is no `.env`.
+nothing is read from the process environment except the variables it names, and there is no
+`.env`.
+
+`docker.env_passthrough` is the one exception, and it is a list of variable names. What each
+one holds is not configuration and is never read as any: it is forwarded into the run
+container and used nowhere here. A run stays reproducible from the file, because the file
+still says which names a run carried, and a name that is not there carries nothing.
+
+| Rule                                                        | Holds because                                                                        |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| A named variable absent or empty on the host fails the preflight | A missing precondition fails. An empty string is not a value                     |
+| A name that would carry Claude's own credential is refused  | The container login is the one route for that, whatever the variable holds            |
+
+It exists so a skill whose whole job is calling an API can be evaluated at all. Without it
+such a skill fails every eval for a reason that has nothing to do with the skill. The setting,
+the two conditions and what a forwarded value reaches are [docker.md](docker.md).
 
 | Layer                 | Beats           | Is for                         |
 | --------------------- | --------------- | ------------------------------ |

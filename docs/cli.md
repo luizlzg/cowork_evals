@@ -164,9 +164,14 @@ a run that silently spends ten more building an image is not readable in a log.
 
 | Backend    | Requires                                                             | Fails when                                                  |
 | ---------- | -------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `--docker` | a Docker or Rancher daemon, the image at the current digest, and the container login | the daemon is down, the image is absent or stale, or there is no login |
+| `--docker` | a Docker or Rancher daemon, the image at the current digest, the container login, and every name in `docker.env_passthrough` set on the host | the daemon is down, the image is absent or stale, there is no login, a forwarded name is unset or empty, or one of them would carry Claude's own credential |
 | `--cowork` | macOS, `claude` on `PATH`, a `cowork_evals.yaml` naming a profile, a readable sessions root under it, an Accessibility grant, and the suite inside the driver's `max_runs` | the grant is missing, so there is no headless route and no CI, or `claude` is absent, or no profile is configured, or the suite would exceed the ceiling |
 | `test`     | a Docker or Rancher daemon, the eval image, and the test image over it        | the daemon is down, or either image is absent or stale |
+
+A forwarded name that is unset or empty on the host is an unmet condition, one line per
+name, because an empty string is not a value. A name that would carry Claude's own credential
+is refused whatever it holds, and the line names the container login as the one route. Every
+line names the variable and never its value. See [docker.md](docker.md).
 
 The desktop application itself is not probed. What the backend reads is the profile directory
 the application writes sessions into, and an unreadable one is the condition that matters. See

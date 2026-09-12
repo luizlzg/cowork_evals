@@ -102,33 +102,33 @@ becomes a second one.
 
 ### Phase 1: the setting
 
-- [ ] `docker.env_passthrough`, a list of variable names, defaulting to empty. In the
+- [x] `docker.env_passthrough`, a list of variable names, defaulting to empty. In the
       `docker:` section, because the container backend is what reads it
-- [ ] A name that is not a plausible environment variable name is refused at load, with the
+- [x] A name that is not a plausible environment variable name is refused at load, with the
       message naming the line
-- [ ] Empty by default, so a repository that names none behaves exactly as it does today
+- [x] Empty by default, so a repository that names none behaves exactly as it does today
 
 ### Phase 2: the preflight
 
-- [ ] A named variable absent from the process environment is an unmet condition, one line
+- [x] A named variable absent from the process environment is an unmet condition, one line
       per name, and `run` exits 3
-- [ ] A named variable present and empty is the same unmet condition. An empty string is not
+- [x] A named variable present and empty is the same unmet condition. An empty string is not
       a value
-- [ ] A name that would carry Claude's own credential is refused whatever its value, and the
+- [x] A name that would carry Claude's own credential is refused whatever its value, and the
       message names the container login as the route
-- [ ] `check --docker` reports the same conditions, so a developer sees them without starting
+- [x] `check --docker` reports the same conditions, so a developer sees them without starting
       a run
-- [ ] Every message names the variable and never its value
+- [x] Every message names the variable and never its value
 
 ### Phase 3: the forwarding
 
-- [ ] `run_preamble` forwards each named variable, beside the variables it already writes
-- [ ] The forwarded names are read once, where the preflight already read them, and are not
+- [x] `run_preamble` forwards each named variable, beside the variables it already writes
+- [x] The forwarded names are read once, where the preflight already read them, and are not
       read a second time at container start
-- [ ] `env.txt` records the forwarded names on one line, and no value
-- [ ] `--dry-run` prints the container argument list with each forwarded name and its value
+- [x] `env.txt` records the forwarded names on one line, and no value
+- [x] `--dry-run` prints the container argument list with each forwarded name and its value
       replaced, so a dry run is safe to paste into a message
-- [ ] A dry run reads no value at all, and so prints the list with every configured name
+- [x] A dry run reads no value at all, and so prints the list with every configured name
       whether or not the host has it set. `cli._run` skips the preflight on `--dry-run`, so
       the refusal in phase 2 has not run, and a dry run reaching nothing behind the preflight
       is the rule that verb already holds
@@ -137,12 +137,12 @@ becomes a second one.
 
 Assertions, not arguments. Each box is a container run and a grep over what it produced.
 
-- [ ] Forward one variable holding a known unique token, run `plugins/smoke/`, and grep
+- [x] Forward one variable holding a known unique token, run `plugins/smoke/`, and grep
       `run.log`, `env.txt`, `debug.txt`, `report.html` and `aggregate-result.json` for the
       token. Record what was found and where, dated, in
       [`../docs/docker.md`](../docs/docker.md)
-- [ ] Run the same case with `--dry-run` and grep the output for the token
-- [ ] If `run.log` carries the token because the container printed it, write that down in
+- [x] Run the same case with `--dry-run` and grep the output for the token
+- [x] If `run.log` carries the token because the container printed it, write that down in
       that file as a limit rather than removing the feature. What the container prints is the
       container's
 
@@ -150,34 +150,34 @@ Assertions, not arguments. Each box is a container run and a grep over what it p
 
 Unit tier, except phase 4's runs.
 
-- [ ] A configured name absent from the environment yields the preflight condition
-- [ ] A configured name present and empty yields the same condition
-- [ ] A credential name yields the refusal, whatever its value
-- [ ] `run_preamble` carries the forwarded name and value
-- [ ] `write_env` carries the name and not the value
-- [ ] The dry-run output carries the name and not the value
-- [ ] The dry-run output carries a configured name that is unset on the host, and the command
+- [x] A configured name absent from the environment yields the preflight condition
+- [x] A configured name present and empty yields the same condition
+- [x] A credential name yields the refusal, whatever its value
+- [x] `run_preamble` carries the forwarded name and value
+- [x] `write_env` carries the name and not the value
+- [x] The dry-run output carries the name and not the value
+- [x] The dry-run output carries a configured name that is unset on the host, and the command
       exits 0
-- [ ] An empty `env_passthrough` produces the argument list this package produces today, byte
+- [x] An empty `env_passthrough` produces the argument list this package produces today, byte
       for byte
 
 ### Phase 6: documentation
 
-- [ ] [`../docs/library.md`](../docs/library.md): the rule that nothing is read from the
+- [x] [`../docs/library.md`](../docs/library.md): the rule that nothing is read from the
       process environment is amended to the one exception, with the two rules above
-- [ ] `CLAUDE.md`: the same amendment, in the one-config-file rule
-- [ ] [`../docs/docker.md`](../docs/docker.md): the setting, the preflight, what is
+- [x] `CLAUDE.md`: the same amendment, in the one-config-file rule
+- [x] [`../docs/docker.md`](../docs/docker.md): the setting, the preflight, what is
       forwarded, the credential refusal, and phase 4's measurement
-- [ ] [`../docs/cli.md`](../docs/cli.md): the preflight table gains the new conditions
-- [ ] [`../docs/running_evals.md`](../docs/running_evals.md): `env.txt` gains its row
-- [ ] `src/cowork_evals/data/cowork_evals.example.yaml` carries the key, commented, with no
+- [x] [`../docs/cli.md`](../docs/cli.md): the preflight table gains the new conditions
+- [x] [`../docs/running_evals.md`](../docs/running_evals.md): `env.txt` gains its row
+- [x] `src/cowork_evals/data/cowork_evals.example.yaml` carries the key, commented, with no
       value. That file is what `init` writes, so a consumer sees the key without reading a
       document
-- [ ] Nothing in `plans/done/` is read or corrected
+- [x] Nothing in `plans/done/` is read or corrected
 
 ### Phase 7: integration
 
-- [ ] `plugins/smoke/` on the Docker backend with one variable forwarded, from the
+- [x] `plugins/smoke/` on the Docker backend with one variable forwarded, from the
       integration tier, green
-- [ ] The same with the variable unset on the host, exit 3, naming the variable
-- [ ] `scripts/test.sh` and `ruff` clean
+- [x] The same with the variable unset on the host, exit 3, naming the variable
+- [x] `scripts/test.sh` and `ruff` clean

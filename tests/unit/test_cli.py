@@ -483,6 +483,37 @@ def test_the_docker_dry_run_creates_no_run_directory(tmp_path, capsys) -> None:
     assert not root.exists()
 
 
+# A name no machine sets, and a value to prove is never printed. `monkeypatch.setenv` sets a
+# real variable in this process, which is the environment the backend reads. docs/docker.md.
+PROBE = "COWORK_EVALS_TEST_PROBE"
+PROBE_VALUE = "probe-value-not-a-secret"
+FORWARDS = f"docker:\n  env_passthrough: [{PROBE}]\n"
+
+
+def test_the_docker_dry_run_prints_the_forwarded_name_and_not_its_value(
+    tmp_path, capsys, monkeypatch
+) -> None:
+    monkeypatch.setenv(PROBE, PROBE_VALUE)
+    args = parse("run", "--docker", str(FIRST / "evals"))
+    config = settings(tmp_path, FORWARDS)
+    assert cli._dry_run(args, config, tmp_path / "logs", [(FIRST, FIRST / "evals")], ()) == 0
+    printed = capsys.readouterr().out
+    assert f"{PROBE}=<not shown>" in printed.splitlines()
+    assert PROBE_VALUE not in printed
+
+
+def test_a_dry_run_names_a_configured_variable_the_host_has_not_set(
+    tmp_path, capsys, monkeypatch
+) -> None:
+    """It skips the preflight, so it reads no value and prints what is configured."""
+    monkeypatch.delenv(PROBE, raising=False)
+    config = settings(tmp_path, FORWARDS)
+    assert cli._run(parse("run", "--docker", str(FIRST / "evals"), "--dry-run"), config) == 0
+    printed = capsys.readouterr()
+    assert f"{PROBE}=<not shown>" in printed.out.splitlines()
+    assert PROBE not in printed.err
+
+
 def test_the_cowork_dry_run_prints_a_case_its_skips_and_the_arithmetic(tmp_path, capsys) -> None:
     """That backend builds no command line, so it prints what it would submit instead."""
     log = tmp_path / "runs.jsonl"

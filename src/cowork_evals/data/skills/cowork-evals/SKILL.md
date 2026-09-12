@@ -244,8 +244,9 @@ Python behaves in a session, which a suite passing on a newer local Python does 
 
 `cowork_evals.yaml` in the working directory holds every setting: the driver's, each
 backend's, the models, the tool grants, the ceilings. Nothing is read from the process
-environment, and there is no `.env`. A command-line option beats the file, and the file beats
-the built-in default.
+environment except the variables `docker.env_passthrough` names, which are forwarded into the
+run container for a skill that reads a credential from one, and there is no `.env`. A
+command-line option beats the file, and the file beats the built-in default.
 
 `cowork_evals init` writes the file with every key and every default. Only the CoWork backend
 requires it: `cowork.profile` is the one key with no default. The file names a profile, which

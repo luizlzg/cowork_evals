@@ -64,7 +64,8 @@ under a path passed to `cowork_evals run` imports only what that image carries. 
 `cowork_evals docs runtime` before adding an import to plugin code.
 
 `cowork_evals.yaml` holds every setting and is the only route: nothing is read from the
-process environment, and there is no `.env`.
+process environment except the variables `docker.env_passthrough` names, which are forwarded
+into the run container, and there is no `.env`.
 """
 
 # The documentation tree, tried in this order. The first that is a directory wins.

@@ -12,6 +12,8 @@ stack, not only the Python interpreter and its wheels.
   There is no `latest`.
 - **One credential route**: a login this package owns, mounted read-write. Never the
   developer's own `~/.claude`, and never an API key.
+- **Named host variables are forwarded**, and their values reach the container's environment
+  and no artefact.
 - **Read-only everywhere except the log directory** and the two credential paths.
 - **Granting `Bash` turns on the OS sandbox**, so the container needs bubblewrap and two
   `--security-opt` values.
@@ -41,6 +43,7 @@ The `docker:` section of `cowork_evals.yaml`. The file, and the ladder over it, 
 | `claude_code_version`  | `2.1.265`                      | The npm version of the CLI installed. In the digest  |
 | `login_dir`            | `~/.cache/cowork_evals/claude` | Where the login this package owns is kept            |
 | `extra_ca_file`        | none                           | An extra root CA for a host whose network inspects TLS |
+| `env_passthrough`      | empty                          | Host variable names forwarded into the run container |
 
 ## Usage
 
@@ -314,6 +317,77 @@ No login is a failed preflight, so it exits 3 and names the command that fixes i
 `CLAUDE_CODE_WALNUT_SPIRE` is passed in with `--env`, because the process inside the
 container is `claude plugin eval` itself with no wrapper in the way. A shell opened in the
 container by hand must export it. See [plugin_eval.md](plugin_eval.md).
+
+## Environment passthrough
+
+`docker.env_passthrough` is a list of host variable names. `run_preamble` writes
+`--env NAME=VALUE` for each one, beside the variables it already writes, so a skill that
+reads a credential from the environment can be evaluated. It is the one thing this package
+reads from the process environment, and [library.md](library.md) holds the rule and this
+exception to it.
+
+It is a `docker:` key because the container backend is the only one that starts a process
+whose environment this package writes. A CoWork session decides its own environment, and
+nothing here reaches inside the VM. See [approaches.md](approaches.md).
+
+```yaml
+docker:
+  env_passthrough: [ACME_API_KEY]
+```
+
+Two conditions, both in `Docker.check`, so `check --docker` reports them and `run` exits 3
+on them before anything is created:
+
+| Condition                                          | Because                                                                     |
+| -------------------------------------------------- | ----------------------------------------------------------------------------- |
+| A named variable is unset or empty on the host     | A missing precondition fails. An empty string is not a value, and a run that forwarded one would look configured and would not be |
+| A named variable is `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` or `CLAUDE_CODE_OAUTH_TOKEN` | The container login above is the one route for Claude's own credential, whatever the variable holds |
+
+Each line names the variable and never its value. A value is read once, where the preflight
+reads it, and is not read a second time at container start.
+
+### What carries a name, and what carries a value
+
+| Artefact                    | Carries the name | Carries the value |
+| --------------------------- | ---------------- | ----------------- |
+| `cowork_evals.yaml`         | yes              | no                |
+| `env.txt`                   | yes              | no                |
+| `run.log`                   | no               | no                |
+| `debug.txt`                 | no               | no                |
+| `report.html`               | no               | no                |
+| `aggregate-result.json`     | no               | no                |
+| A preflight line            | yes              | no                |
+| `--dry-run` output          | yes              | no                |
+| The container's environment | yes              | yes               |
+
+`--dry-run` prints `NAME=<not shown>` and reads no value at all, so the list it prints is
+safe to paste into a message and carries every configured name whether or not the host has
+that name set.
+
+`run.log` is the one artefact this package cannot fully control. It is captured at the file
+descriptor level, so whatever the container prints reaches it, and a case whose prompt makes
+the agent print a forwarded value puts that value in the log. What the container prints is
+the container's. The limit is stated rather than closed: the alternative is filtering the
+log, which would rewrite what a run actually produced.
+
+Measured on 2026-09-12, a snapshot. Host: macOS on aarch64, Rancher Desktop. One variable
+holding a token that appears nowhere else was forwarded, `plugins/smoke/` was run whole on
+this backend, and the token was grepped for afterwards.
+
+| Grepped                                  | Token found |
+| ---------------------------------------- | ----------- |
+| `run.log`                                | no          |
+| `env.txt`                                | no          |
+| `verdict.txt`                            | no          |
+| `aggregate-result.json`                  | no          |
+| `report.html`                            | no          |
+| `debug.txt`                              | no          |
+| Every other file in the run directory, the kept traces included | no |
+| The `--dry-run` output of the same suite | no          |
+
+`env.txt` carried the line `env_passthrough: <name>` and no value. The same container was
+run with `printenv <name>` on the same date and printed the token, so the forwarding the
+measurement is about did happen.
 
 ## Mounts
 

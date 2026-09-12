@@ -151,12 +151,21 @@ def _unique(parent: Path, base: str) -> Path:
 # Recording.
 
 
-def write_env(run_directory: Path | str, backend: str, image: str | None = None) -> Path:
+def write_env(
+    run_directory: Path | str,
+    backend: str,
+    image: str | None = None,
+    env_passthrough: Sequence[str] = (),
+) -> Path:
     """`env.txt`: one `name: value` line per row, in a fixed order.
 
     A command that does not run records the failure on its own line rather than raising: a
     log that says why a version is unknown is worth more than an invocation that stops for
     it. `image` is the container backend's, and is absent on every other.
+
+    `env_passthrough` is the container backend's too, and is the names the run forwarded into
+    the container. The names and never a value: what each one held is the host's, and it
+    reaches the container's environment and no artefact. docs/docker.md.
     """
     rows = [
         ("cowork_evals", distribution_version()),
@@ -166,6 +175,8 @@ def write_env(run_directory: Path | str, backend: str, image: str | None = None)
     ]
     if image is not None:
         rows.append(("image", image))
+    if env_passthrough:
+        rows.append(("env_passthrough", " ".join(env_passthrough)))
     path = Path(run_directory) / ENV_FILE
     path.write_text("".join(f"{name}: {value}\n" for name, value in rows), encoding="utf-8")
     return path
