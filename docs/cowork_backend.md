@@ -18,13 +18,14 @@ is reached as `cowork_evals run --cowork <path>`.
   readable from the host, and it is what a kept run's `workspace/` is copied from.
 - **Nothing under the profile is written.** The traces are copied out of a session directory,
   never moved, and the session is left exactly as the application left it.
-- **Skips are recorded, never silent**, and a run that reports one fails.
+- **Skips are recorded, never silent**, and a run that reports one fails. A case this backend
+  cannot run declares it, is not submitted and is counted, which is not a skip.
 - **The plugin under test is not loaded.** A case path selects which cases run, not which code
   runs.
 - **The suite ceiling is refused before the first submission**, not one case at a time.
 
 Which part of the case format survives this route is [approaches.md](approaches.md), the
-key-by-key skip rule is [running_evals.md](running_evals.md), the case format itself is
+key-by-key rule is [running_evals.md](running_evals.md), the case format itself is
 [eval_format.md](eval_format.md), and the command over it is [cli.md](cli.md). What of this is
 built is the status table in [running_evals.md](running_evals.md).
 
@@ -91,8 +92,10 @@ it part of the `--cowork` preflight. `CLAUDE_CODE_WALNUT_SPIRE` is not exported:
 
 An `llm` grader whose file focus turns out to be an image is a grader skip, not a failure:
 the harness shows the judge the image, and one text call cannot. It is detected from the
-file's bytes, as the harness detects it, so it is decided after the run rather than by the
-skip rule. Any other binary is a failed grader naming what the file is.
+file's bytes, as the harness detects it, so it is decided after the run and not before it. It
+is the one skip this backend decides after a run, and with the `mock_calls` grader skip it is
+one of the only two it decides at all. Any other binary is a failed grader naming what the
+file is.
 
 ## What the result document says that the reference does not
 
@@ -102,7 +105,7 @@ contract is additive-only, which is what permits these. Nothing else here depart
 
 | Field                              | On                | Is                                                      |
 | ---------------------------------- | ----------------- | --------------------------------------------------------- |
-| `skipped`, `skipReason`            | a case            | Why the case submitted nothing. `arms.with` is empty     |
+| `declaredUnrunnable`, `declaredReason` | a case        | That the case carries `no-cowork`, and what the tag declares. `arms.with` is empty |
 | `skipped`, `skipReason`            | a grader result   | Why that grader was not scored                           |
 | `cowork.sessionDir`                | a run             | The session, which is what re-grades a stored run without submitting again, and where the run's artefacts are copied from |
 | `cowork.timeoutSeconds`            | a run             | The timeout that run ran under, which is the override where one was given. It is the one place an effective value is recorded |
@@ -120,10 +123,16 @@ key and never its value, because a run the driver could not start carries the ke
 copy under the run's log directory once that copy is made. The session itself is still named,
 in `cowork.sessionDir`. That is what makes a failure line say the same thing on both backends.
 
-One behaviour departs as well. `casesPassed` is the reference's rule, a case scoring at or
-above `threshold`, minus every skipped case. `threshold` is 0 here, so without that
-subtraction a skipped case would count as passed. Nothing reads it to decide anything: the
-pass and fail rules in [running_evals.md](running_evals.md) read the grader results and `skipped`.
+**A case carries `declaredUnrunnable` and never `skipped`.** The two are different, and a
+reader and the verdict both tell them apart by the field: a skip fails the run, and a declared
+case is counted. This backend decides no case skip at all.
+
+One behaviour departs as well. The four aggregates are over the cases this backend ran, so a
+declared case is out of `casesTotal`, out of `casesPassed` and out of both means. `threshold`
+is 0 here, so a declared case left in `casesTotal` alone would count as passed, and its 0.0
+would drag `overallScore` down for a case that never ran. Nothing reads them to decide
+anything: the pass and fail rules in [running_evals.md](running_evals.md) read the grader
+results, `skipped` and `declaredUnrunnable`.
 
 Two fields mean something narrower here than they do under the harness.
 
@@ -136,11 +145,20 @@ A CoWork run writes `aggregate-result.json` and the run's artefacts under `trace
 no `report.html` on this backend, and the artefacts carry the same three names the container
 backend leaves. The log layout is [running_evals.md](running_evals.md).
 
-Skips are recorded, never silent. A grader with no equivalent, and a case whose frontmatter
-writes out a key this backend cannot honour, are both written into the result document as
-skipped with the reason. A key the case leaves to its default is not a skip; the rule and
-the key-by-key table are in [running_evals.md](running_evals.md). A run fails when it
-reports a skip, so a suite cannot go green on CoWork by grading nothing.
+Skips are recorded, never silent. A grader with no equivalent is written into the result
+document as skipped with the reason, and a run fails when it reports a skip, so a suite cannot
+go green on CoWork by grading nothing.
+
+A case is different. What this backend cannot run is written into the case as the `no-cowork`
+tag, the validator holds the case and this backend to the same rule, and the backend reads the
+tag rather than deciding anything. The reasons behind the tag are still read here, and they
+are what `declaredReason` carries. A key the case leaves to its default is not one of them;
+the rule and the key-by-key table are in [running_evals.md](running_evals.md).
+
+**A `mocks/` directory is declared per case, not per directory.** The layer chain runs from
+`evals/` down to the case, so a suite-wide `evals/mocks/` reaches every case in the plugin and
+every one of those cases carries the tag. That is explicit where a reader is looking, and it
+survives the case being moved.
 
 ## The plugin under test is not loaded
 
@@ -178,6 +196,6 @@ The driver refuses one submission at a time, at step 1 of its sequence; see
 [cowork_driver.md](cowork_driver.md). The backend refuses a whole suite before the first
 submission: it sums each case's effective run count, which is `--runs` where one was given,
 the declared `runs` where the case wrote one, and 1 otherwise, adds `recent()`, and raises
-code 2 when the total is above `max_runs`. A skipped case submits nothing and costs no
-ceiling entry.
+code 2 when the total is above `max_runs`. A case carrying `no-cowork` submits nothing and
+costs no ceiling entry.
 

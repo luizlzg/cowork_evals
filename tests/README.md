@@ -59,7 +59,7 @@ A skipped test reports as a pass and hides the thing it was written to catch.
 | `unit/test_grader.py`             | The four structural graders over hand-written session documents | yes |
 | `unit/test_judge.py`              | The composed text, and vote counting over recorded reply documents | yes |
 | `unit/test_results.py`            | The v1 result document, field by field                     | yes    |
-| `unit/test_cowork_backend.py`     | The skip rule, `plan()`, and the document a skipped suite writes | yes |
+| `unit/test_cowork_backend.py`     | What a session cannot run, `plan()`, and the document a declared suite writes | yes |
 | `unit/test_pytest_image.py`       | The test image digest, and the build and run argument lists | yes    |
 | `unit/test_validate.py`           | The case validator and the coverage report over hand-written trees | yes |
 | `unit/test_logs.py`               | The run directory, `env.txt`, `latest`, pruning and the tee | yes    |
@@ -155,8 +155,9 @@ the same cost: a VM boot, one entry against the rate ceiling, and a permanent se
 signed-in CoWork, the desktop application running, the macOS Accessibility grant and
 `cowork_evals.yaml` naming the active profile, and `claude` on `PATH` as well, because the
 judge and `claudeVersion` both need it. A missing precondition fails the test and never
-skips it. Its two `live` tests fire real CoWork sessions; its two others walk the sessions
-already in the profile and submit nothing.
+skips it. Its two `live` tests fire real CoWork sessions; its three others submit nothing:
+two walk the sessions already in the profile, and one runs the `capped-turns` fixture through
+the backend, which declares itself unrunnable there and is decided without a submission.
 
 `integration/test_judge.py` needs only `claude` on `PATH`. It spends, so it is `live`, but
 it starts no CoWork session and costs no ceiling entry.

@@ -393,8 +393,8 @@ def _run(args: argparse.Namespace, config: Config) -> int:
     picked = _selected(targets, tags, args.case)
     if not picked:
         return _usage(f"{args.path} selects no case{_filters(tags, args.case)}")
-    # What is there before the filters, which is the first of the four counts the verdict
-    # line prints. The same reader answers both, so the two numbers are comparable.
+    # What is there before the filters, which is the first of the counts the verdict line
+    # prints. The same reader answers both, so the two numbers are comparable.
     found = _selected(targets, (), None)
 
     root = logs.log_root(args.out)

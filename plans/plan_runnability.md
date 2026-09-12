@@ -187,19 +187,19 @@ Unit tier throughout, except the last box.
 
 Five documents, and the rule that a skip fails the run is amended in one of them.
 
-- [ ] [`../docs/eval_format.md`](../docs/eval_format.md): the reserved tag, all three sources
+- [x] [`../docs/eval_format.md`](../docs/eval_format.md): the reserved tag, all three sources
       that require it, both directions, and that `tags:` is where it lives
-- [ ] [`../docs/running_evals.md`](../docs/running_evals.md): the key-by-key table stops
+- [x] [`../docs/running_evals.md`](../docs/running_evals.md): the key-by-key table stops
       saying `Skipped` for a key the case writes out and says the case declares it instead.
       The pass and fail table gains the counted condition. The rule that a skip fails the
       run stays, and is narrowed to say what is still a skip
-- [ ] [`../docs/approaches.md`](../docs/approaches.md): the honoured-feature table says a
+- [x] [`../docs/approaches.md`](../docs/approaches.md): the honoured-feature table says a
       case declares what this backend cannot run
-- [ ] [`../docs/cowork_backend.md`](../docs/cowork_backend.md): the added field, that a
+- [x] [`../docs/cowork_backend.md`](../docs/cowork_backend.md): the added field, that a
       `mocks/` directory is declared per case and not per directory, and that the image-focus
       grader skip is the one skip this backend still decides after a run
-- [ ] [`../plugins/README.md`](../plugins/README.md): the fixture case phase 4 adds
-- [ ] Nothing in `plans/done/` is read or corrected
+- [x] [`../plugins/README.md`](../plugins/README.md): the fixture case phase 4 adds
+- [x] Nothing in `plans/done/` is read or corrected
 
 ### Phase 6: integration
 

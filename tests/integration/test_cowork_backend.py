@@ -4,8 +4,8 @@ Preconditions, all of which fail the test rather than skipping it: a signed-in C
 desktop application running, the macOS Accessibility grant, `cowork_evals.yaml` naming the
 active profile, and `claude` on `PATH`. See ../README.md.
 
-Nothing here asserts over the case reader or the skip rule. Neither needs a profile or a
-session, so both are unit tests in tests/unit/test_cowork_backend.py.
+Nothing here asserts over the case reader or over what makes a case unrunnable. Neither needs
+a profile or a session, so both are unit tests in tests/unit/test_cowork_backend.py.
 
 Nothing here prints a path, a prompt or an identifier. Public repository rule.
 """

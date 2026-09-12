@@ -12,7 +12,8 @@ piece is built yet.
   default.
 - **This package decides pass and fail, not the harness.** It reads the result document, so
   one verdict covers both backends. Structural graders decide; judged graders are printed.
-- **A skip fails the run**, so a backend cannot go green by honouring nothing.
+- **A skip fails the run**, so a backend cannot go green by honouring nothing. A case the
+  backend was told it cannot run is counted instead, and the summary line says how many.
 - **Every invocation keeps everything it printed**, in one directory per invocation, and
   every run's transcript with it.
 - **Nothing here runs on CI.** A person runs the sweep and reads the summary.
@@ -72,8 +73,8 @@ path. See [cowork_backend.md](cowork_backend.md).
 ### What counts as a case the backend cannot honour
 
 A backend reads the keys the case file writes, never the merged defaults. `runs: 3` is the
-default for every case, so treating a default as a request would skip every case on CoWork and
-leave every run permanently red.
+default for every case, so treating a default as a request would declare every case on CoWork
+unrunnable and leave every run empty.
 
 | In the case file                                        | On CoWork                                                                    |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------- |
@@ -81,19 +82,25 @@ leave every run permanently red.
 | `runs: N`, written out                                  | Runs N times                                                                 |
 | `timeout_seconds`, written out                          | That case's driver `run_timeout`                                             |
 | `arm: with-only` or `arm: both` on a grader             | Honoured. One arm runs, it is the with-arm, and every grader is scored in it |
-| `max_turns`, written out                                | Skipped                                                                      |
-| `model`, `allowed_tools`, `append_system_prompt`, `env` | Skipped                                                                      |
-| `context.*`, or a `mocks/` directory the case uses      | Skipped                                                                      |
+| `max_turns`, written out                                | The case declares `no-cowork`, and is counted                                |
+| `model`, `allowed_tools`, `append_system_prompt`, `env` | The case declares `no-cowork`, and is counted                                |
+| `context.*`, or a `mocks/` directory the case uses      | The case declares `no-cowork`, and is counted                                |
 | `target` or `focus` of `mock_calls` on a grader         | That grader is skipped, and the case still runs                              |
 
-A grader skip and a case skip are not one thing. A case skip submits nothing. A grader skip
-runs the case and drops that grader from the score, so the case does not fail for a grader
-that was never asked.
+A declared case and a grader skip are not one thing. A declared case submits nothing, is out
+of every aggregate, and fails nothing. A grader skip runs the case and drops that grader from
+the score, so the case does not fail for a grader that was never asked.
 
 The rule is the same for both backends: an explicit key is honoured when the backend's fixed
-behaviour already satisfies it, and skipped otherwise. Which key each backend can honour is
-[approaches.md](approaches.md). A skip is written into the result document with its reason and
-fails the run, so a backend cannot go green by honouring nothing.
+behaviour already satisfies it. Which key each backend can honour is
+[approaches.md](approaches.md). What the CoWork backend cannot honour is written into the case
+as the `no-cowork` tag, which the validator enforces in both directions, and the tag is
+[eval_format.md](eval_format.md). The backend reads the tag and submits nothing for that case;
+it decides no case skip of its own.
+
+One skip on this backend is still decided after a run: an `llm` grader whose focus turns out
+to be an image, which is read from the file's bytes. It fails the run like every other skip.
+See [cowork_backend.md](cowork_backend.md).
 
 ## Pinned flags
 
@@ -393,6 +400,7 @@ covers both backends, and it always runs in the `cowork_evals` process on the ho
 | -------------------------------------------------------------------- | ------------ |
 | Any `regex`, `tool_used`, `tool_order` or `file_exists` grader failed | exit 1       |
 | Any case or grader reported skipped, or a grader reported `scored: false` | exit 1   |
+| A case reported `declaredUnrunnable`                                 | exit 0, counted |
 | `partial: true`, whatever `partialReason` says                       | exit 1       |
 | A run carrying `error`, on either backend                            | exit 1       |
 | A run the permission mode refused a tool, on `--docker`              | exit 1       |
@@ -408,6 +416,11 @@ Structural graders decide because a judged grader over a non-deterministic agent
 verdict. A skip fails the run so that a backend cannot go green by honouring nothing.
 `scored: false` is a skip here: `--ablation none` drops no grader from the score, so a grader
 that was not scored was not asked.
+
+A declared case is not a skip. The case itself says the backend cannot run it, the validator
+holds the case and the backend to the same rule, and the backend reports it rather than
+deciding it, so it is counted and neither passes nor fails. It is out of that document's
+`casesTotal` as well, which is why the summary line carries it separately.
 
 `partial: true` fails whatever the reason. The harness names `cost_ceiling` and `auth_failed`,
 and `interrupted` is a third; the verdict reads the flag and not the reason.
@@ -468,22 +481,27 @@ everything its case asked for.
 
 ### The last line
 
-The last line carries four counts and the overall score:
+The last line carries five counts and the overall score:
 
-| Count    | Is                                                   | Counted by             |
-| -------- | ---------------------------------------------------- | ---------------------- |
-| `found`  | The cases under the path, before any filter          | this package's reader  |
-| `picked` | The cases `--tag` and `--case` kept                  | the same reader        |
-| `ran`    | The cases a backend reported running, `casesTotal`   | the backend            |
-| `passed` | The cases that produced no failure line              | the verdict            |
+| Count      | Is                                                   | Counted by             |
+| ---------- | ---------------------------------------------------- | ---------------------- |
+| `found`    | The cases under the path, before any filter          | this package's reader  |
+| `picked`   | The cases `--tag` and `--case` kept                  | the same reader        |
+| `ran`      | The cases a backend reported running, `casesTotal`   | the backend            |
+| `passed`   | The cases that produced no failure line              | the verdict            |
+| `declared` | The cases carrying `no-cowork` on a backend that reads it | the verdict       |
+
+A declared case is why `ran` can be below `picked` on a suite where nothing went wrong. It is
+printed even when it is 0, because a count that appears only sometimes is one a reader has to
+go and look for.
 
 `passed` is this package's own count and is never `aggregates.casesPassed`. The harness counts
 a case as passed at or above `--threshold`, which is pinned to 0 here, so `casesPassed` is
 every case always and reading it back would print a pass on the line under a failure.
 
-Picked and ran are two counts of two things. They differ when a plugin failed to run, when the
-sweep stopped early, or when the harness picked differently. Both are printed, and neither is
-checked against the other.
+Picked and ran are two counts of two things. They differ when a case was declared unrunnable,
+when a plugin failed to run, when the sweep stopped early, or when the harness picked
+differently. Both are printed, and neither is checked against the other.
 
 The score is the mean of each document's `overallScore`. A document marked `partial` adds
 `stopped early` and the reason to the end of the line.

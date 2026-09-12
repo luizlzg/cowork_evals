@@ -48,7 +48,7 @@ and `README.md` carries the same three lines. The third line installs the comman
 project, which is how a consumer that runs the command but does not import it holds a pin.
 
 Pinning is the consumer's call and this repository states when it is worth making: `run`
-decides pass and fail, so a change to the verdict or the skip rules moves that verdict with no
+decides pass and fail, so a change to the verdict or to what a backend can run moves it with no
 change to the consumer's cases. A repository that runs evals in CI pins. One that runs them
 by hand need not. Once the package is on an index they become
 the name alone:
@@ -86,7 +86,7 @@ mirrors an old VM. See [runtime.md](runtime.md).
 | `src/cowork_evals/judge.py`               | yes   | The `claude -p` judge behind `llm` and `baseline`                  |
 | `src/cowork_evals/results.py`             | yes   | The v1 `aggregate-result.json` document                            |
 | `src/cowork_evals/requirements.py`        | yes   | The pinned requirements reader, and PEP 503 name normalization     |
-| `src/cowork_evals/cowork_backend.py`      | yes   | The CoWork backend: the skip rule, `plan` and `run`                |
+| `src/cowork_evals/cowork_backend.py`      | yes   | The CoWork backend: what it cannot run, `plan` and `run`           |
 | `src/cowork_evals/validate.py`            | yes   | The case validator, and the skill coverage report                  |
 | `src/cowork_evals/logs.py`                | yes   | The run directory, `env.txt`, `latest`, pruning and the tee        |
 | `src/cowork_evals/verdict.py`                | yes   | Pass and fail over `aggregate-result.json`                              |

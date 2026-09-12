@@ -18,12 +18,13 @@ The layout is the standard one, because a fixture that does not look like a real
 proves nothing about discovery. The case format is
 [../docs/eval_format.md](../docs/eval_format.md).
 
-`smoke` holds two cases, both under `evals/plugin/`.
+`smoke` holds three cases, all under `evals/plugin/`.
 
 | Case            | Asks for                              | Graded by                                    |
 | --------------- | ------------------------------------- | -------------------------------------------- |
 | `python-version` | `python3 -V`                         | a `regex` grader over the last message       |
 | `writes-a-file` | one word written to `written.txt`     | a `file_exists` grader over the created file |
+| `capped-turns`  | one word in the reply                 | a `regex` grader over the last message       |
 
 `python-version` matches the exact string [../docs/runtime.md](../docs/runtime.md) records, so
 it proves a case reaches a running command on the interpreter the backend put there. See
@@ -40,16 +41,22 @@ in `cowork_evals.yaml` is untouched. The two conditions are
 [../docs/running_evals.md](../docs/running_evals.md).
 
 The exact string carries a patch release. The container installs it, and the CoWork VM runs
-it, so this fixture serves both backends. The CoWork backend loads no plugin, and neither case
+it, so this fixture serves both backends. The CoWork backend loads no plugin, and no case here
 needs one: each writes `runs: 1`, carries no skill, and asks for something any session can do.
-Neither writes a key that backend cannot honour, so neither is skipped there.
 
-Two cases, and each integration test that fires one names it with a case glob. A test about
-one mechanism pays for one case, and a CoWork test pays for one VM boot.
+`capped-turns` is the fixture for the `no-cowork` tag. It writes `max_turns`, which no CoWork
+session honours, so it carries the tag and satisfies both directions the validator checks. On
+the container backend it runs like any other case and passes. On CoWork it is not submitted
+and is counted, which is what makes it the one case here that an integration test drives
+through that backend without a VM boot, a ceiling entry or a session. The tag is
+[../docs/eval_format.md](../docs/eval_format.md).
 
-Neither carries a skill. Whether a model activates a skill is an eval question, and this
-fixture answers a mechanism question. Both cases are therefore `plugin` ones: a directory under
-`evals/` is a skill name, `plugin` or `mocks`, and there is no skill to name. See
+Three cases, and each integration test that fires one names it with a case glob. A test about
+one mechanism pays for one case, and a CoWork test that submits pays for one VM boot.
+
+None carries a skill. Whether a model activates a skill is an eval question, and this
+fixture answers a mechanism question. All three cases are therefore `plugin` ones: a directory
+under `evals/` is a skill name, `plugin` or `mocks`, and there is no skill to name. See
 [../docs/eval_format.md](../docs/eval_format.md).
 
 `smoke/tests/` is the fixture for the test image, and is a fixture and not a suite. Four
