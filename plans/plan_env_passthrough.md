@@ -137,12 +137,12 @@ becomes a second one.
 
 Assertions, not arguments. Each box is a container run and a grep over what it produced.
 
-- [ ] Forward one variable holding a known unique token, run `plugins/smoke/`, and grep
+- [x] Forward one variable holding a known unique token, run `plugins/smoke/`, and grep
       `run.log`, `env.txt`, `debug.txt`, `report.html` and `aggregate-result.json` for the
       token. Record what was found and where, dated, in
       [`../docs/docker.md`](../docs/docker.md)
-- [ ] Run the same case with `--dry-run` and grep the output for the token
-- [ ] If `run.log` carries the token because the container printed it, write that down in
+- [x] Run the same case with `--dry-run` and grep the output for the token
+- [x] If `run.log` carries the token because the container printed it, write that down in
       that file as a limit rather than removing the feature. What the container prints is the
       container's
 
