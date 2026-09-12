@@ -125,10 +125,17 @@ The ones that can are in [eval_format.md](eval_format.md).
 
 - **Only the plugin under test loads.** No user or project settings, no `CLAUDE.md`, no
   other plugins, no personal MCP servers.
-- **Tools are gated.** Effective tools are the case's `allowed_tools` intersected with the
-  read-only set, unioned with the operator's `--allow-tools`. `Bash`, `Write`, `Edit`,
-  `WebFetch`, `WebSearch` and `mcp__*` need an explicit grant. A plugin's own MCP tools are
-  named `mcp__plugin_<plugin>_<server>__<tool>`.
+- **Tools are gated.** The reference states the effective set as the case's `allowed_tools`
+  intersected with the read-only set, unioned with the operator's `--allow-tools`. `Bash`,
+  `Write`, `Edit`, `WebFetch`, `WebSearch` and `mcp__*` need an explicit grant. A plugin's own
+  MCP tools are named `mcp__plugin_<plugin>_<server>__<tool>`. Measured 2026-09-12 on CLI
+  2.1.265, a case writing no `allowed_tools` still had `Skill`, and its skill fired and
+  scored under an operator grant of `Bash` alone, so the intersection does not empty the
+  read-only set. What was measured tool by tool is
+  [running_evals.md](running_evals.md).
+- **An ungranted tool fails in two ways.** It is offered and refused at the call, which
+  writes a `system` record of subtype `permission_denied` carrying `decision_reason_type`,
+  or it is not offered at all, which writes nothing. Both are silent to a grader.
 - **Granting `Bash` turns on the OS sandbox.** On a machine with no sandbox backend the run
   is refused rather than run unconfined.
 - **The Artifact tool is unavailable in a run.** A skill that ends by publishing cannot be

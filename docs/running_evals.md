@@ -175,26 +175,45 @@ same way, so a tool a session has and a container run is denied makes that run m
 package's configuration rather than the plugin.
 
 The names differ because the two are different programs. A session's `mcp__workspace__bash`
-is the container's `Bash` and its `mcp__workspace__web_fetch` is `WebFetch`. `Read`, `Glob`
-and `Grep` are in the grant although they are read-only tools: the harness grants the
-read-only set by intersecting it with the case's own `allowed_tools`, which is empty in every
-case that writes none, so without the grant a case has nothing but what is named here. See
-[plugin_eval.md](plugin_eval.md).
+is the container's `Bash` and its `mcp__workspace__web_fetch` is `WebFetch`.
 
-`Skill` is the one that item 1 of the problem report caught. Under the old `[Bash]` default
-every `Skill` call was denied by the permission mode, and an activation grader counted the
-denied call as a firing.
+`Read`, `Glob` and `Grep` are named although they are read-only tools the harness grants by a
+route of its own. Naming them is not a no-op: the snapshot below records a run granted only
+`Bash` whose offered tool list carried no `Glob` and no `Grep`. Naming a tool a run would
+have had anyway costs nothing, and not naming one it would not have had is silent.
+
+Widen or narrow it through `eval.allow_tools` or `--allow-tools`, which replace the value
+rather than adding to it, so any replacement has to name every tool it still wants.
 
 Two things this default is not. It is not `WebSearch`, which no session was measured using.
 And a bare `WebFetch` is not a measured statement about which domains a run can reach: the
 harness restricts network access to the domains a `WebFetch(domain:...)` grant names, and
 that has not been measured here.
 
-Widen or narrow it through `eval.allow_tools` or `--allow-tools`, which replace the value
-rather than adding to it, so any replacement has to name every tool it still wants.
+### What the old grant actually denied
 
-Snapshot, 2026-09-12, CLI 2.1.265: all eight names above were accepted by the harness in a
-container run, with no `not granted` and no `malformed entry` notice against any of them.
+Snapshot, 2026-09-12, CLI 2.1.265, four container runs over two throwaway plugins. All eight
+names above were accepted, with no `not granted` and no `malformed entry` notice against any
+of them.
+
+| Run                                                     | What the trace showed                                     |
+| ------------------------------------------------------- | ------------------------------------------------------------ |
+| `--allow-tools Bash`, a case asking for a `Write` call  | The call was refused, and the trace carries one `system` record of subtype `permission_denied` with `tool_name: Write` and `decision_reason_type: mode`. The run still scored, on a grader reading a message the model wrote instead |
+| `--allow-tools Bash`, a case whose skill fires          | The `Skill` call succeeded and the case scored 1.00. `Skill` is available without being named in the grant, and the case named it in no `allowed_tools` either |
+| `--allow-tools Read`, a case asking for a shell command | `Bash` was absent from the `system` `init` record's tool list. The model searched for a shell tool, found none, wrote that it could not run the command, and no `permission_denied` record was written at all |
+| The normal grant, the same shell case                   | It ran, and no `permission_denied` record appears           |
+
+Two consequences.
+
+An ungranted tool fails in one of two ways, and the run is silent about both. It is offered
+and refused at the call, which writes the denial record above, or it is not offered at all,
+which writes nothing. Either way the run is scored on what the model produced without it,
+and the gate below reads the score.
+
+`Skill` is not what item 1 of the problem report caught here. Under the old `[Bash]` default a
+skill fired and scored, so a denied `Skill` call in a consumer's trace came from something
+other than this default. `Write`, `Edit` and `WebFetch` are what it denied, and they are the
+tools a session uses most.
 
 The Docker backend exports `CLAUDE_CODE_WALNUT_SPIRE`, the early-access enablement variable,
 so no developer sets it by hand. It is a constant in `harness.py` and not a configuration key.
