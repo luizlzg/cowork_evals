@@ -96,12 +96,12 @@ Every other skip in `cowork_backend.skips` becomes a validator error or a counte
 
 ## What this plan does not do
 
-| Not in scope                               | Where it is instead                                                |
-| ------------------------------------------ | ------------------------------------------------------------------ |
-| An exclusion glob on the invocation        | Not built. [`plan_run_validity.md`](plan_run_validity.md) says why |
-| A `no-docker` counterpart                  | Nowhere. Nothing names a case key the Docker backend cannot honour |
-| Failing a run that never executed its tool | [`plan_run_validity.md`](plan_run_validity.md)                     |
-| The baseline arm                           | [`plan_ablation.md`](plan_ablation.md)                             |
+| Not in scope                               | Where it is instead                                                            |
+| ------------------------------------------ | ------------------------------------------------------------------------------ |
+| An exclusion glob on the invocation        | Not built. `--case` takes one glob with no negation, and `--tag` only includes |
+| A `no-docker` counterpart                  | Nowhere. Nothing names a case key the Docker backend cannot honour             |
+| Failing a run that never executed its tool | [`plan_run_validity.md`](plan_run_validity.md)                                 |
+| The baseline arm                           | [`plan_ablation.md`](plan_ablation.md)                                         |
 
 ## Orientation
 
