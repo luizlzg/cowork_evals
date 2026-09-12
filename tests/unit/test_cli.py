@@ -299,11 +299,47 @@ def test_the_cowork_backend_accepts_runs_judge_model_and_timeout_seconds() -> No
 
 @pytest.mark.parametrize(
     ("option", "value"),
-    [("--model", "sonnet"), ("--allow-tools", "Bash"), ("--max-cost-usd", "3")],
+    [
+        ("--model", "sonnet"),
+        ("--allow-tools", "Bash"),
+        ("--max-cost-usd", "3"),
+        ("--ablation", "with-without"),
+        ("--delta-threshold", "0.2"),
+    ],
 )
 def test_an_option_the_cowork_backend_refuses_returns_two(option, value, capsys) -> None:
     assert main(["run", "--cowork", "plugin/evals", option, value]) == USAGE
     assert f"{option} is not accepted on --cowork" in capsys.readouterr().err
+
+
+def test_the_ablation_options_are_accepted_on_docker(tmp_path) -> None:
+    """Both are the container backend's, and neither reaches the CoWork backend."""
+    args = parse(
+        "run", "--docker", "plugin/evals", "--ablation", "with-without", "--delta-threshold", "0.2"
+    )
+    assert (args.ablation, args.delta_threshold) == ("with-without", 0.2)
+
+
+def test_an_unconfigured_repository_runs_one_arm(working_directory, tmp_path) -> None:
+    """Off is the default, because the arm runs every case twice."""
+    with working_directory(tmp_path):
+        assert Config.load().eval.ablation == "none"
+        assert cli._options(parse("run", "--docker", "evals"), Config(), ()).ablation == "none"
+
+
+def test_the_delta_threshold_option_beats_the_file(tmp_path) -> None:
+    configured = Config(eval=EvalSection(delta_threshold=0.5))
+    typed = parse("run", "--docker", "evals", "--delta-threshold", "0.1")
+    untyped = parse("run", "--docker", "evals")
+    assert cli._delta_threshold(typed, configured) == 0.1
+    assert cli._delta_threshold(untyped, configured) == 0.5
+    assert cli._delta_threshold(untyped, Config()) == 0
+
+
+def test_an_unknown_ablation_value_is_refused_by_the_parser() -> None:
+    with pytest.raises(SystemExit) as raised:
+        parse("run", "--docker", "evals", "--ablation", "with-only")
+    assert raised.value.code == USAGE
 
 
 def test_build_missing_is_refused_on_cowork(capsys) -> None:

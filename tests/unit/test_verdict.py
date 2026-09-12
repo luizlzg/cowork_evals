@@ -300,6 +300,97 @@ def test_a_document_carrying_no_trace_path_names_nothing(tmp_path: Path) -> None
     assert failures(result)[0].endswith("no match for Alex")
 
 
+# The baseline arm, and the delta it is decided on.
+
+
+def test_a_one_arm_document_carries_no_delta_on_the_summary_line(tmp_path: Path) -> None:
+    """One arm is the default, and a number that is always 0 there would read as a plugin
+    that changed nothing."""
+    result = judge(run_directory(tmp_path, smoke="pass"))
+    assert "delta" not in result.lines[-1]
+
+
+def test_a_delta_above_the_threshold_passes_and_the_mean_is_on_the_line(tmp_path: Path) -> None:
+    result = judge(run_directory(tmp_path, smoke="two_arm"), found=2, picked=2)
+    assert result.passed
+    assert failures(result) == []
+    assert result.lines[-1] == (
+        "2 found, 2 picked, 2 ran, 2 passed, 0 declared unrunnable, "
+        "overall score 1.00, mean delta +0.50"
+    )
+
+
+def test_a_delta_below_the_threshold_fails_and_the_line_names_both_scores(
+    tmp_path: Path,
+) -> None:
+    """The plugin made the case worse, every grader passed, and the suite is red."""
+    result = judge(run_directory(tmp_path, smoke="two_arm_below_threshold"))
+    assert not result.passed
+    assert failures(result) == [
+        "FAIL smoke/writes-a-file: the delta is -0.25, with 0.50 and without 0.75, "
+        "and eval.delta_threshold is 0"
+    ]
+
+
+def test_a_delta_at_the_threshold_passes(tmp_path: Path) -> None:
+    """Failing is below the threshold, so a plugin that changed nothing under a threshold of
+    0 is reported by the mean and not by a failure."""
+    result = judge(run_directory(tmp_path, smoke="two_arm"), found=2, picked=2)
+    assert result.passed
+
+
+def test_a_raised_threshold_fails_the_case_that_changed_nothing(tmp_path: Path) -> None:
+    result = judge(run_directory(tmp_path, smoke="two_arm"), found=2, picked=2, delta_threshold=0.5)
+    assert not result.passed
+    assert failures(result) == [
+        "FAIL smoke/quiet-case: the delta is +0.00, with 1.00 and without 1.00, "
+        "and eval.delta_threshold is 0.5"
+    ]
+
+
+def test_a_two_arm_case_whose_baseline_arm_ran_nothing_fails(tmp_path: Path) -> None:
+    """A two-arm run that produced no delta did not do what the invocation asked."""
+    result = judge(run_directory(tmp_path, smoke="two_arm_no_baseline"))
+    assert not result.passed
+    assert failures(result) == [
+        "FAIL smoke/fires-and-answers: the arms are not comparable: the baseline arm ran nothing"
+    ]
+    assert result.lines[-1].endswith("overall score 1.00, mean delta none")
+
+
+def test_a_two_arm_case_graded_under_different_rules_fails_and_says_so(tmp_path: Path) -> None:
+    """The other of the two reasons the document tells apart."""
+    result = judge(run_directory(tmp_path, smoke="two_arm_skipped_paid"))
+    assert not result.passed
+    assert failures(result) == [
+        "FAIL smoke/judged: the arms are not comparable: a run skipped its paid graders "
+        "at the cost ceiling"
+    ]
+
+
+def test_an_unscored_grader_fails_one_arm_and_is_an_indicator_on_two(tmp_path: Path) -> None:
+    """On one arm nothing is dropped from the score, so a grader not scored was not asked.
+    On two the harness drops a with-only grader on purpose."""
+    one = judge(run_directory(tmp_path / "one", smoke="unscored_grader"))
+    assert not one.passed
+    assert any("not scored, and --ablation none drops no grader" in line for line in one.lines)
+
+    two = judge(run_directory(tmp_path / "two", smoke="two_arm"), found=2, picked=2)
+    assert two.passed
+    assert notes(two) == [
+        "NOTE smoke/quiet-case: run 1: skill-fired: the with-only indicator did not fire"
+    ]
+
+
+def test_a_case_whose_graders_are_all_with_only_is_scored_normally(tmp_path: Path) -> None:
+    """The harness's own exception. The document says `scored: true`, and this reads it
+    rather than re-deriving which graders the arm dropped."""
+    result = judge(run_directory(tmp_path, smoke="two_arm_all_with_only"))
+    assert result.passed
+    assert failures(result) == []
+    assert notes(result) == []
+
+
 # A run that never had the tool the case was granted.
 
 

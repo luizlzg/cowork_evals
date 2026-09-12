@@ -188,14 +188,14 @@ what the reference says, the constant changes and nothing else does.
 
 Unit tier, over recorded documents, except phase 1's run.
 
-- [ ] A one-arm document decides exactly as it does today, over the existing fixtures
-- [ ] A two-arm document whose delta is above the threshold passes
-- [ ] A two-arm document whose delta is below it fails, and the line names both scores
-- [ ] A two-arm document whose case carries no delta fails, and the line names the reason
-- [ ] A `scored: false` grader fails a one-arm document and does not fail a two-arm one
-- [ ] A case whose graders are all with-only passes in a two-arm document
-- [ ] `--ablation with-without` on `--cowork` exits 2
-- [ ] The default resolves to `none`, so an unconfigured repository runs one arm
+- [x] A one-arm document decides exactly as it does today, over the existing fixtures
+- [x] A two-arm document whose delta is above the threshold passes
+- [x] A two-arm document whose delta is below it fails, and the line names both scores
+- [x] A two-arm document whose case carries no delta fails, and the line names the reason
+- [x] A `scored: false` grader fails a one-arm document and does not fail a two-arm one
+- [x] A case whose graders are all with-only passes in a two-arm document
+- [x] `--ablation with-without` on `--cowork` exits 2
+- [x] The default resolves to `none`, so an unconfigured repository runs one arm
 
 ### Phase 6: documentation
 

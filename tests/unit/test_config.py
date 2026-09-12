@@ -61,6 +61,8 @@ def test_missing_file_yields_the_eval_defaults(working_directory, tmp_path: Path
         "WebFetch",
         "Skill",
     )
+    assert section.ablation == "none"
+    assert section.delta_threshold == 0
     assert section.max_cost_usd == 5
     assert section.max_cost_total_usd == 25
     assert section.keep_traces is True
@@ -260,6 +262,33 @@ def test_the_consent_key_reads_one_of_two_words_and_refuses_anything_else(
     with pytest.raises(CoWorkError) as raised:
         Config.load(write(tmp_path, "cowork:\n  consent: yes-please\n"))
     assert "cowork.consent: expected one of dialog, none" in str(raised.value)
+
+
+def test_the_ablation_key_reads_one_of_two_words_and_refuses_anything_else(
+    tmp_path: Path,
+) -> None:
+    """A third word would reach `claude plugin eval` as a flag value it refuses, after the
+    container has started and the suite has been read."""
+    file = write(tmp_path, "eval:\n  ablation: with-without\n")
+    assert Config.load(file).eval.ablation == "with-without"
+
+    with pytest.raises(CoWorkError) as raised:
+        Config.load(write(tmp_path, "eval:\n  ablation: with-only\n"))
+    assert "eval.ablation: expected one of none, with-without" in str(raised.value)
+
+
+def test_the_delta_threshold_reads_a_number_from_zero_to_one(tmp_path: Path) -> None:
+    """A case score is a mean of grader results and is in that range, so a delta is in -1 to
+    1 and a threshold above 1 is one no case can meet."""
+    assert Config.load(write(tmp_path, "eval:\n  delta_threshold: 0.25\n")).eval.delta_threshold
+
+    with pytest.raises(CoWorkError) as raised:
+        Config.load(write(tmp_path, "eval:\n  delta_threshold: 2\n"))
+    assert "eval.delta_threshold: expected a number from 0 to 1, got 2" in str(raised.value)
+
+    with pytest.raises(CoWorkError) as negative:
+        Config.load(write(tmp_path, "eval:\n  delta_threshold: -1\n"))
+    assert "eval.delta_threshold: expected a number at or above zero" in str(negative.value)
 
 
 def test_the_traces_key_reads_a_boolean_and_refuses_anything_else(tmp_path: Path) -> None:

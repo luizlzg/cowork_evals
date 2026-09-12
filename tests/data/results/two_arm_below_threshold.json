@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.265",
+  "startedAt": "2026-09-12T10:00:00+00:00",
+  "durationSeconds": 20.0,
+  "costUsd": 0.22,
+  "partial": false,
+  "suite": {
+    "root": "/plugin",
+    "ablation": "with-without",
+    "threshold": 0,
+    "judgeModel": "haiku",
+    "plugins": [{"name": "smoke", "path": "/plugin"}]
+  },
+  "cases": [
+    {
+      "name": "writes-a-file",
+      "dir": "evals/plugin/writes-a-file",
+      "source": "prose",
+      "promptMarkdown": "Write the report.",
+      "graders": [
+        {"name": "wrote-the-file", "type": "file_exists", "weight": 1, "config": {}}
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0.5,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.11,
+            "judgeCostUsd": 0.0,
+            "error": null,
+            "skippedPaidGraders": false,
+            "graders": [
+              {"name": "wrote-the-file", "passed": true, "weight": 1,
+               "explanation": "report.md exists", "withOnly": false, "scored": true}
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0.75,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.11,
+            "judgeCostUsd": 0.0,
+            "error": null,
+            "skippedPaidGraders": false,
+            "graders": [
+              {"name": "wrote-the-file", "passed": true, "weight": 1,
+               "explanation": "report.md exists", "withOnly": false, "scored": true}
+            ]
+          }
+        ]
+      },
+      "aggregates": {"score": 0.5, "passRate": 1.0, "scoreWithout": 0.75,
+                     "passRateWithout": 1.0, "delta": -0.25}
+    }
+  ],
+  "aggregates": {"casesTotal": 1, "casesPassed": 1, "overallScore": 0.5,
+                 "overallPassRate": 1.0, "meanDelta": -0.25}
+}
