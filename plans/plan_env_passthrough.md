@@ -122,13 +122,13 @@ becomes a second one.
 
 ### Phase 3: the forwarding
 
-- [ ] `run_preamble` forwards each named variable, beside the variables it already writes
-- [ ] The forwarded names are read once, where the preflight already read them, and are not
+- [x] `run_preamble` forwards each named variable, beside the variables it already writes
+- [x] The forwarded names are read once, where the preflight already read them, and are not
       read a second time at container start
-- [ ] `env.txt` records the forwarded names on one line, and no value
-- [ ] `--dry-run` prints the container argument list with each forwarded name and its value
+- [x] `env.txt` records the forwarded names on one line, and no value
+- [x] `--dry-run` prints the container argument list with each forwarded name and its value
       replaced, so a dry run is safe to paste into a message
-- [ ] A dry run reads no value at all, and so prints the list with every configured name
+- [x] A dry run reads no value at all, and so prints the list with every configured name
       whether or not the host has it set. `cli._run` skips the preflight on `--dry-run`, so
       the refusal in phase 2 has not run, and a dry run reaching nothing behind the preflight
       is the rule that verb already holds

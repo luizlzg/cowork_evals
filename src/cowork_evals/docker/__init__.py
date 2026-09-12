@@ -73,6 +73,10 @@ CREDENTIAL_NAMES = frozenset(
     }
 )
 
+# What stands in for a forwarded value in the argument list `--dry-run` prints, so a dry run
+# is safe to paste into a message. docs/docker.md.
+REDACTED = "<not shown>"
+
 
 class Condition(Enum):
     """What `Docker.check` reports unmet.
@@ -321,13 +325,16 @@ class Docker:
             "--claudeai",
         ]
 
-    def run_preamble(self) -> list[str]:
+    def run_preamble(self, *, redact: bool = False) -> list[str]:
         """One run's container, up to the mounts, the tag and the command.
 
-        The one place the run's platform, uid, home, enablement variable, sandbox options
-        and credential mounts are written. `run_argv` adds the two mounts and the harness;
-        tests/integration/test_docker.py adds its own mounts and a fixed command, so what
-        that tier proves about the sandbox it proves about this list.
+        The one place the run's platform, uid, home, enablement variable, sandbox options,
+        forwarded variables and credential mounts are written. `run_argv` adds the two
+        mounts and the harness; tests/integration/test_docker.py adds its own mounts and a
+        fixed command, so what that tier proves about the sandbox it proves about this list.
+
+        `redact` is `--dry-run`'s, and is the whole difference between the list that is
+        printed and the list that is run.
         """
         return [
             "docker",
@@ -351,11 +358,41 @@ class Docker:
             "--security-opt",
             "systempaths=unconfined",
             *self.extra_ca_env_argv(),
+            *self.env_passthrough_argv(redact=redact),
             *self.credential_argv(),
         ]
 
+    def env_passthrough_argv(self, *, redact: bool = False) -> list[str]:
+        """`--env NAME=VALUE` for each name in `docker.env_passthrough`, in order.
+
+        `redact` replaces every value with `REDACTED` and reads none at all, so the list
+        `--dry-run` prints carries every configured name whether or not the host has it set.
+
+        An absent or empty value raises rather than writing `NAME=`. The preflight refuses
+        that before a run reaches here, and an empty string is not a value: a run that
+        forwarded one would look configured and would not be. docs/docker.md.
+        """
+        argv: list[str] = []
+        for name in self.env_passthrough:
+            if redact:
+                argv += ["--env", f"{name}={REDACTED}"]
+                continue
+            value = self.environment()[name]
+            if not value:
+                raise DockerError(
+                    f"docker.env_passthrough names {name}, which is unset or empty on this "
+                    f"host: {remedy(Condition.ENVIRONMENT)}"
+                )
+            argv += ["--env", f"{name}={value}"]
+        return argv
+
     def run_argv(
-        self, target: Path | str, output_dir: Path | str, options: RunOptions
+        self,
+        target: Path | str,
+        output_dir: Path | str,
+        options: RunOptions,
+        *,
+        redact: bool = False,
     ) -> list[str]:
         """One run, as a container. The harness command line is harness.eval_argv.
 
@@ -374,7 +411,7 @@ class Docker:
         if relative != Path("."):
             container_target = f"{CONTAINER_PLUGIN}/{relative.as_posix()}"
         return [
-            *self.run_preamble(),
+            *self.run_preamble(redact=redact),
             *(["--env", f"TMPDIR={CONTAINER_TMPDIR}"] if options.keep_traces else []),
             "-v",
             f"{root}:{CONTAINER_PLUGIN}:ro",

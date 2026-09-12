@@ -493,7 +493,13 @@ def _dry_run(
             _dry_run_cowork(args, config, target, tags)
             continue
         would_be = root / logs.run_dir_name(logs.scope_name(target, [plugin])) / logs.slug(name)
-        for argument in Docker(config).run_argv(target, would_be, _options(args, config, tags)):
+        # `redact` replaces each forwarded value, and reads none: a dry run skips the
+        # preflight, so it prints every configured name whether or not the host has it set.
+        # docs/docker.md.
+        printed = Docker(config).run_argv(
+            target, would_be, _options(args, config, tags), redact=True
+        )
+        for argument in printed:
             print(argument)
     return OK
 
@@ -568,7 +574,12 @@ def _sweep(
     logs.point_latest(root, directory)
 
     with logs.tee(directory):
-        logs.write_env(directory, args.backend, image=None if image is None else image.tag)
+        logs.write_env(
+            directory,
+            args.backend,
+            image=None if image is None else image.tag,
+            env_passthrough=() if image is None else image.env_passthrough,
+        )
         extra = _each_plugin(args, config, directory, targets, tags, image)
         decided = verdict.decide(directory, found=found, picked=picked, extra=extra)
         (directory / logs.VERDICT_FILE).write_text(decided.text, encoding="utf-8")
