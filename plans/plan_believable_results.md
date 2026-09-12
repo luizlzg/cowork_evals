@@ -173,7 +173,16 @@ branch and a separate merge. What each holds is its own file; nothing is restate
 
 ### Phase 4: retire this file
 
-- [ ] When every plan in phase 3 is written, this file has no work left in it. Move it to `done/`
-      under the rule in [`README.md`](README.md). It is the record of what was decided on
-      2026-09-12 and why, which is the first thing anyone needs when one of these decisions is
-      questioned later
+Not yet, and the condition is not the one this phase was written with.
+
+The four plans link to the decisions table above, which is the one place each of those
+decisions is derived. A file in `done/` is frozen and is never read or cited, so retiring
+this one while four live plans cite it would break that rule in four places at once.
+
+- [ ] Each of plans 10 to 13 writes what it establishes into `docs/` as it is implemented,
+      which is the rule in [`README.md`](README.md) and is what empties this file of anything
+      durable
+- [ ] When the last of the four is merged, nothing outside `done/` cites this file. Move it
+      then, under the rule in [`README.md`](README.md). It is the record of what was measured
+      and decided on 2026-09-12, which is the first thing anyone needs when one of these
+      decisions is questioned later
