@@ -85,10 +85,30 @@ Any other key is an error. `context.*` cannot be set from `prompt.md`.
 Writing out a key a backend cannot honour skips the case on that backend. Leaving it out
 does not, because a default is not a request. See [running_evals.md](running_evals.md).
 
+### What an unknown key does, in each of the two files
+
+Snapshot, 2026-09-12, CLI 2.1.265, through the container backend. One fixture case carried
+`backends: [docker]`, first in `prompt.md` and then in `case.yaml`.
+
+| Where the key was       | The harness                                                          |
+| ----------------------- | ---------------------------------------------------------------------- |
+| `prompt.md` frontmatter | Refused the case at load, named the allowed set, ran nothing and wrote no `aggregate-result.json`. The command exited 1 |
+| `case.yaml`             | Loaded the case and ran it                                            |
+
+The refusal is at case load and before the credential is read, so it costs no model call, and
+a whole suite produces no result document for one malformed case. A fact this repository has
+to read off a case therefore cannot ride in `prompt.md` frontmatter.
+
+The allowed set the harness named carries two keys the table above does not:
+`artifact_publish` and `growthbook_overrides`. The case validator's key set is that table, so
+a case writing either is refused by the preflight although the harness accepts it.
+
 ## case.yaml
 
 Optional. It carries only what `prompt.md` cannot: `context.scaffold_script`,
 `context.history_file`, `context.add_dirs`. It needs `schema_version: "1.1"` and `name`.
+An unknown top-level key there is ignored, as the snapshot above records, and this repository
+writes none.
 
 ## Graders
 

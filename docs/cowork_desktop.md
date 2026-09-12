@@ -20,7 +20,7 @@ drive it. These are the measured internals. What the driver does with them is
 
 Captured 2026-09-02 on a macOS development machine by direct probe, re-probed 2026-09-08 for
 section 3, which reads session directories already on disk, and extended 2026-09-12 with the
-process name, what the keyboard does to a submission, and section 5, which is what four real
+process name, what the keyboard does to a submission, and section 5, which is what five real
 sessions did when asked. Expect any release to change these.
 
 ## Measured facts
@@ -251,6 +251,31 @@ Four consequences a case format and a grader act on.
 
 The guest reported Python 3.10.12, which is the interpreter the code under test runs on. See
 [runtime.md](runtime.md).
+
+### What a session has, and what a named absent skill does
+
+Snapshot, captured 2026-09-12 on application version 1.52386.0, one further
+`cowork_evals ask --cowork` submission on the same profile. The prompt asked for a listing of
+the guest's skills directory, and then named a skill that is not installed.
+
+| Asked for                                      | What happened                                                |
+| ---------------------------------------------- | -------------------------------------------------------------- |
+| `ls -1` of the guest's skills directory        | `mcp__workspace__bash`, and eleven names: `consolidate-memory`, `docx`, `explain-usage`, `frontend-design`, `pdf`, `pdf-reading`, `pptx`, `schedule`, `setup-claude`, `setup-cowork`, `xlsx` |
+| Use the `invoice-parser` skill to write a file | Nothing was written, and `outputs/` stayed empty. The session said the skill does not exist, asked whether to write the file without it, and ended the turn |
+
+The eleven names are the host tree at
+`local-agent-mode-sessions/skills-plugin/<account>/<profile>/skills/`, name for name, which
+is the mount in section 4. A session's skill set is a property of the profile. That tree is
+application managed and mounted read only, and nothing here writes under a profile, so a
+skill is made absent by using a profile it was never installed into and by nothing else.
+
+The second row is why a prompt does not name the skill it is testing. The session refused the
+name and produced no file, so a prompt that names the skill measures the name rather than the
+behaviour.
+
+The session's own prose named ten of the eleven and added two the directory does not hold.
+The eleven above are what `bash` printed. What a session says about its own configuration is
+not evidence.
 
 ## Authorizations
 

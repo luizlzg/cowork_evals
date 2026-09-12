@@ -4,8 +4,8 @@ This plan writes no code. It holds the state of a design conversation that ran o
 2026-09-12, so that a cleared context resumes from here. Its product is four plan files,
 written after the measurements in phase 1 and the decisions in phase 2.
 
-Work it after [`plan_ask.md`](plan_ask.md) is implemented and merged. Phase 1 uses the `ask`
-verb that plan builds.
+Work it after plan 8 is implemented and merged. Phase 1 uses the `ask` verb that plan built,
+and the row for it is in [`README.md`](README.md).
 
 ## Decisions the developer still owns
 
@@ -119,15 +119,21 @@ in the `docs/` file that owns the subject, dated, and called a snapshot. Ask the
 the thing and read what it did. What a session says about its own configuration is not
 evidence.
 
-- [ ] What a live session does when asked to write a file, shell out, fetch a URL, and fire a
-      skill. This is the same measurement `plan_ask.md` phase 5 makes. If that plan already
-      recorded it, read the snapshot and do not pay for it again
-- [ ] Whether a session asks for permission before using a tool, or acts
-- [ ] Whether a session can run with a named skill absent, and how that absence is arranged.
-      This decides whether a baseline arm is reachable on CoWork at all
-- [ ] Whether `claude plugin eval` accepts an unknown `prompt.md` frontmatter key. This is a
-      Docker measurement, not an ask: add a key to a fixture case and run it. It decides
-      whether the backend declaration is a reserved tag or a `backends:` key
+- [x] What a live session does when asked to write a file, shell out, fetch a URL, and fire a
+      skill. Plan 8 already paid for it and recorded it: section 5 of
+      [`../docs/cowork_desktop.md`](../docs/cowork_desktop.md). Nothing was re-submitted
+- [x] Whether a session asks for permission before using a tool, or acts. The same snapshot
+      answers it: nothing was granted, nothing was asked, four tools were used and all four
+      runs reached `completed`. A session acts
+- [x] Whether a session can run with a named skill absent, and how that absence is arranged.
+      One submission, recorded in section 5 of
+      [`../docs/cowork_desktop.md`](../docs/cowork_desktop.md). A session's skill set is the
+      profile's mounted, application-managed tree, so absence is arranged by using another
+      profile and by nothing else. Not clean, so decision 3 splits the CoWork arm out
+- [x] Whether `claude plugin eval` accepts an unknown `prompt.md` frontmatter key. It does
+      not: the case is refused at load and the whole suite writes no result document. An
+      unknown `case.yaml` key is ignored. Recorded in
+      [`../docs/eval_format.md`](../docs/eval_format.md). The declaration is the reserved tag
 
 If a measurement is inconclusive, the plan that depends on it is written to the conservative
 option: the tag rather than the key, and the CoWork baseline arm split into its own plan
