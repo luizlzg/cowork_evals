@@ -221,7 +221,8 @@ def test_an_extra_line_is_a_failure_the_caller_already_had(tmp_path: Path) -> No
 
 
 def test_two_plugins_are_gated_once(tmp_path: Path) -> None:
-    result = judge(run_directory(tmp_path, mail="pass", writer="structural_failures"), found=2, picked=2)
+    directory = run_directory(tmp_path, mail="pass", writer="structural_failures")
+    result = judge(directory, found=2, picked=2)
     assert not result.passed
     assert len(failures(result)) == 4
     assert result.lines[-1] == "2 found, 2 picked, 2 ran, 1 passed, overall score 0.50"
