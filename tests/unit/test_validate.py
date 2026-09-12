@@ -193,7 +193,9 @@ def _one_case(root: Path, extra: str) -> Path:
     (root / "skills" / "greeter").mkdir(parents=True)
     case = root / "evals" / "greeter" / "hello"
     case.mkdir(parents=True)
+    # The tag, because the one caller writes `max_turns`. docs/eval_format.md.
     (case / "prompt.md").write_text(
-        f'---\nname: hello\ntags: [greeter]\nplugins: ["../../.."]\n{extra}---\n\nSay hello.\n'
+        f'---\nname: hello\ntags: [greeter, no-cowork]\nplugins: ["../../.."]\n'
+        f"{extra}---\n\nSay hello.\n"
     )
     return root

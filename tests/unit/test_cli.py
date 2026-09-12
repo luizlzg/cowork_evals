@@ -579,8 +579,8 @@ def test_check_returns_three_and_names_every_unmet_condition(tmp_path, capsys) -
 def _plugin(root: Path, *, portable: bool) -> Path:
     """One plugin, one skill, one case, one grader. `portable` decides one frontmatter key.
 
-    `allowed_tools` is honoured by the container backend and not by CoWork, so writing it out
-    is what makes the case skipped there and the suite dead. Nothing else differs.
+    `allowed_tools` is honoured by the container backend and not by CoWork, so a case writing
+    it out carries `no-cowork` and is not submitted there. Nothing else differs.
     """
     plugin = root / "one"
     case = plugin / "evals" / "greeter" / "only"
@@ -590,8 +590,9 @@ def _plugin(root: Path, *, portable: bool) -> Path:
     (plugin / "skills" / "greeter").mkdir(parents=True)
     (plugin / "skills" / "greeter" / "SKILL.md").write_text("---\nname: greeter\n---\n")
     unhonoured = "" if portable else "allowed_tools: [Skill]\n"
+    tags = "[greeter]" if portable else "[greeter, no-cowork]"
     (case / "prompt.md").write_text(
-        f"---\nname: only\ntags: [greeter]\nplugins: ['../../..']\n{unhonoured}---\n\nSay hello.\n"
+        f"---\nname: only\ntags: {tags}\nplugins: ['../../..']\n{unhonoured}---\n\nSay hello.\n"
     )
     (case / "graders" / "said.md").write_text(
         "---\ntype: regex\ntarget: last_message\npattern: 'hello'\n---\n"

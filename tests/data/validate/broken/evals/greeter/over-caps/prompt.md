@@ -1,6 +1,6 @@
 ---
 name: over-caps
-tags: [greeter]
+tags: [greeter, no-cowork]
 plugins: ["../../.."]
 runs: 51
 max_turns: 201

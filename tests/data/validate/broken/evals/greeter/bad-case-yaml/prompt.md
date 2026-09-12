@@ -1,6 +1,6 @@
 ---
 name: bad-case-yaml
-tags: [greeter]
+tags: [greeter, no-cowork]
 plugins: ["../../.."]
 ---
 

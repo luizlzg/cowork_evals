@@ -121,16 +121,16 @@ Every other skip in `cowork_backend.skips` becomes a validator error or a counte
 
 ### Phase 1: the tag, read and written
 
-- [ ] `cases.py` names the reserved tag in one place and exposes whether a case carries it.
+- [x] `cases.py` names the reserved tag in one place and exposes whether a case carries it.
       No other module spells the string
-- [ ] `cowork_backend` exposes the reasons a case is unrunnable, all three sources, as the
+- [x] `cowork_backend` exposes the reasons a case is unrunnable, all three sources, as the
       one function both the validator and the backend call. It takes the case and the plugin
       root, which is what `_mock_layers` already needs, and it is what `skips` reads today
-- [ ] `validate.py` enforces both directions of the table above over that function, one rule
+- [x] `validate.py` enforces both directions of the table above over that function, one rule
       name each. The message names what makes the case unrunnable: the key, or the `mocks/`
       directory as a path
-- [ ] A case carrying the tag is still selected by `--tag <skill>`, and a test says so
-- [ ] The tag is not added to `PROMPT_KEYS`. It is a tag value, not a key, so nothing about
+- [x] A case carrying the tag is still selected by `--tag <skill>`, and a test says so
+- [x] The tag is not added to `PROMPT_KEYS`. It is a tag value, not a key, so nothing about
       the key set changes
 
 ### Phase 2: the backend reads it

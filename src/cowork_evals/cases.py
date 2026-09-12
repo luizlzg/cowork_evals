@@ -57,6 +57,11 @@ MIXED = "mixed"
 # `context.add_dirs` and not for the mapping above it.
 CONTEXT = "context"
 
+# The one reserved tag value, and the only one. A case carrying it declares that the CoWork
+# backend cannot run it, and the validator enforces that in both directions. It is spelled
+# here and nowhere else. docs/eval_format.md.
+NO_COWORK = "no-cowork"
+
 
 class CaseError(Exception):
     """A case tree that cannot be read: unparsable YAML, or no plugin root."""
@@ -97,6 +102,11 @@ class Case:
     frontmatter_keys: dict[str, Any] = field(default_factory=dict)
     case_yaml_keys: dict[str, Any] = field(default_factory=dict)
     path: Path = Path(PROMPT_FILE)
+
+    @property
+    def no_cowork(self) -> bool:
+        """Whether the case carries the reserved tag. It is read here and nowhere else."""
+        return NO_COWORK in self.tags
 
 
 def plugin_root(target: Path | str) -> Path:

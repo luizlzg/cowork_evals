@@ -19,15 +19,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .cases import CASE_YAML, EVAL_DIR, GRADER_TYPES, GRADERS_DIR, PRUNED, Case, discover
+from .cases import CASE_YAML, EVAL_DIR, GRADER_TYPES, GRADERS_DIR, NO_COWORK, PRUNED, Case, discover
+from .cowork_backend import MOCKS_DIR, unrunnable
 
 # The directory a plugin's skills live in. Coverage is one directory here against one
 # directory under `evals/`. docs/eval_format.md.
 SKILLS_DIR = "skills"
 
-# The two directories under `evals/` that are not a skill name. docs/eval_format.md.
+# The two directories under `evals/` that are not a skill name. `MOCKS_DIR` is the CoWork
+# backend's, which is the one module that decides what a `mocks/` directory means.
+# docs/eval_format.md.
 COMPOSITION_DIR = "plugin"
-MOCKS_DIR = "mocks"
 NON_SKILL_DIRS = frozenset({COMPOSITION_DIR, MOCKS_DIR})
 
 # Every key `prompt.md` frontmatter may carry, and nothing else. docs/eval_format.md.
@@ -158,9 +160,40 @@ def _case_violations(case: Case, plugin: Path, evals: Path) -> list[Violation]:
     skill = _skill_of(case, evals)
     return [
         *_prompt_violations(case, plugin, skill),
+        *_runnability_violations(case, plugin),
         *_case_yaml_violations(case),
         *_grader_violations(case),
     ]
+
+
+def _runnability_violations(case: Case, plugin: Path) -> list[Violation]:
+    """The reserved tag, checked in both directions. docs/eval_format.md.
+
+    `cowork_backend.unrunnable` is the one derivation of what a CoWork session cannot run,
+    and the backend reads the same function, so the validator and the backend cannot
+    disagree about one case.
+
+    The second direction is what keeps the tag from becoming a way to switch a case off.
+    """
+    reasons = unrunnable(case, plugin)
+    if reasons and not case.no_cowork:
+        return [
+            Violation(
+                path=case.path,
+                rule="no-cowork-missing",
+                detail=f"{reason}, and tags does not carry {NO_COWORK}",
+            )
+            for reason in reasons
+        ]
+    if case.no_cowork and not reasons:
+        return [
+            Violation(
+                path=case.path,
+                rule="no-cowork-unneeded",
+                detail=f"tags carries {NO_COWORK}, and a CoWork session can run this case",
+            )
+        ]
+    return []
 
 
 def _skill_of(case: Case, evals: Path) -> str | None:

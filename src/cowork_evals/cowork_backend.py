@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .cases import EVAL_DIR, JUDGED, Case, CaseError, discover, plugin_roots
+from .cases import EVAL_DIR, JUDGED, NO_COWORK, Case, CaseError, discover, plugin_roots
 from .config import Config, CoWorkError
 from .cowork import CoWork
 from .grader import grade as grade_structural
@@ -29,6 +29,7 @@ from .results import CaseResult, Run, build, write
 # The MCP stand-in directory. Its three layers, suite, group and case, are
 # docs/claude_code/plugin_eval_reference.md.
 MOCKS_DIR = "mocks"
+MOCKS_REASON = "stand-ins are the harness's, and the MCP servers here are real"
 
 # The grader target and focus value that names those stand-ins.
 MOCK_CALLS = "mock_calls"
@@ -47,6 +48,43 @@ UNHONOURED_CASE_KEYS = {
 # The `case.yaml` keys, which are all of one shape and share one reason.
 CONTEXT_PREFIX = "context."
 CONTEXT_REASON = "nothing stages files into the VM"
+
+
+def unrunnable(case: Case, plugin_root: Path | str) -> tuple[str, ...]:
+    """Every reason a live CoWork session cannot run this case, from all three sources.
+
+    Empty for a case this backend runs. It is the one derivation of that fact: the validator
+    calls it to enforce the `no-cowork` tag in both directions, and `declared` calls it to
+    say what the tag on a case declares. Two derivations could disagree, and a validator that
+    passed a case the backend then refused is the state docs/eval_format.md removes.
+
+    `plugin_root` is where the `evals/` tree starts, which is what makes a suite-wide
+    `evals/mocks/` reach a case several directories below it.
+    """
+    reasons = [
+        f"{key}: {why}" for key, why in UNHONOURED_CASE_KEYS.items() if key in case.frontmatter_keys
+    ]
+    reasons += [
+        f"{key}: {CONTEXT_REASON}" for key in case.case_yaml_keys if key.startswith(CONTEXT_PREFIX)
+    ]
+    reasons += [
+        f"{directory / MOCKS_DIR}: {MOCKS_REASON}"
+        for directory in _mock_layers(case.directory, Path(plugin_root))
+    ]
+    return tuple(reasons)
+
+
+def declared(case: Case, plugin_root: Path | str) -> str | None:
+    """Why this backend submits nothing for the case, or `None` for a case it runs.
+
+    The tag decides, and `unrunnable` says what the tag declares. The validator is what keeps
+    the two in step, so a case reaching this with a source and no tag is one no preflight
+    read: it is submitted, and the key it wrote is ignored by the session.
+    """
+    if not case.no_cowork:
+        return None
+    reasons = unrunnable(case, plugin_root)
+    return f"{NO_COWORK}: {'; '.join(reasons)}" if reasons else NO_COWORK
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,29 +110,18 @@ class Skips:
 
 
 def skips(case: Case, plugin_root: Path | str) -> Skips:
-    """What this backend cannot honour in one case. It reads files and submits nothing.
-
-    `plugin_root` is where the `evals/` tree starts, which is what makes a suite-wide
-    `evals/mocks/` reach a case several directories below it.
-    """
-    reasons = [
-        f"{key}: {why}" for key, why in UNHONOURED_CASE_KEYS.items() if key in case.frontmatter_keys
-    ]
-    reasons += [
-        f"{key}: {CONTEXT_REASON}" for key in case.case_yaml_keys if key.startswith(CONTEXT_PREFIX)
-    ]
-    reasons += [
-        f"{directory / MOCKS_DIR}: stand-ins are the harness's, and the MCP servers here are real"
-        for directory in _mock_layers(case.directory, Path(plugin_root))
-    ]
-    return Skips(case=tuple(reasons), graders=_grader_skips(case))
+    """What this backend cannot honour in one case. It reads files and submits nothing."""
+    return Skips(case=unrunnable(case, plugin_root), graders=grader_skips(case))
 
 
-def _grader_skips(case: Case) -> dict[str, str]:
+def grader_skips(case: Case) -> dict[str, str]:
     """The one grader skip that is decided before a run.
 
-    The other one, an `llm` grader whose focus turns out to be an image, is read from the
-    file's bytes and so exists only after the run. `judge.py` decides that one.
+    A grader skip runs the case and drops that grader from the score, so a case does not fail
+    for a grader that was never asked.
+
+    The other grader skip, an `llm` grader whose focus turns out to be an image, is read from
+    the file's bytes and so exists only after the run. `judge.py` decides that one.
     """
     skipped = {}
     for grader in case.graders:
@@ -108,7 +135,7 @@ def _grader_skips(case: Case) -> dict[str, str]:
 def _mock_layers(case_dir: Path, plugin_root: Path) -> list[Path]:
     """Every directory from `evals/` down to the case that carries a `mocks/`.
 
-    `evals/mocks/` skips every case in the plugin and a case's own `mocks/` skips that case
+    `evals/mocks/` covers every case in the plugin and a case's own `mocks/` covers that case
     alone, which are the layers the harness adds up.
     """
     case_dir = case_dir.resolve()
