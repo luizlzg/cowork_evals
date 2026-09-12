@@ -248,7 +248,8 @@ no skip.
       and called a snapshot, beside the bundle id
 - [x] `docs/cowork_desktop.md`: one section recording the 2026-09-12 contamination, dated,
       and what the composer does with a deep link fired into a non-empty field
-- [x] `docs/cli.md`: one paragraph saying `run --cowork` and `ask` ask once, and what `none` is
+- [x] `docs/cli.md`: one paragraph saying `run --cowork` asks once, and what `none` is. The
+      `ask` half of the sentence lands with `feat/ask`, which owns that verb
 - [x] `README.md`: the sentence about a CoWork run taking the keyboard says the modal asks first
 - [ ] `plans/README.md`: the row moves to `implemented` on the merge, and the file moves to
       `done/plan_focus.<YYYYMMDD>.md`
@@ -259,8 +260,13 @@ no skip.
 - [x] `scripts/test.sh tests/unit`
 - [x] `scripts/test.sh` with the default selection, green
 - [x] `scripts/test.sh -m integration -k focus`, on a machine with the profile and the grant
-- [x] Type text into the CoWork composer by hand, then `cowork_evals ask --cowork "Reply with
-      the single word: ready"`. It prints `ready`, and the audit prompt carries no extra text
-- [x] Start an ask, click into an editor before the Return, and confirm it exits on code 9
-      with nothing typed into the editor
-- [ ] `plans/plan_ask.md` phase 5 is unblocked: the four measurements run without a code 6
+- [x] Type text into the CoWork composer by hand, then submit. It answers, and the audit
+      prompt carries no extra text. Run on 2026-09-12 through `ask`, on `feat/ask` where
+      that verb lives, and again here through
+      `test_focus_a_primed_composer_is_cleared_before_the_prompt`
+- [x] Steal focus before the Return, and confirm it exits on code 9 with nothing typed.
+      Observed twice on 2026-09-12: `9: Finder is frontmost, not Claude` from
+      `test_focus_the_guard_refuses_with_code_9_when_cowork_is_not_frontmost`, and
+      `9: iTerm2 is frontmost, not Claude` from a live run during which the developer typed
+- [ ] `plans/plan_ask.md` phase 5 is unblocked: the four measurements run without a code 6.
+      `feat/ask`'s, not this plan's, and it runs there
