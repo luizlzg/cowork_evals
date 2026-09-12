@@ -43,7 +43,7 @@ not the system's: what is built and usable is
 | 10 | [`done/plan_run_validity.20260912.md`](done/plan_run_validity.20260912.md) | A run that never got its tool fails instead of scoring, and honest counts | implemented | `feat/run-validity`   |
 | 11 | [`done/plan_runnability.20260912.md`](done/plan_runnability.20260912.md) | The `no-cowork` tag on a case, enforced both ways, counted rather than failed | implemented | `feat/runnability`    |
 | 12 | [`done/plan_env_passthrough.20260912.md`](done/plan_env_passthrough.20260912.md) | Named host variables forwarded into the run container, values never logged | implemented | `feat/env-passthrough` |
-| 13 | [`plan_ablation.md`](plan_ablation.md) | The baseline arm, and a verdict that decides on the per-case delta | not started | `feat/ablation`       |
+| 13 | [`done/plan_ablation.20260912.md`](done/plan_ablation.20260912.md) | The baseline arm, and a verdict that decides on the per-case delta | implemented | `feat/ablation`       |
 
 | Status        | Means                                                                     |
 | ------------- | --------------------------------------------------------------------------- |
@@ -90,17 +90,18 @@ prompt. It was the driver's and not any one verb's: every `run --cowork` case go
 the same call. What it changed is [`../docs/cowork_driver.md`](../docs/cowork_driver.md). The
 one line it names in `cli._ask` ships with plan 8, which owns that verb.
 
-Plans 10 to 13 are one piece of work in four merges. Each states the decisions it rests on in
-its own file, so one is implemented by reading one file;
+The four plans numbered 10 to 13 were one piece of work in four merges, and all four are
+implemented. Each states the decisions it rests on in its own file, so one is implemented by
+reading one file;
 [`done/plan_believable_results.20260912.md`](done/plan_believable_results.20260912.md) is the
-record of what was measured on the day they were written. Together they make a result
+record of what was measured on the day they were written. Together they made a result
 believable: a run that never got the tool it needed stops scoring, a case a backend cannot run
-says so instead of failing every suite forever, a skill that needs a credential becomes
+says so instead of failing every suite forever, a skill that needs a credential became
 evaluable at all, and a suite can be asked whether the plugin changed anything rather than only
-whether the cases passed. They are
-implemented in that order. Plan 13 is last because it rewrites the pass and fail rules that
-plans 10 and 11
-both change, and plan 12 is independent of all three.
+whether the cases passed. They were implemented in that order. `plan_ablation` was last
+because it rewrites the pass and fail rules that `plan_run_validity` and `plan_runnability`
+both change, and `plan_env_passthrough` is independent of all three. What those rules are now
+is [`../docs/running_evals.md`](../docs/running_evals.md).
 
 Plans 2 and 3 each build one backend whole. Running an eval on those two backends is
 `claude plugin eval`, which discovers the cases, runs them, grades them and writes

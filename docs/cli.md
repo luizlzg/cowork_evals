@@ -148,10 +148,11 @@ days.
 Defaults come from the `eval:` section of `cowork_evals.yaml`, in
 [running_evals.md](running_evals.md), which also says which underlying flag each option maps
 to and why that flag is pinned. An option beats the file, and the file beats the built-in
-default; the ladder is [library.md](library.md). Two pinned flags have no option:
-`--threshold`, because this package decides, and `--ablation`, because a baseline arm changes
-which graders are scored. `eval.max_cost_total_usd` has no option either; it bounds the
-invocation rather than a run.
+default; the ladder is [library.md](library.md). One pinned flag has no option:
+`--threshold`, because this package decides. `eval.max_cost_total_usd` has no option either,
+because it bounds the invocation rather than a run. `--delta-threshold` is the other way
+round: it is an option over a setting that maps to no harness flag at all, because the
+verdict reads it here.
 
 An option the chosen backend cannot honour is refused at parse time. That is an operator
 mistake, so it is a usage error. A *case* that needs a field the backend cannot honour says so

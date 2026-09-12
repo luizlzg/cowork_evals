@@ -197,8 +197,9 @@ A trailing newline passes because `\s*` consumes it, not because `$` matches bef
 pattern with no `\s*` and a target ending in a newline fails.
 
 `arm` selects which ablation arm scores a grader: `with-only`, or `both`. It matters only
-under `--ablation with-without`, which this repository never runs, so a case here sets it
-only to stay portable. See [running_evals.md](running_evals.md).
+under `--ablation with-without`, which is off by default and is the container backend's
+alone, so a case that never asks for the baseline arm sets it only to stay portable. See
+[running_evals.md](running_evals.md).
 
 Prefer a deterministic grader over a judged one for anything long. Judges are noisy on long
 inputs.
