@@ -16,11 +16,11 @@ while the work happens.
 
 ## Plans
 
-Eleven plans. Nine build something and are numbered in build order, and one of those nine
-is skipped. `plan_fix` builds nothing, so it carries no number: it corrects what the others
-wrote, and it ran before `plan_cowork_backend.md` because it changes what that plan and
+Fifteen plans. Thirteen build something and are numbered in build order, and one of those
+thirteen is skipped. `plan_fix` builds nothing, so it carries no number: it corrects what the
+others wrote, and it ran before `plan_cowork_backend.md` because it changes what that plan and
 `plan_cli.md` both read. `plan_believable_results` carries no number for the same reason:
-it holds measurements and decisions, and its product is four plan files. The order is the
+it holds measurements and decisions, and its product is the four plans numbered 10 to 13. The order is the
 order they are built in, not a gate: a plan is
 written whenever the developer decides to write it, and a plan whose inputs already exist is
 executable whether or not the plan before it is finished. `status` is the plan's own state,
@@ -40,10 +40,15 @@ not the system's: what is built and usable is
 | 8 | [`done/plan_ask.20260912.md`](done/plan_ask.20260912.md) | The `ask` verb over the driver, and the skill that asks a live session what it does | implemented | `feat/ask`            |
 | 9 | [`done/plan_focus.20260912.md`](done/plan_focus.20260912.md) | The consent modal, the frontmost guard and the composer clear, in the driver | implemented | `feat/focus`          |
 | - | [`plan_believable_results.md`](plan_believable_results.md) | Nothing. The measurements, the decisions, and the four plans that follow them | written     |                       |
+| 10 | [`plan_run_validity.md`](plan_run_validity.md) | A run that never got its tool fails instead of scoring, and honest counts | not started | `feat/run-validity`   |
+| 11 | [`plan_runnability.md`](plan_runnability.md) | The `no-cowork` tag on a case, enforced both ways, counted rather than failed | not started | `feat/runnability`    |
+| 12 | [`plan_env_passthrough.md`](plan_env_passthrough.md) | Named host variables forwarded into the run container, values never logged | not started | `feat/env-passthrough` |
+| 13 | [`plan_ablation.md`](plan_ablation.md) | The baseline arm, and a gate that decides on the per-case delta | not started | `feat/ablation`       |
 
 | Status        | Means                                                                     |
 | ------------- | --------------------------------------------------------------------------- |
 | `not written` | The plan file does not exist yet                                           |
+| `not started` | The plan file exists and no box in it is ticked                            |
 | `written`     | The plan file exists, and its checklist is not finished                    |
 | `implemented` | Every box is ticked and the branch is merged. The file is in `done/`       |
 | `skipped`     | The developer decided not to write it. What it would build stays designed in `docs/` and unbuilt |
@@ -84,6 +89,15 @@ into a composer it never cleared, so a developer working in another window conta
 prompt. It was the driver's and not any one verb's: every `run --cowork` case goes through
 the same call. What it changed is [`../docs/cowork_driver.md`](../docs/cowork_driver.md). The
 one line it names in `cli._ask` ships with plan 8, which owns that verb.
+
+Plans 10 to 13 are one piece of work in four merges, and
+[`plan_believable_results.md`](plan_believable_results.md) is the record of what was measured
+and what each follows from. Together they make a result believable: a run that never got the
+tool it needed stops scoring, a case a backend cannot run says so instead of reddening the
+gate forever, a skill that needs a credential becomes evaluable at all, and a suite can be
+asked whether the plugin changed anything rather than only whether the cases passed. They are
+implemented in that order. Plan 13 is last because it rewrites the gate that plans 10 and 11
+both change, and plan 12 is independent of all three.
 
 Plans 2 and 3 each build one backend whole. Running an eval on those two backends is
 `claude plugin eval`, which discovers the cases, runs them, grades them and writes

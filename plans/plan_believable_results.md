@@ -154,38 +154,22 @@ later plan does not reopen one.
 ### Phase 3: write the four plans
 
 Written in this order, and implemented in this order. Each is a separate file, a separate
-branch and a separate merge.
+branch and a separate merge. What each holds is its own file; nothing is restated here.
 
-- [ ] `plans/plan_run_validity.md`. A run whose kept trace shows the tool under test never
-      executed fails loudly instead of scoring, on the rule decision 2 settles. Honest counts
-      in the summary, so a sweep the stop condition truncated stops reading as fully passed.
-      Also, as documentation only, the kept artefact layout stated as a contract a consumer's
-      post-suite content checker reads, including the sealed subdirectories and one directory
-      per run. Out of scope, stated: merging an externally produced verdict into the result
-      document. Two riders: `eval.allow_tools` moves to what phase 1 measured, because a
-      validity check over a grant this repository got wrong reddens every suite for its own
-      misconfiguration; and an exclusion glob on the invocation, with the selection counts
-      saying how many cases were discovered and how many were selected. Touches
-      `traces.py`, `results.py`, `gate.py`, `cli.py`, `config.py`, `docs/running_evals.md`
-- [ ] `plans/plan_runnability.md`. The backend declaration on the case, enforced in both
+- [x] [`plan_run_validity.md`](plan_run_validity.md). A run that never got its tool fails
+      instead of scoring, and the summary counts stop lying. The exclusion glob that was to
+      ride with it is dropped, and that file says why: `--case` takes one glob with no
+      negation, and on Docker the harness selects
+- [x] [`plan_runnability.md`](plan_runnability.md). The `no-cowork` tag, enforced in both
       directions by the validator, read by the CoWork backend in place of its run-time case
-      skip, and counted rather than failed. Amends the rule in `docs/running_evals.md` that a
-      skip gates. Touches `cases.py`, `validate.py`, `cowork_backend.py`, `gate.py`,
-      `results.py`, `cli.py`, and four documents. The one run-time skip that stays is the `llm`
-      grader whose focus turns out to be an image, because the file is produced by the run
-- [ ] `plans/plan_env_passthrough.md`. Named host variables forwarded into the run container.
-      Values never in `env.txt`, `debug.txt`, the result document, a gate line or the dry-run
-      output. Names do appear. Amends the rule in `CLAUDE.md` and `docs/library.md` that
-      nothing is read from the process environment. Docker only: a case writing `env:` is
-      exactly a case the CoWork backend cannot run. Touches `config.py`,
-      `docker/__init__.py`, `logs.py`, `cli.py`, `docs/library.md`, `docs/docker.md`
-- [ ] `plans/plan_ablation.md`. The `--ablation` option and the `eval.ablation` key,
-      `harness.py` unpinned, the gate reading both arms and deciding on the delta decision 5
-      settles, `traces.py` collecting the without-arm, and the default decision 4 settles. The
-      CoWork arm is in this plan or in a fifth, on decision 3. Last, because it rewrites the
-      gate that the first two plans both change
-- [ ] Add a row for each to [`README.md`](README.md), and a paragraph where that file
-      describes what a plan builds
+      skip, and counted rather than failed
+- [x] [`plan_env_passthrough.md`](plan_env_passthrough.md). Named host variables forwarded
+      into the run container, with no value in any artefact
+- [x] [`plan_ablation.md`](plan_ablation.md). The option, the setting, both arms collected,
+      and a gate that decides on the per-case delta. Docker only. Last, because it rewrites
+      the gate the first two change
+- [x] A row for each in [`README.md`](README.md), and a paragraph where that file describes
+      what a plan builds
 
 ### Phase 4: retire this file
 
