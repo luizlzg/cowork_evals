@@ -54,7 +54,7 @@ python-build-standalone, which is relocatable, so the copy runs from its new pat
 ## Why the plugin directory is the only place it can go
 
 The readable set above decides every candidate below. Every run is subject to it, because
-`--allow-tools` is pinned to `Bash`, and [running_evals.md](running_evals.md) says why.
+the pinned grant names `Bash`, and [running_evals.md](running_evals.md) says why.
 
 | Candidate location                          | Usable                                                             |
 | ------------------------------------------- | ------------------------------------------------------------------ |
@@ -170,7 +170,7 @@ Re-measured 2026-09-04, same CLI. Nothing lifts it on that host:
 The last row is why the host cannot be worked around. The configuration the sandbox cannot
 exclude is also the one that authenticates Claude Code there.
 
-It would bind the venv backend, which pins `--allow-tools Bash` and runs the harness on the
+It would bind the venv backend, whose grant names `Bash` and which runs the harness on the
 developer's host. It does not bind the container backend, which runs the harness inside the
 image, where no such configuration exists. Nothing in this repository lifts it: the host's
 AWS configuration belongs to the developer. This measurement is why the container was built

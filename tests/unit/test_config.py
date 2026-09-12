@@ -50,7 +50,17 @@ def test_missing_file_yields_the_eval_defaults(working_directory, tmp_path: Path
         section = Config.load().eval
     assert section.model == "sonnet"
     assert section.judge_model == "haiku"
-    assert section.allow_tools == ("Bash",)
+    # The session mirror, in the container's tool names. docs/running_evals.md.
+    assert section.allow_tools == (
+        "Bash",
+        "Read",
+        "Glob",
+        "Grep",
+        "Write",
+        "Edit",
+        "WebFetch",
+        "Skill",
+    )
     assert section.max_cost_usd == 5
     assert section.max_cost_total_usd == 25
     assert section.keep_traces is True

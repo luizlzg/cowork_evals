@@ -244,7 +244,7 @@ global is added.
 
 `bubblewrap` and `socat` are the second and third, and both are harness infrastructure in
 the same sense as the CLI above. The harness refuses to start a granted shell tool unless
-both are installed, and every case here is pinned `--allow-tools Bash`. Measured 2026-09-08:
+both are installed, and the pinned grant names `Bash`. Measured 2026-09-08:
 without `socat` a run exits 1 with `sandbox is enabled but dependencies are missing: socat
 not installed`, and the case is scored 0 rather than errored, so the failure reads as a bad
 answer unless the notes column is read. `probe.py` reports both versions and parity fails on

@@ -29,11 +29,13 @@ def value_after(argv: list[str], flag: str) -> str:
 
 
 def test_the_built_in_defaults_apply_when_the_file_carries_no_eval_section():
+    # The grant is read from the section rather than restated: what it holds is asserted in
+    # tests/unit/test_config.py, and this asserts that resolving carries it through.
     assert RunOptions.resolve(Config()) == RunOptions(
         model="sonnet",
         judge_model="haiku",
         max_cost_usd="5",
-        allow_tools=("Bash",),
+        allow_tools=Config().eval.allow_tools,
         keep_traces=True,
     )
 

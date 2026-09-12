@@ -190,7 +190,19 @@ class EvalSection:
 
     model: str = "sonnet"
     judge_model: str = "haiku"
-    allow_tools: tuple[str, ...] = ("Bash",)
+    # What a CoWork session can do, named in the container's own tool names. A session
+    # grants nothing and acts, so a container run that is denied a tool a session has is
+    # measuring this package's configuration and not the plugin. docs/running_evals.md.
+    allow_tools: tuple[str, ...] = (
+        "Bash",
+        "Read",
+        "Glob",
+        "Grep",
+        "Write",
+        "Edit",
+        "WebFetch",
+        "Skill",
+    )
     max_cost_usd: int | float = 5
     # It bounds a whole invocation rather than a run, so the sweep reads it and not the
     # `claude plugin eval` argument list: `cli.py` checks the spend so far before each

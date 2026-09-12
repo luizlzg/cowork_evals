@@ -109,7 +109,7 @@ command-line option overrides is [cli.md](cli.md).
 | `--threshold`                                | `0`, so the local gate decides | none                               |
 | `--max-cost-usd`                             | the configured ceiling         | `eval.max_cost_usd`, 5             |
 | `--output-dir`                               | the run's log directory        | none                               |
-| `--allow-tools`                              | the configured grant           | `eval.allow_tools`, `[Bash]`       |
+| `--allow-tools`                              | the configured grant           | `eval.allow_tools`, the session mirror below |
 | `--keep-temp`                                | on, when the run keeps its traces | `eval.keep_traces`, true        |
 | `--no-publish`, `--no-scaffold`, `--verbose` | always                         | none                               |
 
@@ -158,9 +158,43 @@ this command. It doubles the agent runs, and the table in
 
 `--allow-tools` is pinned because a case cannot grant itself `Bash`, `Write`, `Edit`,
 `WebFetch` or an MCP tool. The operator grant is the only route, and an ungranted case loses
-the tool rather than failing loudly. `Bash` is the default because a skill that shells out
-needs it. Widen it through `eval.allow_tools` or `--allow-tools`, which replace the value
-rather than adding to it, so the widened value has to name `Bash` again.
+the tool rather than failing loudly.
+
+### The grant mirrors a session
+
+The default is what a CoWork session can do, in the container's tool names:
+
+```
+Bash Read Glob Grep Write Edit WebFetch Skill
+```
+
+A session grants nothing and asks nothing. It writes files, shells out, reaches the network
+and reads a skill off its mount, all measured in
+[cowork_desktop.md](cowork_desktop.md). The container backend exists to run the same case the
+same way, so a tool a session has and a container run is denied makes that run measure this
+package's configuration rather than the plugin.
+
+The names differ because the two are different programs. A session's `mcp__workspace__bash`
+is the container's `Bash` and its `mcp__workspace__web_fetch` is `WebFetch`. `Read`, `Glob`
+and `Grep` are in the grant although they are read-only tools: the harness grants the
+read-only set by intersecting it with the case's own `allowed_tools`, which is empty in every
+case that writes none, so without the grant a case has nothing but what is named here. See
+[plugin_eval.md](plugin_eval.md).
+
+`Skill` is the one that item 1 of the problem report caught. Under the old `[Bash]` default
+every `Skill` call was denied by the permission mode, and an activation grader counted the
+denied call as a firing.
+
+Two things this default is not. It is not `WebSearch`, which no session was measured using.
+And a bare `WebFetch` is not a measured statement about which domains a run can reach: the
+harness restricts network access to the domains a `WebFetch(domain:...)` grant names, and
+that has not been measured here.
+
+Widen or narrow it through `eval.allow_tools` or `--allow-tools`, which replace the value
+rather than adding to it, so any replacement has to name every tool it still wants.
+
+Snapshot, 2026-09-12, CLI 2.1.265: all eight names above were accepted by the harness in a
+container run, with no `not granted` and no `malformed entry` notice against any of them.
 
 The Docker backend exports `CLAUDE_CODE_WALNUT_SPIRE`, the early-access enablement variable,
 so no developer sets it by hand. It is a constant in `harness.py` and not a configuration key.
