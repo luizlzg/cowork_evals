@@ -3,7 +3,7 @@
 Tests for this repository's own code. Python 3.10 under `.venv`, run by `scripts/test.sh`.
 Scope as each piece is built: the environments, the configuration file, the harness
 argument list, the container image and its parity probe, the test image over it, the CoWork
-driver, the CLI's option surface and backend mapping, the result gate, the case validator
+driver, the CLI's option surface and backend mapping, the pass and fail decision, the case validator
 and the CoWork grader. The table below lists the files that exist today.
 
 These are not evals. An eval needs a model in the loop. If a failure can be caught by
@@ -13,7 +13,7 @@ A hand-written case tree under `tests/data/cases/`, `tests/data/validate/` and
 `tests/data/cli/`, a hand-written session document under `tests/data/documents/`, a
 hand-written result document under `tests/data/results/` and a recorded judge reply under
 `tests/data/judge/` are input on disk, not stand-ins. The reader, the graders, the validator,
-the gate and the vote counting that parse them are the real ones.
+the verdict and the vote counting that parse them are the real ones.
 
 A harness sandbox is written by the test rather than kept under `tests/data/`, because a
 sandbox is a directory tree with modes on it and a checkout does not carry a mode-000
@@ -64,7 +64,7 @@ A skipped test reports as a pass and hides the thing it was written to catch.
 | `unit/test_validate.py`           | The case validator and the coverage report over hand-written trees | yes |
 | `unit/test_logs.py`               | The run directory, `env.txt`, `latest`, pruning and the tee | yes    |
 | `unit/test_traces.py`             | What is kept out of a run on either backend, over sandboxes and session directories written by the test | yes |
-| `unit/test_gate.py`               | The gate over hand-written result documents                | yes    |
+| `unit/test_verdict.py`               | Pass and fail over hand-written result documents                | yes    |
 | `unit/test_preflight.py`          | Each backend's unmet conditions, and the rate ceiling      | yes    |
 | `unit/test_cli.py`                | The parser, the refusals, the verbs and the exit codes     | yes    |
 | `unit/test_cli_docs_init.py`      | The `docs` and `init` verbs: what they print and what they write | yes |

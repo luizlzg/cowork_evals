@@ -11,17 +11,22 @@ nothing. A suite that is green because the plugin is good and a suite that is gr
 the plugin is irrelevant look identical.
 
 The harness can settle it: run each case twice, once with the plugin loaded and once with
-nothing loaded, and compare the two scores. This package fixes that setting to off and offers
+nothing loaded, and compare the two scores. This package pins that setting to off and offers
 no way to change it.
+
+The pin has a reason. Under `with-without` the harness stops scoring a `tool_used: Skill`
+grader and demotes it to an indicator, so the arm turns off the check that the skill fired at
+all. Off is therefore the right default, and it stays the default after this plan. What is
+wrong is that there is no way to ask for the arm.
 
 ## What this plan does
 
-Adds the option and the config key, keeps the traces from both runs, and makes the gate
-decide on the difference between the two scores rather than on the score alone.
+Adds the option and the config key, keeps the traces from both runs, and decides on the
+difference between the two scores rather than on the score alone.
 
 Off by default, because it runs every case twice and so costs twice as much.
 
-Last of the four plans, because it rewrites the gate that
+Last of the four plans, because it rewrites the pass and fail rules that
 [`plan_run_validity.md`](plan_run_validity.md) and
 [`plan_runnability.md`](plan_runnability.md) both change.
 
@@ -43,63 +48,63 @@ here.
 
 ## The two settings
 
-| Setting          | Values                   | Default          |
-| ---------------- | ------------------------ | ---------------- |
-| `eval.ablation`  | `none`, `with-without`   | `none`           |
-| `eval.delta_threshold` | a number from 0 to 1 | `0`              |
+| Setting                | Values                 | Default |
+| ---------------------- | ---------------------- | ------- |
+| `eval.ablation`        | `none`, `with-without` | `none`  |
+| `eval.delta_threshold` | a number from 0 to 1   | `0`     |
 
 `--ablation` and `--delta-threshold` are the command-line options over them, and the command
 line beats the file as it does for every other option.
 
-Off by default. Under `with-without` the harness stops scoring a `tool_used: Skill` grader
-and reports it as an indicator instead. On by default would quietly stop checking that the
-skill fired at all, which is the thing this whole set of plans is about.
+`eval.ablation` stays off by default, for the reason the problem statement gives, and because
+the arm runs every case twice and so costs twice as much.
 
-## What the gate compares
+## What is compared
 
 Per case: the with-arm's score minus the without-arm's score, failing below
 `eval.delta_threshold`.
 
 Per case and not per suite, because a suite average hides the one case the plugin made worse.
-`--threshold` stays pinned to 0 so that the harness hands pass and fail to this gate, which
-is why the number lives here and not there.
+`--threshold` stays pinned to 0 so the harness hands the verdict over, which is why the
+number lives in this package and not in that flag.
 
-Under `--ablation none` there is one arm and no delta, and the gate decides exactly as it
-does today.
+Under `--ablation none` there is one arm and no delta, and the verdict is reached exactly as
+it is today.
 
 ## The `scored: false` condition has to move
 
-The gate today fails any grader carrying `scored: false`, on the stated ground that
+A grader carrying `scored: false` fails the run today, on the stated ground that
 `--ablation none` drops no grader from the score. That ground disappears in the two-arm run:
 the harness drops a `tool_used: Skill` grader from the score in both arms on purpose.
 
-| Run                | `scored: false` on a grader                          |
-| ------------------ | ------------------------------------------------------- |
-| `--ablation none`  | A skip, and it fails the gate, exactly as today       |
-| `with-without`     | Expected on a with-only grader, and it is reported as an indicator rather than failed |
+| Run               | `scored: false` on a grader                                                           |
+| ----------------- | ------------------------------------------------------------------------------------- |
+| `--ablation none` | A skip, and it fails the run, exactly as today                                        |
+| `with-without`    | Expected on a with-only grader, and it is reported as an indicator rather than failed |
 
 Getting this wrong in either direction is the whole risk in this plan. Too strict and every
 two-arm run is red; too loose and a real skip goes green in the one-arm run everybody uses.
 
 ## What this plan does not do
 
-| Not in scope                                   | Where it is instead                            |
-| ------------------------------------------------- | ------------------------------------------------ |
-| A baseline arm on CoWork                        | Nowhere, and the section above says why         |
-| `arm:` on a grader                              | Already read by both backends, and inert today. This plan makes it live on Docker |
-| Failing a run that never executed its tool      | [`plan_run_validity.md`](plan_run_validity.md)  |
+| Not in scope                               | Where it is instead                                                                           |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| A baseline arm on CoWork                   | Nowhere, and the section above says why                                                       |
+| `arm:` on a grader                         | Carried into the document by both backends and inert today. This plan makes it live on Docker |
+| Failing a run that never executed its tool | [`plan_run_validity.md`](plan_run_validity.md)                                                |
 
 ## Orientation
 
-| Fact                                                      | Where                                             |
-| ------------------------------------------------------------ | --------------------------------------------------- |
-| The pinned ablation and threshold                           | `src/cowork_evals/harness.py`, `ABLATION`, `THRESHOLD` |
-| The gate, and the one arm it reads                          | `src/cowork_evals/gate.py`, `ARM`, `_judge_case`   |
-| The `scored: false` condition                               | `src/cowork_evals/gate.py`, `_judge_grader`       |
-| Trace collection, and the same single arm                   | `src/cowork_evals/traces.py`, `ARM`, `_each_run`  |
-| What the harness does with two arms, and `withOnly`         | [`../docs/running_evals.md`](../docs/running_evals.md) |
-| The model calls a suite makes, counted                      | [`../docs/plugin_eval.md`](../docs/plugin_eval.md) |
-| The `arm:` table, and what a case author controls           | [`../docs/running_evals.md`](../docs/running_evals.md) |
+| Fact                                                         | Where                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------ |
+| The pinned ablation and threshold                            | `src/cowork_evals/harness.py`, `ABLATION`, `THRESHOLD` |
+| The same two names on the CoWork document, which stay pinned | `src/cowork_evals/results.py`, `ABLATION`, `THRESHOLD` |
+| What decides pass and fail, and the one arm it reads         | `src/cowork_evals/verdict.py`, `ARM`, `_judge_case`    |
+| The `scored: false` condition                                | `src/cowork_evals/verdict.py`, `_judge_grader`         |
+| Trace collection, and the same single arm                    | `src/cowork_evals/traces.py`, `ARM`, `_each_run`       |
+| What the harness does with two arms, and `withOnly`          | [`../docs/running_evals.md`](../docs/running_evals.md) |
+| The model calls a suite makes, counted                       | [`../docs/plugin_eval.md`](../docs/plugin_eval.md)     |
+| The `arm:` table, and what a case author controls            | [`../docs/running_evals.md`](../docs/running_evals.md) |
 
 ## Phases
 
@@ -108,14 +113,23 @@ two-arm run is red; too loose and a real skip goes green in the one-arm run ever
 Nothing in this repository has read a two-arm result document. Every field below is the
 vendored reference's and not a measurement.
 
+The option this phase needs does not exist until phase 2, and `cowork_evals run` pins
+`--ablation none`. So this phase calls the harness by hand, which is what
+[`../docs/running_evals.md`](../docs/running_evals.md) already describes a baseline arm as.
+Build the command line from `harness.eval_argv` with `--ablation with-without` substituted,
+and run it in the container the same way `Docker.run` does.
+
 - [ ] Run `docs/claude_code/eval_smoke/` through the container with `--ablation with-without`
       and keep the result document. That fixture has a skill, a `tool_used: Skill` grader and
       an over-trigger case, so it exercises every shape the arm changes
 - [ ] Write into [`../docs/running_evals.md`](../docs/running_evals.md), dated: what `arms`
       holds, what the second arm's key is called, which graders carry `withOnly` and
-      `scored`, and whether the result file carries a delta of its own or the gate works one
-      out
+      `scored`, and whether the result file carries a delta of its own or `verdict.py` has
+      to work one out
 - [ ] Record what the without-arm's runs carry in place of `tracePath`, which decides phase 3
+- [ ] Record what the document holds when the arms are not comparable. The reference says
+      `delta` and `scoreWithout` are omitted when the without-arm is empty or a run skipped
+      paid graders, and phase 4 needs to know which of the two it is looking at
 - [ ] It costs two agent runs per case. Three cases at one run each is six, and
       [`../docs/plugin_eval.md`](../docs/plugin_eval.md) counts the rest
 
@@ -130,7 +144,9 @@ what the reference says, the constant changes and nothing else does.
       exit 2 naming why
 - [ ] `harness.ABLATION` stops being a constant and becomes the resolved option.
       `harness.THRESHOLD` stays pinned to 0, and the docstring says the delta number lives in
-      the gate
+      `verdict.py`
+- [ ] `results.ABLATION` and `results.THRESHOLD` are untouched. They are what the CoWork
+      document records, that backend runs one arm, and the section above says why
 - [ ] The pinned-flag table in [`../docs/running_evals.md`](../docs/running_evals.md) moves
       `--ablation` from pinned to optioned
 
@@ -140,21 +156,30 @@ what the reference says, the constant changes and nothing else does.
       be read as two transcripts rather than one
 - [ ] The layout keeps one directory per run and adds the arm to the path. The name is fixed
       here and stated in [`../docs/running_evals.md`](../docs/running_evals.md)
-- [ ] A one-arm run's layout is unchanged, byte for byte, so every existing trace path still
-      resolves
-- [ ] `tracePath` is rewritten for both arms, so the gate's `[artifacts: ...]` suffix names
+- [ ] A one-arm run's layout is unchanged, byte for byte. One arm is the default, so this is
+      the layout almost every run produces, and `tracePath` and the `[artifacts: ...]` suffix
+      both keep naming it
+- [ ] `tracePath` is rewritten for both arms, so the `[artifacts: ...]` suffix names
       the right directory on a line about either
 
-### Phase 4: the gate
+### Phase 4: deciding pass and fail
 
-- [ ] The gate reads both arms when the document holds two
+- [ ] `verdict.decide` takes the resolved `eval.delta_threshold`, the way it already takes
+      `extra`. It reads no configuration file of its own, so one invocation still resolves
+      every setting once and it stays a function of the run directory and its arguments
+- [ ] Both arms are read when the document holds two
 - [ ] Per case, with minus without, failing below `eval.delta_threshold`, one line naming
       both scores and the delta
+- [ ] A two-arm case the document says is not comparable fails, and the line says which of
+      the two reasons phase 1 recorded it was. A two-arm run that produced no delta did not
+      do what the invocation asked, and passing it would be the green-on-nothing this plan
+      exists to remove
 - [ ] The `scored: false` condition splits along the table above: a skip in a one-arm run, an
       indicator in a two-arm run
 - [ ] A case whose graders are all with-only is the harness's stated exception, scored
-      normally in both arms. The gate reads what the document says and does not re-derive it
-- [ ] Every other gate condition is unchanged and applies to the with-arm, which is what a
+      normally in both arms. `verdict.py` reads what the document says and does not
+      re-derive it
+- [ ] Every other condition is unchanged and applies to the with-arm, which is what a
       structural grader failing still means
 - [ ] The summary line names the mean delta beside the counts, when there are two arms
 
@@ -162,9 +187,10 @@ what the reference says, the constant changes and nothing else does.
 
 Unit tier, over recorded documents, except phase 1's run.
 
-- [ ] A one-arm document gates exactly as it does today, over the existing fixtures
+- [ ] A one-arm document decides exactly as it does today, over the existing fixtures
 - [ ] A two-arm document whose delta is above the threshold passes
 - [ ] A two-arm document whose delta is below it fails, and the line names both scores
+- [ ] A two-arm document whose case carries no delta fails, and the line names the reason
 - [ ] A `scored: false` grader fails a one-arm document and does not fail a two-arm one
 - [ ] A case whose graders are all with-only passes in a two-arm document
 - [ ] `--ablation with-without` on `--cowork` exits 2
@@ -173,9 +199,9 @@ Unit tier, over recorded documents, except phase 1's run.
 ### Phase 6: documentation
 
 - [ ] [`../docs/running_evals.md`](../docs/running_evals.md): the baseline arm stops being
-      described as something you do by calling the harness yourself, and becomes an option. The gate table gains
-      the delta condition and the split `scored: false` condition. The trace layout gains the
-      arm
+      described as something you do by calling the harness yourself, and becomes an option.
+      The pass and fail table gains the delta condition, the incomparable-arms condition
+      beside it, and the split `scored: false` condition. The trace layout gains the arm
 - [ ] [`../docs/cli.md`](../docs/cli.md): the two options, and that both are Docker only
 - [ ] [`../docs/approaches.md`](../docs/approaches.md): `arm:` on a grader stops being inert
       on Docker, and stays inert on CoWork

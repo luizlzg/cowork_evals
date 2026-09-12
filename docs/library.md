@@ -6,7 +6,7 @@ This repository is not where evals are written. It is a library, distributed as 
 package. A separate repository owns the plugins and their eval cases, installs this one, and
 points it at its own tree.
 
-- **Two repositories.** This one owns the backends, the CLI, the gate, the validator, the
+- **Two repositories.** This one owns the backends, the CLI, the verdict, the validator, the
   pinned wheel set and the image. The consumer owns its plugins, its cases and its logs.
 - **One configuration file.** `cowork_evals.yaml` in the working directory. Nothing is read
   from the process environment, and there is no `.env`.
@@ -24,7 +24,7 @@ the status table in [running_evals.md](running_evals.md).
 
 | Repository   | Owns                                                                                             |
 | ------------ | ------------------------------------------------------------------------------------------------ |
-| This one     | The backends, the CLI, the gate, the case validator, the pinned CoWork wheel set, the image      |
+| This one     | The backends, the CLI, the verdict, the case validator, the pinned CoWork wheel set, the image      |
 | The consumer | Its plugins, their `evals/` trees, its `logs/`, its `cowork_evals.yaml`, and the pinned version of this package |
 
 The consumer never runs `claude plugin eval`. That command is an implementation detail of the
@@ -48,8 +48,8 @@ and `README.md` carries the same three lines. The third line installs the comman
 project, which is how a consumer that runs the command but does not import it holds a pin.
 
 Pinning is the consumer's call and this repository states when it is worth making: `run`
-decides pass and fail, so a change to the gate or the skip rules moves that verdict with no
-change to the consumer's cases. A repository that gates CI on evals pins. One that runs them
+decides pass and fail, so a change to the verdict or the skip rules moves that verdict with no
+change to the consumer's cases. A repository that runs evals in CI pins. One that runs them
 by hand need not. Once the package is on an index they become
 the name alone:
 
@@ -76,7 +76,7 @@ mirrors an old VM. See [runtime.md](runtime.md).
 
 | Path                                      | Ships | Holds                                                              |
 | ----------------------------------------- | ----- | ------------------------------------------------------------------ |
-| `src/cowork_evals/`                       | yes   | The CoWork driver, the CLI, the backends, the gate, the validator  |
+| `src/cowork_evals/`                       | yes   | The CoWork driver, the CLI, the backends, the verdict, the validator  |
 | `src/cowork_evals/data/requirements*.txt` | yes   | The pins the mirror and the image are built from                   |
 | `src/cowork_evals/config.py`              | yes   | `cowork_evals.yaml`, and the frozen `Config` below                 |
 | `src/cowork_evals/harness.py`             | yes   | The `claude plugin eval` argument list                             |
@@ -89,7 +89,7 @@ mirrors an old VM. See [runtime.md](runtime.md).
 | `src/cowork_evals/cowork_backend.py`      | yes   | The CoWork backend: the skip rule, `plan` and `run`                |
 | `src/cowork_evals/validate.py`            | yes   | The case validator, and the skill coverage report                  |
 | `src/cowork_evals/logs.py`                | yes   | The run directory, `env.txt`, `latest`, pruning and the tee        |
-| `src/cowork_evals/gate.py`                | yes   | The gate over `aggregate-result.json`                              |
+| `src/cowork_evals/verdict.py`                | yes   | Pass and fail over `aggregate-result.json`                              |
 | `src/cowork_evals/preflight.py`           | yes   | Each backend's unmet conditions, for `check` and for `run`         |
 | `src/cowork_evals/resources.py`           | yes   | Where the shipped documentation and data are, in either layout     |
 | `src/cowork_evals/cli.py`                 | yes   | The parser, the eight verbs, the dispatch and the exit codes       |
@@ -342,6 +342,6 @@ them. A consumer running the CLI from its checkout gets `logs/` in its checkout.
 The image is an execution environment and nothing more: the OS, the interpreter, the wheels,
 the document tooling, the fonts and the Claude Code CLI. The `cowork_evals` process stays on
 the host, builds the `docker run` argument list, and reads the result document back out of the
-mounted log directory. Run naming, pruning and the gate therefore happen in one place for both
+mounted log directory. Run naming, pruning and the verdict therefore happen in one place for both
 backends, and the package is never installed into an image or mounted into a container. See
 [docker.md](docker.md).

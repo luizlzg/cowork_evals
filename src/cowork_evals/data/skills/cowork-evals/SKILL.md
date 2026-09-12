@@ -18,7 +18,7 @@ file is the authority for anything below.
 | How to write a case, field by field     | `docs eval_format`       |
 | Every verb, option and exit code        | `docs cli`               |
 | Which backend proves what, and its cost | `docs approaches`        |
-| The gate, the logs, what a run costs    | `docs running_evals`     |
+| Pass and fail, the logs, what a run costs    | `docs running_evals`     |
 | The runtime a plugin's code gets        | `docs runtime`           |
 | `test`, and the runtime a suite gets    | `docs cowork_test`       |
 | Every grader field the format is silent on | `docs claude_code/plugin_eval_reference` |
@@ -28,7 +28,7 @@ file is the authority for anything below.
 ```bash
 cowork_evals check --all                       # what each backend still needs
 cowork_evals setup --docker                    # build the images, and log in once
-cowork_evals run  --docker <path>              # an eval: a model, graders, a gate
+cowork_evals run  --docker <path>              # an eval: a model, graders, a verdict
 cowork_evals test --docker <path>/tests        # pytest on the CoWork runtime, no model
 cowork_evals ask  --cowork "<prompt>"          # one prompt to a live session, and its answer
 cowork_evals docs [<name>]                     # where the documentation is
@@ -173,7 +173,7 @@ Each has a silent failure mode.
 
 | Exit | Means                                                            |
 | ---- | ---------------------------------------------------------------- |
-| 0    | the gate passed                                                  |
+| 0    | the run passed                                                  |
 | 1    | a structural grader failed, or a case or grader was skipped      |
 | 2    | usage error                                                      |
 | 3    | the preflight failed. Nothing ran, and the message names the fix |
@@ -220,7 +220,7 @@ cowork_evals test --docker <plugin>/tests -- -k parser -x
 ```
 
 Every token after `--` reaches pytest in order and unmodified. It runs the suite inside the
-CoWork image with no model, no case tree, no grader and no gate. That is what says a plugin's
+CoWork image with no model, no case tree, no grader and no verdict. That is what says a plugin's
 Python behaves in a session, which a suite passing on a newer local Python does not.
 
 ## Configuration

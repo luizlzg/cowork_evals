@@ -28,7 +28,7 @@ build; the last three are external material and one deferred design.
 | [`cli.md`](cli.md)                         | The `cowork_evals` command: verbs, backends, scope, exit codes  |
 | [`approaches.md`](approaches.md)           | The two backends, what each proves, and what each costs to run  |
 | [`eval_format.md`](eval_format.md)         | What a case file contains: tree, frontmatter, graders, traps    |
-| [`running_evals.md`](running_evals.md)     | The run: status, pinned flags, the gate, logs, cadence, cost    |
+| [`running_evals.md`](running_evals.md)     | The run: status, pinned flags, pass and fail, logs, cadence, cost    |
 | [`cowork_test.md`](cowork_test.md)         | The other thing this repository runs: a consumer's pytest suite, on the CoWork runtime |
 | [`docker.md`](docker.md)                   | The container that reproduces the CoWork image                  |
 | [`cowork_driver.md`](cowork_driver.md)     | Driving CoWork from a script: API, sequence, session document   |
@@ -44,7 +44,7 @@ build; the last three are external material and one deferred design.
 
 `running_evals.md` holds the run: what the command does with a case tree whichever backend
 it chose. The status of every piece, which case a backend must skip, the pinned harness
-argument list, the gate, the log layout, the cadence and the cost ceilings.
+argument list, pass and fail, the log layout, the cadence and the cost ceilings.
 
 [`cowork_test.md`](cowork_test.md) holds the other thing the command runs. It is a mechanism
 file, not a backend: it returns pytest's exit code and produces no result document, so nothing

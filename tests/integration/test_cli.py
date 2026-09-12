@@ -102,10 +102,10 @@ def test_a_docker_run_writes_the_whole_log_layout_and_passes(credentialled, tmp_
     """
     root = tmp_path / "logs"
     code = main(["run", "--docker", str(SMOKE), "--out", str(root), "--runs", "1"])
-    assert code == 0, (root / logs.LATEST / logs.GATE_FILE).read_text()
+    assert code == 0, (root / logs.LATEST / logs.VERDICT_FILE).read_text()
 
     run = (root / logs.LATEST).resolve()
-    for name in (logs.RUN_LOG, logs.ENV_FILE, logs.GATE_FILE):
+    for name in (logs.RUN_LOG, logs.ENV_FILE, logs.VERDICT_FILE):
         assert (run / name).is_file(), f"{name} is absent from {run}"
     for name in (RESULT_NAME, "report.html", "debug.txt"):
         assert (run / "smoke" / name).is_file(), f"smoke/{name} is absent from {run}"
@@ -158,7 +158,7 @@ def test_a_failing_suite_returns_one_through_the_executable(images) -> None:
 
 
 def test_the_test_verb_writes_nothing_on_the_host(images, tmp_path) -> None:
-    """No run directory, no `env.txt`, no `latest`, no pruning and no gate."""
+    """No run directory, no `env.txt`, no `latest`, no pruning and no verdict."""
     before = sorted(ROOT.iterdir())
     completed = command("test", "--docker", str(SMOKE / "tests" / "test_passes.py"))
     assert completed.returncode == 0, completed.stdout + completed.stderr

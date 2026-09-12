@@ -11,13 +11,13 @@ about each.
 | Problem                                                                                   | How this solves it                                                                        |
 | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | CoWork has no scriptable entry point, so a skill can only be exercised by a person clicking | Two backends execute a case from the command line: Claude Code inside a container that reproduces the CoWork image, and the real desktop application driven directly |
-| A container is not the product, and the product cannot be run on every commit             | Both. Docker is the iteration loop and the pre-release gate. CoWork is the confirmation on the real stack, run by a person on purpose, and never a commit gate |
-| Two backends would mean two eval formats and two sets of results                          | One format, `claude plugin eval`'s own. The same case tree runs on both, both write the same result document, and one gate reads it |
+| A container is not the product, and the product cannot be run on every commit             | Both. Docker is the iteration loop and the pre-release check. CoWork is the confirmation on the real stack, run by a person on purpose, and never run on a commit |
+| Two backends would mean two eval formats and two sets of results                          | One format, `claude plugin eval`'s own. The same case tree runs on both, both write the same result document, and one verdict reads it |
 | A CoWork session is Python 3.10 with a fixed wheel set, so a plugin's tests passing on a laptop prove nothing about the session | `cowork_evals test` runs the plugin's own pytest suite inside that runtime, with no model in the loop |
 
 A case asserts what a unit test cannot reach: the answer text, which tools ran and in what
 order, which files the agent created, and a rubric a judge model votes on. The four structural
-graders are deterministic and carry the gate. The two judged ones are printed.
+graders are deterministic and carry the verdict. The two judged ones are printed.
 
 The CoWork backend honours a subset of the format, because it drives a live session rather
 than the harness. [`docs/approaches.md`](docs/approaches.md) says which subset, what each
@@ -46,8 +46,8 @@ uv tool install "cowork-evals @ git+https://github.com/pcingola/cowork_evals"
 The last line installs the command on its own, outside any project.
 
 Those three track the default branch. Appending `@<reference>`, a tag, a branch or a commit,
-pins instead. Pin in a repository that gates CI on evals: `run` decides pass and fail, so a
-change to the gate or the skip rules moves that verdict without the consumer's cases changing.
+pins instead. Pin in a repository that runs evals in CI: `run` decides pass and fail, so a
+change to the verdict or the skip rules moves it without the consumer's cases changing.
 `cowork_evals --version` prints what is installed, and every run records it in `env.txt`.
 
 The distribution is `cowork-evals`. The command it installs is `cowork_evals`.
@@ -175,11 +175,11 @@ The path is the scope. It selects a case, a skill's cases at `evals/summarize/`,
 whole suite at `evals/`, or every plugin under a directory holding several. `--dry-run` prints
 the command line and spends nothing.
 
-The exit code is the gate's:
+The exit code is the verdict's:
 
 | Exit | Means                                                            |
 | ---- | ---------------------------------------------------------------- |
-| 0    | the gate passed                                                  |
+| 0    | the run passed                                                  |
 | 1    | a structural grader failed, or a case or grader was skipped      |
 | 2    | usage error                                                      |
 | 3    | the preflight failed. Nothing ran, and the message names the fix |
@@ -188,10 +188,10 @@ The invocation keeps everything it printed, and every run's transcript with it:
 
 ```
 logs/evals/latest/
-  gate.txt                       # one line per finding, each carrying FAIL or NOTE
+  verdict.txt                    # one line per finding, each carrying FAIL or NOTE
   run.log                        # everything the invocation printed
   notes/report.html              # the harness's own report
-  notes/aggregate-result.json    # what the gate read
+  notes/aggregate-result.json    # what the verdict read
   notes/traces/<case>/run-<n>/   # trace.jsonl, last_message.txt and the agent's workspace
 ```
 
@@ -213,7 +213,7 @@ Then widen it:
 
 `cowork_evals test` is the other half, and it is not an eval. It runs the plugin's own pytest
 suite inside the CoWork image: Python 3.10, the image wheel set, no model, no case tree, no
-grader and no gate. That is what says a plugin's Python behaves in a session, which a suite
+grader and no verdict. That is what says a plugin's Python behaves in a session, which a suite
 passing against a laptop's own wheels does not.
 
 ```bash
@@ -227,7 +227,7 @@ usage error, because pytest takes one rootdir. It writes no run directory and re
 `evals/`, so a malformed case never blocks a test run.
 
 The format, field by field, is [`docs/eval_format.md`](docs/eval_format.md). Every option and
-every exit code is [`docs/cli.md`](docs/cli.md). What the gate reads, and what a run costs, is
+every exit code is [`docs/cli.md`](docs/cli.md). What the verdict reads, and what a run costs, is
 [`docs/running_evals.md`](docs/running_evals.md). The runtime your pytest suite gets is
 [`docs/cowork_test.md`](docs/cowork_test.md). Which backend to reach for, and what each one
 costs to run, is [`docs/approaches.md`](docs/approaches.md).
@@ -238,15 +238,16 @@ costs to run, is [`docs/approaches.md`](docs/approaches.md).
 cowork_evals init                    # the config, the skills, and the CLAUDE.md block
 cowork_evals setup --docker          # build the container images, and log in once
 cowork_evals check --all             # what each backend still needs, one line per backend
-cowork_evals run  --docker path/to/plugin          # an eval: a model, graders, a gate
+cowork_evals run  --docker path/to/plugin          # an eval: a model, graders, a verdict
 cowork_evals test --docker path/to/plugin/tests    # pytest on the CoWork runtime, no model
 cowork_evals ask  --cowork "..."     # one prompt to a live CoWork session, and its answer
 cowork_evals docs [name]             # where the documentation is, or one document's path
 cowork_evals prune --docker          # delete what setup built
 ```
 
-`run` grades what a model produced and exits non-zero when the gate fails. `test` runs no model,
-runs your own pytest suite inside the CoWork runtime, and returns pytest's exit code unchanged.
+`run` grades what a model produced and exits non-zero when the verdict is a failure. `test`
+runs no model, runs your own pytest suite inside the CoWork runtime, and returns pytest's exit
+code unchanged.
 `ask` runs no eval: it submits one prompt to a real CoWork session and prints the answer, which
 is how a question about what a live session does is answered by asking one.
 
@@ -287,7 +288,7 @@ reads the same files without this repository checked out.
 | [`docs/cli.md`](docs/cli.md)                     | The whole command surface: verbs, options, exit codes |
 | [`docs/eval_format.md`](docs/eval_format.md)     | How to write a case: tree, frontmatter, graders    |
 | [`docs/approaches.md`](docs/approaches.md)       | The two backends, and what each one proves         |
-| [`docs/running_evals.md`](docs/running_evals.md) | The run: what is built today, the gate, logs, cost |
+| [`docs/running_evals.md`](docs/running_evals.md) | The run: what is built today, pass and fail, logs, cost |
 | [`docs/cowork_test.md`](docs/cowork_test.md)     | `test`, and the runtime your suite gets            |
 | [`docs/runtime.md`](docs/runtime.md)             | What a CoWork session provides, and what your plugin code may import |
 | [`docs/library.md`](docs/library.md)             | What ships, what it writes, and where              |

@@ -6,9 +6,9 @@ Two ways to run an eval against a CoWork skill. They answer different questions,
 replaces the other.
 
 - **Docker**: `claude plugin eval` inside a container that reproduces the CoWork image. The
-  iteration loop and the pre-release gate.
+  iteration loop and the pre-release check.
 - **CoWork**: the real desktop application, driven directly. The pre-release confirmation,
-  run by a person on purpose. Never a commit gate.
+  run by a person on purpose. Never run on a commit.
 - **Docker costs a container start. CoWork costs a VM boot, the keyboard and a permanent
   session in a real account**, and has no headless route.
 - One case format serves both. The backend changes, the case does not.
@@ -22,7 +22,7 @@ Which of the two is built is the status table in
 
 | Approach                | Runs on                      | Proves                                       | Design                               |
 | ----------------------- | ---------------------------- | -------------------------------------------- | ------------------------------------ |
-| Claude Code, Docker     | Local `claude`, Ubuntu 22.04 | Skill logic, activation, hook gates, rendering, OCR, fonts, CLIs | [docker.md](docker.md) |
+| Claude Code, Docker     | Local `claude`, Ubuntu 22.04 | Skill logic, activation, hook denials, rendering, OCR, fonts, CLIs | [docker.md](docker.md) |
 | CoWork, driven directly | The real CoWork VM           | The deployed stack, end to end               | [cowork_driver.md](cowork_driver.md) |
 
 This is the one copy of that table. `README.md` introduces the same two approaches in prose and
@@ -44,7 +44,7 @@ The same case tree runs on both approaches. Only the backend changes.
 One executable, one path argument, one backend flag. The full surface is [cli.md](cli.md).
 
 Both backends write the same `aggregate-result.json` v1 document into the same log directory,
-so one gate decides pass and fail identically for both.
+so one verdict decides pass and fail identically for both.
 
 `cowork_evals test` is not a third backend. It runs a consumer's pytest suite on the CoWork
 runtime, with no model and no case tree, and returns an exit code rather than a result
@@ -110,7 +110,7 @@ harness the Docker backend uses. See [plugin_eval.md](plugin_eval.md). It is not
 command surface: a consumer never invokes it.
 
 What it gets right: the skill files under test are the ones that ship, activation is decided
-by the real model, and hook gates fire.
+by the real model, and hook denials fire.
 
 What it gets wrong: it is not CoWork. Different model routing, no admin-applied enterprise
 prompt, and no CoWork MCP servers. See [runtime.md](runtime.md) for the size of that gap.

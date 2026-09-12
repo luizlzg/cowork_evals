@@ -396,7 +396,7 @@ def test_a_sweep_is_scoped_all_and_a_single_plugin_is_named() -> None:
 
 
 def test_two_plugins_sharing_a_manifest_name_get_two_directories(tmp_path: Path) -> None:
-    """Neither result document overwrites the other, and the gate reads both."""
+    """Neither result document overwrites the other, and the verdict reads both."""
     run = logs.run_dir(tmp_path, "all")
     made = [logs.plugin_dir(run, plugin_name(root)) for root in (FIRST, SECOND)]
     assert [directory.name for directory in made] == ["shared", "shared-2"]
@@ -600,7 +600,7 @@ def _plugin(root: Path, *, portable: bool) -> Path:
 
 
 def test_a_dry_run_validates_with_no_backend_reachable(tmp_path, capsys) -> None:
-    """Nothing behind the preflight is reached by a dry run, so nothing gates it.
+    """Nothing behind the preflight is reached by a dry run, so nothing blocks it.
 
     The profile names a directory that is not there, which is what an unconfigured consumer
     has. The case still validates and the dry run still reports what would run.
@@ -622,14 +622,14 @@ def test_a_dry_run_still_refuses_a_malformed_case(tmp_path, capsys) -> None:
 
 
 def test_a_dry_run_fails_when_every_case_is_skipped_on_cowork(tmp_path, capsys) -> None:
-    """A suite dead on this backend would fail the gate, so the dry run says so."""
+    """A suite dead on this backend would fail the run, so the dry run says so."""
     plugin = _plugin(tmp_path, portable=False)
     config = settings(tmp_path, "cowork:\n  profile: /nowhere-at-all\n")
     assert cli._run(parse("run", "--cowork", str(plugin), "--dry-run"), config) == 1
     printed = capsys.readouterr()
     assert "skip: allowed_tools" in printed.out
     assert "0 submissions planned" in printed.out
-    assert "the gate would fail" in printed.err
+    assert "the run would fail" in printed.err
 
 
 def test_the_same_dead_suite_is_not_a_failure_on_docker(tmp_path, capsys) -> None:
@@ -637,7 +637,7 @@ def test_the_same_dead_suite_is_not_a_failure_on_docker(tmp_path, capsys) -> Non
     plugin = _plugin(tmp_path, portable=False)
     config = settings(tmp_path, "cowork:\n  profile: /nowhere-at-all\n")
     assert cli._run(parse("run", "--docker", str(plugin), "--dry-run"), config) == 0
-    assert "the gate would fail" not in capsys.readouterr().err
+    assert "the run would fail" not in capsys.readouterr().err
 
 
 def test_an_uncovered_skill_prints_once_and_on_one_stream(tmp_path, capsys) -> None:

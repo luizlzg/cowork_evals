@@ -1,5 +1,6 @@
 # `cowork_evals init` writes this file to cowork_evals.yaml in the working directory. Set
-# cowork.profile there. Every other line below is the built-in default, so a copy with the
+# cowork.profile there. Every other commented line is the built-in default, except
+# docker.extra_ca_file, which has no default and shows the shape of a value. A copy with the
 # rest commented out behaves as no file at all.
 #
 # The three sections, the ladder over them and the rules the loader applies are in
@@ -33,7 +34,7 @@ cowork:
 eval:
   # model: sonnet
   # judge_model: haiku
-  # allow_tools: [Bash]
+  # allow_tools: [Bash, Read, Glob, Grep, Write, Edit, WebFetch, Skill]
   # max_cost_usd: 5
   # max_cost_total_usd: 25
   # keep_traces: true

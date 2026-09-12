@@ -267,7 +267,7 @@ def test_the_sandboxes_are_removed_however_they_were_sealed(tmp_path: Path) -> N
 
 
 def test_the_trace_path_is_rewritten_to_where_the_trace_now_is(tmp_path: Path) -> None:
-    """The one field that named the trace still names it, so the gate can print it."""
+    """The one field that named the trace still names it, so the run can print it."""
     write_sandbox(traces.sandbox_root(tmp_path))
     write_document(tmp_path, run_entry(passed=False))
 
@@ -373,7 +373,7 @@ def test_a_session_that_produced_no_file_is_not_a_warning(tmp_path: Path) -> Non
 
 
 def test_a_cowork_trace_path_is_rewritten_like_a_harness_one(tmp_path: Path) -> None:
-    """The gate then prints the same thing whichever backend produced the run."""
+    """The verdict then prints the same thing whichever backend produced the run."""
     session = write_session(tmp_path / "profile")
     output = tmp_path / "logs"
     output.mkdir()

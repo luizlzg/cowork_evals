@@ -2,7 +2,7 @@
 
 ## Summary
 
-The eval system behind the command: what is built, the pinned harness flags, the gate, the
+The eval system behind the command: what is built, the pinned harness flags, pass and fail, the
 logs, the cadence and the cost. This file is the design. It is true whether or not a given
 piece is built yet.
 
@@ -10,9 +10,9 @@ piece is built yet.
   link here.
 - **Flags are pinned, not defaulted.** Every flag in the pinned list would bite at its
   default.
-- **The gate decides pass and fail, not the harness.** It reads the result document, so one
-  gate covers both backends. Structural graders gate; judged graders are printed.
-- **A skip fails the gate**, so a backend cannot go green by honouring nothing.
+- **This package decides pass and fail, not the harness.** It reads the result document, so
+  one verdict covers both backends. Structural graders decide; judged graders are printed.
+- **A skip fails the run**, so a backend cannot go green by honouring nothing.
 - **Every invocation keeps everything it printed**, in one directory per invocation, and
   every run's transcript with it.
 - **Nothing here runs on CI.** A person runs the sweep and reads the summary.
@@ -33,7 +33,7 @@ not restate any of them here.
 | `cowork_evals.yaml` and the `Config` over it  | yes      | [library.md](library.md)                     |
 | The pinned harness argument list              | yes      | this file                                    |
 | The run traces, kept under the log directory, on both backends | yes | this file                    |
-| The gate                                      | yes      | this file                                    |
+| Pass and fail                                 | yes      | this file                                    |
 | The case validator                            | yes      | [eval_format.md](eval_format.md)             |
 | The 3.10 and import check over code under test | no      | nowhere. Not designed, and no plan builds it |
 | The container backend and its Dockerfile      | yes      | [docker.md](docker.md)                       |
@@ -56,7 +56,7 @@ does, so nothing here configures discovery.
 
 There is no marketplace-wide suite. The harness loads one plugin per run, so a cross-plugin
 case is not expressible. A path holding several plugins means every plugin's suite in turn,
-each its own harness invocation, gated once.
+each its own harness invocation, decided once.
 
 There is no sweep on CoWork. One case there costs a VM boot plus a full agentic run and counts
 against the driver's `max_runs` ceiling, so a sweep is a smoke set named case by case. That is
@@ -73,7 +73,7 @@ path. See [cowork_backend.md](cowork_backend.md).
 
 A backend reads the keys the case file writes, never the merged defaults. `runs: 3` is the
 default for every case, so treating a default as a request would skip every case on CoWork and
-leave the gate permanently red.
+leave every run permanently red.
 
 | In the case file                                        | On CoWork                                                                    |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------- |
@@ -93,7 +93,7 @@ that was never asked.
 The rule is the same for both backends: an explicit key is honoured when the backend's fixed
 behaviour already satisfies it, and skipped otherwise. Which key each backend can honour is
 [approaches.md](approaches.md). A skip is written into the result document with its reason and
-fails the gate, so a backend cannot go green by honouring nothing.
+fails the run, so a backend cannot go green by honouring nothing.
 
 ## Pinned flags
 
@@ -106,7 +106,7 @@ command-line option overrides is [cli.md](cli.md).
 | `--model`                                    | the configured model           | `eval.model`, `sonnet`             |
 | `--judge-model`                              | the configured judge           | `eval.judge_model`, `haiku`        |
 | `--ablation`                                 | `none`                         | none                               |
-| `--threshold`                                | `0`, so the local gate decides | none                               |
+| `--threshold`                                | `0`, so this package decides | none                               |
 | `--max-cost-usd`                             | the configured ceiling         | `eval.max_cost_usd`, 5             |
 | `--output-dir`                               | the run's log directory        | none                               |
 | `--allow-tools`                              | the configured grant           | `eval.allow_tools`, the session mirror below |
@@ -117,7 +117,7 @@ The target goes before every variadic flag: `--tag` and `--allow-tools` swallow 
 target.
 
 `--ablation` and `--threshold` have no command-line option and cannot be overridden.
-`--threshold 0` is what hands pass and fail to the gate below.
+`--threshold 0` is what hands pass and fail to this package below.
 
 `eval.keep_traces` is the one key in this table that is not only a flag. It decides this flag
 on the container backend, and it decides whether a run's artefacts are collected on both. The
@@ -148,7 +148,7 @@ A case whose graders are all with-only is the exception. There is nothing left t
 the harness scores them normally in both arms.
 
 `--ablation none` runs one arm, and that arm is the with-arm. Nothing is dropped from the
-score, so a `tool_used: Skill` grader is scored and the gate reads it. That is why it is
+score, so a `tool_used: Skill` grader is scored and the verdict reads it. That is why it is
 pinned. `arm:` then satisfies itself whichever value it carries, and a case sets it only to
 stay portable to a suite that does run the baseline arm.
 
@@ -208,7 +208,7 @@ Two consequences.
 An ungranted tool fails in one of two ways, and the run is silent about both. It is offered
 and refused at the call, which writes the denial record above, or it is not offered at all,
 which writes nothing. Either way the run is scored on what the model produced without it,
-and the gate below reads the score.
+and the verdict below reads the score.
 
 `Skill` is not what item 1 of the problem report caught here. Under the old `[Bash]` default a
 skill fired and scored, so a denied `Skill` call in a consumer's trace came from something
@@ -299,7 +299,7 @@ A collection problem is a warning on stderr and never a failed run. A sandbox th
 kept, a session the driver never reached, a trace that will not read and a result document
 that will not parse are each one line saying so, and the run keeps whatever verdict it
 already had. A run that already carries an `error` says nothing: the error is why there is
-nothing to collect, and the gate prints it.
+nothing to collect, and the verdict line prints it.
 
 Collection runs whether or not the backend raised, because a run that left no result document
 still left sandboxes behind, and a kept sandbox is read-only until something unseals it.
@@ -315,9 +315,9 @@ both workspaces. A CoWork run's cost is the size of its `outputs/`, which is wha
 made the session produce. The `⚠ kept ...` notice the harness prints per sandbox goes to
 `run.log` and to the terminal, one line per run.
 
-## The gate
+## Pass and fail
 
-The gate decides pass and fail, not the harness. It reads the result document, so one gate
+This package decides pass and fail, not the harness. It reads the result document, so one verdict
 covers both backends, and it always runs in the `cowork_evals` process on the host.
 
 | Condition                                                            | Result       |
@@ -333,15 +333,15 @@ covers both backends, and it always runs in the `cowork_evals` process on the ho
 | A document whose `aggregates.casesTotal` is 0                        | exit 0       |
 | Otherwise                                                            | exit 0       |
 
-Structural graders gate because a judged grader over a non-deterministic agent is a flaky
-gate. A skip gates so that a backend cannot go green by honouring nothing. `scored: false` is
-a skip here: `--ablation none` drops no grader from the score, so a grader that was not scored
-was not asked.
+Structural graders decide because a judged grader over a non-deterministic agent is a flaky
+verdict. A skip fails the run so that a backend cannot go green by honouring nothing.
+`scored: false` is a skip here: `--ablation none` drops no grader from the score, so a grader
+that was not scored was not asked.
 
-`partial: true` gates whatever the reason. The harness names `cost_ceiling` and `auth_failed`,
-and `interrupted` is a third; the gate reads the flag and not the reason.
+`partial: true` fails whatever the reason. The harness names `cost_ceiling` and `auth_failed`,
+and `interrupted` is a third; the verdict reads the flag and not the reason.
 
-A run carrying `error` gates on every backend, not only on CoWork. There it is a case the
+A run carrying `error` fails on every backend, not only on CoWork. There it is a case the
 driver could not run or collect. On the harness it is a run that timed out, hit the turn cap
 or exited non-zero, each of which is still graded on what it produced, so the score alone does
 not catch it.
@@ -350,7 +350,7 @@ An empty document passes. A `--tag` sweep matches no case in most plugins, and f
 would make every filtered sweep red. A selection matching no case *anywhere* is refused before
 the run instead, with exit 2. See [cli.md](cli.md).
 
-Every line the gate prints carries `FAIL` or `NOTE`, so a judged failure is never read as the
+Every line printed carries `FAIL` or `NOTE`, so a judged failure is never read as the
 cause of exit 1. The last line is the case counts and the overall score, summed and averaged
 across every plugin in the run directory.
 
@@ -366,14 +366,14 @@ as they did before. `traces.py` rewrites that field to the trace it collected on
 so the line says the same thing whichever one produced the run. A CoWork run's session
 directory is still in `cowork.sessionDir`.
 
-The gate reads every `<plugin>/aggregate-result.json` under the run directory and decides once
-for the whole invocation, so a sweep gates once and not once per plugin.
+The verdict reads every `<plugin>/aggregate-result.json` under the run directory and decides once
+for the whole invocation, so a sweep is decided once and not once per plugin.
 
 It reads the `with` arm only. A run's grader results carry `name`, `passed` and `scored`,
-never `type`, so the gate joins each result to that case's grader definition by name to learn
+never `type`, so it joins each result to that case's grader definition by name to learn
 which of the two classes it is in.
 
-The gate reads `schemaVersion: 1` documents and tolerates unknown fields. The contract is
+The verdict reads `schemaVersion: 1` documents and tolerates unknown fields. The contract is
 additive-only.
 
 ## Logs
@@ -384,7 +384,7 @@ per plugin: runs are non-deterministic, and a per-plugin file overwrites the pre
 ```
 logs/evals/<yyyymmdd-hhmmss>-<scope>/
   run.log                        # stdout and stderr of the whole invocation, tee'd live
-  gate.txt                       # the gate's output
+  verdict.txt                    # the verdict
   env.txt                        # cowork_evals --version, claude --version, python3 -V,
                                  #   the backend, and the image on the container backend
   <plugin>/aggregate-result.json # the v1 result document
@@ -406,7 +406,8 @@ reclaims space.
 harness's own output and the container's reach the file.
 
 `traces/` is written by both backends, with the same three names in it, and the rule above
-says what goes in each. `<n>` is 1-based and is the same number the gate prints as `run N`. Nothing makes a case name
+says what goes in each. `<n>` is 1-based and is the same number printed as `run N`. Nothing
+makes a case name
 unique inside a plugin, so a second case of the same name is suffixed `-2`, as a second plugin
 of one name is. The run's `tracePath` in
 the result document is rewritten to the collected trace, so the field that named it still
@@ -415,7 +416,7 @@ names it.
 A CoWork run writes `<plugin>/aggregate-result.json` and `<plugin>/traces/`. There is no
 `report.html` and no `debug.txt` on that backend: the first is the harness's, the second is
 `claude --debug-file`, and the harness is in neither path. `traces/` is written by both, with
-the same three names in it. The gate reads only the result document, so it decides identically
+the same three names in it. The verdict reads only the result document, so it decides identically
 for both backends.
 
 The debug log exists only when the run is given one:
@@ -437,7 +438,7 @@ fixtures except the smoke case that proves the backend reaches a running case.
 ## Nothing here runs on CI
 
 No hook, no PR job, no workflow shipped by this package. A person runs the sweep and reads the
-summary. The reason is not cost: a red gate over cases nobody trusts gets routed around rather
+summary. The reason is not cost: a red verdict over cases nobody trusts gets routed around rather
 than fixed.
 
 A consumer automates it when all four of these hold, and not before:
@@ -445,7 +446,7 @@ A consumer automates it when all four of these hold, and not before:
 | Condition                                                              | Read from         |
 | ---------------------------------------------------------------------- | ----------------- |
 | Every skill under test has at least one case                           | the `evals/` tree, reported by `run` and enforced by `--require-coverage` |
-| Structural graders carry the gate, with a measured flake rate          | `logs/evals/*/`   |
+| Structural graders carry the verdict, with a measured flake rate          | `logs/evals/*/`   |
 | The cost and wall-clock time of a full sweep are measured and accepted | the table below   |
 | A credential and a pinned CLI on a runner have an owner                | a decision        |
 

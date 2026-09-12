@@ -4,17 +4,27 @@
 
 A skill that needs a credential cannot be evaluated.
 
-A skill calls an API and reads the key from an environment variable. The container an eval
-runs in is given two environment variables, `HOME` and one internal flag, and there is no way
-to add another. The skill fails in every eval, for a reason that has nothing to do with the
-skill, and the person writing the case can do nothing about it.
+A skill calls an API and reads the key from an environment variable. Every variable the
+container gets is written in `run_preamble` and `run_argv`, and all of them are this
+package's own: `HOME`, the enablement flag, `TMPDIR` when the run keeps its traces, and
+`NODE_EXTRA_CA_CERTS` when a certificate file is configured. None is a route a case can use.
+
+That is not an omission. This repository has one configuration route and reads nothing from
+the process environment, which is why a run is reproducible from `cowork_evals.yaml` alone
+and why no `.env` can change what a suite did. The rule is in `CLAUDE.md` and in
+[`../docs/library.md`](../docs/library.md).
+
+The rule is too strict by exactly one case. A skill whose whole job is calling an API cannot
+be evaluated at all: it fails in every eval for a reason that has nothing to do with the
+skill, and the person writing the case can do nothing about it. This plan cuts the one hole
+the rule needs and keeps everything else about it.
 
 ## What this plan does
 
 The config file lists which environment variables to pass from your machine into the
 container. The backend passes them.
 
-The values must not end up anywhere else: not in a log, not in the result file, not in a gate
+The values must not end up anywhere else: not in a log, not in the result file, not in a failure
 line, not in the dry-run output. The names may, so you can see what was passed.
 
 It changes a rule this repository states in two places: nothing is read from the process
@@ -25,25 +35,30 @@ Branch: `feat/env-passthrough`.
 
 ## Docker only
 
-A case that needs an environment variable writes `env:`, and `env:` is exactly a key the
-CoWork backend cannot honour: nothing sets a variable inside the VM, and a session decides
-its own environment. So this is a Docker backend feature, and a case that depends on it is a
-case [`plan_runnability.md`](plan_runnability.md) has already made declare itself.
-
+The setting is in the `docker:` section because only that backend starts a process whose
+environment this package writes. Nothing here reaches inside the VM, and a session decides
+its own environment, which is why `env:` is already a key the CoWork backend cannot honour.
 That is the rule for the split, and it is not a build-order accident.
+
+Two kinds of case depend on a forwarded variable, and they land differently. A case that
+writes `env:` is one [`plan_runnability.md`](plan_runnability.md) has already made declare
+itself, so it never reaches a CoWork run. A case whose skill simply reads a variable writes
+nothing, carries no tag, and fails on CoWork for a missing credential. That is left as it is:
+it is the skill failing the way it would fail in a session that never had the credential,
+which is a true result and not a defect in this package.
 
 ## What a value may never touch
 
-| Artefact                          | Carries the name | Carries the value |
-| --------------------------------- | ---------------- | ----------------- |
-| `cowork_evals.yaml`               | yes              | no                |
-| `env.txt`                         | yes              | no                |
-| `run.log`                         | yes              | no                |
-| `debug.txt`                       | yes              | no                |
-| `aggregate-result.json`           | no               | no                |
-| A gate line                       | no               | no                |
-| `--dry-run` output                | yes              | no                |
-| The container's environment       | yes              | yes               |
+| Artefact                    | Carries the name | Carries the value |
+| --------------------------- | ---------------- | ----------------- |
+| `cowork_evals.yaml`         | yes              | no                |
+| `env.txt`                   | yes              | no                |
+| `run.log`                   | yes              | no                |
+| `debug.txt`                 | yes              | no                |
+| `aggregate-result.json`     | no               | no                |
+| A failure line              | no               | no                |
+| `--dry-run` output          | yes              | no                |
+| The container's environment | yes              | yes               |
 
 `run.log` is captured at the file descriptor level, so whatever the container prints reaches
 it. That is the one artefact this plan cannot fully control, and phase 4 measures it rather
@@ -51,10 +66,10 @@ than asserting it.
 
 ## Two rules this plan settles
 
-| Rule                                                                     | Why                                                     |
-| -------------------------------------------------------------------------- | --------------------------------------------------------- |
-| A named variable that is absent from the host refuses at the preflight    | A missing precondition fails. It never forwards an empty string, which would be a run that looks configured and is not |
-| This is never a route for Claude's own credential                         | The container login is the one credential route, and `docs/docker.md` says so. The preflight refuses the names that would carry one |
+| Rule                                                                   | Why                                                                                                                                 |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| A named variable that is absent from the host refuses at the preflight | A missing precondition fails. It never forwards an empty string, which would be a run that looks configured and is not              |
+| This is never a route for Claude's own credential                      | The container login is the one credential route, and `docs/docker.md` says so. The preflight refuses the names that would carry one |
 
 The second is a refusal, so it is a restriction, and it is one
 [`plan_believable_results.md`](plan_believable_results.md) already decided rather than one
@@ -62,24 +77,25 @@ invented here.
 
 ## What this plan does not do
 
-| Not in scope                                             | Where it is instead                              |
-| ----------------------------------------------------------- | -------------------------------------------------- |
-| Anything on the CoWork backend                             | Nowhere. A session decides its own environment    |
-| A `.env` file, or reading an unnamed variable              | Nowhere. One configuration file, and it names them |
-| Forwarding into the test image                             | Nowhere. `cowork_evals test` runs pytest and takes a raw tail: [`../docs/cowork_test.md`](../docs/cowork_test.md) |
+| Not in scope                                  | Where it is instead                                                                                               |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Anything on the CoWork backend                | Nowhere. A session decides its own environment                                                                    |
+| A `.env` file, or reading an unnamed variable | Nowhere. One configuration file, and it names them                                                                |
+| Forwarding into the test image                | Nowhere. `cowork_evals test` runs pytest and takes a raw tail: [`../docs/cowork_test.md`](../docs/cowork_test.md) |
 
 ## Orientation
 
-| Fact                                                 | Where                                                |
-| ------------------------------------------------------- | ------------------------------------------------------ |
-| The container's two variables                          | `src/cowork_evals/docker/__init__.py`, `run_preamble` |
-| The enablement variable, a constant and not a setting  | `src/cowork_evals/harness.py`, `ENABLEMENT_ENV`       |
-| `env.txt`, and what it records                         | `src/cowork_evals/logs.py`, `write_env`               |
-| The configuration sections and the ladder over them    | `src/cowork_evals/config.py`                          |
-| The preflight, one function per backend                | `src/cowork_evals/preflight.py`                       |
-| The `EVAL_` prefix a case's own `env` keys carry       | `src/cowork_evals/validate.py`, `ENV_PREFIX`          |
-| The rule this plan amends                              | [`../docs/library.md`](../docs/library.md), and `CLAUDE.md` |
-| The one credential route                               | [`../docs/docker.md`](../docs/docker.md)              |
+| Fact                                                         | Where                                                                                  |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| Every variable the container gets today                      | `src/cowork_evals/docker/__init__.py`, `run_preamble`, `run_argv`, `extra_ca_env_argv` |
+| The enablement variable, a constant and not a setting        | `src/cowork_evals/harness.py`, `ENABLEMENT_ENV`                                        |
+| `env.txt`, and what it records                               | `src/cowork_evals/logs.py`, `write_env`                                                |
+| The configuration sections and the ladder over them          | `src/cowork_evals/config.py`                                                           |
+| The preflight dispatch                                       | `src/cowork_evals/preflight.py`, `checks`                                              |
+| The Docker backend's own conditions, which is where these go | `src/cowork_evals/docker/__init__.py`, `Docker.check`                                  |
+| The `EVAL_` prefix a case's own `env` keys carry             | `src/cowork_evals/validate.py`, `ENV_PREFIX`                                           |
+| The rule this plan amends                                    | [`../docs/library.md`](../docs/library.md), and `CLAUDE.md`                            |
+| The one credential route                                     | [`../docs/docker.md`](../docs/docker.md)                                               |
 
 ## Phases
 
@@ -105,12 +121,16 @@ invented here.
 
 ### Phase 3: the forwarding
 
-- [ ] `run_preamble` forwards each named variable, beside `HOME` and the enablement flag
+- [ ] `run_preamble` forwards each named variable, beside the variables it already writes
 - [ ] The forwarded names are read once, where the preflight already read them, and are not
       read a second time at container start
 - [ ] `env.txt` records the forwarded names on one line, and no value
 - [ ] `--dry-run` prints the container argument list with each forwarded name and its value
       replaced, so a dry run is safe to paste into a message
+- [ ] A dry run reads no value at all, and so prints the list with every configured name
+      whether or not the host has it set. `cli._run` skips the preflight on `--dry-run`, so
+      the refusal in phase 2 has not run, and a dry run reaching nothing behind the preflight
+      is the rule that verb already holds
 
 ### Phase 4: measure what leaks
 
@@ -135,6 +155,8 @@ Unit tier, except phase 4's runs.
 - [ ] `run_preamble` carries the forwarded name and value
 - [ ] `write_env` carries the name and not the value
 - [ ] The dry-run output carries the name and not the value
+- [ ] The dry-run output carries a configured name that is unset on the host, and the command
+      exits 0
 - [ ] An empty `env_passthrough` produces the argument list this package produces today, byte
       for byte
 
@@ -147,7 +169,9 @@ Unit tier, except phase 4's runs.
       forwarded, the credential refusal, and phase 4's measurement
 - [ ] [`../docs/cli.md`](../docs/cli.md): the preflight table gains the new conditions
 - [ ] [`../docs/running_evals.md`](../docs/running_evals.md): `env.txt` gains its row
-- [ ] `cowork_evals.example.yaml` carries the key, commented, with no value
+- [ ] `src/cowork_evals/data/cowork_evals.example.yaml` carries the key, commented, with no
+      value. That file is what `init` writes, so a consumer sees the key without reading a
+      document
 - [ ] Nothing in `plans/done/` is read or corrected
 
 ### Phase 7: integration

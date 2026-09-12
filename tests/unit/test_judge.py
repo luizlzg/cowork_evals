@@ -79,7 +79,7 @@ def test_judge_argv_is_claude_p_with_the_model_and_strict_mcp_config() -> None:
 
 
 def test_the_enablement_variable_is_not_exported() -> None:
-    """It gates `claude plugin eval`, and this is `claude -p`."""
+    """It enables `claude plugin eval`, and this is `claude -p`."""
     import cowork_evals.judge as module
 
     assert not hasattr(module, "ENABLEMENT_ENV")

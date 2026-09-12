@@ -13,11 +13,13 @@ checkout and dangles in an install, so nothing at run time can see it. See ../RE
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
 from cowork_evals import resources
+from cowork_evals.config import Config
 
 REPOSITORY = Path(__file__).resolve().parents[2]
 
@@ -86,6 +88,50 @@ def test_a_vendored_plugin_case_is_not_a_document() -> None:
 def test_the_example_configuration_ships_beside_the_modules() -> None:
     assert resources.EXAMPLE_CONFIG.is_file()
     assert "cowork:" in resources.EXAMPLE_CONFIG.read_text()
+
+
+# The two keys the example does not claim a default for: `cowork.profile` has none, and
+# `docker.extra_ca_file` shows the shape of a value rather than a default. Its own header
+# says so, and every other commented line is a default.
+NOT_A_DEFAULT = ("profile:", "extra_ca_file:")
+
+
+def _uncommented(text: str) -> str:
+    """The example with every commented default turned back on.
+
+    A default line is `  # <key>: <value>`; a prose line is `# ...` at the margin or a
+    sentence after the hash. The key is what tells them apart, so only a line whose comment
+    is `<key>: ...` is uncommented.
+    """
+    key = re.compile(r"^(\s+)# ([a-z_]+:.*)$")
+    lines = []
+    for line in text.splitlines():
+        found = key.match(line)
+        if found is None or any(name in line for name in NOT_A_DEFAULT):
+            lines.append(line)
+            continue
+        lines.append(f"{found.group(1)}{found.group(2)}")
+    return "\n".join(lines) + "\n"
+
+
+def test_every_commented_default_in_the_example_is_the_built_in_default(
+    tmp_path: Path,
+) -> None:
+    """Uncommenting the example changes nothing, which is what its header promises.
+
+    The file ships to a consumer through `init`, so a stale line there is a default a
+    consumer adopts by uncommenting it. Nothing else compares the two, which is how
+    `allow_tools` sat at the superseded `[Bash]` after the grant became the session mirror.
+    """
+    written = tmp_path / "cowork_evals.yaml"
+    written.write_text(_uncommented(resources.EXAMPLE_CONFIG.read_text()), encoding="utf-8")
+
+    loaded = Config.load(written)
+    defaults = Config()
+
+    assert loaded.eval == defaults.eval
+    assert loaded.docker == defaults.docker
+    assert replace(loaded.cowork, profile=None) == defaults.cowork
 
 
 def test_every_shipped_skill_is_a_directory_named_for_it() -> None:

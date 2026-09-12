@@ -21,7 +21,7 @@ thirteen is skipped. `plan_fix` builds nothing, so it carries no number: it corr
 others wrote, and it ran before `plan_cowork_backend.md` because it changes what that plan and
 `plan_cli.md` both read. `plan_believable_results` carries no number for the same reason:
 it holds measurements and decisions, and its product is the four plans numbered 10 to 13. The order is the
-order they are built in, not a gate: a plan is
+order they are built in, not a precondition: a plan is
 written whenever the developer decides to write it, and a plan whose inputs already exist is
 executable whether or not the plan before it is finished. `status` is the plan's own state,
 not the system's: what is built and usable is
@@ -34,7 +34,7 @@ not the system's: what is built and usable is
 | 3 | `plan_venv.md`           | The staged relocatable 3.10 runtime, and the harness run under it                 | skipped     |                       |
 | 4 | [`done/plan_cowork_backend.20260909.md`](done/plan_cowork_backend.20260909.md) | The case reader, the CoWork grader and the v1 result document over the driver     | implemented | `feat/cowork-backend` |
 | 5 | [`done/plan_test.20260909.md`](done/plan_test.20260909.md) | The test image, and a consumer's pytest suite run on the CoWork runtime            | implemented | `feat/test`           |
-| 6 | [`done/plan_cli.20260909.md`](done/plan_cli.20260909.md) | Scope resolution, the run directory, the gate, and the command                    | implemented | `feat/cli`            |
+| 6 | [`done/plan_cli.20260909.md`](done/plan_cli.20260909.md) | Scope resolution, the run directory, the verdict, and the command                    | implemented | `feat/cli`            |
 | - | [`done/plan_fix.20260909.md`](done/plan_fix.20260909.md) | Nothing. One configuration file, one name per artifact, and the false statements  | implemented | `feat/fix-consistency` |
 | 7 | [`done/plan_consumer.20260909.md`](done/plan_consumer.20260909.md) | The shipped documentation, the `docs` and `init` verbs, and the eval-authoring skill | implemented | `feat/consumer`       |
 | 8 | [`done/plan_ask.20260912.md`](done/plan_ask.20260912.md) | The `ask` verb over the driver, and the skill that asks a live session what it does | implemented | `feat/ask`            |
@@ -43,7 +43,7 @@ not the system's: what is built and usable is
 | 10 | [`plan_run_validity.md`](plan_run_validity.md) | A run that never got its tool fails instead of scoring, and honest counts | not started | `feat/run-validity`   |
 | 11 | [`plan_runnability.md`](plan_runnability.md) | The `no-cowork` tag on a case, enforced both ways, counted rather than failed | not started | `feat/runnability`    |
 | 12 | [`plan_env_passthrough.md`](plan_env_passthrough.md) | Named host variables forwarded into the run container, values never logged | not started | `feat/env-passthrough` |
-| 13 | [`plan_ablation.md`](plan_ablation.md) | The baseline arm, and a gate that decides on the per-case delta | not started | `feat/ablation`       |
+| 13 | [`plan_ablation.md`](plan_ablation.md) | The baseline arm, and a verdict that decides on the per-case delta | not started | `feat/ablation`       |
 
 | Status        | Means                                                                     |
 | ------------- | --------------------------------------------------------------------------- |
@@ -94,9 +94,10 @@ Plans 10 to 13 are one piece of work in four merges, and
 [`plan_believable_results.md`](plan_believable_results.md) is the record of what was measured
 and what each follows from. Together they make a result believable: a run that never got the
 tool it needed stops scoring, a case a backend cannot run says so instead of reddening the
-gate forever, a skill that needs a credential becomes evaluable at all, and a suite can be
+red forever, a skill that needs a credential becomes evaluable at all, and a suite can be
 asked whether the plugin changed anything rather than only whether the cases passed. They are
-implemented in that order. Plan 13 is last because it rewrites the gate that plans 10 and 11
+implemented in that order. Plan 13 is last because it rewrites the pass and fail rules that
+plans 10 and 11
 both change, and plan 12 is independent of all three.
 
 Plans 2 and 3 each build one backend whole. Running an eval on those two backends is
@@ -163,8 +164,8 @@ never prunes, never parses an option and never decides pass or fail. Plan 6 owns
 Plans 2 and 4 hold to that, so plan 6 assembles what exists and rebuilds none of it. Plan 5
 holds to the same shape without being a backend: it returns an exit code rather than a
 result document, and plan 6 adds the verb over it. A
-backend that writes a log layout of its own breaks the one gate that covers all three. The
-layout and the gate are [`../docs/running_evals.md`](../docs/running_evals.md), and the
+backend that writes a log layout of its own breaks the one verdict that covers all three. The
+layout and the verdict are [`../docs/running_evals.md`](../docs/running_evals.md), and the
 command is [`../docs/cli.md`](../docs/cli.md).
 
 ## How a plan is written

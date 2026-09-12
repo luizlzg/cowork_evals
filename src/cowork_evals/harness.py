@@ -29,7 +29,7 @@ RESULT_NAME = "aggregate-result.json"
 ENABLEMENT_ENV = "CLAUDE_CODE_WALNUT_SPIRE=1"
 
 # Two pinned flags have no option and no setting. `--threshold 0` hands pass and fail to
-# the gate; `--ablation none` keeps a `tool_used: Skill` grader scored.
+# the verdict in verdict.py; `--ablation none` keeps a `tool_used: Skill` grader scored.
 THRESHOLD = "0"
 ABLATION = "none"
 

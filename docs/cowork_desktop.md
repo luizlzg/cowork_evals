@@ -9,7 +9,7 @@ drive it. These are the measured internals. What the driver does with them is
 - **Input is a deep link.** The application registers the `claude` URL scheme and takes a
   prompt in `q`. No query parameter submits.
 - **Submission is a synthetic Return**, which needs the macOS Accessibility grant. No
-  supported method avoids that gate.
+  supported method avoids that permission prompt.
 - **Output is on the host filesystem.** Nothing reads the screen: a session writes a
   transcript, a signed audit log and an `outputs/` directory under the profile.
 - **Never write anywhere under the profile.** Those directories are application managed.
@@ -99,7 +99,8 @@ Without the macOS Accessibility grant this fails with:
 System Events got an error: osascript is not allowed to send keystrokes. (1002)
 ```
 
-The same gate applies to CGEvent and to pressing the send button through the Accessibility
+The same permission check applies to CGEvent and to pressing the send button through the
+Accessibility
 API. No supported method avoids it.
 
 ### What the keyboard does to a submission

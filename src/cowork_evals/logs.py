@@ -37,7 +37,7 @@ LOG_ROOT = Path("logs") / "evals"
 # docs/running_evals.md.
 RUN_LOG = "run.log"
 ENV_FILE = "env.txt"
-GATE_FILE = "gate.txt"
+VERDICT_FILE = "verdict.txt"
 
 # The symlink at the log root, pointing at the newest run directory.
 LATEST = "latest"
@@ -132,7 +132,7 @@ def plugin_dir(run_directory: Path | str, name: str) -> Path:
     """`<run_dir>/<slug>`, created, with the same `-2` suffix on a collision.
 
     Two plugins in one sweep whose manifests carry the same `name` therefore get two
-    directories, so neither result document overwrites the other and the gate reads both.
+    directories, so neither result document overwrites the other and the verdict reads both.
     """
     return _unique(Path(run_directory), slug(name))
 
