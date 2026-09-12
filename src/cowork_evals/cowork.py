@@ -96,9 +96,14 @@ RETURN = (
 # Step 2a. `tell me to activate` is what forces the modal in front of the editor the
 # developer is working in. There is no `default button`, so a Return typed into that editor
 # mid-sentence dismisses nothing and the developer has to click.
+#
+# The message states the timeout, because `display dialog` renders no countdown and a modal
+# that waits without saying how long reads as one that waits forever.
 CONSENT_TITLE = "cowork_evals"
 CONSENT_MESSAGE = (
-    "cowork_evals is about to drive CoWork. Do not use the keyboard or the mouse until it finishes."
+    "cowork_evals is about to drive CoWork. Do not use the keyboard or the "
+    "mouse until it finishes."
+    "\n\nIt goes ahead on its own in {timeout:g} seconds."
 )
 
 # One process, one operator, one keyboard. `CoWorkSection` is frozen and
@@ -486,8 +491,9 @@ def consent(section: CoWorkSection) -> None:
         "-e",
         "tell me to activate",
         "-e",
-        f'display dialog "{CONSENT_MESSAGE}" with title "{CONSENT_TITLE}" '
-        f'buttons {{"Cancel", "Go"}} giving up after {section.consent_timeout:g}',
+        f'display dialog "{CONSENT_MESSAGE.format(timeout=section.consent_timeout)}" '
+        f'with title "{CONSENT_TITLE}" buttons {{"Cancel", "Go"}} '
+        f"giving up after {section.consent_timeout:g}",
     ]
     completed = subprocess.run(argv, capture_output=True, text=True, check=False)
     if completed.returncode != 0:

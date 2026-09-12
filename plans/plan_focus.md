@@ -222,8 +222,9 @@ Work in order. Tick a box when it is verified, then commit. Do not batch ticks.
 ### Phase 3: the callers
 
 - [ ] `cli._ask` calls `consent` once, before the driver, and not on `--session` or `--dry-run`
-- [ ] `cli._each_plugin` calls it once, before the first plugin, on `--cowork` only
-- [ ] `run --cowork --dry-run` never asks
+      (blocked: the `ask` verb is plan 8's and is not on `main`)
+- [x] `cli._each_plugin` calls it once, before the first plugin, on `--cowork` only
+- [x] `run --cowork --dry-run` never asks
 
 ### Phase 4: tests
 

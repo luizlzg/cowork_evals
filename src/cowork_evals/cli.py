@@ -19,7 +19,18 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from . import cowork_backend, docker, gate, logs, preflight, resources, results, traces, validate
+from . import (
+    cowork,
+    cowork_backend,
+    docker,
+    gate,
+    logs,
+    preflight,
+    resources,
+    results,
+    traces,
+    validate,
+)
 from .cases import CaseError, discover, plugin_name, plugin_roots
 from .config import Config, CoWorkError
 from .docker import Docker, DockerError, pytest_image
@@ -554,6 +565,12 @@ def _each_plugin(
     billed to the account and is not observable from the host, so the ceiling that binds
     there is the driver's `max_runs`, in the preflight above. docs/running_evals.md.
     """
+    if image is None:
+        try:
+            cowork.consent(config.cowork)
+        except CoWorkError as error:
+            return (str(error),)
+
     ceiling = config.eval.max_cost_total_usd
     for plugin, target in targets:
         spent = results.spend(directory)
