@@ -163,6 +163,50 @@ A baseline arm is an investigation, run by calling the harness by hand, and it i
 this command. It doubles the agent runs, and the table in
 [plugin_eval.md](plugin_eval.md) counts them.
 
+### What a two-arm document holds
+
+Snapshot, 2026-09-12, CLI 2.1.265, image `cowork-evals:57f48ba2adac`.
+`docs/claude_code/eval_smoke/` run through the container with `--ablation with-without`.
+Three cases at `runs: 1`, so six agent runs, 34 s and 0.35 USD.
+
+| Where                        | Field                                                            | Holds                                                          |
+| ---------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------- |
+| `suite`                      | `ablation`                                                       | `with-without`                                                 |
+| a case's `arms`              | `with`, `without`                                                | one run list each. The second arm's key is `without`           |
+| a case's `aggregates`        | `score`, `passRate`, `scoreWithout`, `passRateWithout`, `delta`  | `delta` is `score - scoreWithout`, and the document works it out |
+| the document's `aggregates`  | `meanDelta`                                                      | the mean of the case deltas that are defined                   |
+
+The delta is read and never re-derived. A one-arm document carries `score` and `passRate`
+alone, and no `arms.without`.
+
+| The grader                                  | In the with-arm                   | In the without-arm            |
+| ------------------------------------------- | --------------------------------- | ------------------------------- |
+| `tool_used: Skill` with no `arm:`           | `withOnly: true`, `scored: false` | absent from the grader list   |
+| The same grader under `arm: both`           | `withOnly: false`, `scored: true` | `withOnly: false`, `scored: true` |
+| Every other grader                          | `withOnly: false`, `scored: true` | `withOnly: false`, `scored: true` |
+
+Every run of both arms carries a `tracePath` of its own, naming its own kept sandbox, and all
+six reached the host under one `TMPDIR`.
+
+### What a document holds when the arms are not comparable
+
+Same snapshot, one case re-run under `--max-cost-usd 0.10`, so the without-arm run overran the
+remainder and its paid graders were skipped.
+
+| The document                                       | Then                                                       |
+| -------------------------------------------------- | ------------------------------------------------------------ |
+| a case's `aggregates.delta` and `aggregates.scoreWithout` | both omitted. `score`, `passRate` and `passRateWithout` stay |
+| the document's `aggregates.meanDelta`              | omitted                                                    |
+| the run that overran                               | `skippedPaidGraders: true`                                 |
+| `partial`                                          | stays `false`, and there is no `partialReason`             |
+
+The two reasons are told apart by the document, which is what lets a failure line name which
+one it was: an absent or empty `arms.without` is the first, and a run carrying
+`skippedPaidGraders: true` is the second.
+
+A paid grader skipped at the ceiling is not a grader skip. It carries `passed: false`,
+`scored: true` and `explanation: skipped: cost ceiling`, and no `skipped` flag at all.
+
 `--allow-tools` is pinned because a case cannot grant itself `Bash`, `Write`, `Edit`,
 `WebFetch` or an MCP tool. The operator grant is the only route, and an ungranted case loses
 the tool rather than failing loudly.

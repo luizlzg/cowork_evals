@@ -120,15 +120,15 @@ and run it in the container the same way `Docker.run` does.
 - [x] Run `docs/claude_code/eval_smoke/` through the container with `--ablation with-without`
       and keep the result document. That fixture has a skill, a `tool_used: Skill` grader and
       an over-trigger case, so it exercises every shape the arm changes
-- [ ] Write into [`../docs/running_evals.md`](../docs/running_evals.md), dated: what `arms`
+- [x] Write into [`../docs/running_evals.md`](../docs/running_evals.md), dated: what `arms`
       holds, what the second arm's key is called, which graders carry `withOnly` and
       `scored`, and whether the result file carries a delta of its own or `verdict.py` has
       to work one out
-- [ ] Record what the without-arm's runs carry in place of `tracePath`, which decides phase 3
-- [ ] Record what the document holds when the arms are not comparable. The reference says
+- [x] Record what the without-arm's runs carry in place of `tracePath`, which decides phase 3
+- [x] Record what the document holds when the arms are not comparable. The reference says
       `delta` and `scoreWithout` are omitted when the without-arm is empty or a run skipped
       paid graders, and phase 4 needs to know which of the two it is looking at
-- [ ] It costs two agent runs per case. Three cases at one run each is six, and
+- [x] It costs two agent runs per case. Three cases at one run each is six, and
       [`../docs/plugin_eval.md`](../docs/plugin_eval.md) counts the rest
 
 Phases 2 to 4 are written against what this phase records. If the without-arm's key is not
