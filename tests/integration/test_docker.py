@@ -13,11 +13,13 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 
 import pytest
 
+from cowork_evals import traces, verdict
 from cowork_evals.docker import Condition, Docker, probe, remedy
 from cowork_evals.docker.parity import EXPECTED_VERSIONS, REQUIREMENTS, compare
 from cowork_evals.harness import RunOptions
@@ -25,6 +27,12 @@ from cowork_evals.requirements import pins
 
 ROOT = Path(__file__).resolve().parents[2]
 SMOKE = ROOT / "plugins" / "smoke"
+
+# The harness's own fixture, which `cowork_evals run` refuses because it deliberately does not
+# follow this repository's case format. It is the one tree here that carries a skill, a
+# `tool_used: Skill` grader and an over-trigger case, so it exercises every shape the baseline
+# arm changes. docs/claude_code/eval_smoke/README.md.
+EVAL_SMOKE = ROOT / "docs" / "claude_code" / "eval_smoke"
 
 # docs/runtime.md, the core runtime table, read through the one place that records it. A
 # patch bump in jammy fails here first, and the fixture's grader is a literal that is updated
@@ -245,3 +253,53 @@ def test_the_smoke_case_passes_through_the_backend(credentialled, tmp_path):
     runs = cases[0]["arms"]["with"]
     assert runs, "the case produced no run"
     assert all(run["passed"] for run in runs), [run.get("error") for run in runs]
+
+
+@pytest.mark.live
+def test_a_two_arm_run_is_collected_and_decided_on_its_delta(credentialled, tmp_path):
+    """The baseline arm, end to end: six agent runs, two arms collected, one verdict.
+
+    It runs the backend directly rather than the command, because `cowork_evals run` refuses
+    this tree: the cases are the harness's own shape and the validator holds every case it is
+    given to this repository's format. What is asserted above the backend is still the real
+    thing, and `traces.collect` and `verdict.decide` are the ones the command calls.
+
+    What is asserted is the arm and not the scores. Whether sonnet answers a given case well
+    is the model's own variance, and a green suite is not what this test is for: the delta is
+    worked out, both arms are kept, and the verdict reads the number the document carries.
+    """
+    directory = tmp_path / "run"
+    logs = directory / "eval-smoke"
+    logs.mkdir(parents=True)
+    options = RunOptions.resolve(ablation="with-without")
+    result = credentialled.run(EVAL_SMOKE, logs, options)
+    assert traces.collect(logs, granted=options.allow_tools) == []
+
+    document = json.loads(result.read_text())
+    assert document["suite"]["ablation"] == "with-without"
+    assert verdict.two_arm(document)
+    for case in document["cases"]:
+        assert case["arms"]["without"], f"{case['name']} ran no baseline arm"
+        assert isinstance(case["aggregates"]["delta"], int | float), case["aggregates"]
+
+    # The `tool_used: Skill` grader with no `arm:` is the shape the arm changes: an indicator
+    # in the with-arm, and gone from the without-arm.
+    france = next(case for case in document["cases"] if case["name"] == "capital-france")
+    indicator = next(
+        result for result in france["arms"]["with"][0]["graders"] if result["name"] == "skill-fired"
+    )
+    assert (indicator["withOnly"], indicator["scored"]) == (True, False), indicator
+    assert "skill-fired" not in [
+        result["name"] for result in france["arms"]["without"][0]["graders"]
+    ]
+
+    # The with-arm keeps the layout a one-arm run has, and the baseline arm is under it.
+    kept = traces.run_dir(logs, "capital-france", 1)
+    baseline = traces.run_dir(logs, "capital-france", 1, arm="without")
+    assert (kept / traces.TRACE_NAME).is_file()
+    assert (baseline / traces.TRACE_NAME).is_file()
+    assert baseline.parent.name == "without"
+
+    decided = verdict.decide(directory, found=3, picked=3)
+    assert [line for line in decided.lines if "not comparable" in line] == [], decided.text
+    assert re.search(r"mean delta [-+]\d\.\d\d$", decided.lines[-1]), decided.lines[-1]

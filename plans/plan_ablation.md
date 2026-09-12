@@ -214,9 +214,9 @@ Unit tier, over recorded documents, except phase 1's run.
 
 ### Phase 7: integration
 
-- [ ] `plugins/smoke/` on the Docker backend with one arm, green, and the trace layout
+- [x] `plugins/smoke/` on the Docker backend with one arm, green, and the trace layout
       unchanged
-- [ ] `docs/claude_code/eval_smoke/` with two arms, from the integration tier, with the
+- [x] `docs/claude_code/eval_smoke/` with two arms, from the integration tier, with the
       delta printed
-- [ ] `plugins/smoke/` on CoWork, green, unaffected
-- [ ] `scripts/test.sh` and `ruff` clean
+- [x] `plugins/smoke/` on CoWork, green, unaffected
+- [x] `scripts/test.sh` and `ruff` clean
