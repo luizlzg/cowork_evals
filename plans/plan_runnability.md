@@ -203,5 +203,5 @@ Five documents, and the rule that a skip fails the run is amended in one of them
 
 ### Phase 6: integration
 
-- [ ] `plugins/smoke/` on both backends, from the integration tier, green
+- [x] `plugins/smoke/` on both backends, from the integration tier, green
 - [x] `scripts/test.sh` and `ruff` clean
