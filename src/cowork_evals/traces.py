@@ -63,8 +63,12 @@ TRACE_NAME = "trace.jsonl"
 LAST_MESSAGE_NAME = "last_message.txt"
 WORKSPACE_NAME = "workspace"
 
-# The arm every backend runs. There is no baseline arm here, as in [verdict.py](verdict.py).
-ARM = "with"
+# The two arms a document may carry, in the order they are collected. `with` loads the plugin
+# under test and is the arm every backend runs; `without` is the baseline arm, which only a
+# `--ablation with-without` run on the container backend produces. docs/running_evals.md.
+ARM_WITH = "with"
+ARM_WITHOUT = "without"
+ARMS = (ARM_WITH, ARM_WITHOUT)
 
 # The result document field that says a run came from the CoWork backend. It is this
 # repository's own added field, and the harness writes no such key.
@@ -114,7 +118,14 @@ def sandbox_root(output_dir: Path | str) -> Path:
     return Path(output_dir) / SANDBOX_DIR
 
 
-def run_dir(output_dir: Path | str, case: str, index: int, *, occurrence: int = 1) -> Path:
+def run_dir(
+    output_dir: Path | str,
+    case: str,
+    index: int,
+    *,
+    occurrence: int = 1,
+    arm: str = ARM_WITH,
+) -> Path:
     """`<plugin log dir>/traces/<case>/run-<n>`, the directory one run's artefacts go in.
 
     `index` is 1-based, and is the same number the verdict line prints as `run N`, so a failure line
@@ -124,11 +135,20 @@ def run_dir(output_dir: Path | str, case: str, index: int, *, occurrence: int = 
     `hello`. `occurrence` is which of them this is, and the second gets `-2`, exactly as
     `logs.plugin_dir` suffixes the second plugin of a name. Without it the second case's runs
     would land on the first's, and a failure line would name a directory holding the wrong run.
+
+    The with-arm's path is the path, and every other arm goes in a directory of its own named
+    for the arm, between the case and the run. A one-arm run is therefore laid out exactly as
+    it was before the baseline arm existed, which is what almost every run produces, and
+    `traces/<case>/run-*` still selects the with-arm alone in a two-arm run.
+    docs/running_evals.md.
     """
     name = logs.slug(case)
     if occurrence > 1:
         name = f"{name}-{occurrence}"
-    return Path(output_dir) / TRACES_DIR / name / f"{RUN_PREFIX}{index}"
+    directory = Path(output_dir) / TRACES_DIR / name
+    if arm != ARM_WITH:
+        directory = directory / logs.slug(arm)
+    return directory / f"{RUN_PREFIX}{index}"
 
 
 def collect(output_dir: Path | str, *, granted: tuple[str, ...] = ()) -> list[str]:
@@ -262,9 +282,12 @@ def _bare(name: str) -> str:
 def _each_run(
     output_dir: Path, root: Path, document: dict[str, Any], granted: tuple[str, ...]
 ) -> list[str]:
-    """Every run of every case, in the order the document lists them.
+    """Every run of every arm of every case, in the order the document lists them.
 
     `seen` counts the cases carrying each name, which is what `run_dir` suffixes on.
+
+    Both arms are collected, so a failing delta is read as two transcripts rather than one.
+    A one-arm document carries no `without` key and this walks the same runs it always did.
     """
     warnings = []
     seen: dict[str, int] = {}
@@ -273,9 +296,13 @@ def _each_run(
             continue
         name = str(case.get("name"))
         seen[name] = seen.get(name, 0) + 1
-        for index, run in enumerate(case.get("arms", {}).get(ARM) or [], start=1):
-            if isinstance(run, dict):
-                warnings += _one_run(output_dir, root, name, index, run, seen[name], granted)
+        arms = case.get("arms") or {}
+        for arm in ARMS:
+            for index, run in enumerate(arms.get(arm) or [], start=1):
+                if isinstance(run, dict):
+                    warnings += _one_run(
+                        output_dir, root, name, index, run, seen[name], granted, arm
+                    )
     return warnings
 
 
@@ -287,14 +314,19 @@ def _one_run(
     run: dict[str, Any],
     occurrence: int,
     granted: tuple[str, ...],
+    arm: str = ARM_WITH,
 ) -> list[str]:
     """One run's artefacts, and `tracePath` pointed at where the trace now is.
 
     The kept trace is read once. A harness trace answers the final message and both validity
     checks out of the same records; a session transcript is another format and is read by
     `cowork.final_text`, which parses it for the one thing it is asked.
+
+    `arm` reaches the destination directory and the warning line. Every arm's `tracePath` is
+    rewritten, so the `[artifacts: ...]` suffix on a line about either names the right
+    directory.
     """
-    where = f"{case}: run {index}"
+    where = f"{case}: run {index}" if arm == ARM_WITH else f"{case}: {arm}-arm run {index}"
     source, missing = _source(root, run)
     if source is None:
         # A run that already carries an error says why there is nothing to collect, and a
@@ -303,7 +335,7 @@ def _one_run(
 
     if not source.session:
         logs.unseal(source.trace.parent.parent)
-    destination = run_dir(output_dir, case, index, occurrence=occurrence)
+    destination = run_dir(output_dir, case, index, occurrence=occurrence, arm=arm)
     try:
         destination.mkdir(parents=True, exist_ok=True)
         trace = _keep_trace(source, destination)

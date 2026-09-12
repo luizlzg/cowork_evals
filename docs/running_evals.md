@@ -365,6 +365,19 @@ same name inside one plugin is suffixed `-2`, as a second plugin of one name is.
 path is under the run directory the invocation printed, and a failure line about that run
 names the directory as `[artifacts: <dir>]`.
 
+The with-arm's path is the path above. Under `--ablation with-without` the baseline arm's
+runs go in a directory of their own, named for the arm, between the case and the run:
+
+```
+<log root>/<yyyymmdd-hhmmss>-<scope>/<plugin>/traces/<case>/without/run-<n>/
+```
+
+So a one-arm run's layout is what it always was, which is what almost every run produces,
+and `traces/<case>/run-*` still selects the with-arm alone in a two-arm run. Both arms keep
+the same three names, and each arm's `tracePath` is rewritten to its own collected trace, so
+a failing delta is read as two transcripts and a line about either arm names the right
+directory.
+
 Nothing in this package writes into a run directory after collection. The three names are
 written once, by `traces.collect`, before the verdict is reached. The one field it changes
 afterwards is in the result document, not here.
