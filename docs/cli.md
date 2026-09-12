@@ -2,7 +2,7 @@
 
 ## Summary
 
-The command. One executable, seven verbs, two backends. It is the whole surface a consumer
+The command. One executable, eight verbs, two backends. It is the whole surface a consumer
 repository sees; the boundary behind it is [library.md](library.md).
 
 - **The backend is required on every verb but `prune`, `docs` and `init`** and has no
@@ -10,9 +10,9 @@ repository sees; the boundary behind it is [library.md](library.md).
 - **The path is the scope.** One path argument decides whether a case, a skill, a plugin or a
   whole tree runs. There is no separate sweep command.
 - **A verb names its object only when that object is not an eval.** `run` runs evals, which
-  is what this command is. `test` runs pytest, so it says so. `setup`, `check` and `prune`
-  act on a backend and carry no object at all. `docs` and `init` act on neither: they read
-  what the package ships and write into the working directory.
+  is what this command is. `test` runs pytest and `ask` submits one prompt, so both say so.
+  `setup`, `check` and `prune` act on a backend and carry no object at all. `docs` and `init`
+  act on neither: they read what the package ships and write into the working directory.
 - **Options are named.** Nothing is forwarded raw to `claude plugin eval`. `test` is the one
   verb that takes a raw tail, because pytest is the only thing behind it.
 - **`run` verifies and never builds.** A failed preflight exits 3 and names the command that
@@ -31,6 +31,8 @@ What of this command is built is the status table in
 
 ```
 cowork_evals run   (--docker | --cowork) <path> [options]
+cowork_evals ask   --cowork <prompt> [--timeout-seconds N] [--json] [--dry-run]
+cowork_evals ask   --cowork --session <dir> [--json]
 cowork_evals test  --docker <path> [--build-missing] [--dry-run] [-- PYTEST_ARGS]
 cowork_evals setup --docker
 cowork_evals check (--docker | --cowork | --all)
@@ -42,6 +44,9 @@ cowork_evals --version
 
 `setup` takes `--docker` alone. It is the only backend with anything to build, and there is
 no `setup --all`.
+
+`ask` takes `--cowork` alone, exactly as `test` takes `--docker` alone. It reaches a live
+session, and the container has none.
 
 `prune`, `docs` and `init` are the three verbs that take no backend. `prune` requires at
 least one selection flag, and none is a usage error. `docs` and `init` take no backend
@@ -164,6 +169,9 @@ the application writes sessions into, and an unreadable one is the condition tha
 login: there is no model call in that path. It is not a backend, and the row is here because
 it is selected the way one is. See [cowork_test.md](cowork_test.md).
 
+`ask` verifies the `--cowork` row, minus the rate ceiling, which is the driver's and is
+checked inside it. `ask --session` verifies nothing: it reads a directory already on disk.
+
 ### Taking the keyboard
 
 A CoWork run types into the frontmost application, so `run --cowork` asks for the keyboard
@@ -242,6 +250,98 @@ Host spend on `--cowork` is the judge alone. The CoWork session itself is billed
 signed-in account and is not observable from the host, so `--max-cost-usd` is refused there
 and the ceiling that binds is the driver's `max_runs`. See
 [cowork_driver.md](cowork_driver.md).
+
+## ask
+
+`ask` submits one prompt to a real CoWork session, waits, and prints the answer. It runs no
+eval: no case tree, no grader, no result document, no gate and no run directory. It is how a
+question about what a live session actually does is answered by asking one.
+
+| Option               | Is                                                                 |
+| -------------------- | -------------------------------------------------------------------- |
+| `--cowork`           | the only backend. There is no `ask --docker`                       |
+| `<prompt>`           | the prompt. `-` reads it from standard input                       |
+| `--session <dir>`    | print a session already on disk. Submits nothing, costs nothing    |
+| `--timeout-seconds N`| this run's timeout, replacing `cowork.run_timeout`                 |
+| `--json`             | print the session document instead of the text                     |
+| `--dry-run`          | print the deep link and the ceiling arithmetic. Submits nothing    |
+
+It takes no other option. Every option it does not carry configures a suite, and `ask` runs
+no suite: no `--runs`, no `--tag`, no `--case`, no `--out` and no `--require-coverage`.
+
+`--json` here is this verb's output form. It is unrelated to the harness flag of the same
+name, which [plugin_eval.md](plugin_eval.md) records as never emitted.
+
+### What is printed, and where
+
+| Form        | Standard output          | Standard error                                            |
+| ----------- | ------------------------ | ----------------------------------------------------------- |
+| default     | the final assistant text | session directory, assistant turn count, tool names, outputs, driver log |
+| `--json`    | the session document     | nothing                                                   |
+| `--dry-run` | the deep link            | the ceiling arithmetic                                    |
+
+The split is so that `cowork_evals ask --cowork "..." > answer.txt` holds the answer and
+nothing else. A footer line whose value is empty is not printed: a session that called no
+tool has no `tools` line. `--json` prints no footer, because every footer value is a field of
+the document it printed.
+
+The session document is the driver's, field by field in
+[cowork_driver.md](cowork_driver.md).
+
+### What it writes
+
+Nothing on the host. No run directory, no `latest`, no `env.txt` and no pruning; `test` is
+the precedent. The session directory in the profile is the permanent record, and the driver's
+run log is the driver's. The verb never saves the session document: printing it is what it is
+for.
+
+### The ceiling
+
+The rate ceiling is the driver's `cowork.max_runs`, checked in `CoWork` before the submission
+and counted from the run log. There is no second ceiling in this verb, because one number
+gets one source. `--dry-run` prints the arithmetic instead of spending against it.
+
+### Usage errors
+
+Each returns 2, from the verb rather than from `argparse`, with a message naming what was
+typed.
+
+| Typed                                | Refused because                      |
+| ------------------------------------ | ------------------------------------ |
+| neither a prompt nor `--session`     | there is nothing to print            |
+| a prompt and `--session` together    | the session is either new or on disk |
+| `--timeout-seconds` with `--session` | nothing waits                        |
+| `--dry-run` with `--session`         | nothing would be submitted           |
+
+### Preflight
+
+The CoWork row of the preflight table above, minus the rate ceiling, which is the driver's.
+
+`--session` skips the preflight entirely. It reads a directory, so it needs no macOS, no
+profile and no Accessibility grant, and it runs against an archived session on a machine that
+has no CoWork.
+
+`--dry-run` skips it too, for the reason `run --dry-run` does: nothing behind the preflight is
+reached. The deep link is built from the prompt and the ceiling arithmetic is read from the
+run log, so a dry run checks a prompt on a machine with no CoWork at all.
+
+### Exit codes
+
+| Code | Means                                                              |
+| ---- | -------------------------------------------------------------------- |
+| 0    | a session document was printed                                     |
+| 2    | a usage error above                                                |
+| 3    | the CoWork preflight is unmet, or the driver raised code 2         |
+| 1    | everything else the driver raised. No session document was printed |
+| 130  | interrupted                                                        |
+
+Driver code 2 is configuration or the rate ceiling, which is the preflight class, so it maps
+to 3 and matches what `run --cowork` does with the same code.
+
+Code 7 is a run timeout and carries a session directory. The session keeps running in the VM,
+so the verb collects that directory, prints what the session produced, and still exits 1.
+That is what the CoWork backend already does with a timeout. See
+[cowork_backend.md](cowork_backend.md).
 
 ## test
 
@@ -391,7 +491,13 @@ directory. It takes no backend and no option.
 | --------------------------------------- | ----------------------------------------------------------- |
 | `cowork_evals.yaml`                     | Every key and every default, and a placeholder for `cowork.profile` |
 | `.claude/skills/cowork-evals/SKILL.md`  | The eval-authoring skill: the tree, the keys, the graders, the traps |
+| `.claude/skills/cowork-ask/SKILL.md`    | The ask skill: when to ask a live session, what it costs, what counts as evidence |
 | `CLAUDE.md`                             | A block naming the command, the `docs` verb and the runtime constraint |
+
+The skills are whatever the package ships, one directory each under
+`src/cowork_evals/data/skills/`, installed at `.claude/skills/<directory name>/SKILL.md`.
+Which skill fires on what, and why they are two files and not one, is
+[library.md](library.md).
 
 It never overwrites. A target that exists is reported as kept and is left exactly as it is,
 so a second run changes nothing and a consumer's own edits survive. `CLAUDE.md` is appended
@@ -403,15 +509,15 @@ option here that overwrites a file.
 
 ### Upgrading the package does not refresh what init wrote
 
-`init` overwrites nothing, so a target written by an older version stays as it is. The skill
-is the one where that matters: it carries the case format, and a stale copy teaches an
-out-of-date one to every session that reads it. Nothing detects the drift and nothing warns
-about it.
+`init` overwrites nothing, so a target written by an older version stays as it is. The skills
+are where that matters: the eval-authoring one carries the case format, and a stale copy
+teaches an out-of-date one to every session that reads it. Nothing detects the drift and
+nothing warns about it.
 
-After upgrading `cowork-evals`, take the new skill:
+After upgrading `cowork-evals`, take the new skills:
 
 ```sh
-rm .claude/skills/cowork-evals/SKILL.md
+rm -r .claude/skills/cowork-evals .claude/skills/cowork-ask
 cowork_evals init
 ```
 
@@ -419,7 +525,7 @@ The other two targets hold a consumer's own values, so leaving them alone is rig
 `cowork_evals.yaml` gains a key only when a release adds one, and every key has a built-in
 default, so an old file keeps working. The `CLAUDE.md` block is prose a consumer edits.
 
-The skill is a copy and not a link, so deleting it is the only way it changes. That is
+A skill is a copy and not a link, so deleting it is the only way it changes. That is
 deliberate: a consumer edits the file after `init` writes it, and a refresh that overwrote
 would destroy those edits without asking.
 
@@ -437,10 +543,13 @@ ignore list. See [library.md](library.md).
 | Code | Means                                                                       |
 | ---- | --------------------------------------------------------------------------- |
 | 0    | the gate passed, or the verb succeeded                                      |
-| 1    | the gate failed. The conditions are in [running_evals.md](running_evals.md) |
+| 1    | the gate failed, or the driver raised on `ask`. The gate's conditions are in [running_evals.md](running_evals.md) |
 | 2    | usage error: unknown option, an option the backend refuses, or no path      |
 | 3    | preflight failed. Nothing ran and nothing was written                       |
 | 130  | interrupted                                                                 |
+
+Code 1 is one code because it is one thing to an operator: the verb reached its backend and
+the work did not succeed. `run` and `ask` are the two verbs that can return it.
 
 The exit code is the CLI's, and no backend's code reaches an operator unchanged. `test` is the
 one exception: once the container starts it returns pytest's code, unchanged and

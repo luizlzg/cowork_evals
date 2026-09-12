@@ -7,6 +7,7 @@ other refusal is a value `main` returns. The surface is docs/cli.md. See ../READ
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -14,7 +15,7 @@ import pytest
 
 from cowork_evals import cli, logs, preflight, results
 from cowork_evals.cases import plugin_name, plugin_roots
-from cowork_evals.cli import USAGE, main, parse_args
+from cowork_evals.cli import FAILED, OK, USAGE, main, parse_args
 from cowork_evals.config import Config, EvalSection
 from cowork_evals.docker import Docker
 from cowork_evals.docker.pytest_image import PytestImage
@@ -128,6 +129,36 @@ def test_test_takes_a_path_two_flags_and_a_tail() -> None:
     assert args.build_missing
     assert args.dry_run
     assert args.pytest_args == []
+
+
+def test_ask_takes_cowork_a_prompt_and_its_four_options() -> None:
+    args = parse("ask", "--cowork", "hi", "--timeout-seconds", "60", "--json", "--dry-run")
+    assert (args.verb, args.backend, args.prompt) == ("ask", "cowork", "hi")
+    assert args.timeout_seconds == 60.0
+    assert args.json
+    assert args.dry_run
+    assert args.session is None
+
+
+def test_ask_takes_no_case_option() -> None:
+    """It runs no eval, so every option that configures one is unknown to it."""
+    for option in ("--runs", "--tag", "--case", "--out", "--model"):
+        with pytest.raises(SystemExit) as raised:
+            parse("ask", "--cowork", "hi", option, "x")
+        assert raised.value.code == USAGE
+
+
+def test_ask_docker_is_a_usage_error() -> None:
+    """`--cowork` is its only backend, so the other is not a member of the group."""
+    with pytest.raises(SystemExit) as raised:
+        parse("ask", "--docker", "hi")
+    assert raised.value.code == USAGE
+
+
+def test_ask_with_no_backend_is_a_usage_error() -> None:
+    with pytest.raises(SystemExit) as raised:
+        parse("ask", "hi")
+    assert raised.value.code == USAGE
 
 
 def test_setup_takes_docker_alone() -> None:
@@ -702,3 +733,118 @@ def test_a_prune_keeps_an_image_built_after_the_cutoff() -> None:
 
 def test_a_prune_of_nothing_removes_nothing() -> None:
     assert cli._stale([], set(), datetime(2026, 9, 9)) == []
+
+
+# ask. Nothing below submits anything: the four refusals return before the driver is built,
+# `--session` reads a session directory written by hand, and `--dry-run` builds a URL and
+# reads a run log. The live submission is the integration tier's, in integration/test_cli.py.
+
+SESSIONS = Path(__file__).resolve().parent.parent / "data" / "cowork" / "sessions"
+ONE_TURN = SESSIONS / "acct0000" / "prof0000" / "one_turn"
+TOOL_CALL = SESSIONS / "acct0000" / "prof0000" / "tool_call"
+
+
+def ask_settings(tmp_path: Path) -> Config:
+    """A configuration whose run log is this test's own, so no ceiling and no log is shared."""
+    return settings(tmp_path, f"cowork:\n  run_log: {tmp_path / 'runs.jsonl'}\n")
+
+
+@pytest.mark.parametrize(
+    ("argv", "says"),
+    [
+        (("ask", "--cowork"), "there is nothing to print"),
+        (("ask", "--cowork", "hi", "--session", "x"), "not both"),
+        (("ask", "--cowork", "--session", "x", "--timeout-seconds", "60"), "nothing waits"),
+        (("ask", "--cowork", "--session", "x", "--dry-run"), "nothing would be submitted"),
+    ],
+)
+def test_each_ask_refusal_returns_two_and_names_what_was_typed(argv, says, capsys) -> None:
+    assert main(list(argv)) == USAGE
+    assert says in capsys.readouterr().err
+
+
+def test_a_session_on_disk_prints_the_answer_on_stdout_and_the_footer_on_stderr(
+    tmp_path: Path, capsys
+) -> None:
+    """The split is what makes `ask ... > answer.txt` hold the answer and nothing else."""
+    args = parse("ask", "--cowork", "--session", str(ONE_TURN))
+    assert cli._ask(args, ask_settings(tmp_path)) == OK
+    printed = capsys.readouterr()
+    assert printed.out == "PONG\n"
+    assert f"session: {ONE_TURN}" in printed.err
+    assert "assistant turns: 1" in printed.err
+    assert "outputs: outputs/marker.txt" in printed.err
+
+
+def test_a_footer_line_with_no_value_is_not_printed(tmp_path: Path, capsys) -> None:
+    """That session called no tool and wrote no diagnostic log, so neither line is there."""
+    args = parse("ask", "--cowork", "--session", str(ONE_TURN))
+    cli._ask(args, ask_settings(tmp_path))
+    printed = capsys.readouterr().err
+    assert "tools:" not in printed
+    assert "log:" not in printed
+
+
+def test_the_footer_names_every_tool_the_session_called(tmp_path: Path, capsys) -> None:
+    args = parse("ask", "--cowork", "--session", str(TOOL_CALL))
+    assert cli._ask(args, ask_settings(tmp_path)) == OK
+    assert "tools: mcp__workspace__bash, mcp__workspace__bash" in capsys.readouterr().err
+
+
+def test_json_prints_the_session_document_and_nothing_on_stderr(tmp_path: Path, capsys) -> None:
+    args = parse("ask", "--cowork", "--session", str(ONE_TURN), "--json")
+    assert cli._ask(args, ask_settings(tmp_path)) == OK
+    printed = capsys.readouterr()
+    document = json.loads(printed.out)
+    assert document["session_dir"] == str(ONE_TURN)
+    assert document["final_text"] == "PONG"
+    assert printed.err == ""
+
+
+def test_a_session_directory_that_is_not_there_fails_and_says_so(tmp_path: Path, capsys) -> None:
+    missing = tmp_path / "no-such-session"
+    args = parse("ask", "--cowork", "--session", str(missing))
+    assert cli._ask(args, ask_settings(tmp_path)) == FAILED
+    assert f"{missing}: no such session directory" in capsys.readouterr().err
+
+
+def test_a_session_that_produced_no_assistant_text_fails_with_the_drivers_code(
+    tmp_path: Path, capsys
+) -> None:
+    """Code 8 is the driver's, and the verb carries it into the message rather than losing it."""
+    empty = SESSIONS / "acct0000" / "prof0000" / "no_transcript"
+    args = parse("ask", "--cowork", "--session", str(empty))
+    assert cli._ask(args, ask_settings(tmp_path)) == FAILED
+    assert "8: " in capsys.readouterr().err
+
+
+def test_a_dry_run_prints_the_deep_link_carrying_the_encoded_prompt(tmp_path: Path, capsys) -> None:
+    args = parse("ask", "--cowork", "--dry-run", "say hello & wait")
+    assert cli._ask(args, ask_settings(tmp_path)) == OK
+    printed = capsys.readouterr()
+    assert printed.out.strip() == (
+        "claude://claude.ai/new?q=say%20hello%20%26%20wait&surface=cowork"
+    )
+    assert "1 submission planned, 0 already made in the last 24 hours" in printed.err
+
+
+def test_a_dry_run_writes_no_run_log_entry(tmp_path: Path, capsys) -> None:
+    """It fires nothing, so it costs nothing and the ceiling does not move."""
+    args = parse("ask", "--cowork", "--dry-run", "hello")
+    assert cli._ask(args, ask_settings(tmp_path)) == OK
+    capsys.readouterr()
+    assert not (tmp_path / "runs.jsonl").exists()
+
+
+def test_a_dry_run_needs_no_profile_and_no_backend(tmp_path: Path, capsys) -> None:
+    """Nothing behind the preflight is reached: a URL is built and a run log is read.
+
+    That is the same rule `run --dry-run` follows, and it is what lets a dry run be checked
+    on a machine with no CoWork at all.
+    """
+    config = settings(
+        tmp_path,
+        f"cowork:\n  profile: /nowhere-at-all\n  run_log: {tmp_path / 'runs.jsonl'}\n",
+    )
+    assert cli._ask(parse("ask", "--cowork", "--dry-run", "hello"), config) == OK
+    assert "no readable sessions root" not in capsys.readouterr().err

@@ -26,11 +26,15 @@ PACKAGE = Path(__file__).resolve().parent
 # Package data. Beside the modules in both layouts.
 DATA = PACKAGE / "data"
 EXAMPLE_CONFIG = DATA / "cowork_evals.example.yaml"
-SKILL = DATA / "skill" / "SKILL.md"
+
+# Every shipped skill, one directory each. `init` installs each of them, so a skill added to
+# this tree needs no change here and no change in the verb. docs/library.md.
+SKILLS = DATA / "skills"
+SKILL_FILE = "SKILL.md"
 
 # What `init` writes into the working directory, and where. docs/cli.md.
 CONFIG_NAME = "cowork_evals.yaml"
-SKILL_TARGET = Path(".claude") / "skills" / "cowork-evals" / "SKILL.md"
+SKILLS_TARGET = Path(".claude") / "skills"
 MEMORY_NAME = "CLAUDE.md"
 
 # The block `init` appends to the consumer's CLAUDE.md, and the marker that says it is
@@ -49,8 +53,11 @@ it does goes through that one executable.
   `cowork_evals test --docker <path>/tests` runs a plugin's own pytest suite on the CoWork
   runtime, with no model.
 - `cowork_evals check --all` reports what each backend still needs.
+- `cowork_evals ask --cowork "<prompt>"` submits one prompt to a real CoWork session and
+  prints the answer. It runs no eval. Use it when the answer is a fact about the live
+  product, and read `cowork_evals docs cli` for what one ask costs.
 - The case format and the authoring traps are the `cowork-evals` skill in
-  `.claude/skills/cowork-evals/`.
+  `.claude/skills/cowork-evals/`, and asking a live session is `cowork-ask` beside it.
 
 A CoWork session is Python 3.10 with a fixed wheel set. Every skill, command, agent and hook
 under a path passed to `cowork_evals run` imports only what that image carries. Read
@@ -68,6 +75,29 @@ _DOCS_CANDIDATES = (
 
 # The extension every document carries. A name may be given with it or without.
 SUFFIX = ".md"
+
+
+def skills() -> list[tuple[Path, Path]]:
+    """Every shipped skill, as `(source, target)`, sorted by name.
+
+    The target is `.claude/skills/<directory name>/SKILL.md`, relative to the working
+    directory, which is where a Claude Code session picks up a project skill. The directory
+    name is the skill name, so the two cannot drift.
+
+    A directory under `skills/` with no `SKILL.md` is not a skill and is not listed.
+    """
+    if not SKILLS.is_dir():
+        return []
+    return sorted(
+        (directory / SKILL_FILE, SKILLS_TARGET / directory.name / SKILL_FILE)
+        for directory in SKILLS.iterdir()
+        if (directory / SKILL_FILE).is_file()
+    )
+
+
+def skill(name: str) -> Path:
+    """One shipped skill's source path, named. It is not checked for existence here."""
+    return SKILLS / name / SKILL_FILE
 
 
 def docs_dir() -> Path | None:

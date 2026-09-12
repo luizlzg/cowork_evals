@@ -74,7 +74,7 @@ A skipped test reports as a pass and hides the thing it was written to catch.
 | `integration/test_judge.py`       | The judge against the real `claude -p`                     | yes    |
 | `integration/test_cowork_backend.py` | The backend against a real profile, and one real suite   | yes    |
 | `integration/test_pytest_image.py` | The built test image, its exit codes, and what it writes | yes    |
-| `integration/test_cli.py`         | The command against the real backends, through the executable | yes |
+| `integration/test_cli.py`         | The command against the real backends, through the executable, and `ask` against a live session | yes |
 
 One file per unit under test, named after the unit and not after the scenario. A unit tested
 in both tiers keeps its name in both directories, which is why `pyproject.toml` sets
@@ -135,14 +135,19 @@ tests is `live` and none of them spends. It runs `plugins/smoke/tests/`, which
 ### The command tier's preconditions
 
 `integration/test_cli.py` needs a reachable daemon, both images already built, and the login
-already made. It needs no CoWork profile: everything the command builds above a backend is
-backend-neutral and is proven on `--docker`, and the option mapping is proven with
-`--dry-run --cowork` in the unit tier. Nothing there builds an image or logs in.
+already made. Every test in it but one needs no CoWork profile: everything the command builds
+above a backend is backend-neutral and is proven on `--docker`, and the option mapping is
+proven with `--dry-run --cowork` in the unit tier. Nothing there builds an image or logs in.
 
-Its one `live` test fires `plugins/smoke/` through `cowork_evals run --docker` and asserts
+Its first `live` test fires `plugins/smoke/` through `cowork_evals run --docker` and asserts
 the whole log layout over that same run, `run.log` and the run's collected trace included. That log line is the
 descriptor-level tee proven against a real child process, and it cannot be reached without
 one. Its two `test` verb tests cost a container and no model call, so neither is `live`.
+
+Its second `live` test is the one that needs a profile. `ask` reaches a live session and
+there is no other way to prove that the verb submits, waits, prints an answer and names a
+session that exists. It needs everything `integration/test_cowork.py` needs, and it carries
+the same cost: a VM boot, one entry against the rate ceiling, and a permanent session.
 
 ### The CoWork backend tier's preconditions
 
@@ -167,7 +172,8 @@ that must not spend selects `-m "integration and not live"`.
 The CoWork ones need the macOS Accessibility grant, a signed-in CoWork, the desktop
 application already running, and `cowork_evals.yaml` naming the active profile. They fail,
 and do not skip, when no profile is configured. Nothing steals focus while one runs. See
-[../docs/cowork_desktop.md](../docs/cowork_desktop.md) for the authorizations. The three
+[../docs/cowork_desktop.md](../docs/cowork_desktop.md) for the authorizations. Three of them
+are in the two CoWork files and the fourth is `ask`, in `integration/test_cli.py`. The three
 container ones need a credential route, and fail without one.
 
 Every CoWork test that fires reads the `unattended` fixture in

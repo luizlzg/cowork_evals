@@ -23,6 +23,10 @@ tmp/
 # Local machine state
 .claude/settings.local.json
 
+# The shipped skills, copied in by scripts/dev_skills.sh. The copy under
+# src/cowork_evals/data/skills/ is the one source. See docs/library.md.
+.claude/skills/
+
 # Configuration. Names a CoWork profile, which is an identifier.
 # See README.md, the public repository rule.
 cowork_evals.yaml

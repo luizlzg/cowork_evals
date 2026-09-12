@@ -86,20 +86,27 @@ def _init_in(path: Path, working_directory: Callable) -> int:
         return main(["init"])
 
 
-def test_init_writes_three_targets(tmp_path: Path, working_directory: Callable) -> None:
-    assert _init_in(tmp_path, working_directory) == OK
-    assert (tmp_path / resources.CONFIG_NAME).is_file()
-    assert (tmp_path / resources.SKILL_TARGET).is_file()
-    assert (tmp_path / resources.MEMORY_NAME).is_file()
-
-
-def test_the_skill_lands_where_claude_code_reads_it(
+def test_init_writes_the_config_the_memory_block_and_every_skill(
     tmp_path: Path, working_directory: Callable
 ) -> None:
+    assert _init_in(tmp_path, working_directory) == OK
+    assert (tmp_path / resources.CONFIG_NAME).is_file()
+    assert (tmp_path / resources.MEMORY_NAME).is_file()
+    for _, target in resources.skills():
+        assert (tmp_path / target).is_file(), target
+
+
+def test_every_skill_lands_where_claude_code_reads_it(
+    tmp_path: Path, working_directory: Callable
+) -> None:
+    """One directory per skill under `.claude/skills/`, and the copy is byte for byte."""
     _init_in(tmp_path, working_directory)
-    written = tmp_path / ".claude" / "skills" / "cowork-evals" / "SKILL.md"
-    assert written.is_file()
-    assert written.read_text() == resources.SKILL.read_text()
+    installed = resources.skills()
+    assert len(installed) == 2
+    for source, target in installed:
+        written = tmp_path / target
+        assert written.parent.parent == tmp_path / ".claude" / "skills"
+        assert written.read_text() == source.read_text()
 
 
 def test_the_configuration_it_writes_loads(tmp_path: Path, working_directory: Callable) -> None:
@@ -125,7 +132,7 @@ def test_a_second_run_reports_every_target_as_kept(
     capsys.readouterr()
     _init_in(tmp_path, working_directory)
     printed = capsys.readouterr().out
-    assert printed.count("kept") == 3
+    assert printed.count("kept") == 2 + len(resources.skills())
     assert "wrote" not in printed
 
 

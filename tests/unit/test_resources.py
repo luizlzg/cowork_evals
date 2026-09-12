@@ -88,11 +88,26 @@ def test_the_example_configuration_ships_beside_the_modules() -> None:
     assert "cowork:" in resources.EXAMPLE_CONFIG.read_text()
 
 
-def test_the_skill_ships_beside_the_modules() -> None:
-    text = resources.SKILL.read_text()
-    assert text.startswith("---\n")
-    assert "name: cowork-evals" in text
-    assert "TRIGGER" in text
+def test_every_shipped_skill_is_a_directory_named_for_it() -> None:
+    """One directory per skill, and its name is the skill's name. docs/library.md."""
+    installed = resources.skills()
+    assert [target.parent.name for _, target in installed] == ["cowork-ask", "cowork-evals"]
+    for source, target in installed:
+        text = source.read_text()
+        assert text.startswith("---\n"), source
+        assert f"name: {target.parent.name}" in text, source
+        assert "TRIGGER" in text, source
+
+
+def test_a_skill_installs_where_claude_code_reads_a_project_skill() -> None:
+    assert resources.skills()[0][1] == Path(".claude") / "skills" / "cowork-ask" / "SKILL.md"
+
+
+def test_the_ask_skill_carries_the_measurement_rule() -> None:
+    """The one rule that makes an ask worth its VM boot. docs/cowork_desktop.md."""
+    text = resources.skill("cowork-ask").read_text()
+    assert "is not evidence" in text
+    assert "cowork_evals ask --cowork" in text
 
 
 def test_the_memory_block_carries_its_own_marker() -> None:
@@ -111,7 +126,7 @@ def _traps(text: str, start: str, end: str | None) -> list[str]:
 
 def test_the_skill_carries_every_grader_type_the_format_defines() -> None:
     """The skill states no fact of its own, so a type in one is a type in the other."""
-    skill = resources.SKILL.read_text()
+    skill = resources.skill("cowork-evals").read_text()
     fmt = (resources.docs_dir() / "eval_format.md").read_text()
     for grader in ("regex", "tool_used", "tool_order", "file_exists", "llm", "baseline"):
         assert f"`{grader}`" in skill, grader
@@ -120,7 +135,7 @@ def test_the_skill_carries_every_grader_type_the_format_defines() -> None:
 
 def test_the_skill_carries_as_many_traps_as_the_format() -> None:
     """A trap added to one and not the other is the drift this rule exists to stop."""
-    skill = resources.SKILL.read_text()
+    skill = resources.skill("cowork-evals").read_text()
     fmt = (resources.docs_dir() / "eval_format.md").read_text()
     assert len(_traps(skill, "## Traps", "## The exit codes")) == len(
         _traps(fmt, "## Authoring traps", None)
@@ -129,7 +144,7 @@ def test_the_skill_carries_as_many_traps_as_the_format() -> None:
 
 def test_the_skill_sends_the_reader_to_the_docs_verb() -> None:
     """Everything it does not carry is one command away, and it has to say which."""
-    skill = resources.SKILL.read_text()
+    skill = resources.skill("cowork-evals").read_text()
     assert "cowork_evals docs" in skill
     for name in ("eval_format", "cli", "runtime"):
         assert f"docs {name}" in skill, name

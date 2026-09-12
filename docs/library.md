@@ -92,7 +92,7 @@ mirrors an old VM. See [runtime.md](runtime.md).
 | `src/cowork_evals/gate.py`                | yes   | The gate over `aggregate-result.json`                              |
 | `src/cowork_evals/preflight.py`           | yes   | Each backend's unmet conditions, for `check` and for `run`         |
 | `src/cowork_evals/resources.py`           | yes   | Where the shipped documentation and data are, in either layout     |
-| `src/cowork_evals/cli.py`                 | yes   | The parser, the seven verbs, the dispatch and the exit codes       |
+| `src/cowork_evals/cli.py`                 | yes   | The parser, the eight verbs, the dispatch and the exit codes       |
 | `src/cowork_evals/docker/`                | yes   | The container backend: the digest, the argument lists, build, check and run |
 | `src/cowork_evals/docker/Dockerfile`      | yes   | What `setup --docker` builds                                       |
 | `src/cowork_evals/docker/Dockerfile.pytest` | yes | One layer over it, carrying pytest                                 |
@@ -100,7 +100,7 @@ mirrors an old VM. See [runtime.md](runtime.md).
 | `src/cowork_evals/docker/probe.py`        | yes   | The parity probe, the one file here that runs inside the container |
 | `src/cowork_evals/docker/parity.py`       | yes   | The comparison, run on the host                                    |
 | `src/cowork_evals/data/cowork_evals.example.yaml` | yes | Every key and every default, and what `init` writes          |
-| `src/cowork_evals/data/skill/SKILL.md`    | yes   | The eval-authoring skill, and what `init` installs                 |
+| `src/cowork_evals/data/skills/<name>/SKILL.md` | yes | Every shipped skill, one directory each, and what `init` installs |
 | `docs/`                                   | yes   | Every document in this tree, at `cowork_evals/docs/` in the wheel  |
 | `scripts/`                                | no    | Development tasks for this repository only                         |
 | `tests/`, `plugins/`, `plans/`            | no    | Development material                                               |
@@ -117,32 +117,44 @@ or if the two artefacts carry a different number of documents.
 The requirements files are shipped data, not documentation, because `setup --docker` reads
 them at run time on a machine that has no checkout of this repository. They are measured from
 a CoWork VM and recorded once. What they hold, and how they differ, is
-[environments.md](environments.md). `cowork_evals.example.yaml` and `SKILL.md` are shipped
-data for the same reason: `init` writes both on a machine with no checkout.
+[environments.md](environments.md). `cowork_evals.example.yaml` and the skills are shipped
+data for the same reason: `init` writes them on a machine with no checkout.
 
-## The skill
+## The skills
 
-`src/cowork_evals/data/skill/SKILL.md` is a Claude Code skill, and it is the one shipped file
-whose reader is a model rather than a person. `cowork_evals init` copies it to
-`.claude/skills/cowork-evals/SKILL.md` in the consumer's repository, which is where a Claude
-Code session picks up a project skill. Its frontmatter carries the triggers: writing or fixing
-a case, a `prompt.md` or a grader, a failing command, the configuration file, and plugin code
-that has to run inside a session.
+`src/cowork_evals/data/skills/` holds the shipped Claude Code skills, one directory per skill,
+and they are the shipped files whose reader is a model rather than a person. `cowork_evals
+init` copies each of them to `.claude/skills/<name>/SKILL.md` in the consumer's repository,
+which is where a Claude Code session picks up a project skill. The directory name is the skill
+name, so the two cannot drift, and adding a skill is adding a directory: nothing in the verb
+names one.
 
-It holds the case tree, the two addressability keys, the six grader types, the three grader
-idioms, the seven authoring traps, the exit codes and the runtime constraint. That is a
-condensed [eval_format.md](eval_format.md) and [cli.md](cli.md), and it is condensed on
-purpose: a skill is read into a context window every time it fires, and the full documents are
-one `cowork_evals docs` away for anything it does not carry.
+There are two, and the rule that separates them is which question fires them. `cowork-evals`
+fires on a case tree and on the command. `cowork-ask` fires on what a live session does. A
+question about a file this repository ships is the first; a question that only a running
+session can settle is the second.
 
-This file and the documents it condenses are the one place in this repository where the same
-fact is written twice. The rule that keeps them from drifting apart is that the skill states
-no fact of its own: every rule in it is in a document, the skill carries the short form, and a
-change to a rule is made in the document first. A rule that exists only in the skill is a
-defect.
+| Skill          | Fires on                                                   | Holds                                                                     |
+| -------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `cowork-evals` | Writing or fixing a case, a `prompt.md` or a grader, a failing command, the configuration file, plugin code that runs in a session | The case tree, the two addressability keys, the six grader types, the three grader idioms, the seven authoring traps, the exit codes and the runtime constraint |
+| `cowork-ask`   | A question about what a live CoWork session does, a claim that has to be confirmed in the product, a failing `cowork_evals ask` | The verb, what one ask costs, and the rule that ask the session to do the thing and read what it did |
 
-Where the verb writes it, and why upgrading the package does not refresh it, is
-[cli.md](cli.md).
+The first is a condensed [eval_format.md](eval_format.md) and [cli.md](cli.md). The second is
+a condensed [cli.md](cli.md), [cowork_driver.md](cowork_driver.md) and
+[cowork_desktop.md](cowork_desktop.md). Both are condensed on purpose: a skill is read into a
+context window every time it fires, and the full documents are one `cowork_evals docs` away
+for anything neither carries.
+
+These files and the documents they condense are the one place in this repository where the
+same fact is written twice. The rule that keeps them from drifting apart is that a skill
+states no fact of its own: every rule in it is in a document, the skill carries the short
+form, and a change to a rule is made in the document first. A rule that exists only in a skill
+is a defect.
+
+Where the verb writes them, and why upgrading the package does not refresh them, is
+[cli.md](cli.md). This repository is not a consumer, so its own `.claude/skills/` is generated
+by `scripts/dev_skills.sh` and git-ignored: the shipped copy is the one source, and a
+committed second copy would be a duplicate with no rule.
 
 ## Why the documentation ships
 
