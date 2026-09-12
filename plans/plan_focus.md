@@ -212,12 +212,12 @@ Work in order. Tick a box when it is verified, then commit. Do not batch ticks.
 
 ### Phase 2: consent
 
-- [ ] `cowork.consent(section)`: the modal, once per process, and the module flag behind it
-- [ ] Cancel is code 2. The timeout proceeds. `consent: none` never shows it
-- [ ] `run` and `submit` refuse with code 2 when consent was never given
-- [ ] `collect`, `sessions`, `history`, `recent` and `deep_link` never ask
-- [ ] `CoWorkSection` gains `consent` and `consent_timeout`, with the defaults above
-- [ ] `data/cowork_evals.example.yaml` gains both keys
+- [x] `cowork.consent(section)`: the modal, once per process, and the module flag behind it
+- [x] Cancel is code 2. The timeout proceeds. `consent: none` never shows it
+- [x] `run` and `submit` refuse with code 2 when consent was never given
+- [x] `collect`, `sessions`, `history`, `recent` and `deep_link` never ask
+- [x] `CoWorkSection` gains `consent` and `consent_timeout`, with the defaults above
+- [x] `data/cowork_evals.example.yaml` gains both keys
 
 ### Phase 3: the callers
 

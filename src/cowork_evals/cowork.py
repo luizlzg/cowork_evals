@@ -19,7 +19,15 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote, urlencode
 
-from .config import PROMPT_LIMIT, Config, CoWorkError, CoWorkSection, _override
+from .config import (
+    CONSENT_DIALOG,
+    CONSENT_NONE,
+    PROMPT_LIMIT,
+    Config,
+    CoWorkError,
+    CoWorkSection,
+    _override,
+)
 
 # A session directory is exactly three levels below the sessions root and holds an
 # audit.jsonl. docs/cowork_desktop.md.
@@ -34,6 +42,9 @@ STARTED_STATE = "started"
 
 # The rate ceiling protects one CoWork account, so its window is fixed and not configurable.
 CEILING_WINDOW = timedelta(hours=24)
+
+# The one taxonomy code that means nothing was fired. docs/cowork_driver.md.
+REFUSED = 2
 
 # The driver writes here. It never configures the root logger.
 LOGGER = logging.getLogger("cowork_evals")
@@ -81,6 +92,19 @@ RETURN = (
     "-e",
     'tell application "System Events" to key code 36',
 )
+
+# Step 2a. `tell me to activate` is what forces the modal in front of the editor the
+# developer is working in. There is no `default button`, so a Return typed into that editor
+# mid-sentence dismisses nothing and the developer has to click.
+CONSENT_TITLE = "cowork_evals"
+CONSENT_MESSAGE = (
+    "cowork_evals is about to drive CoWork. Do not use the keyboard or the mouse until it finishes."
+)
+
+# One process, one operator, one keyboard. `CoWorkSection` is frozen and
+# `cowork_backend._run_case` builds a new `CoWork` per case, so neither can carry this and
+# a 20-case suite would ask 20 times. docs/cowork_driver.md.
+_CONSENTED = False
 
 # How often a poll looks at the filesystem. Not configurable: the timeouts are.
 POLL_SECONDS = 1.0
@@ -183,7 +207,10 @@ class CoWork:
         try:
             session_dir = self._fire_and_attribute(prompt)
         except CoWorkError as error:
-            self._record(prompt, error.session_dir, f"failed:{error.code}")
+            # Code 2 is a refusal, and a refusal has fired nothing. It is not logged and it
+            # does not count against the ceiling, which is the rule step 1 already follows.
+            if error.code != REFUSED:
+                self._record(prompt, error.session_dir, f"failed:{error.code}")
             raise
         self._record(prompt, session_dir, "submitted")
         return session_dir
@@ -193,6 +220,7 @@ class CoWork:
         baseline = set(self.sessions(root))
         link = self.deep_link(prompt)
 
+        self._consented()
         self._clear()
         LOGGER.info("firing the deep link: %s", link)
         self._fire(["open", link])
@@ -206,6 +234,21 @@ class CoWork:
         self._attribute(session_dir, prompt)
         LOGGER.info("attributed the session to this submission")
         return session_dir
+
+    def _consented(self) -> None:
+        """Step 2a. Code 2 when `consent` is `dialog` and this process never asked.
+
+        The driver never shows the modal itself. It knows submissions and nothing above
+        them, and the developer approves once for a whole invocation rather than once per
+        case, so the asking belongs to the caller and this reads what the caller left.
+        """
+        if self._config.consent == CONSENT_DIALOG and not _CONSENTED:
+            raise CoWorkError(
+                2,
+                "consent was never given in this process: call cowork_evals.cowork.consent "
+                f"before submitting, or set cowork.consent: {CONSENT_NONE} to fire without "
+                "asking",
+            )
 
     def _clear(self) -> None:
         """Steps 2b and 2c: activate, guard, then select all and delete.
@@ -417,8 +460,41 @@ class CoWork:
                 LOGGER.setLevel(level)
 
 
-# The machine. This reads the desktop, not a session, so it takes no configuration and
-# stands beside the class rather than on it.
+# The keyboard. Both of these read the desktop, not a session, so they take no
+# configuration object and stand beside the class rather than on it.
+
+
+def consent(section: CoWorkSection) -> None:
+    """Ask once per process for the keyboard. Cancel is code 2, and nothing has fired.
+
+    The caller is the command, once per invocation, before it builds a driver: `cli._ask`
+    and `cli._each_plugin`. A library caller does the same, or sets `cowork.consent: none`
+    in the configuration file. `run` and `submit` then refuse a submission that never asked.
+
+    `consent: none` shows nothing and sets nothing, which is the documented route for an
+    unattended run and for this repository's own integration tier. It is a configuration
+    value and not a test seam: a test sets it in a file exactly as a consumer would, and no
+    parameter exists to inject an answer.
+
+    The timeout proceeds rather than refuses. An unattended run is the case it exists for.
+    """
+    global _CONSENTED
+    if section.consent == CONSENT_NONE or _CONSENTED:
+        return
+    argv = [
+        "osascript",
+        "-e",
+        "tell me to activate",
+        "-e",
+        f'display dialog "{CONSENT_MESSAGE}" with title "{CONSENT_TITLE}" '
+        f'buttons {{"Cancel", "Go"}} giving up after {section.consent_timeout:g}',
+    ]
+    completed = subprocess.run(argv, capture_output=True, text=True, check=False)
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or f"osascript returned {completed.returncode}"
+        raise CoWorkError(2, f"consent was not given: {detail}")
+    _CONSENTED = True
+    LOGGER.info("consent was given for this process")
 
 
 def frontmost() -> str:

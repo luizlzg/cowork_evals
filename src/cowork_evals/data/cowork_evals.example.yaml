@@ -20,6 +20,11 @@ cowork:
   # idle_seconds: 20.0
   # run_timeout: 1800.0
   # max_runs: 50
+  # Ask once per process for the keyboard, in a modal that forces itself in front of
+  # whatever you are working in. `none` fires without asking, which is the route for an
+  # unattended run.
+  # consent: dialog
+  # consent_timeout: 20.0
   # run_log: ~/.cowork-runs.jsonl
   # log_dir: logs
 
