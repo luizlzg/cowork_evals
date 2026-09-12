@@ -40,7 +40,7 @@ def test_missing_file_yields_the_cowork_defaults(working_directory, tmp_path: Pa
     assert section.run_timeout == 1800.0
     assert section.max_runs == 50
     assert section.consent == "dialog"
-    assert section.consent_timeout == 20.0
+    assert section.consent_timeout == 10.0
     assert section.run_log == Path.home() / ".cowork-runs.jsonl"
     assert section.log_dir == tmp_path / "logs"
 

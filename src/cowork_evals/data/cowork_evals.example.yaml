@@ -24,7 +24,7 @@ cowork:
   # whatever you are working in. `none` fires without asking, which is the route for an
   # unattended run.
   # consent: dialog
-  # consent_timeout: 20.0
+  # consent_timeout: 10.0
   # run_log: ~/.cowork-runs.jsonl
   # log_dir: logs
 

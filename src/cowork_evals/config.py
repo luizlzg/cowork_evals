@@ -132,7 +132,7 @@ class CoWorkSection:
     run_timeout: float = 1800.0
     max_runs: int = 50
     consent: str = CONSENT_DIALOG
-    consent_timeout: float = 20.0
+    consent_timeout: float = 10.0
     run_log: Path = Path("~/.cowork-runs.jsonl")
     log_dir: Path | None = Path("logs")
 

@@ -198,7 +198,7 @@ cowork:
   run_timeout: 1800
   max_runs: 50
   consent: dialog
-  consent_timeout: 20
+  consent_timeout: 10
   run_log: ~/.cowork-runs.jsonl
   log_dir: logs
 ```
@@ -213,7 +213,7 @@ cowork:
 | `run_timeout`     | 1800                   | Wait for the run to finish                     |
 | `max_runs`        | 50                     | Submissions allowed in the trailing 24 hours   |
 | `consent`         | `dialog`               | `dialog` shows the modal once per process. `none` fires without asking |
-| `consent_timeout` | 20                     | Seconds before the modal gives up and proceeds |
+| `consent_timeout` | 10                     | Seconds before the modal gives up and proceeds |
 | `run_log`         | `~/.cowork-runs.jsonl` | The run log, outside the profile               |
 | `log_dir`         | `logs`                 | Diagnostic logs. `null` turns them off         |
 

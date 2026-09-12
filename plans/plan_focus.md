@@ -142,7 +142,7 @@ Two keys in the `cowork:` section, which `docs/cowork_driver.md` owns.
 | Key                | Default  | Is                                                                  |
 | ------------------ | -------- | ---------------------------------------------------------------------- |
 | `consent`          | `dialog` | `dialog` shows the modal once per process. `none` fires without asking |
-| `consent_timeout`  | 20       | Seconds before the modal gives up and proceeds                       |
+| `consent_timeout`  | 10       | Seconds before the modal gives up and proceeds                       |
 
 `consent: none` is the documented route for an unattended run and for this repository's own
 integration tier. It is a configuration value and not a test seam: a test sets it in a
@@ -189,6 +189,7 @@ Every one of these is settled. None is left to the implementer.
 | Decision                                              | Reason                                                                  |
 | ----------------------------------------------------- | -------------------------------------------------------------------------- |
 | The consent timeout proceeds, it does not refuse      | Developer's call, 2026-09-12. An unattended suite is the case the key exists for |
+| The default timeout is 10 seconds, not 20             | Developer's call, 2026-09-12, after seeing the modal                       |
 | The frontmost check is CoWork, and it aborts          | Developer's call, 2026-09-12. A retry after a failed check is how a keystroke reaches an editor |
 | Approval is once for all cases of an invocation       | Developer's call, 2026-09-12. A 20-case suite asking 20 times is unusable  |
 | Consent is module state, not instance state           | A frozen `CoWorkSection` and a new `CoWork` per case cannot carry it       |
