@@ -14,7 +14,7 @@ the process environment, which is why a run is reproducible from `cowork_evals.y
 and why no `.env` can change what a suite did. The rule is in `CLAUDE.md` and in
 [`../docs/library.md`](../docs/library.md).
 
-The rule is too strict by exactly one case. A skill whose whole job is calling an API cannot
+The rule is too strict in exactly one way. A skill whose whole job is calling an API cannot
 be evaluated at all: it fails in every eval for a reason that has nothing to do with the
 skill, and the person writing the case can do nothing about it. This plan cuts the one hole
 the rule needs and keeps everything else about it.

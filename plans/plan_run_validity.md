@@ -107,9 +107,9 @@ many were picked, and how many ran. Phase 5 writes this into
 
 Already done, and written into
 [`../docs/running_evals.md`](../docs/running_evals.md). Read it there; it is not repeated
-here. In short: a refused call leaves one record naming the tool and why it was refused, a
-tool that was never offered leaves nothing, and the run's opening record lists every tool the
-model was given, which is what the second case is caught with.
+here. In short: a refused call leaves one record naming the tool and why it was refused, and
+a tool that was never offered leaves nothing at all. What catches the second one is the run's
+opening record, which lists every tool the model was given.
 
 - [x] All of it, in that file
 
