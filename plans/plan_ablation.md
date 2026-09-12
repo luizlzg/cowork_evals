@@ -136,16 +136,16 @@ what the reference says, the constant changes and nothing else does.
 
 ### Phase 2: the option and the setting
 
-- [ ] `eval.ablation` and `eval.delta_threshold` in the `eval:` section, with the defaults
+- [x] `eval.ablation` and `eval.delta_threshold` in the `eval:` section, with the defaults
       above
-- [ ] `--ablation` and `--delta-threshold` on `run`, Docker only, refused on `--cowork` with
+- [x] `--ablation` and `--delta-threshold` on `run`, Docker only, refused on `--cowork` with
       exit 2 naming why
-- [ ] `harness.ABLATION` stops being a constant and becomes the resolved option.
+- [x] `harness.ABLATION` stops being a constant and becomes the resolved option.
       `harness.THRESHOLD` stays pinned to 0, and the docstring says the delta number lives in
       `verdict.py`
-- [ ] `results.ABLATION` and `results.THRESHOLD` are untouched. They are what the CoWork
+- [x] `results.ABLATION` and `results.THRESHOLD` are untouched. They are what the CoWork
       document records, that backend runs one arm, and the section above says why
-- [ ] The pinned-flag table in [`../docs/running_evals.md`](../docs/running_evals.md) moves
+- [x] The pinned-flag table in [`../docs/running_evals.md`](../docs/running_evals.md) moves
       `--ablation` from pinned to optioned
 
 ### Phase 3: the traces

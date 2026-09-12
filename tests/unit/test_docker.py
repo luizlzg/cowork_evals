@@ -259,6 +259,7 @@ def run_options(**overrides) -> RunOptions:
     fixed = {
         "model": "sonnet",
         "judge_model": "haiku",
+        "ablation": "none",
         "max_cost_usd": "5",
         "allow_tools": ("Bash",),
     }

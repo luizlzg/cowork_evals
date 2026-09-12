@@ -35,6 +35,11 @@ eval:
   # model: sonnet
   # judge_model: haiku
   # allow_tools: [Bash, Read, Glob, Grep, Write, Edit, WebFetch, Skill]
+  # `with-without` runs every case a second time with no plugin loaded, and the verdict
+  # then decides on each case's delta rather than on its score. It costs twice as much
+  # and it stops scoring a tool_used: Skill grader. Both are --docker only.
+  # ablation: none
+  # delta_threshold: 0
   # max_cost_usd: 5
   # max_cost_total_usd: 25
   # keep_traces: true

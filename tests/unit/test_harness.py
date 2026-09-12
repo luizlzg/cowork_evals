@@ -14,6 +14,7 @@ def options(**overrides) -> RunOptions:
     fixed = {
         "model": "sonnet",
         "judge_model": "haiku",
+        "ablation": "none",
         "max_cost_usd": "5",
         "allow_tools": ("Bash",),
         "keep_traces": True,
@@ -34,6 +35,7 @@ def test_the_built_in_defaults_apply_when_the_file_carries_no_eval_section():
     assert RunOptions.resolve(Config()) == RunOptions(
         model="sonnet",
         judge_model="haiku",
+        ablation="none",
         max_cost_usd="5",
         allow_tools=Config().eval.allow_tools,
         keep_traces=True,
@@ -111,10 +113,23 @@ def test_json_is_never_emitted():
     assert "--json" not in eval_argv("/work/plugin/evals", "/work/logs", options())
 
 
-def test_the_threshold_and_the_ablation_cannot_be_overridden():
-    """Neither is a field of RunOptions, so no caller can reach them."""
+def test_the_threshold_cannot_be_overridden():
+    """It is not a field of RunOptions, so no caller can reach it. It is what hands pass and
+    fail to verdict.py, and the number a two-arm run is decided on lives there."""
     assert not hasattr(options(), "threshold")
-    assert not hasattr(options(), "ablation")
+    assert "--threshold" in eval_argv("/work/plugin/evals", "/work/logs", options())
+
+
+def test_the_ablation_is_the_resolved_option():
+    argv = eval_argv("/work/plugin/evals", "/work/logs", options(ablation="with-without"))
+    assert value_after(argv, "--ablation") == "with-without"
+
+
+def test_the_ablation_is_off_unless_the_file_or_the_argument_turns_it_on():
+    assert RunOptions.resolve(Config()).ablation == "none"
+    configured = Config(eval=EvalSection(ablation="with-without"))
+    assert RunOptions.resolve(configured).ablation == "with-without"
+    assert RunOptions.resolve(configured, ablation="none").ablation == "none"
 
 
 def test_nothing_unasked_is_emitted():

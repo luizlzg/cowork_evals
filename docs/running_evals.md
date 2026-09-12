@@ -112,7 +112,7 @@ command-line option overrides is [cli.md](cli.md).
 | -------------------------------------------- | ------------------------------ | ---------------------------------- |
 | `--model`                                    | the configured model           | `eval.model`, `sonnet`             |
 | `--judge-model`                              | the configured judge           | `eval.judge_model`, `haiku`        |
-| `--ablation`                                 | `none`                         | none                               |
+| `--ablation`                                 | the configured arm             | `eval.ablation`, `none`            |
 | `--threshold`                                | `0`, so this package decides | none                               |
 | `--max-cost-usd`                             | the configured ceiling         | `eval.max_cost_usd`, 5             |
 | `--output-dir`                               | the run's log directory        | none                               |
@@ -123,8 +123,9 @@ command-line option overrides is [cli.md](cli.md).
 The target goes before every variadic flag: `--tag` and `--allow-tools` swallow a trailing
 target.
 
-`--ablation` and `--threshold` have no command-line option and cannot be overridden.
-`--threshold 0` is what hands pass and fail to this package below.
+`--threshold` has no command-line option and cannot be overridden. `--threshold 0` is what
+hands pass and fail to this package below, and the number a two-arm run is decided on is
+`eval.delta_threshold`, which is read there and reaches no command line.
 
 `eval.keep_traces` is the one key in this table that is not only a flag. It decides this flag
 on the container backend, and it decides whether a run's artefacts are collected on both. The

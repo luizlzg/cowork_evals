@@ -28,10 +28,10 @@ RESULT_NAME = "aggregate-result.json"
 # docs/plugin_eval.md.
 ENABLEMENT_ENV = "CLAUDE_CODE_WALNUT_SPIRE=1"
 
-# Two pinned flags have no option and no setting. `--threshold 0` hands pass and fail to
-# the verdict in verdict.py; `--ablation none` keeps a `tool_used: Skill` grader scored.
+# The one pinned flag with no option and no setting. `--threshold 0` hands pass and fail to
+# the verdict in verdict.py, which is also where the number a two-arm run is decided on
+# lives: `eval.delta_threshold`, read there and never emitted here. docs/running_evals.md.
 THRESHOLD = "0"
-ABLATION = "none"
 
 
 @dataclass(frozen=True)
@@ -40,6 +40,7 @@ class RunOptions:
 
     model: str
     judge_model: str
+    ablation: str
     max_cost_usd: str
     allow_tools: tuple[str, ...]
     keep_traces: bool = True
@@ -54,6 +55,7 @@ class RunOptions:
         *,
         model: str | None = None,
         judge_model: str | None = None,
+        ablation: str | None = None,
         max_cost_usd: str | None = None,
         allow_tools: tuple[str, ...] | None = None,
         keep_traces: bool | None = None,
@@ -67,11 +69,16 @@ class RunOptions:
         replaces the configured value rather than adding to it, so a widened value names
         `Bash` again. `keep_traces` is a three-state argument: `None` is the option not
         typed, and both `True` and `False` beat the file.
+
+        `ablation` is `eval.ablation`, and the value it resolves to is the flag emitted.
+        The number a two-arm run is decided on is not here: it is never emitted, and
+        `verdict.py` reads it. docs/running_evals.md.
         """
         settings = (config if config is not None else Config.load()).eval
         return cls(
             model=model if model is not None else settings.model,
             judge_model=judge_model if judge_model is not None else settings.judge_model,
+            ablation=ablation if ablation is not None else settings.ablation,
             max_cost_usd=(max_cost_usd if max_cost_usd is not None else str(settings.max_cost_usd)),
             allow_tools=allow_tools if allow_tools is not None else settings.allow_tools,
             keep_traces=keep_traces if keep_traces is not None else settings.keep_traces,
@@ -102,7 +109,7 @@ def eval_argv(target: Path | str, output_dir: Path | str, options: RunOptions) -
         "--judge-model",
         options.judge_model,
         "--ablation",
-        ABLATION,
+        options.ablation,
         "--threshold",
         THRESHOLD,
         "--max-cost-usd",
