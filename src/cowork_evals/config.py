@@ -27,6 +27,14 @@ CONFIG_FILENAME = "cowork_evals.yaml"
 # The deep link prompt cap. docs/cowork_desktop.md.
 PROMPT_LIMIT = 14336
 
+# What `cowork.consent` may be. `dialog` shows the modal once per process, `none` fires
+# without asking and is the documented route for an unattended run. docs/cowork_driver.md.
+# They live here rather than in `cowork.py` because the converter below reads them, and
+# `cowork.py` imports this module and not the other way round.
+CONSENT_DIALOG = "dialog"
+CONSENT_NONE = "none"
+CONSENT_CHOICES = (CONSENT_DIALOG, CONSENT_NONE)
+
 
 class CoWorkError(Exception):
     """A driver failure, carrying its taxonomy code from docs/cowork_driver.md."""
@@ -86,6 +94,12 @@ def _optional_path(name: str, value: Any) -> Path | None:
     return None if value is None else _path(name, value)
 
 
+def _consent(name: str, value: Any) -> str:
+    if _text(name, value) not in CONSENT_CHOICES:
+        raise CoWorkError(2, f"{name}: expected one of {', '.join(CONSENT_CHOICES)}, got {value}")
+    return value
+
+
 def _flag(name: str, value: Any) -> bool:
     if not isinstance(value, bool):
         raise CoWorkError(2, f"{name}: expected true or false, got {type(value).__name__}")
@@ -117,6 +131,8 @@ class CoWorkSection:
     idle_seconds: float = 20.0
     run_timeout: float = 1800.0
     max_runs: int = 50
+    consent: str = CONSENT_DIALOG
+    consent_timeout: float = 10.0
     run_log: Path = Path("~/.cowork-runs.jsonl")
     log_dir: Path | None = Path("logs")
 
@@ -128,6 +144,8 @@ class CoWorkSection:
         "idle_seconds": _seconds,
         "run_timeout": _seconds,
         "max_runs": _count,
+        "consent": _consent,
+        "consent_timeout": _seconds,
         "run_log": _path,
         "log_dir": _optional_path,
     }

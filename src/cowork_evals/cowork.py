@@ -19,7 +19,15 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote, urlencode
 
-from .config import PROMPT_LIMIT, Config, CoWorkError, CoWorkSection, _override
+from .config import (
+    CONSENT_DIALOG,
+    CONSENT_NONE,
+    PROMPT_LIMIT,
+    Config,
+    CoWorkError,
+    CoWorkSection,
+    _override,
+)
 
 # A session directory is exactly three levels below the sessions root and holds an
 # audit.jsonl. docs/cowork_desktop.md.
@@ -35,21 +43,73 @@ STARTED_STATE = "started"
 # The rate ceiling protects one CoWork account, so its window is fixed and not configurable.
 CEILING_WINDOW = timedelta(hours=24)
 
+# The one taxonomy code that means nothing was fired. docs/cowork_driver.md.
+REFUSED = 2
+
 # The driver writes here. It never configures the root logger.
 LOGGER = logging.getLogger("cowork_evals")
 LOG_STEM = "cowork_evals"
 
-# The deep link route and the keystroke. docs/cowork_desktop.md.
+# The deep link route and the keystrokes. docs/cowork_desktop.md.
 DEEP_LINK = "claude://claude.ai/new"
-OSASCRIPT = (
+
+# What `System Events` calls the CoWork process. Measured, not guessed, and the value is
+# beside the bundle id in docs/cowork_desktop.md.
+COWORK_PROCESS = "Claude"
+
+# Step 2b. The delay is what lets the activation land before the guard reads the frontmost
+# process, which is otherwise still whatever the developer was working in.
+ACTIVATE = (
     "osascript",
     "-e",
     'tell application "Claude" to activate',
     "-e",
     "delay 0.8",
+)
+
+# The guard's probe. Its own command, because this is the one osascript call whose standard
+# output is read.
+FRONTMOST = (
+    "osascript",
+    "-e",
+    'tell application "System Events" to get name of first process whose frontmost is true',
+)
+
+# Step 2c. Key code 51 is Delete. It runs behind the guard, so the worst field it can reach
+# is a CoWork field that is not the composer.
+CLEAR = (
+    "osascript",
+    "-e",
+    'tell application "System Events" to keystroke "a" using command down',
+    "-e",
+    'tell application "System Events" to key code 51',
+)
+
+# Step 5. Key code 36 is Return. It carries no activation of its own: step 2b activated and
+# step 4a checked, and re-activating here would open a gap after the last check.
+RETURN = (
+    "osascript",
     "-e",
     'tell application "System Events" to key code 36',
 )
+
+# Step 2a. `tell me to activate` is what forces the modal in front of the editor the
+# developer is working in. There is no `default button`, so a Return typed into that editor
+# mid-sentence dismisses nothing and the developer has to click.
+#
+# The message states the timeout, because `display dialog` renders no countdown and a modal
+# that waits without saying how long reads as one that waits forever.
+CONSENT_TITLE = "cowork_evals"
+CONSENT_MESSAGE = (
+    "cowork_evals is about to drive CoWork. Do not use the keyboard or the "
+    "mouse until it finishes."
+    "\n\nIt goes ahead on its own in {timeout:g} seconds."
+)
+
+# One process, one operator, one keyboard. `CoWorkSection` is frozen and
+# `cowork_backend._run_case` builds a new `CoWork` per case, so neither can carry this and
+# a 20-case suite would ask 20 times. docs/cowork_driver.md.
+_CONSENTED = False
 
 # How often a poll looks at the filesystem. Not configurable: the timeouts are.
 POLL_SECONDS = 1.0
@@ -152,7 +212,10 @@ class CoWork:
         try:
             session_dir = self._fire_and_attribute(prompt)
         except CoWorkError as error:
-            self._record(prompt, error.session_dir, f"failed:{error.code}")
+            # Code 2 is a refusal, and a refusal has fired nothing. It is not logged and it
+            # does not count against the ceiling, which is the rule step 1 already follows.
+            if error.code != REFUSED:
+                self._record(prompt, error.session_dir, f"failed:{error.code}")
             raise
         self._record(prompt, session_dir, "submitted")
         return session_dir
@@ -162,17 +225,65 @@ class CoWork:
         baseline = set(self.sessions(root))
         link = self.deep_link(prompt)
 
+        self._consented()
+        self._clear()
         LOGGER.info("firing the deep link: %s", link)
         self._fire(["open", link])
         time.sleep(self._config.settle_seconds)
+        self._guard()
         LOGGER.info("sending the synthetic Return")
-        self._fire(list(OSASCRIPT))
+        self._fire(list(RETURN))
 
         session_dir = self._discover(root, baseline)
         LOGGER.info("discovered the session: %s", session_dir)
         self._attribute(session_dir, prompt)
         LOGGER.info("attributed the session to this submission")
         return session_dir
+
+    def _consented(self) -> None:
+        """Step 2a. Code 2 when `consent` is `dialog` and this process never asked.
+
+        The driver never shows the modal itself. It knows submissions and nothing above
+        them, and the developer approves once for a whole invocation rather than once per
+        case, so the asking belongs to the caller and this reads what the caller left.
+        """
+        if self._config.consent == CONSENT_DIALOG and not _CONSENTED:
+            raise CoWorkError(
+                2,
+                "consent was never given in this process: call cowork_evals.cowork.consent "
+                f"before submitting, or set cowork.consent: {CONSENT_NONE} to fire without "
+                "asking",
+            )
+
+    def _clear(self) -> None:
+        """Steps 2b and 2c: activate, guard, then select all and delete.
+
+        It runs before the deep link, not after: the deep link is what puts the prompt in
+        the composer, so a clear after it deletes the prompt.
+
+        It does not read what it cleared and does not report it. Reading the composer means
+        reading the screen, which docs/cowork_desktop.md rules out.
+        """
+        LOGGER.info("activating CoWork")
+        self._fire(list(ACTIVATE))
+        self._guard()
+        LOGGER.info("clearing the composer")
+        self._fire(list(CLEAR))
+
+    def _guard(self) -> None:
+        """Code 9 when CoWork is not frontmost. Nothing is typed.
+
+        It narrows the window between the check and the keystroke and does not close it:
+        focus can change in between. Attribution stays the backstop, so a keystroke that
+        lands elsewhere is still caught as code 6 rather than graded. There is no retry:
+        retrying blind is how a keystroke reaches an editor.
+        """
+        name = frontmost()
+        if name != COWORK_PROCESS:
+            raise CoWorkError(
+                9,
+                f"{name} is frontmost, not {COWORK_PROCESS}: nothing was typed",
+            )
 
     def _fire(self, argv: list[str]) -> None:
         """Run one command. A non-zero return is code 3.
@@ -352,6 +463,59 @@ class CoWork:
                 LOGGER.removeHandler(handler)
                 handler.close()
                 LOGGER.setLevel(level)
+
+
+# The keyboard. Both of these read the desktop, not a session, so they take no
+# configuration object and stand beside the class rather than on it.
+
+
+def consent(section: CoWorkSection) -> None:
+    """Ask once per process for the keyboard. Cancel is code 2, and nothing has fired.
+
+    The caller is the command, once per invocation, before it builds a driver: `cli._ask`
+    and `cli._each_plugin`. A library caller does the same, or sets `cowork.consent: none`
+    in the configuration file. `run` and `submit` then refuse a submission that never asked.
+
+    `consent: none` shows nothing and sets nothing, which is the documented route for an
+    unattended run and for this repository's own integration tier. It is a configuration
+    value and not a test seam: a test sets it in a file exactly as a consumer would, and no
+    parameter exists to inject an answer.
+
+    The timeout proceeds rather than refuses. An unattended run is the case it exists for.
+    """
+    global _CONSENTED
+    if section.consent == CONSENT_NONE or _CONSENTED:
+        return
+    argv = [
+        "osascript",
+        "-e",
+        "tell me to activate",
+        "-e",
+        f'display dialog "{CONSENT_MESSAGE.format(timeout=section.consent_timeout)}" '
+        f'with title "{CONSENT_TITLE}" buttons {{"Cancel", "Go"}} '
+        f"giving up after {section.consent_timeout:g}",
+    ]
+    completed = subprocess.run(argv, capture_output=True, text=True, check=False)
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or f"osascript returned {completed.returncode}"
+        raise CoWorkError(2, f"consent was not given: {detail}")
+    _CONSENTED = True
+    LOGGER.info("consent was given for this process")
+
+
+def frontmost() -> str:
+    """The name of the frontmost process, as `System Events` reports it.
+
+    A non-zero `osascript` is code 3, which is what every other `osascript` failure is. A
+    refusal to type is code 9 and is raised by the guard above, so a grading layer tells
+    "the driver refused to type into something that was not CoWork" apart from "osascript
+    is broken".
+    """
+    completed = subprocess.run(list(FRONTMOST), capture_output=True, text=True, check=False)
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or f"osascript returned {completed.returncode}"
+        raise CoWorkError(3, f"the frontmost process could not be read: {detail}")
+    return completed.stdout.strip()
 
 
 # Readers. Each takes what it reads, so a test drives it over a fixture directory.

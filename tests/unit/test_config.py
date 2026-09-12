@@ -39,6 +39,8 @@ def test_missing_file_yields_the_cowork_defaults(working_directory, tmp_path: Pa
     assert section.idle_seconds == 20.0
     assert section.run_timeout == 1800.0
     assert section.max_runs == 50
+    assert section.consent == "dialog"
+    assert section.consent_timeout == 10.0
     assert section.run_log == Path.home() / ".cowork-runs.jsonl"
     assert section.log_dir == tmp_path / "logs"
 
@@ -137,6 +139,8 @@ def test_an_unknown_key_inside_a_known_section_raises(tmp_path: Path, body: str,
     ("body", "key"),
     [
         ("cowork:\n  max_runs: many\n", "cowork.max_runs"),
+        ("cowork:\n  consent: 3\n", "cowork.consent"),
+        ("cowork:\n  consent_timeout: soon\n", "cowork.consent_timeout"),
         ("eval:\n  max_cost_usd: five\n", "eval.max_cost_usd"),
         ("eval:\n  allow_tools: Bash Write\n", "eval.allow_tools"),
         ("docker:\n  platform: 3\n", "docker.platform"),
@@ -210,6 +214,24 @@ def test_every_section_is_frozen() -> None:
     for section, key in ((config.cowork, "profile"), (config.eval, "model")):
         with pytest.raises((AttributeError, TypeError)):
             setattr(section, key, "Other")
+
+
+def test_the_consent_key_reads_one_of_two_words_and_refuses_anything_else(
+    tmp_path: Path,
+) -> None:
+    """`consent` is the one `cowork:` key with a fixed set of values.
+
+    A third word is not a wider setting. It is a typo that would fire without asking, so it
+    is refused where every other wrongly typed value is.
+    """
+    file = write(tmp_path, "cowork:\n  consent: none\n  consent_timeout: 5\n")
+    section = Config.load(file).cowork
+    assert section.consent == "none"
+    assert section.consent_timeout == 5.0
+
+    with pytest.raises(CoWorkError) as raised:
+        Config.load(write(tmp_path, "cowork:\n  consent: yes-please\n"))
+    assert "cowork.consent: expected one of dialog, none" in str(raised.value)
 
 
 def test_the_traces_key_reads_a_boolean_and_refuses_anything_else(tmp_path: Path) -> None:

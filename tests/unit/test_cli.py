@@ -510,8 +510,13 @@ def test_a_directory_with_no_document_has_spent_nothing(tmp_path: Path) -> None:
 
 
 def test_a_ceiling_of_zero_stops_the_sweep_before_the_first_plugin(tmp_path, capsys) -> None:
-    config = settings(tmp_path, "eval:\n  max_cost_total_usd: 0\n")
-    args = parse("run", "--docker", str(MARKETPLACE))
+    """`image=None` is the CoWork backend, so the backend flag and the configuration say so.
+
+    `consent: none` is what an unattended run sets, and it is why no modal appears here. It
+    is a configuration value and not a test seam: nothing is injected. ../README.md.
+    """
+    config = settings(tmp_path, "eval:\n  max_cost_total_usd: 0\ncowork:\n  consent: none\n")
+    args = parse("run", "--cowork", str(MARKETPLACE))
     directory = logs.run_dir(tmp_path / "logs", "all")
     extra = cli._each_plugin(
         args, config, directory, [(FIRST, FIRST), (SECOND, SECOND)], (), image=None

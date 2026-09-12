@@ -39,7 +39,7 @@ SKILL_TOOL = "Skill"
 OUTPUTS_PREFIX = "outputs/"
 
 # The driver codes the walk steps over. A session with no assistant text raises code 8.
-TAXONOMY = {2, 3, 4, 5, 6, 7, 8}
+TAXONOMY = {2, 3, 4, 5, 6, 7, 8, 9}
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,13 +120,14 @@ def test_the_profile_is_walked_and_both_facts_are_measured() -> None:
 @pytest.mark.integration
 @pytest.mark.live
 @pytest.mark.timeout(1800)
-def test_one_run_provokes_whichever_fact_the_profile_does_not_show() -> None:
+def test_one_run_provokes_whichever_fact_the_profile_does_not_show(unattended: Path) -> None:
     """One prompt that asks for both. A profile already showing both costs nothing here.
 
     The two facts are recorded in docs/cowork_backend.md. A false one is not a failure: it
     means that grader cannot be used on this backend, and that file drops the row.
     """
-    driver = CoWork(real_profile())
+    real_profile()
+    driver = CoWork.from_file(unattended)
     facts = walk(driver)
     if not facts.both:
         document = driver.run(PROVOKE)
@@ -139,11 +140,11 @@ def test_one_run_provokes_whichever_fact_the_profile_does_not_show() -> None:
 @pytest.mark.integration
 @pytest.mark.live
 @pytest.mark.timeout(1800)
-def test_the_smoke_suite_runs_and_the_case_passes(tmp_path: Path) -> None:
+def test_the_smoke_suite_runs_and_the_case_passes(unattended: Path, tmp_path: Path) -> None:
     """One VM boot, one ceiling entry, one permanent session."""
     output = tmp_path / "smoke"
     output.mkdir()
-    written = run(SMOKE, output, config=Config.load())
+    written = run(SMOKE, output, config=Config.load(unattended))
     assert written == output / RESULT_NAME
 
     document = json.loads(written.read_text(encoding="utf-8"))

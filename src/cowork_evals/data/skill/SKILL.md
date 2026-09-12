@@ -37,7 +37,8 @@ cowork_evals prune --docker                    # delete what setup built
 
 `--docker` runs Claude Code in a container that reproduces the CoWork image. `--cowork` drives
 the real desktop application, needs macOS and a configured profile, and takes the keyboard for
-the length of the run. Prefer `--docker` for iteration.
+the length of the run. A modal asks for the keyboard once per invocation, before the first
+plugin; `--dry-run` never shows it. Prefer `--docker` for iteration.
 
 The path is the scope: a case directory runs that case, `evals/<skill>/` runs that skill,
 `evals/` runs the plugin, and a directory holding several plugins runs each in turn.

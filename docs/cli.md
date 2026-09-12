@@ -164,6 +164,20 @@ the application writes sessions into, and an unreadable one is the condition tha
 login: there is no model call in that path. It is not a backend, and the row is here because
 it is selected the way one is. See [cowork_test.md](cowork_test.md).
 
+### Taking the keyboard
+
+A CoWork run types into the frontmost application, so `run --cowork` asks for the keyboard
+once per invocation, in a modal that forces itself in front of whatever you are working in.
+It asks once before the first plugin, whatever the suite holds. Cancel refuses: the sweep
+fails the gate and exits 1, and nothing has fired at that point.
+
+`--dry-run` never asks, because nothing would be submitted.
+
+`cowork.consent: none` in the configuration file fires without asking, which is the route for
+an unattended run. `cowork.consent_timeout` is how long the modal waits before going ahead on
+its own. Both keys, and the guard that refuses to type when CoWork is not frontmost, are in
+[cowork_driver.md](cowork_driver.md).
+
 A failed preflight exits 3 and prints one line naming the command that fixes it:
 
 ```
@@ -441,7 +455,7 @@ checked in the preflight, and pruning happens behind every refusal, so neither b
 `partial: true` result document, and the gate turns that into exit 1. See
 [plugin_eval.md](plugin_eval.md).
 
-The CoWork driver has its own taxonomy, codes 2 to 8, carried by a raised `CoWorkError` and
+The CoWork driver has its own taxonomy, codes 2 to 9, carried by a raised `CoWorkError` and
 never by an exit code. It is in [cowork_driver.md](cowork_driver.md). The `--cowork` backend
 maps it:
 

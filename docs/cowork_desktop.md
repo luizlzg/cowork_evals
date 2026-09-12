@@ -18,15 +18,16 @@ drive it. These are the measured internals. What the driver does with them is
 - **Nothing here is a public interface.** The coupling list at the end is the checklist to
   re-probe after an application update.
 
-Captured 2026-09-02 on a macOS development machine by direct probe, and re-probed 2026-09-08
-for section 3, which reads session directories already on disk. Expect any release to change
-these.
+Captured 2026-09-02 on a macOS development machine by direct probe, re-probed 2026-09-08 for
+section 3, which reads session directories already on disk, and extended 2026-09-12 with the
+process name and what the keyboard does to a submission. Expect any release to change these.
 
 ## Measured facts
 
 | Fact              | Value                                                                |
 | ----------------- | -------------------------------------------------------------------- |
 | Application       | `Claude.app`, Electron, bundle id `com.anthropic.claudefordesktop`   |
+| Process name      | `Claude`, as `System Events` reports it. Snapshot 2026-09-12          |
 | Version probed    | 1.40609.1                                                            |
 | Profiles          | `~/Library/Application Support/<profile>`                            |
 | Session isolation | Apple Virtualization VM with gvisor networking, local to the machine |
@@ -97,6 +98,27 @@ System Events got an error: osascript is not allowed to send keystrokes. (1002)
 
 The same gate applies to CGEvent and to pressing the send button through the Accessibility
 API. No supported method avoids it.
+
+### What the keyboard does to a submission
+
+Snapshot 2026-09-12, on the same machine and application version.
+
+Two submissions of one prompt, `Reply with the single word: ready`, were recorded in
+`audit.jsonl` as `Reply with the single word: readyennumera` and
+`Reply with the single word: read`. The developer was typing in another application while
+the driver held the keyboard. The first submission carried their characters into the prompt.
+The second lost the prompt's own last character.
+
+The deep link had already brought the application forward, so the characters a human typed
+next went into its composer, beside the prefilled prompt. Attribution refused both, so
+nothing was submitted to a grader and nothing was scored on an altered prompt.
+
+A separate probe the same day, one prompt, fired the deep link into a composer that already
+held the text `RESIDUE`. The recorded prompt was the submitted prompt exactly, carrying none
+of it. `claude://claude.ai/new` starts a new conversation, so what a driver has to protect
+against is a human typing after the deep link, not text left in a field before it.
+
+What the driver does about all of this is [cowork_driver.md](cowork_driver.md).
 
 ## 3. Output, on the host filesystem
 
@@ -233,7 +255,7 @@ git-ignored:
 Re-probe every item after an application update. This is a checklist, not an investigation.
 
 The `claude://claude.ai/new` route, the `q`, `surface`, `file` and `folder` parameter names,
-the 14336 cap, the sessions root path, the three level session directory depth, the
+the 14336 cap, the `Claude` process name `System Events` reports, the sessions root path, the three level session directory depth, the
 `audit.jsonl` filename, the `user` and `command_lifecycle` record types, the `state` values,
 the transcript path under `.claude/projects/session`, the `subagents/*.jsonl` layout, the
 `tool_use` `id` and `tool_result` `tool_use_id` fields, and the `outputs/` directory.
