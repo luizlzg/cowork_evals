@@ -177,7 +177,7 @@ Unit tier, except phase 4's runs.
 
 ### Phase 7: integration
 
-- [ ] `plugins/smoke/` on the Docker backend with one variable forwarded, from the
+- [x] `plugins/smoke/` on the Docker backend with one variable forwarded, from the
       integration tier, green
-- [ ] The same with the variable unset on the host, exit 3, naming the variable
-- [ ] `scripts/test.sh` and `ruff` clean
+- [x] The same with the variable unset on the host, exit 3, naming the variable
+- [x] `scripts/test.sh` and `ruff` clean
