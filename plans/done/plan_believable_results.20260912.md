@@ -171,13 +171,16 @@ branch and a separate merge. What each holds is its own file; nothing is restate
 - [x] A row for each in [`README.md`](README.md), and a paragraph where that file describes
       what a plan builds
 
-## When this file is retired
+## What this file is now
 
-This plan's work is finished. Its product is four plan files and phase 3 delivered them.
-Implementing those four is each of their own business, and none of it belongs on a checklist
-here.
+Its work is finished. Its product is four plan files and phase 3 delivered them. Implementing
+those four is each of their own business, and none of it was ever this plan's.
 
-Retirement is the one thing left, and it is not work. The four plans cite the decisions table
-above, which is the one place each of those decisions is derived, and nothing outside `done/`
-may depend on a file inside it. So this file moves to `done/` after the fourth of them merges,
-and not before. [`README.md`](README.md) owns when a plan moves and what it is named.
+Each of the four states the decisions it rests on in its own file, so a person implementing
+one reads that one file and nothing else. Nothing outside `done/` depends on this one, which
+is what let it retire here rather than waiting on four merges.
+
+What is left is the record: what was measured on 2026-09-12, what each decision follows from,
+and which of them the developer asked for rather than this repository proposing. That is the
+first thing anyone needs when one of these decisions is questioned later, and it is why the
+file is kept rather than deleted.

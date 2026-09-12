@@ -39,7 +39,7 @@ not the system's: what is built and usable is
 | 7 | [`done/plan_consumer.20260909.md`](done/plan_consumer.20260909.md) | The shipped documentation, the `docs` and `init` verbs, and the eval-authoring skill | implemented | `feat/consumer`       |
 | 8 | [`done/plan_ask.20260912.md`](done/plan_ask.20260912.md) | The `ask` verb over the driver, and the skill that asks a live session what it does | implemented | `feat/ask`            |
 | 9 | [`done/plan_focus.20260912.md`](done/plan_focus.20260912.md) | The consent modal, the frontmost guard and the composer clear, in the driver | implemented | `feat/focus`          |
-| - | [`plan_believable_results.md`](plan_believable_results.md) | Nothing. The measurements, the decisions, and the four plans that follow them | complete    |                       |
+| - | [`done/plan_believable_results.20260912.md`](done/plan_believable_results.20260912.md) | Nothing. The measurements, the decisions, and the four plans that follow them | implemented |                       |
 | 10 | [`plan_run_validity.md`](plan_run_validity.md) | A run that never got its tool fails instead of scoring, and honest counts | not started | `feat/run-validity`   |
 | 11 | [`plan_runnability.md`](plan_runnability.md) | The `no-cowork` tag on a case, enforced both ways, counted rather than failed | not started | `feat/runnability`    |
 | 12 | [`plan_env_passthrough.md`](plan_env_passthrough.md) | Named host variables forwarded into the run container, values never logged | not started | `feat/env-passthrough` |
@@ -50,7 +50,6 @@ not the system's: what is built and usable is
 | `not written` | The plan file does not exist yet                                           |
 | `not started` | The plan file exists and no box in it is ticked                            |
 | `written`     | The plan file exists, and its checklist is not finished                    |
-| `complete`    | Every box is ticked, and something outside the plan holds the file in `plans/`. The plan says what |
 | `implemented` | Every box is ticked and the branch is merged. The file is in `done/`       |
 | `skipped`     | The developer decided not to write it. What it would build stays designed in `docs/` and unbuilt |
 
@@ -91,12 +90,14 @@ prompt. It was the driver's and not any one verb's: every `run --cowork` case go
 the same call. What it changed is [`../docs/cowork_driver.md`](../docs/cowork_driver.md). The
 one line it names in `cli._ask` ships with plan 8, which owns that verb.
 
-Plans 10 to 13 are one piece of work in four merges, and
-[`plan_believable_results.md`](plan_believable_results.md) is the record of what was measured
-and what each follows from. Together they make a result believable: a run that never got the
-tool it needed stops scoring, a case a backend cannot run says so instead of reddening the
-red forever, a skill that needs a credential becomes evaluable at all, and a suite can be
-asked whether the plugin changed anything rather than only whether the cases passed. They are
+Plans 10 to 13 are one piece of work in four merges. Each states the decisions it rests on in
+its own file, so one is implemented by reading one file;
+[`done/plan_believable_results.20260912.md`](done/plan_believable_results.20260912.md) is the
+record of what was measured on the day they were written. Together they make a result
+believable: a run that never got the tool it needed stops scoring, a case a backend cannot run
+says so instead of failing every suite forever, a skill that needs a credential becomes
+evaluable at all, and a suite can be asked whether the plugin changed anything rather than only
+whether the cases passed. They are
 implemented in that order. Plan 13 is last because it rewrites the pass and fail rules that
 plans 10 and 11
 both change, and plan 12 is independent of all three.
@@ -200,10 +201,10 @@ file stays, but nothing durable may live only in it. A row in `docs/` still read
 A plan is done when every box is ticked and its branch is merged. Neither half alone is
 enough: a full checklist on an unmerged branch is still work in progress.
 
-Done and retired are not the same thing. A plan that builds nothing has no branch, and it is
-done when its last box is ticked. It still waits in `plans/` while anything outside `done/`
-depends on it, because nothing outside `done/` may depend on a file inside it. That is the
-`complete` status, and the plan itself names what is holding it.
+A plan that builds nothing has no branch, and is done when its last box is ticked. Before it
+moves, every file outside `done/` that depends on it stops doing so, because nothing outside
+`done/` may depend on a file inside it. For a plan whose product is other plans, that means
+each of those carries the decisions it rests on rather than pointing back.
 
 On the merge, move the file to `done/` and rename it `plan_<name>.<YYYYMMDD>.md`. The date
 is the date it was merged, so `plan_docker.md` merged on 2026-09-08 becomes

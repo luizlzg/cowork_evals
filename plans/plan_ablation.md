@@ -42,9 +42,7 @@ application between the two. The measurement behind that is in
 [`../docs/cowork_desktop.md`](../docs/cowork_desktop.md).
 
 The arm is a statistical control, and a control belongs on the cheap backend. CoWork is the
-expensive one that checks the real thing. The decisions table in
-[`plan_believable_results.md`](plan_believable_results.md) holds this and it is not reopened
-here.
+expensive one that checks the real thing. Decided, and not reopened here.
 
 ## The two settings
 

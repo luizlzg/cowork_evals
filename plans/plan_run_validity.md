@@ -58,8 +58,14 @@ Write down where a run's files are kept. A consumer wants to check what an eval 
 produced, such as whether the `.pptx` a skill wrote will open, so they write their own script
 over those files. That script needs a layout that does not move.
 
-Why an eval fails on one kind of refusal and not another is the decisions table in
-[`plan_believable_results.md`](plan_believable_results.md). Do not work it out again here.
+Why one kind of refusal invalidates a run and another does not, decided and not reopened
+here: a `permission_denied` carrying `decision_reason_type: mode` invalidates it whatever
+tool it names, and a denial from the plugin's own hook does not. A session has no permission
+mode and is never refused a tool by one, so a mode denial is the container failing to behave
+like a session and nothing else. A hook denial is the plugin's own behaviour, which a session
+has too, and for a case testing a hook it is the correct behaviour under test. The rule
+matches on the reason and never on the tool, because narrowing it to tools a grader names
+would miss every denial that broke a run through a tool no grader mentions.
 
 Branch: `feat/run-validity`.
 
@@ -75,8 +81,8 @@ Branch: `feat/run-validity`.
 
 ## Skipping a case with a glob is not possible
 
-`plan_believable_results.md` planned an option to exclude a case from one command, so that
-nobody has to move the case directory. It cannot be built.
+An option to exclude a case from one invocation was wanted, so that nobody has to move the
+case directory out of the tree. It cannot be built.
 
 `claude plugin eval --case <glob>` takes one glob matching the case name, with `*` and `?`.
 There is no negation and no list, and `--tag` only includes. On Docker the harness finds and

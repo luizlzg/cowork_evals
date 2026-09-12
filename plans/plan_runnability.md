@@ -29,9 +29,11 @@ stops the tag becoming a way to quietly switch a case off.
 The CoWork backend reads the tag instead of working it out mid-run, and such a case is counted
 instead of failing the suite.
 
-Why a tag rather than a new frontmatter key is in the decisions table in
-[`plan_believable_results.md`](plan_believable_results.md), and the fact it rests on is in
-[`../docs/eval_format.md`](../docs/eval_format.md).
+A tag and not a new frontmatter key, decided and not reopened here. `tags:` is already
+free-form and the harness only filters on it, while an unknown `prompt.md` frontmatter key is
+refused at load and the whole suite then writes no result document. That measurement is in
+[`../docs/eval_format.md`](../docs/eval_format.md). A new key would risk the Docker backend
+rejecting every case that carried it.
 
 Branch: `feat/runnability`.
 
@@ -61,8 +63,8 @@ three, and the validator reads all three.
 | A `mocks/` directory on the case's layer chain | `evals/mocks/`, or beside the case | Stand-ins are the harness's, and the MCP servers here are real |
 
 The third is a directory and not a key, and the case that inherits it may be several
-directories below. `plan_believable_results.md` decided it is tagged at each case rather
-than at the directory: explicit at the case, and it survives the case being moved. A plugin
+directories below. It is tagged at each case rather than at the directory, which is explicit
+where a reader is looking and survives the case being moved. A plugin
 whose `evals/mocks/` covers every case therefore tags every case.
 
 One function decides unrunnability, and the validator and the backend both call it. Deriving
@@ -79,7 +81,9 @@ The validator reports each of these, and `run` exits 3 on either.
 | Carries `no-cowork` and no source in the table above      | The tag is then a silencer, excluding a case that would have run      |
 
 The second direction is the whole point. Without it the tag is a `skip:` field wearing
-another name, and `plan_believable_results.md` refused that.
+another name, and there is no `skip:` field in a case tree and will not be one: it is a
+permanent silent pass that outlives whoever wrote it, and `CLAUDE.md` already says never
+skip.
 
 ## The one run-time skip that stays
 

@@ -71,9 +71,9 @@ than asserting it.
 | A named variable that is absent from the host refuses at the preflight | A missing precondition fails. It never forwards an empty string, which would be a run that looks configured and is not              |
 | This is never a route for Claude's own credential                      | The container login is the one credential route, and `docs/docker.md` says so. The preflight refuses the names that would carry one |
 
-The second is a refusal, so it is a restriction, and it is one
-[`plan_believable_results.md`](plan_believable_results.md) already decided rather than one
-invented here.
+The second is a refusal, so it is a restriction, and the developer asked for it rather than
+this plan inventing it. The container login is the one credential route, and this never
+becomes a second one.
 
 ## What this plan does not do
 
