@@ -78,6 +78,13 @@ baseline arm on either backend, so `--ablation with-without` is not reachable th
 command at all. A case carrying `arm:` for portability is therefore honoured rather than
 skipped. See [running_evals.md](running_evals.md).
 
+One pass and fail condition is Docker only. A run that never had a tool the case was granted
+fails rather than scoring, and both ways of catching it read a harness trace: a
+`permission_denied` record with `decision_reason_type: mode`, and the `init` record's tool
+list. A session has no permission mode, is never refused a tool by one, and writes no such
+list, so neither is ever found on CoWork and every `--cowork` document is the shape that
+passes. One decision still covers both backends. See [running_evals.md](running_evals.md).
+
 A case that writes out a key the CoWork backend cannot honour is reported by that backend as
 skipped, never as passed. A default is not a request, so a case that writes no `runs` key
 runs once rather than skipping; the exact rule is in [running_evals.md](running_evals.md). A

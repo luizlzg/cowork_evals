@@ -234,21 +234,21 @@ Unit tier throughout. Nothing here needs a model.
 
 ### Phase 7: documentation
 
-- [ ] The pass and fail table in [`../docs/running_evals.md`](../docs/running_evals.md)
+- [x] The pass and fail table in [`../docs/running_evals.md`](../docs/running_evals.md)
       gains the new condition, and says both conditions need a kept trace, so
       `--no-keep-traces` gives up both
-- [ ] The same file says what the four counts on the last line mean
-- [ ] It says what the two new fields in the result file are, next to where it describes the
+- [x] The same file says what the four counts on the last line mean
+- [x] It says what the two new fields in the result file are, next to where it describes the
       `tracePath` rewrite
-- [ ] [`../docs/cli.md`](../docs/cli.md) says against `--no-keep-traces` that the option
+- [x] [`../docs/cli.md`](../docs/cli.md) says against `--no-keep-traces` that the option
       gives up both conditions, which is where a person reading it finds out
-- [ ] [`../docs/approaches.md`](../docs/approaches.md) says this check is Docker only,
+- [x] [`../docs/approaches.md`](../docs/approaches.md) says this check is Docker only,
       because CoWork has no permission mode
-- [ ] [`../docs/running_evals.md`](../docs/running_evals.md) states the bound: both checks
+- [x] [`../docs/running_evals.md`](../docs/running_evals.md) states the bound: both checks
       start from the grant, so a tool the case needed and nobody granted is caught by
       neither, and a green suite is not proof the run had everything it asked for
-- [ ] [`../plugins/README.md`](../plugins/README.md): the fixture case phase 8 adds
-- [ ] Nothing in `plans/done/` is read or corrected
+- [x] [`../plugins/README.md`](../plugins/README.md): the fixture case phase 8 adds
+- [x] Nothing in `plans/done/` is read or corrected
 
 ### Phase 8: run it for real
 

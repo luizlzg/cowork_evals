@@ -233,7 +233,8 @@ def test_the_smoke_case_passes_through_the_backend(credentialled, tmp_path):
     # The plugin directory itself, not evals/ beneath it: the target sets the containment
     # root, and the case's `plugins` entry has to resolve inside it. Naming the plugin is
     # what consents to loading it.
-    result = credentialled.run(SMOKE, logs, RunOptions.resolve(runs=1))
+    # One case by name: the suite holds two, and this test is about the backend reaching one.
+    result = credentialled.run(SMOKE, logs, RunOptions.resolve(runs=1, case="python-version"))
     document = json.loads(result.read_text())
 
     assert document["schemaVersion"] == 1

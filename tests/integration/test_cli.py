@@ -101,7 +101,21 @@ def test_a_docker_run_writes_the_whole_log_layout_and_passes(credentialled, tmp_
     root, and the case's `plugins` entry has to resolve inside it.
     """
     root = tmp_path / "logs"
-    code = main(["run", "--docker", str(SMOKE), "--out", str(root), "--runs", "1"])
+    # One case by name. `plugins/smoke/` holds two, and this test is about the log layout
+    # over one run rather than about the suite. See ../../plugins/README.md.
+    code = main(
+        [
+            "run",
+            "--docker",
+            str(SMOKE),
+            "--out",
+            str(root),
+            "--runs",
+            "1",
+            "--case",
+            "python-version",
+        ]
+    )
     assert code == 0, (root / logs.LATEST / logs.VERDICT_FILE).read_text()
 
     run = (root / logs.LATEST).resolve()

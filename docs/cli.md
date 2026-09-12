@@ -119,6 +119,12 @@ file's value, and both `--keep-traces` and `--no-keep-traces` beat the file. `Fa
 value an operator typed and not a default, which is why the refusal table cannot read it as
 untyped and why the option carries both forms.
 
+`--no-keep-traces` also gives up two pass and fail conditions. A run that was refused a tool by
+the permission mode, and a run that was never offered a tool the grant named, are both read out
+of the kept trace, so with no trace neither is found and neither fails. The suite then scores a
+run that could not have passed and says nothing about it. Both conditions are
+[running_evals.md](running_evals.md).
+
 `--out DIR` replaces the whole `logs/evals` root, so the run directory is
 `<out>/<stamp>-<scope>`. It is accepted on `prune` too, which otherwise resolves
 `<cwd>/logs/evals`. `--older-than DAYS` is a `prune` flag only: `run` prunes at a fixed 30
