@@ -19,6 +19,9 @@ from the host filesystem. The only approach that exercises the deployed stack.
   Nothing here exits, prints or returns an error code.
 - **A rate ceiling, not deferral.** Every run leaves a permanent session in a real account.
   The driver deletes nothing and refuses past `max_runs`.
+- **The keyboard is asked for once and guarded at every keystroke.** A modal asks the
+  developer once per process, and no keystroke is sent unless CoWork is frontmost at that
+  moment.
 
 Every statement here is a design decision, not a measurement, except where it cites
 [cowork_desktop.md](cowork_desktop.md). The measured application internals it couples to are
@@ -52,14 +55,20 @@ Two modules, and PyYAML.
 | `cowork_evals.cowork`      | `CoWork`, the driver                                        |
 
 `Config`, its three sections, `CoWork` and `CoWorkError` are the driver's whole public
-surface, and they are the names re-exported from `cowork_evals`. One module function stands
-beside them, `cowork.final_text`, which reads the last assistant text out of one session
-transcript on disk. It exists because `traces.py` writes that text beside the transcript it
-copies, and the session transcript format is parsed here and must not be parsed twice. The backend's modules are
+surface, and they are the names re-exported from `cowork_evals`. The backend's modules are
 imported by their own names, and every module this package ships is the table in
-[library.md](library.md). There is no module level function in either module here, so a
-caller passes a configuration once and calls methods on the object that holds it. A `CoWork`
-takes the `cowork:` section, `CoWorkSection`, and never the whole file.
+[library.md](library.md). A `CoWork` takes the `cowork:` section, `CoWorkSection`, and never
+the whole file, and a caller passes a configuration once and calls methods on the object
+that holds it.
+
+Three module functions stand beside the class. Each is a function because what it reads is
+not one driver's configuration.
+
+| Function              | Reads                       | Is there because                                    |
+| --------------------- | --------------------------- | ---------------------------------------------------- |
+| `final_text(path)`    | one session transcript      | `traces.py` writes that text beside the transcript it copies, and this format is parsed here and must not be parsed twice |
+| `frontmost()`         | the desktop                 | the guard compares its result, and it takes no configuration |
+| `consent(section)`    | the developer, once         | the answer is one operator's for one process, and a frozen section cannot carry it |
 
 ```python
 from cowork_evals import Config, CoWork, CoWorkError
@@ -119,20 +128,34 @@ for the length of an agentic run. Everything else uses `run`.
 
 `run` performs these steps in order. Each step names the taxonomy code it raises on failure.
 
-| # | Step                | Does                                                                                | Fails as |
-| - | ------------------- | ----------------------------------------------------------------------------------- | -------- |
-| 1 | Refuse              | Check the configuration, the rate ceiling and the prompt cap                        | 2        |
-| 2 | Record the baseline | List the session directories that already exist                                     |          |
-| 3 | Fire the deep link  | `open claude://claude.ai/new?q=<prompt>&surface=<surface>`                          | 3        |
-| 4 | Settle              | Sleep `settle_seconds` while the window navigates and focuses the composer          |          |
-| 5 | Submit              | Activate the application and send a synthetic Return through `osascript`            | 3        |
-| 6 | Discover            | Poll for a session directory that is not in the baseline                            | 4, 5     |
-| 7 | Attribute           | Compare the recorded prompt with the submitted one                                  | 6        |
-| 8 | Wait                | Block until the completion signal fires                                             | 7        |
-| 9 | Collect             | Build the session document from the session directory                               | 8        |
+| #  | Step                | Does                                                                          | Fails as |
+| -- | ------------------- | ------------------------------------------------------------------------------ | -------- |
+| 1  | Refuse              | Check the configuration, the rate ceiling and the prompt cap                  | 2        |
+| 2  | Record the baseline | List the session directories that already exist                               |          |
+| 2a | Consent             | Check that this process asked for the keyboard                                | 2        |
+| 2b | Activate and guard  | Activate CoWork, then check it is frontmost                                   | 3, 9     |
+| 2c | Clear               | Select all and delete, in the composer                                        | 3        |
+| 3  | Fire the deep link  | `open claude://claude.ai/new?q=<prompt>&surface=<surface>`                    | 3        |
+| 4  | Settle              | Sleep `settle_seconds` while the window navigates and focuses the composer    |          |
+| 4a | Guard               | Check CoWork is still frontmost                                               | 9        |
+| 5  | Submit              | Send the synthetic Return through `osascript`                                 | 3        |
+| 6  | Discover            | Poll for a session directory that is not in the baseline                      | 4, 5     |
+| 7  | Attribute           | Compare the recorded prompt with the submitted one                            | 6        |
+| 8  | Wait                | Block until the completion signal fires                                       | 7        |
+| 9  | Collect             | Build the session document from the session directory                         | 8        |
 
-Step 5 sends the keystroke to the frontmost application. Nothing may steal focus between
-steps 3 and 5.
+Every keystroke goes to the frontmost application, so a step that types runs behind a check
+that CoWork is the frontmost application. The check is 2b for the clear and 4a for the
+Return, and 4a is after the settle so the gap between the last check and the keystroke is as
+small as the sequence allows. Step 5 carries no activation of its own: activating again
+after 4a would reopen the gap the check just closed.
+
+The clear is 2c and not a step after the deep link. The deep link is what puts the prompt in
+the composer, so clearing after it deletes the prompt.
+
+Step 2a refuses, and a refusal has fired nothing, so it leaves no run log line and does not
+count against the ceiling. That is the rule step 1 already follows, and code 2 is the one
+taxonomy code that carries it.
 
 Step 6 identifies a session by structure, not by name: a directory holding an `audit.jsonl`
 three levels below the sessions root. New sessions are the set difference against the
@@ -174,6 +197,8 @@ cowork:
   idle_seconds: 20
   run_timeout: 1800
   max_runs: 50
+  consent: dialog
+  consent_timeout: 20
   run_log: ~/.cowork-runs.jsonl
   log_dir: logs
 ```
@@ -187,6 +212,8 @@ cowork:
 | `idle_seconds`    | 20                     | Quiescence window, fallback signal only        |
 | `run_timeout`     | 1800                   | Wait for the run to finish                     |
 | `max_runs`        | 50                     | Submissions allowed in the trailing 24 hours   |
+| `consent`         | `dialog`               | `dialog` shows the modal once per process. `none` fires without asking |
+| `consent_timeout` | 20                     | Seconds before the modal gives up and proceeds |
 | `run_log`         | `~/.cowork-runs.jsonl` | The run log, outside the profile               |
 | `log_dir`         | `logs`                 | Diagnostic logs. `null` turns them off         |
 
@@ -208,6 +235,83 @@ public repository rule in `README.md`.
 
 The driver never writes anywhere under the profile. The two log files below are the only
 files it owns.
+
+## Taking the keyboard
+
+The driver types into whatever is frontmost. Three mechanisms stand between that and a
+keystroke in a source file, and none of them replaces the other two.
+
+| Mechanism | Buys                                          | Cannot                                                |
+| --------- | ---------------------------------------------- | ------------------------------------------------------ |
+| Consent   | The developer's intent, once per process      | Stop them typing anyway                                |
+| The guard | That CoWork is frontmost at the check         | Close the gap between the check and the keystroke      |
+| Attribution | That an altered prompt is never graded      | Prevent the alteration                                 |
+
+macOS offers no lock on the keyboard or the mouse to an unprivileged process, so there is
+none here. The guard narrows a race it cannot close, and attribution stays the backstop: a
+keystroke that lands elsewhere is caught as code 6 rather than graded.
+
+### Consent
+
+The developer approves once for a whole invocation. A 20-case suite asks once, not 20 times.
+
+The driver knows submissions and nothing above them, and `cowork_backend` builds a new
+`CoWork` per case, so the answer cannot live on an instance and `CoWorkSection` is frozen
+besides. It is module state in `cowork.py`, set by `cowork.consent` and read at step 2a.
+
+| Caller                        | Calls                                                |
+| ----------------------------- | ------------------------------------------------------ |
+| `ask`, before the driver      | `cowork.consent(config.cowork)` once                 |
+| `run --cowork`, before the first plugin | the same, once for the whole sweep          |
+| A library caller              | the same, or sets `consent: none` in the file        |
+
+`run` and `submit` refuse with code 2 when consent was never given and `consent` is
+`dialog`. `collect`, `sessions`, `history`, `recent` and `deep_link` never ask, because they
+fire nothing, so `ask --session` and a dry run never show the modal.
+
+The modal is `osascript` `display dialog`, which needs no Accessibility grant. Only the
+keystrokes do, and the preflight covers that.
+
+| Property              | Is                                                                   |
+| --------------------- | ---------------------------------------------------------------------- |
+| `tell me to activate` | What forces the modal in front of the editor the developer is working in |
+| No `default button`   | A Return typed into that editor mid-sentence must not dismiss it, so the developer has to click |
+| Cancel                | A non-zero exit from `osascript`, which becomes code 2. Nothing has fired |
+| `giving up after`     | Proceeds. An unattended run is the case the key exists for            |
+| The message           | States the timeout, because `display dialog` renders no countdown     |
+
+`consent: none` is the documented route for an unattended run and for this repository's own
+integration tier. It is a configuration value and not a test seam: a test sets it in a
+configuration file exactly as a consumer would, and no parameter exists to inject an answer.
+
+### The guard
+
+`System Events` reports the frontmost process by name, and the name CoWork carries is in
+[cowork_desktop.md](cowork_desktop.md).
+
+| Result                  | Means                                     |
+| ----------------------- | ------------------------------------------- |
+| The CoWork process name | Proceed with the keystroke                |
+| Any other name          | Code 9. Nothing is typed                  |
+| `osascript` non-zero    | Code 3, as every other `osascript` failure is |
+
+There is no retry after a failed check. Retrying blind is how a keystroke reaches an editor.
+
+Code 9 is not code 3. A grading layer has to tell "the driver refused to type into something
+that was not CoWork" apart from "osascript is broken", and code 3 already carries the second.
+
+### The clear
+
+Select all, then Delete, in the composer. It runs behind the guard, so the worst field it
+can reach is a CoWork field that is not the composer, and the contents of a CoWork composer
+are a draft.
+
+It does not read what it cleared and does not report it. Reading the composer means reading
+the screen, which [cowork_desktop.md](cowork_desktop.md) rules out.
+
+What the application does with a deep link fired into a composer that already holds text is
+measured in [cowork_desktop.md](cowork_desktop.md), and so is the contamination that put
+this section here.
 
 ## Logging
 

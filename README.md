@@ -79,11 +79,12 @@ rm .claude/skills/cowork-evals/SKILL.md && cowork_evals init
 `cowork_evals check --all` reports what each backend is still missing, and names the command
 that supplies it.
 
-A CoWork run also takes the keyboard. Each case activates the application and sends Return to
-the frontmost window, so the machine is not yours while a suite runs, and there is no headless
-route and no CI. A container run costs none of that, and runs the code in your checkout rather
-than the code deployed to the account. The whole comparison is
-[`docs/approaches.md`](docs/approaches.md).
+A CoWork run also takes the keyboard. A modal asks you for it once, before anything fires,
+and then each case activates the application and sends Return to the frontmost window, so the
+machine is not yours while a suite runs, and there is no headless route and no CI. Nothing is
+typed unless CoWork is frontmost at that moment. A container run costs none of that, and runs
+the code in your checkout rather than the code deployed to the account. The whole comparison
+is [`docs/approaches.md`](docs/approaches.md).
 
 ## Quickstart
 

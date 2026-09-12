@@ -242,24 +242,24 @@ no skip.
 
 ### Phase 5: documentation, and the measurement
 
-- [ ] `docs/cowork_driver.md`: the sequence table, the two keys, code 9, and the consent section
-- [ ] `docs/cowork_desktop.md`: the CoWork process name as `System Events` reports it, dated
+- [x] `docs/cowork_driver.md`: the sequence table, the two keys, code 9, and the consent section
+- [x] `docs/cowork_desktop.md`: the CoWork process name as `System Events` reports it, dated
       and called a snapshot, beside the bundle id
-- [ ] `docs/cowork_desktop.md`: one section recording the 2026-09-12 contamination, dated,
+- [x] `docs/cowork_desktop.md`: one section recording the 2026-09-12 contamination, dated,
       and what the composer does with a deep link fired into a non-empty field
-- [ ] `docs/cli.md`: one paragraph saying `run --cowork` and `ask` ask once, and what `none` is
-- [ ] `README.md`: the sentence about a CoWork run taking the keyboard says the modal asks first
+- [x] `docs/cli.md`: one paragraph saying `run --cowork` and `ask` ask once, and what `none` is
+- [x] `README.md`: the sentence about a CoWork run taking the keyboard says the modal asks first
 - [ ] `plans/README.md`: the row moves to `implemented` on the merge, and the file moves to
       `done/plan_focus.<YYYYMMDD>.md`
 
 ## Verification
 
-- [ ] `scripts/lint.sh`
-- [ ] `scripts/test.sh tests/unit`
-- [ ] `scripts/test.sh` with the default selection, green
-- [ ] `scripts/test.sh -m integration -k focus`, on a machine with the profile and the grant
-- [ ] Type text into the CoWork composer by hand, then `cowork_evals ask --cowork "Reply with
+- [x] `scripts/lint.sh`
+- [x] `scripts/test.sh tests/unit`
+- [x] `scripts/test.sh` with the default selection, green
+- [x] `scripts/test.sh -m integration -k focus`, on a machine with the profile and the grant
+- [x] Type text into the CoWork composer by hand, then `cowork_evals ask --cowork "Reply with
       the single word: ready"`. It prints `ready`, and the audit prompt carries no extra text
-- [ ] Start an ask, click into an editor before the Return, and confirm it exits on code 9
+- [x] Start an ask, click into an editor before the Return, and confirm it exits on code 9
       with nothing typed into the editor
 - [ ] `plans/plan_ask.md` phase 5 is unblocked: the four measurements run without a code 6
