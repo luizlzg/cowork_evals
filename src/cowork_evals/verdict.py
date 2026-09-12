@@ -1,15 +1,15 @@
-"""The gate over the result documents one invocation produced.
+"""Pass and fail over the result documents one invocation produced.
 
-It reads `<plugin>/aggregate-result.json`, so one gate covers every backend and a sweep is
-decided once rather than once per plugin. The conditions are the gate table in
+It reads `<plugin>/aggregate-result.json`, so one verdict covers every backend and a sweep is
+decided once rather than once per plugin. The conditions are the pass and fail table in
 docs/running_evals.md.
 
-Structural graders gate. Judged graders are printed and gate nothing, because a judged grader
-over a non-deterministic agent is a flaky gate. A skip gates, so a backend cannot go green by
-honouring nothing.
+Structural graders decide the verdict. Judged graders are printed and decide nothing, because
+a judged grader over a non-deterministic agent is a flaky verdict. A skip fails the run, so a
+backend cannot go green by honouring nothing.
 
-Nothing here writes a file or prints. The caller writes `lines` to `gate.txt` and prints them,
-and turns `passed` into an exit code. [cli.py](cli.py).
+Nothing here writes a file or prints. The caller writes `lines` to `verdict.txt` and prints
+them, and turns `passed` into an exit code. [cli.py](cli.py).
 """
 
 from __future__ import annotations
@@ -22,12 +22,12 @@ from typing import Any
 from .cases import JUDGED
 from .harness import RESULT_NAME
 
-# The one schema this gate reads. The contract is additive-only, so an unknown field is
+# The one schema this module reads. The contract is additive-only, so an unknown field is
 # ignored and a different version is a failure.
 # docs/claude_code/plugin_eval_reference.md.
 SCHEMA_VERSION = 1
 
-# The arm the gate reads. There is no baseline arm on either backend.
+# The arm this module reads. There is no baseline arm on either backend.
 # docs/running_evals.md.
 ARM = "with"
 
@@ -41,7 +41,7 @@ ARTIFACTS = "artifacts"
 
 
 @dataclass(frozen=True, slots=True)
-class GateResult:
+class Verdict:
     """The decision, and every line that explains it. The summary line is the last one."""
 
     passed: bool
@@ -52,11 +52,11 @@ class GateResult:
         return "".join(f"{line}\n" for line in self.lines)
 
 
-def gate(run_dir: Path | str, *, extra: tuple[str, ...] = ()) -> GateResult:
+def decide(run_dir: Path | str, *, extra: tuple[str, ...] = ()) -> Verdict:
     """Read every result document one level under the run directory and decide once.
 
     `extra` is a failure line the caller already holds, which is how a sweep stopped by the
-    total cost ceiling reaches the gate without a second code path.
+    total cost ceiling reaches the verdict without a second code path.
     """
     directory = Path(run_dir)
     failures = [f"{FAIL} {line}" for line in extra]
@@ -71,14 +71,14 @@ def gate(run_dir: Path | str, *, extra: tuple[str, ...] = ()) -> GateResult:
         totals.add(document)
         _judge_document(plugin.name, document, failures, notes)
 
-    return GateResult(passed=not failures, lines=(*failures, *notes, totals.summary))
+    return Verdict(passed=not failures, lines=(*failures, *notes, totals.summary))
 
 
 # Reading one document.
 
 
 def _read(path: Path) -> tuple[dict[str, Any], None] | tuple[dict[str, Any], str]:
-    """The document, or the one line that says why it cannot be gated."""
+    """The document, or the one line that says why no verdict can be reached on it."""
     try:
         document = json.loads(path.read_text(encoding="utf-8"))
     except OSError:
@@ -89,7 +89,7 @@ def _read(path: Path) -> tuple[dict[str, Any], None] | tuple[dict[str, Any], str
         return {}, f"{path}: expected a mapping at the top level"
     version = document.get("schemaVersion")
     if version != SCHEMA_VERSION:
-        return {}, f"{path}: schemaVersion is {version!r}, and this gate reads {SCHEMA_VERSION}"
+        return {}, f"{path}: schemaVersion is {version!r}, and this module reads {SCHEMA_VERSION}"
     return document, None
 
 
@@ -124,7 +124,7 @@ def _judge_run(
     failures: list[str],
     notes: list[str],
 ) -> None:
-    """One run of one case. An `error` gates on every backend.
+    """One run of one case. An `error` fails on every backend.
 
     On CoWork it is a case the driver could not run or collect. On the harness it is a run
     that timed out, hit the turn cap or exited non-zero, each of which is still graded on
@@ -185,7 +185,7 @@ def artifacts(run: dict[str, Any]) -> str:
     directory on CoWork.
 
     Empty when there is no such directory, which is a run whose trace was not collected and
-    a document written before this was built. The gate never names a path that is not there.
+    a document written before this was built. It never names a path that is not there.
     """
     named = run.get("tracePath")
     if not isinstance(named, str) or not named:

@@ -5,11 +5,12 @@ passes on two `PASS` votes. There is no SDK and no second credential route: the 
 `claude` on `PATH` is the one route, and `docs/cli.md` makes it part of the `--cowork`
 preflight.
 
-A judged grader never gates, which is the gate table in docs/running_evals.md, so nothing here
-raises. A file the judge cannot be shown is a failed grader naming it, except an image, which is
-a grader skip: the harness shows the judge the image, and one text call cannot.
+A judged grader never decides the verdict, which is the pass and fail table in
+docs/running_evals.md, so nothing here raises. A file the judge cannot be shown is a failed
+grader naming it, except an image, which is a grader skip: the harness shows the judge the
+image, and one text call cannot.
 
-`CLAUDE_CODE_WALNUT_SPIRE` is not exported here. It gates `claude plugin eval`, and this is
+`CLAUDE_CODE_WALNUT_SPIRE` is not exported here. It enables `claude plugin eval`, and this is
 `claude -p`.
 """
 

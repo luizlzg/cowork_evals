@@ -24,13 +24,13 @@ from . import (
     cowork,
     cowork_backend,
     docker,
-    gate,
     logs,
     preflight,
     resources,
     results,
     traces,
     validate,
+    verdict,
 )
 from .cases import CaseError, discover, plugin_name, plugin_roots
 from .config import Config, CoWorkError
@@ -46,7 +46,7 @@ ALL = "all"
 # The exit codes. docs/cli.md. `test` is the one verb that returns a code from below
 # unchanged, and it returns pytest's.
 #
-# `FAILED` is the gate on `run` and the driver on `ask`. It is one code because it is one
+# `FAILED` is the verdict on `run` and the driver on `ask`. It is one code because it is one
 # thing to an operator: the verb reached its backend and the work did not succeed.
 OK = 0
 FAILED = 1
@@ -74,7 +74,7 @@ UNTYPED = {"--build-missing": False}
 
 # What each backend cannot honour. An option here is an operator mistake, so it is a usage
 # error. A *case* that needs a field the backend cannot honour is reported skipped and
-# fails the gate instead, and the two are never conflated. docs/cli.md.
+# fails the run instead, and the two are never conflated. docs/cli.md.
 REFUSED = {
     DOCKER: ("--timeout-seconds",),
     COWORK: ("--model", "--allow-tools", "--max-cost-usd", "--build-missing"),
@@ -135,7 +135,7 @@ def _backend_group(
 
 
 def _run_parser(verbs: Any) -> None:
-    verb = verbs.add_parser("run", help="run a suite and gate what it produced")
+    verb = verbs.add_parser("run", help="run a suite and decide pass or fail on what it produced")
     _backend_group(verb, DOCKER, COWORK)
     verb.add_argument("path", help="a case, a skill, an evals/ tree, a plugin root or a sweep")
     verb.add_argument("--runs", type=int, help="how many times each case runs")
@@ -360,7 +360,7 @@ def _dispatch(args: argparse.Namespace, config: Config) -> int:
 
 
 def _run(args: argparse.Namespace, config: Config) -> int:
-    """Preflight, validate, count, prune, then run every selected plugin and gate once.
+    """Preflight, validate, count, prune, then run every selected plugin and reach a verdict once.
 
     Every refusal happens before anything is created and before anything is deleted, so
     exit 2 and exit 3 leave the log root exactly as it was.
@@ -480,7 +480,7 @@ def _dry_run(
     """What would run, and no run directory. Pruning already happened above.
 
     A dry run reports the exit code the run would reach, so it is not always 0. On `--cowork`
-    a suite whose every case is skipped would fail the gate, and this returns the gate's code
+    a suite whose every case is skipped would fail the run, and this returns its code
     rather than a pass: a dry run wired into CI as a portability check has to go red on a
     suite that is dead on that backend. The container backend's skips are the harness's and
     are decided at run time, so a dry run there cannot know them and reports nothing.
@@ -498,7 +498,7 @@ def _dry_run(
             print(argument)
     if dead:
         return _refuse(
-            ["every selected case is skipped on this backend, so the gate would fail"],
+            ["every selected case is skipped on this backend, so the run would fail"],
             FAILED,
         )
     return OK
@@ -507,7 +507,7 @@ def _dry_run(
 def _dry_run_cowork(args: argparse.Namespace, config: Config, target: Path, tags: tuple) -> bool:
     """One line per case, then the ceiling arithmetic. This backend builds no command line.
 
-    The skips are the point: a skipped case fails the gate, so an operator reads which ones
+    The skips are the point: a skipped case fails the run, so an operator reads which ones
     before spending a VM boot on the rest.
 
     It returns whether the suite is dead here, meaning it planned no submission at all
@@ -565,7 +565,7 @@ def _sweep(
     targets: list[tuple[Path, Path]],
     tags: tuple,
 ) -> int:
-    """Every selected plugin in turn, inside one run directory, gated once."""
+    """Every selected plugin in turn, inside one run directory, decided once."""
     image = Docker(config) if args.backend == DOCKER else None
     scope = logs.scope_name(args.path, [plugin for plugin, _ in targets])
     directory = logs.run_dir(root, scope)
@@ -574,8 +574,8 @@ def _sweep(
     with logs.tee(directory):
         logs.write_env(directory, args.backend, image=None if image is None else image.tag)
         extra = _each_plugin(args, config, directory, targets, tags, image)
-        decided = gate.gate(directory, extra=extra)
-        (directory / logs.GATE_FILE).write_text(decided.text, encoding="utf-8")
+        decided = verdict.decide(directory, extra=extra)
+        (directory / logs.VERDICT_FILE).write_text(decided.text, encoding="utf-8")
         print(decided.text, end="")
     return OK if decided.passed else FAILED
 
@@ -625,7 +625,7 @@ def _each_plugin(
                     case_glob=args.case,
                 )
         except (DockerError, CaseError) as error:
-            # The gate reads the missing document and fails, so the sweep goes on.
+            # The verdict reads the missing document and fails, so the sweep goes on.
             print(f"{plugin}: {error}", file=sys.stderr)
         finally:
             # In a `finally`, because a run that left no result document still left
@@ -650,7 +650,7 @@ STDIN = "-"
 def _ask(args: argparse.Namespace, config: Config) -> int:
     """One prompt to a CoWork session, or one session already on disk.
 
-    It is not an eval. There is no case tree, no grader, no result document, no gate and no
+    It is not an eval. There is no case tree, no grader, no result document, no verdict and no
     run directory, and it writes nothing on the host: the session directory in the profile is
     the permanent record, and the run log is the driver's. `test` is the precedent.
     docs/cli.md.
@@ -787,7 +787,7 @@ def _test(args: argparse.Namespace, config: Config) -> int:
     """A preflight and one call. Nothing between the two interprets what pytest produced.
 
     The verb writes nothing on the host: no run directory, no `env.txt`, no `latest`, no
-    pruning and no gate. It validates no case and reads no `evals/`, so a malformed case
+    pruning and no verdict. It validates no case and reads no `evals/`, so a malformed case
     never blocks a test run. docs/cowork_test.md.
     """
     try:

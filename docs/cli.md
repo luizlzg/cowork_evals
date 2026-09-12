@@ -61,7 +61,7 @@ because neither reaches one: `docs` reads the shipped tree, and `init` writes fi
 | a case directory                    | that case                       | `<plugin>-<skill>-<case>`       |
 | `evals/<skill>/`                    | that skill's cases              | `<plugin>-<skill>`              |
 | `evals/`                            | that plugin's whole suite       | `<plugin>`                      |
-| a directory holding several plugins | each plugin in turn, gated once | `all`                           |
+| a directory holding several plugins | each plugin in turn, decided once | `all`                           |
 | anything else inside one root       | that plugin's whole suite       | `<plugin>`                      |
 
 The last row is the plugin root itself, a `skills/` directory, and any other path inside one
@@ -74,7 +74,7 @@ by a fixed glob, so a directory carrying a manifest and no `evals/` is not swept
 The plugin name in a scope name is `.claude-plugin/plugin.json`'s `name`, and the folder
 basename when that file names none. Every character outside `[A-Za-z0-9._-]` becomes `-`. Two
 plugins in one sweep whose manifests carry the same name get two directories, the second
-suffixed `-2`, so neither result document overwrites the other and the gate reads both.
+suffixed `-2`, so neither result document overwrites the other and the verdict reads both.
 
 A multi-plugin path is a usage error on `--cowork`. There is no sweep on that backend, for
 the reason in [running_evals.md](running_evals.md).
@@ -128,13 +128,13 @@ Defaults come from the `eval:` section of `cowork_evals.yaml`, in
 [running_evals.md](running_evals.md), which also says which underlying flag each option maps
 to and why that flag is pinned. An option beats the file, and the file beats the built-in
 default; the ladder is [library.md](library.md). Two pinned flags have no option:
-`--threshold`, because the gate decides, and `--ablation`, because a baseline arm changes
+`--threshold`, because this package decides, and `--ablation`, because a baseline arm changes
 which graders are scored. `eval.max_cost_total_usd` has no option either; it bounds the
 invocation rather than a run.
 
 An option the chosen backend cannot honour is refused at parse time. That is an operator
 mistake, so it is a usage error. A *case* that needs a field the backend cannot honour is
-reported skipped and fails the gate. The two are different and are never conflated.
+reported skipped and fails the run. The two are different and are never conflated.
 
 `--dry-run` exits 0 without running anything and without creating a run directory. What it
 prints differs per backend, because only one of them builds a command line.
@@ -144,7 +144,7 @@ prints differs per backend, because only one of them builds a command line.
 | `--docker` | the `docker run` command line, one argument per line, `--keep-temp` and the `TMPDIR` behind it included |
 | `--cowork` | one line per case with its run count, its timeout and its skips, then the rate ceiling arithmetic |
 
-The skips are the point of the CoWork dry run: a skipped case fails the gate, so an operator
+The skips are the point of the CoWork dry run: a skipped case fails the run, so an operator
 reads which ones before spending. Pruning of old run directories happens before the exit, so
 an unattended dry run still reclaims space. The tests assert over both, so the option surface,
 the backend mapping and the target's position ahead of the variadic flags are covered without
@@ -178,7 +178,7 @@ A CoWork submission types into the frontmost application, so `run --cowork` and
 `ask --cowork` each ask for the keyboard once per invocation, in a modal that forces itself
 in front of whatever you are working in. `run` asks once before the first plugin, whatever
 the suite holds, and `ask` asks once before its one submission. Cancel refuses, and nothing
-has fired at that point: the sweep fails the gate and exits 1, and `ask` exits 3.
+has fired at that point: the sweep fails the run and exits 1, and `ask` exits 3.
 
 `--dry-run` never asks, because nothing would be submitted, and neither does `ask --session`,
 which reads a directory.
@@ -240,7 +240,7 @@ A dry run reports the code the run would reach, so it is not always 0.
 | `--cowork` | every selected case is skipped, so the suite plans no submission     |
 | `--docker` | never. The harness decides its skips at run time, and a dry run cannot know them |
 
-A skipped case fails the gate, so a suite that is dead on CoWork would fail a real run. A dry
+A skipped case fails the run, so a suite that is dead on CoWork would fail a real run. A dry
 run that exited 0 on it would pass a portability check in CI while the run went red. An empty
 selection is a different thing and is refused earlier, with exit 2.
 
@@ -256,7 +256,7 @@ and the ceiling that binds is the driver's `max_runs`. See
 ## ask
 
 `ask` submits one prompt to a real CoWork session, waits, and prints the answer. It runs no
-eval: no case tree, no grader, no result document, no gate and no run directory. It is how a
+eval: no case tree, no grader, no result document, no verdict and no run directory. It is how a
 question about what a live session actually does is answered by asking one.
 
 | Option               | Is                                                                 |
@@ -351,7 +351,7 @@ That is what the CoWork backend already does with a timeout. See
 ## test
 
 `test` runs a consumer's pytest suite inside the CoWork image. No model, no harness, no case
-tree, no grader, no result document and no gate. The mechanism is
+tree, no grader, no result document and no verdict. The mechanism is
 [cowork_test.md](cowork_test.md), and it is not restated here.
 
 | Option            | Is                                                                  |
@@ -372,7 +372,7 @@ pass-through would be silently ignored on the other. It is allowed here because 
 only thing behind this verb.
 
 `test` creates nothing on the host: no run directory, no `env.txt`, no `latest`, no pruning
-and no gate. Those five exist for `aggregate-result.json`, which pytest does not produce. It
+and no verdict. Those five exist for `aggregate-result.json`, which pytest does not produce. It
 validates no case and reads no `evals/` either, so a malformed case never blocks a test run.
 
 `test --dry-run` prints before the preflight, unlike `run --dry-run`, which prunes the log
@@ -547,8 +547,8 @@ ignore list. See [library.md](library.md).
 
 | Code | Means                                                                       |
 | ---- | --------------------------------------------------------------------------- |
-| 0    | the gate passed, or the verb succeeded                                      |
-| 1    | the gate failed, or the driver raised on `ask`. The gate's conditions are in [running_evals.md](running_evals.md) |
+| 0    | the run passed, or the verb succeeded                                      |
+| 1    | the run failed, or the driver raised on `ask`. The conditions are in [running_evals.md](running_evals.md) |
 | 2    | usage error: unknown option, an option the backend refuses, or no path      |
 | 3    | preflight failed. Nothing ran and nothing was written                       |
 | 130  | interrupted                                                                 |
@@ -566,7 +566,7 @@ Exit 3 means nothing ran and nothing was written on every path. The CoWork rate 
 checked in the preflight, and pruning happens behind every refusal, so neither breaks that.
 
 `claude plugin eval` exits 2 on partial results; the Docker backend turns that into a
-`partial: true` result document, and the gate turns that into exit 1. See
+`partial: true` result document, and that becomes exit 1. See
 [plugin_eval.md](plugin_eval.md).
 
 The CoWork driver has its own taxonomy, codes 2 to 9, carried by a raised `CoWorkError` and
@@ -576,5 +576,5 @@ maps it:
 | Driver code                              | Becomes                                                            |
 | ---------------------------------------- | ------------------------------------------------------------------ |
 | 2, for configuration or the rate ceiling | Checked in preflight, before any case: exit 3                      |
-| 2 to 8, raised while running a case      | That case is an error in the result document, and the gate exits 1 |
+| 2 to 8, raised while running a case      | That case is an error in the result document, and the run exits 1 |
 | No raise                                 | The case is graded normally                                        |

@@ -6,11 +6,13 @@ Claude Code's own eval harness. It loads one plugin into a fresh isolated `claud
 runs each case several times, and scores the result with graders. This repository does not own
 it, and a consumer never invokes it.
 
-- **Early access, enabled per organization.** A gated build prints that and exits 1. The
+- **Early access, enabled per organization.** A build without early access prints that and
+  exits 1. The
   command exists either way.
 - **Only the plugin under test loads.** No user or project settings, no `CLAUDE.md`, no other
   plugins, no personal MCP servers.
-- **Tools are gated.** `Bash`, `Write`, `Edit`, `WebFetch`, `WebSearch` and `mcp__*` need an
+- **Tools need an explicit grant.** `Bash`, `Write`, `Edit`, `WebFetch`, `WebSearch` and
+  `mcp__*` need an
   explicit operator grant.
 - **Its defaults would bite**, which is why [running_evals.md](running_evals.md) pins a flag
   list rather than accepting them.
@@ -35,7 +37,8 @@ plugin, written here, that proves the harness works.
 ## Availability
 
 Enabled per organization. When it is not enabled, the command prints that it is in early
-access and exits 1. The command exists either way; a gated build is not a missing feature.
+access and exits 1. The command exists either way; a build without early access is not a
+missing feature.
 
 Enablement is the `tengu_walnut_spire` per-organization rollout flag. Enabled first-party
 clients pick it up after `claude update` and a fresh session.
@@ -101,7 +104,7 @@ was rejected; 130 interrupted; 143 terminated.
 | `--model`         | `ANTHROPIC_MODEL` is not inherited by the agent under test. Unpinned, a model rollout reads as a regression                                          |
 | `--judge-model`   | Same, for the graders                                                                                                                                |
 | `--ablation none` | The default runs a no-plugin baseline arm whenever the plugin resolves, doubling cost and demoting `tool_used: Skill` graders to unscored indicators |
-| `--threshold 0`   | Let a local gate decide pass and fail, so structural and judged graders can be separated                                                             |
+| `--threshold 0`   | Let this package decide pass and fail, so structural and judged graders can be separated                                                             |
 | `--max-cost-usd`  | Spend backstop. Hitting it exits 2 with partial results                                                                                              |
 | `--output-dir`    | Puts `aggregate-result.json` and `report.html` in a log directory rather than under the plugin                                                       |
 | `--no-publish`    | The HTML report is otherwise published to claude.ai                                                                                                  |
@@ -125,7 +128,8 @@ The ones that can are in [eval_format.md](eval_format.md).
 
 - **Only the plugin under test loads.** No user or project settings, no `CLAUDE.md`, no
   other plugins, no personal MCP servers.
-- **Tools are gated.** The reference states the effective set as the case's `allowed_tools`
+- **Tools need an explicit grant.** The reference states the effective set as the case's
+  `allowed_tools`
   intersected with the read-only set, unioned with the operator's `--allow-tools`. `Bash`,
   `Write`, `Edit`, `WebFetch`, `WebSearch` and `mcp__*` need an explicit grant. A plugin's own
   MCP tools are named `mcp__plugin_<plugin>_<server>__<tool>`. Measured 2026-09-12 on CLI

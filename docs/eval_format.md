@@ -9,7 +9,7 @@ backends.
 - **A case is a directory**: a `prompt.md` with frontmatter and a prompt body, a `graders/`
   directory, and an optional `case.yaml`.
 - **Two addressability keys are required**, `tags` and `plugins`, and both are checked.
-- **Graders come in two classes.** Structural graders are deterministic and carry the gate;
+- **Graders come in two classes.** Structural graders are deterministic and carry the verdict;
   judged graders call a model and are printed. Prefer a structural one.
 - **Only two grader types choose what they look at, and they use different keys.** `regex`
   uses `target`, `llm` uses `focus`.
@@ -123,10 +123,10 @@ One grader per file under `graders/`, frontmatter then the rubric or pattern.
 | `llm`         | `criteria`, `focus`. A judge model votes 2 of 3                  | judged     |
 | `baseline`    | `baseline_file`, `criteria`                                      | judged     |
 
-The class column is what the gate reads. See [running_evals.md](running_evals.md).
+The class column is what the verdict reads. See [running_evals.md](running_evals.md).
 
 Every grader also takes `name`, which defaults to the filename without `.md`, and `weight`,
-which is greater than 0 and defaults to 1. The gate reads pass and fail, not the score, so
+which is greater than 0 and defaults to 1. The verdict reads pass and fail, not the score, so
 `weight` changes the harness summary and changes nothing here. There is no `weight: 0`:
 delete the grader, or use `arm`.
 

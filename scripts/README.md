@@ -38,7 +38,7 @@ sibling of `test.sh`, which runs this repository's own tests under `.venv`. See
 generated and git-ignored, and the shipped copy under `src/cowork_evals/data/skills/` is the
 one source. See [`../docs/library.md`](../docs/library.md).
 
-The three eval backends, the gate and the case validator are not here. They are library
+The three eval backends, the verdict and the case validator are not here. They are library
 code, they are reached through the `cowork_evals` command, and a row is never added below
 for one of them.
 

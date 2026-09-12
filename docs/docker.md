@@ -285,7 +285,7 @@ starting the login container.
 A credential file is not a credential either. An OAuth flow that is started and not
 finished leaves `.credentials.json` behind carrying `scopes` and `subscriptionType` with
 `accessToken` and `refreshToken` both empty. `Docker.has_credential()` therefore reads the
-tokens rather than testing that the file is there, and the two callers that gate on it, the
+tokens rather than testing that the file is there, and the two callers that check it, the
 `CREDENTIAL` condition and `scripts/login.sh`, report no login. An expired access token is
 still a credential, because the CLI refreshes it: only the absence of both tokens is no
 login. Measured 2026-09-09, where presence alone reported a login and every container run
@@ -344,7 +344,7 @@ plugin directory and the read-only mount does not fail a correct run.
 
 The container holds nothing from this package. The `cowork_evals` process stays on the host,
 builds this argument list, names the run directory, writes the `latest` symlink, prunes old
-runs, records `env.txt` and runs the gate over the result document the container leaves
+runs, records `env.txt` and reaches the verdict over the result document the container leaves
 behind. One place does all of that for both backends. See [library.md](library.md).
 
 Only the run's own log directory is mounted, not the whole log root, because the host owns

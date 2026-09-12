@@ -21,7 +21,7 @@ Do not reopen these. Each is argued, and each states what it follows from.
 
 | Decision                                                                 | Reason                                                                 |
 | -------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| No `skip:` field in a case tree, ever                                     | It is a permanent silent pass that outlives whoever wrote it, and it would need the gate to stop failing on skips. `CLAUDE.md` already says never skip |
+| No `skip:` field in a case tree, ever                                     | It is a permanent silent pass that outlives whoever wrote it, and it would need the verdict to stop failing on skips. `CLAUDE.md` already says never skip |
 | A case that a backend cannot run says so in its own file                  | The fact must be readable without reading `cowork_evals` source          |
 | The declaration is a reserved tag, `no-cowork`, unless a measurement shows the harness tolerates an unknown frontmatter key | `tags:` is already free-form and upstream only filters on it. A new key risks the Docker backend rejecting the case |
 | The validator enforces the declaration in both directions                 | A case writing an unhonourable key without the tag is an error, and a case carrying the tag with nothing that stops a CoWork run is also an error. The second is what stops the tag being a silencer |
@@ -33,10 +33,10 @@ Do not reopen these. Each is argued, and each states what it follows from.
 | The artifact content checker is built outside this package                | The report established that no harness change is needed. This repository is a library |
 | The container's tool grant mirrors a session, and is not a judgement | The Docker backend exists to run the same case the same way a session does. A session grants nothing and acts, so a container run denied a tool a session has measures this package's configuration rather than the plugin. Closed on 2026-09-12 and implemented the same day, so `plan_run_validity` inherits a grant that is already right: `docs/running_evals.md` |
 | The real gap under report item 5 is selection, and it is an exclusion glob on the invocation | `--case` takes one glob and `--tag` only includes, so there is no way to say `everything except X` without moving the directory. A glob typed on one invocation is visible in that invocation and silences nothing tomorrow. It rides in `plan_run_validity`, which is already making the selection counts honest |
-| A `permission_denied` carrying `decision_reason_type: mode` invalidates the run, whatever tool it names. A denial from a plugin's own hook does not | A session has no permission mode and is never refused a tool by one, so a mode denial is the simulation being wrong and nothing else. A hook denial is the plugin's own behaviour, which a session has too, and for a hook-gate case it is the correct behaviour under test. Narrowing the rule to tools a grader names would miss every denial that broke a run through a tool no grader mentions |
+| A `permission_denied` carrying `decision_reason_type: mode` invalidates the run, whatever tool it names. A denial from a plugin's own hook does not | A session has no permission mode and is never refused a tool by one, so a mode denial is the simulation being wrong and nothing else. A hook denial is the plugin's own behaviour, which a session has too, and for a hook-denial case it is the correct behaviour under test. Narrowing the rule to tools a grader names would miss every denial that broke a run through a tool no grader mentions |
 | There is no baseline arm on CoWork, and no plan builds one | The arm is a statistical control, and a control belongs on the cheap backend. On CoWork a plugin's presence is a property of the profile and the application chooses the profile, so a second arm means a second profile and an application restart between arms. Measured in section 5 of `docs/cowork_desktop.md` |
-| The baseline arm is off by default | Under `with-without` the harness stops scoring a `tool_used: Skill` grader and reports it as an indicator. On by default would silently stop gating skill activation, which is report item 1 |
-| The gate compares per case, with-arm minus without-arm, against a threshold defaulting to 0 | A suite-level average hides a case the plugin made worse. `--threshold` is already pinned to 0 so that this gate owns the number, so the number lives here |
+| The baseline arm is off by default | Under `with-without` the harness stops scoring a `tool_used: Skill` grader and reports it as an indicator. On by default would silently stop checking skill activation, which is report item 1 |
+| Pass and fail compare per case, with-arm minus without-arm, against a threshold defaulting to 0 | A suite-level average hides a case the plugin made worse. `--threshold` is already pinned to 0 so that this package owns the number, so the number lives here |
 
 ## What the problem report said
 
@@ -53,7 +53,7 @@ own order:
 2. **Turn the baseline arm on.** `harness.py` pins `ABLATION = "none"` and `THRESHOLD = "0"`
    and exposes neither. Under `with-without` a `tool_used: Skill` grader stops being a score
    component and becomes an indicator, which is the other half of item 1. Needed: the option
-   and the configuration key, a gate that reads both arms and decides on the delta, a
+   and the configuration key, a verdict that reads both arms and decides on the delta, a
    threshold that means something, and the arm implemented on the CoWork backend, which runs
    no second arm at all.
 3. **Checking the produced artifact needs no harness change.** 0.3.0 keeps each run's
@@ -62,7 +62,7 @@ own order:
    checker is therefore a post-suite pass on the host, built outside this package. Two notes
    for whoever builds it: the kept workspace is sealed on purpose, and there is one directory
    per run. Deferred by the report's own recommendation: merging a verdict produced outside
-   the harness into the result document so that it gates.
+   the harness into the result document so that it decides.
 4. **Environment passthrough.** The container starts with exactly two variables, `HOME` and
    the enablement flag. A skill that needs credentials cannot be evaluated at all. Needed: a
    way to name variables in `cowork_evals.yaml` that are forwarded from the host, with values
@@ -97,7 +97,7 @@ Where each thing is, for a context that starts here.
 | Fact                                              | Where                                            |
 | ------------------------------------------------- | -------------------------------------------------- |
 | The pinned ablation and threshold                 | `src/cowork_evals/harness.py`, `ABLATION`, `THRESHOLD` |
-| The gate, and the one arm it reads                | `src/cowork_evals/gate.py`, `ARM`                 |
+| What decides pass and fail, and the one arm it reads                | `src/cowork_evals/verdict.py`, `ARM`                 |
 | Trace collection, and the same single arm         | `src/cowork_evals/traces.py`, `ARM`, `collect`    |
 | What a CoWork run cannot honour                   | `src/cowork_evals/cowork_backend.py`, `UNHONOURED_CASE_KEYS` |
 | The container's two environment variables         | `src/cowork_evals/docker/__init__.py`, `run_preamble` |
@@ -144,10 +144,10 @@ later plan does not reopen one.
 - [x] The tool grant. Closed and implemented the same day rather than deferred into a plan:
       `eval.allow_tools` is the session mirror, stated in `docs/running_evals.md`
 - [x] What makes a run invalid. A `mode` denial, whatever tool it names. A hook denial does
-      not, because a hook-gate case is a case whose correct behaviour is a denied call
+      not, because a hook-denial case is a case whose correct behaviour is a denied call
 - [x] The baseline arm on CoWork. Not built, and no fifth plan. The row says why
 - [x] Whether the baseline arm defaults on. Off
-- [x] What the gate compares. Per case, against a threshold defaulting to 0
+- [x] What is compared. Per case, against a threshold defaulting to 0
 - [x] Every one of them written into the decisions table above, before the plan that
       depends on it is written
 
@@ -166,8 +166,8 @@ branch and a separate merge. What each holds is its own file; nothing is restate
 - [x] [`plan_env_passthrough.md`](plan_env_passthrough.md). Named host variables forwarded
       into the run container, with no value in any artefact
 - [x] [`plan_ablation.md`](plan_ablation.md). The option, the setting, both arms collected,
-      and a gate that decides on the per-case delta. Docker only. Last, because it rewrites
-      the gate the first two change
+      and a verdict that decides on the per-case delta. Docker only. Last, because it rewrites
+      the pass and fail rules the first two change
 - [x] A row for each in [`README.md`](README.md), and a paragraph where that file describes
       what a plan builds
 

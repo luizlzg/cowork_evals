@@ -206,7 +206,7 @@ class EvalSection:
     max_cost_usd: int | float = 5
     # It bounds a whole invocation rather than a run, so the sweep reads it and not the
     # `claude plugin eval` argument list: `cli.py` checks the spend so far before each
-    # plugin, and a stop becomes a gate failure. docs/running_evals.md.
+    # plugin, and a stop becomes a failed run. docs/running_evals.md.
     max_cost_total_usd: int | float = 25
     # On, so a failing case can be diagnosed without running the suite again. It is the one
     # `eval:` key the CoWork backend does not read. docs/running_evals.md.

@@ -428,7 +428,7 @@ class Docker:
 
         The caller creates `output_dir` first, and owns naming it. A non-zero exit is not
         itself a failure: the harness exits 1 below threshold and 2 on partial results,
-        and the gate reads the document either way. No document at all is.
+        and the verdict reads the document either way. No document at all is.
 
         The sandbox directory is created here rather than by the harness, which makes a
         sandbox inside `TMPDIR` and not `TMPDIR` itself. What is kept out of it afterwards

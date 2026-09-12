@@ -49,7 +49,7 @@ it does goes through that one executable.
 
 - `cowork_evals docs` prints where its documentation is, and `cowork_evals docs <name>`
   prints one document's path. `docs eval_format` is the case format, `docs cli` the command.
-- `cowork_evals run --docker <path>` runs a case tree and gates on it.
+- `cowork_evals run --docker <path>` runs a case tree and decides pass or fail on it.
   `cowork_evals test --docker <path>/tests` runs a plugin's own pytest suite on the CoWork
   runtime, with no model.
 - `cowork_evals check --all` reports what each backend still needs.

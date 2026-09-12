@@ -57,7 +57,7 @@ TRACE_NAME = "trace.jsonl"
 LAST_MESSAGE_NAME = "last_message.txt"
 WORKSPACE_NAME = "workspace"
 
-# The arm every backend runs. There is no baseline arm here, as in [gate.py](gate.py).
+# The arm every backend runs. There is no baseline arm here, as in [verdict.py](verdict.py).
 ARM = "with"
 
 # The result document field that says a run came from the CoWork backend. It is this
@@ -93,13 +93,13 @@ def sandbox_root(output_dir: Path | str) -> Path:
 def run_dir(output_dir: Path | str, case: str, index: int, *, occurrence: int = 1) -> Path:
     """`<plugin log dir>/traces/<case>/run-<n>`, the directory one run's artefacts go in.
 
-    `index` is 1-based, and is the same number the gate prints as `run N`, so a failure line
+    `index` is 1-based, and is the same number the verdict line prints as `run N`, so a failure line
     and a directory name name the same run.
 
     Nothing makes a case name unique inside a plugin: two skills may each hold a case named
     `hello`. `occurrence` is which of them this is, and the second gets `-2`, exactly as
     `logs.plugin_dir` suffixes the second plugin of a name. Without it the second case's runs
-    would land on the first's, and the gate would name a directory holding the wrong run.
+    would land on the first's, and a failure line would name a directory holding the wrong run.
     """
     name = logs.slug(case)
     if occurrence > 1:
@@ -116,7 +116,7 @@ def collect(output_dir: Path | str) -> list[str]:
     would drop half of every comparison. docs/running_evals.md.
 
     `tracePath` in the result document is rewritten to the host path of the trace this kept,
-    so the one field that named the trace still names it and the gate prints the same thing
+    so the one field that named the trace still names it and the verdict line prints the same thing
     on both backends. A CoWork run's session directory is still in `cowork.sessionDir`.
 
     The caller calls this only when the run was keeping its traces. Off, the harness kept no
@@ -128,7 +128,7 @@ def collect(output_dir: Path | str) -> list[str]:
     document, unreadable = _document(output_dir)
 
     if unreadable is not None:
-        # No document and no sandboxes is a backend that produced nothing at all. The gate
+        # No document and no sandboxes is a backend that produced nothing at all. The verdict
         # reports the missing document, and there is nothing here to add.
         warnings = [unreadable] if root.is_dir() else []
     else:
@@ -192,7 +192,7 @@ def _one_run(
     source, missing = _source(root, run)
     if source is None:
         # A run that already carries an error says why there is nothing to collect, and a
-        # second line saying it again is noise. The gate prints the error either way.
+        # second line saying it again is noise. The verdict line prints the error either way.
         return [] if run.get("error") else [f"{where}: {missing}"]
 
     if not source.session:

@@ -6,7 +6,7 @@ description: Answer a question about what a real Claude CoWork session does by s
 # cowork_evals ask
 
 `cowork_evals ask --cowork "<prompt>"` submits one prompt to a real CoWork session, waits,
-and prints the answer. It runs no eval: no case tree, no grader, no result document, no gate
+and prints the answer. It runs no eval: no case tree, no grader, no result document, no verdict
 and no run directory.
 
 Use it when the answer is a fact about the deployed product. Do not use it to check anything

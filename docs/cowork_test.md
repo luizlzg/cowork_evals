@@ -3,7 +3,7 @@
 ## Summary
 
 A consumer's Python tests, run inside the CoWork image. No model, no harness, no case tree, no
-grader, no result document and no gate. pytest collects, runs and reports, and this package
+grader, no result document and no verdict. pytest collects, runs and reports, and this package
 supplies only the runtime it runs in.
 
 - **It is not an eval.** An eval needs a model in the loop, and there is none here. Code

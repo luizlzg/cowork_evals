@@ -18,7 +18,7 @@ is reached as `cowork_evals run --cowork <path>`.
   readable from the host, and it is what a kept run's `workspace/` is copied from.
 - **Nothing under the profile is written.** The traces are copied out of a session directory,
   never moved, and the session is left exactly as the application left it.
-- **Skips are recorded, never silent**, and the gate fails a run that reports one.
+- **Skips are recorded, never silent**, and a run that reports one fails.
 - **The plugin under test is not loaded.** A case path selects which cases run, not which code
   runs.
 - **The suite ceiling is refused before the first submission**, not one case at a time.
@@ -86,7 +86,7 @@ the reason. `--strict-mcp-config` keeps the developer's own MCP servers out of a
 
 The model is `--judge-model` where one was given and `eval.judge_model` otherwise. The
 signed-in `claude` on `PATH` is the one credential route, which is why [cli.md](cli.md) makes
-it part of the `--cowork` preflight. `CLAUDE_CODE_WALNUT_SPIRE` is not exported: it gates
+it part of the `--cowork` preflight. `CLAUDE_CODE_WALNUT_SPIRE` is not exported: it enables
 `claude plugin eval`, and this is `claude -p`.
 
 An `llm` grader whose file focus turns out to be an image is a grader skip, not a failure:
@@ -96,7 +96,7 @@ skip rule. Any other binary is a failed grader naming what the file is.
 
 ## What the result document says that the reference does not
 
-Both backends write the same v1 `aggregate-result.json`, so one gate covers both. The
+Both backends write the same v1 `aggregate-result.json`, so one verdict covers both. The
 contract is additive-only, which is what permits these. Nothing else here departs from
 [claude_code/plugin_eval_reference.md](claude_code/plugin_eval_reference.md).
 
@@ -118,12 +118,12 @@ key and never its value, because a run the driver could not start carries the ke
 
 `tracePath` is the session's transcript when the document is written, and is rewritten to the
 copy under the run's log directory once that copy is made. The session itself is still named,
-in `cowork.sessionDir`. That is what makes a gate line say the same thing on both backends.
+in `cowork.sessionDir`. That is what makes a failure line say the same thing on both backends.
 
 One behaviour departs as well. `casesPassed` is the reference's rule, a case scoring at or
 above `threshold`, minus every skipped case. `threshold` is 0 here, so without that
 subtraction a skipped case would count as passed. Nothing reads it to decide anything: the
-gate in [running_evals.md](running_evals.md) reads the grader results and `skipped`.
+pass and fail rules in [running_evals.md](running_evals.md) read the grader results and `skipped`.
 
 Two fields mean something narrower here than they do under the harness.
 
@@ -139,7 +139,7 @@ backend leaves. The log layout is [running_evals.md](running_evals.md).
 Skips are recorded, never silent. A grader with no equivalent, and a case whose frontmatter
 writes out a key this backend cannot honour, are both written into the result document as
 skipped with the reason. A key the case leaves to its default is not a skip; the rule and
-the key-by-key table are in [running_evals.md](running_evals.md). The gate fails a run that
+the key-by-key table are in [running_evals.md](running_evals.md). A run fails when it
 reports a skip, so a suite cannot go green on CoWork by grading nothing.
 
 ## The plugin under test is not loaded

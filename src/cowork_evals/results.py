@@ -1,6 +1,6 @@
 """The v1 `aggregate-result.json` document, as this backend writes it.
 
-It is the same document the harness writes, so one gate covers every backend. The contract is
+It is the same document the harness writes, so one verdict covers every backend. The contract is
 docs/claude_code/plugin_eval_reference.md: canonical camelCase, `schemaVersion: 1`,
 additive-only, and an optional field absent rather than null.
 
@@ -25,7 +25,7 @@ from .harness import RESULT_NAME
 
 SCHEMA_VERSION = 1
 
-# Pinned for every suite this backend runs. There is no baseline arm, and the gate decides
+# Pinned for every suite this backend runs. There is no baseline arm, and this package decides
 # pass and fail. docs/running_evals.md.
 ABLATION = "none"
 THRESHOLD = 0
@@ -250,7 +250,7 @@ def spend(run_dir: Path | str) -> float:
     """`costUsd` summed over every result document one level under a run directory.
 
     It is what a sweep compares against `eval.max_cost_total_usd` before each plugin. A
-    document that is missing or unreadable contributes nothing: the gate is what reports
+    document that is missing or unreadable contributes nothing: the verdict is what reports
     it, and a sweep never stops early because it could not read one.
     """
     total = 0.0
