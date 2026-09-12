@@ -14,6 +14,9 @@ piece is built yet.
   one verdict covers both backends. Structural graders decide; judged graders are printed.
 - **A skip fails the run**, so a backend cannot go green by honouring nothing. A case the
   backend was told it cannot run is counted instead, and the summary line says how many.
+- **The baseline arm is an option, off by default.** Under it a case is decided on the delta
+  between the two arms and not on its score alone, so a suite that is green because the
+  plugin is irrelevant is red.
 - **Every invocation keeps everything it printed**, in one directory per invocation, and
   every run's transcript with it.
 - **Nothing here runs on CI.** A person runs the sweep and reads the summary.
@@ -35,6 +38,7 @@ not restate any of them here.
 | The pinned harness argument list              | yes      | this file                                    |
 | The run traces, kept under the log directory, on both backends | yes | this file                    |
 | Pass and fail                                 | yes      | this file                                    |
+| The baseline arm, and the verdict over its delta | yes   | this file                                    |
 | The case validator                            | yes      | [eval_format.md](eval_format.md)             |
 | The 3.10 and import check over code under test | no      | nowhere. Not designed, and no plan builds it |
 | The container backend and its Dockerfile      | yes      | [docker.md](docker.md)                       |
@@ -157,11 +161,26 @@ the harness scores them normally in both arms.
 
 `--ablation none` runs one arm, and that arm is the with-arm. Nothing is dropped from the
 score, so a `tool_used: Skill` grader is scored and the verdict reads it. That is why it is
-pinned. `arm:` then satisfies itself whichever value it carries, and a case sets it only to
-stay portable to a suite that does run the baseline arm.
+the default. `arm:` then satisfies itself whichever value it carries, and a case sets it only
+to stay portable to a suite that does run the baseline arm.
 
-A baseline arm is an investigation, run by calling the harness by hand, and it is not a run of
-this command. It doubles the agent runs, and the table in
+The arm is `eval.ablation`, and `--ablation` is the option over it. It is off by default,
+because it runs every case twice and so costs twice as much, and because it stops scoring the
+one grader that says the skill fired at all. Both are the container backend's: the CoWork
+backend runs one arm, for the reason in [cowork_backend.md](cowork_backend.md), so
+`--ablation` and `--delta-threshold` are both a usage error on `--cowork`. See
+[cli.md](cli.md).
+
+| Setting                | Values                 | Default | Read by                    |
+| ---------------------- | ---------------------- | ------- | -------------------------- |
+| `eval.ablation`        | `none`, `with-without` | `none`  | the harness command line   |
+| `eval.delta_threshold` | a number from 0 to 1   | `0`     | the verdict, below         |
+
+`eval.delta_threshold` reaches no command line. `--threshold` stays pinned to 0 so this
+package decides, which is why the number a two-arm run is decided on lives here and not in
+that flag. It binds on a two-arm document alone.
+
+A two-arm run doubles the agent runs, and the table in
 [plugin_eval.md](plugin_eval.md) counts them.
 
 ### What a two-arm document holds
@@ -457,7 +476,11 @@ covers both backends, and it always runs in the `cowork_evals` process on the ho
 | Condition                                                            | Result       |
 | -------------------------------------------------------------------- | ------------ |
 | Any `regex`, `tool_used`, `tool_order` or `file_exists` grader failed | exit 1       |
-| Any case or grader reported skipped, or a grader reported `scored: false` | exit 1   |
+| Any case or grader reported skipped                                  | exit 1       |
+| A grader reported `scored: false`, on one arm                        | exit 1       |
+| A grader reported `scored: false`, on two arms                       | printed only, when it did not fire |
+| A case's delta is below `eval.delta_threshold`, on two arms          | exit 1       |
+| A case carries no delta, on two arms                                 | exit 1       |
 | A case reported `declaredUnrunnable`                                 | exit 0, counted |
 | `partial: true`, whatever `partialReason` says                       | exit 1       |
 | A run carrying `error`, on either backend                            | exit 1       |
@@ -472,8 +495,41 @@ covers both backends, and it always runs in the `cowork_evals` process on the ho
 
 Structural graders decide because a judged grader over a non-deterministic agent is a flaky
 verdict. A skip fails the run so that a backend cannot go green by honouring nothing.
-`scored: false` is a skip here: `--ablation none` drops no grader from the score, so a grader
-that was not scored was not asked.
+
+`scored: false` splits on the arm, and getting it wrong in either direction is the whole risk
+in the baseline arm. Too strict and every two-arm run is red; too loose and a real skip goes
+green in the one-arm run almost everybody runs.
+
+| The run           | `scored: false` on a grader                                                            |
+| ----------------- | --------------------------------------------------------------------------------------- |
+| `--ablation none` | A skip, and it fails the run. Nothing is dropped from the score, so a grader that was not scored was not asked |
+| `with-without`    | Expected on a with-only grader. It fails nothing, and it is printed as an indicator when it did not fire |
+
+A case whose graders are all with-only is the harness's own exception and arrives carrying
+`scored: true`. The verdict reads what the document says and never re-derives which graders
+an arm dropped.
+
+### The delta, on a two-arm run
+
+Per case, and never per suite: a suite average hides the one case the plugin made worse. The
+delta is `score - scoreWithout`, the document works it out, and a case below
+`eval.delta_threshold` fails on a line naming both scores and the delta.
+
+A two-arm case the document says is not comparable fails as well. A two-arm run that produced
+no delta did not do what the invocation asked, and passing it would be the green-on-nothing
+the arm exists to remove. The line names which of the two reasons it was, because the
+document tells them apart:
+
+| The document               | The line says                                          |
+| -------------------------- | -------------------------------------------------------- |
+| `arms.without` is empty    | the baseline arm ran nothing                           |
+| A run carries `skippedPaidGraders: true` | a run skipped its paid graders at the cost ceiling |
+
+The failure is the same either way. Every other condition in the table is unchanged and reads
+the with-arm, which is what a structural grader failing still means.
+
+Under `--ablation none` there is one arm and no delta, and the verdict is reached exactly as
+it is without the arm.
 
 A declared case is not a skip. The case itself says the backend cannot run it, the validator
 holds the case and the backend to the same rule, and the backend reports it rather than
@@ -561,8 +617,11 @@ Picked and ran are two counts of two things. They differ when a case was declare
 when a plugin failed to run, when the sweep stopped early, or when the harness picked
 differently. Both are printed, and neither is checked against the other.
 
-The score is the mean of each document's `overallScore`. A document marked `partial` adds
-`stopped early` and the reason to the end of the line.
+The score is the mean of each document's `overallScore`. A two-arm run adds the mean delta
+beside it, which is the mean of the `meanDelta` of each document that carried one, and reads
+`mean delta none` when no document did. A one-arm run adds nothing: there is no delta on one
+arm, and a number that is always 0 there would read as a plugin that changed nothing. A
+document marked `partial` adds `stopped early` and the reason to the end of the line.
 
 A line about what one run produced ends with `[artifacts: <dir>]`, naming the directory
 holding that run's transcript. It is on a failed structural grader, a failed judged grader and
@@ -591,9 +650,13 @@ them are above.
 The verdict reads every `<plugin>/aggregate-result.json` under the run directory and decides once
 for the whole invocation, so a sweep is decided once and not once per plugin.
 
-It reads the `with` arm only. A run's grader results carry `name`, `passed` and `scored`,
-never `type`, so it joins each result to that case's grader definition by name to learn
-which of the two classes it is in.
+Every condition but the delta reads the `with` arm, on one arm and on two. A run's grader
+results carry `name`, `passed` and `scored`, never `type`, so it joins each result to that
+case's grader definition by name to learn which of the two classes it is in.
+
+Whether a run was two-arm is `suite.ablation` in the document, and never a count of the arms
+a case carries: a case of a two-arm run whose baseline arm ran nothing carries one arm and is
+a failure, not a one-arm case.
 
 The verdict reads `schemaVersion: 1` documents and tolerates unknown fields. The contract is
 additive-only.

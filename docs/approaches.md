@@ -67,7 +67,7 @@ and reads what the session wrote, so it honours a subset of the format.
 | `model`, `allowed_tools`, `append_system_prompt`, `env` | yes              | no, the session decides                 |
 | `context.add_dirs`, `context.scaffold_script`           | yes              | no, nothing stages files into the VM    |
 | `mocks/`                                                | yes              | no, the MCP servers are the real ones   |
-| `arm:` on a grader                                      | read, but inert  | read, but inert                         |
+| `arm:` on a grader                                      | live under `--ablation with-without`, inert otherwise | read, but inert |
 | `no-cowork` in `tags:`                                  | one more tag     | the case is not submitted, and is counted |
 
 A case that needs any of the four rows this backend answers `no` to says so itself, with the
@@ -79,11 +79,17 @@ A session used four tools with nothing granted to it, which is what `no, the ses
 above is read from. The four probes are section 5 of
 [cowork_desktop.md](cowork_desktop.md).
 
-`arm:` is read on both backends and changes nothing, because `--ablation` is pinned to `none`
-on the Docker backend and the CoWork backend runs one arm, which is the with-arm. There is no
-baseline arm on either backend, so `--ablation with-without` is not reachable through this
-command at all. A case carrying `arm:` for portability is therefore honoured rather than
-skipped. See [running_evals.md](running_evals.md).
+`arm:` decides which arm scores a grader, so it does something only when a run has two arms.
+That is `--ablation with-without` on the Docker backend, which is off by default and is
+`eval.ablation`. Everywhere else the flag is `none`, one arm runs, that arm is the with-arm,
+and `arm:` satisfies itself whichever value it carries.
+
+There is no baseline arm on CoWork, and no plan builds one. A session gets its skills from
+the profile the desktop application is running, and that tree is the application's to manage,
+so a plugin is absent only in a profile it was never installed into and nothing here chooses
+which profile is active. `--ablation` and `--delta-threshold` are therefore a usage error on
+`--cowork`. A case carrying `arm:` for portability is honoured rather than skipped on both.
+See [running_evals.md](running_evals.md).
 
 One pass and fail condition is Docker only. A run that never had a tool the case was granted
 fails rather than scoring, and both ways of catching it read a harness trace: a

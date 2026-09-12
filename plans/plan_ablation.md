@@ -199,18 +199,18 @@ Unit tier, over recorded documents, except phase 1's run.
 
 ### Phase 6: documentation
 
-- [ ] [`../docs/running_evals.md`](../docs/running_evals.md): the baseline arm stops being
+- [x] [`../docs/running_evals.md`](../docs/running_evals.md): the baseline arm stops being
       described as something you do by calling the harness yourself, and becomes an option.
       The pass and fail table gains the delta condition, the incomparable-arms condition
       beside it, and the split `scored: false` condition. The trace layout gains the arm
-- [ ] [`../docs/cli.md`](../docs/cli.md): the two options, and that both are Docker only
-- [ ] [`../docs/approaches.md`](../docs/approaches.md): `arm:` on a grader stops being inert
+- [x] [`../docs/cli.md`](../docs/cli.md): the two options, and that both are Docker only
+- [x] [`../docs/approaches.md`](../docs/approaches.md): `arm:` on a grader stops being inert
       on Docker, and stays inert on CoWork
-- [ ] [`../docs/plugin_eval.md`](../docs/plugin_eval.md): the model-call count for a two-arm
+- [x] [`../docs/plugin_eval.md`](../docs/plugin_eval.md): the model-call count for a two-arm
       suite is what a reader is pointed at for the cost
-- [ ] [`../docs/cowork_backend.md`](../docs/cowork_backend.md): one line saying that backend
+- [x] [`../docs/cowork_backend.md`](../docs/cowork_backend.md): one line saying that backend
       runs one arm and why, pointing at the measurement rather than restating it
-- [ ] Nothing in `plans/done/` is read or corrected
+- [x] Nothing in `plans/done/` is read or corrected
 
 ### Phase 7: integration
 

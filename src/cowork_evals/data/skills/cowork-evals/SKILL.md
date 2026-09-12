@@ -188,7 +188,7 @@ Each has a silent failure mode.
 | Exit | Means                                                            |
 | ---- | ---------------------------------------------------------------- |
 | 0    | the run passed                                                  |
-| 1    | a structural grader failed, a case or grader was skipped, or a run never had a tool it was granted |
+| 1    | a structural grader failed, a case or grader was skipped, a run never had a tool it was granted, or a case's delta was below the threshold |
 | 2    | usage error                                                      |
 | 3    | the preflight failed. Nothing ran, and the message names the fix |
 
@@ -196,6 +196,27 @@ Each has a silent failure mode.
 case blocks a single-case run. There is no option to skip validation.
 
 `test` is the exception: it returns pytest's exit code unchanged.
+
+## Did the plugin do anything
+
+A green suite does not say the plugin works. Ask a model to build a spreadsheet and it will
+probably build one whether or not your spreadsheet plugin is loaded.
+
+```bash
+cowork_evals run --docker <path> --ablation with-without
+cowork_evals run --docker <path> --ablation with-without --delta-threshold 0.2
+```
+
+Every case runs twice, once with the plugin and once with nothing loaded, and each case is
+decided on the delta between the two scores rather than on its score alone. A case below
+`--delta-threshold` fails, and so does a case the two arms cannot be compared on. It costs
+twice as much, it is off by default, and it is `--docker` only: a CoWork session gets its
+skills from the profile the application is running. `eval.ablation` and
+`eval.delta_threshold` set both from the file. `cowork_evals docs running_evals` has what the
+arm changes about pass and fail.
+
+Under the arm a `tool_used: Skill` grader stops being scored in either arm and is reported as
+an indicator, so the one-arm run is still what says the skill fired.
 
 ## Reading a failure
 
