@@ -222,10 +222,14 @@ Work in order. Tick a box when it is verified, then commit. Do not batch ticks.
 
 ### Phase 3: the callers
 
-- [ ] `cli._ask` calls `consent` once, before the driver, and not on `--session` or `--dry-run`
-      (blocked: the `ask` verb is plan 8's and is not on `main`)
 - [x] `cli._each_plugin` calls it once, before the first plugin, on `--cowork` only
 - [x] `run --cowork --dry-run` never asks
+
+`cli._ask` is the third caller this plan named, and it is not here. The `ask` verb is plan
+8's and was not on `main` when this merged, so the one line that calls `cowork.consent` from
+it belongs to `feat/ask` and ships with that branch. Everything the call needs is on `main`:
+`cowork.consent` is public, `consent: none` is a documented key, and the driver refuses a
+submission that never asked.
 
 ### Phase 4: tests
 
@@ -251,8 +255,8 @@ no skip.
 - [x] `docs/cli.md`: one paragraph saying `run --cowork` asks once, and what `none` is. The
       `ask` half of the sentence lands with `feat/ask`, which owns that verb
 - [x] `README.md`: the sentence about a CoWork run taking the keyboard says the modal asks first
-- [ ] `plans/README.md`: the row moves to `implemented` on the merge, and the file moves to
-      `done/plan_focus.<YYYYMMDD>.md`
+- [x] `plans/README.md`: the row moves to `implemented` on the merge, and the file moves to
+      `done/plan_focus.20260912.md`
 
 ## Verification
 
@@ -268,5 +272,9 @@ no skip.
       Observed twice on 2026-09-12: `9: Finder is frontmost, not Claude` from
       `test_focus_the_guard_refuses_with_code_9_when_cowork_is_not_frontmost`, and
       `9: iTerm2 is frontmost, not Claude` from a live run during which the developer typed
-- [ ] `plans/plan_ask.md` phase 5 is unblocked: the four measurements run without a code 6.
-      `feat/ask`'s, not this plan's, and it runs there
+
+Plan 8's phase 5 is unblocked. What blocked it was a prompt reaching the composer altered,
+and a driven submission now clears the field, guards every keystroke and refuses rather than
+types. One live submission on 2026-09-12 into a composer primed with text by hand came back
+with an audit prompt equal to the submitted prompt, so the four measurements can run. They
+are `feat/ask`'s and run there.
