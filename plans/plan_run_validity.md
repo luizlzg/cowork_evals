@@ -1,18 +1,16 @@
-# Run validity: a run that never executed the tool fails instead of scoring
+# Run validity: an eval that never got its tool fails instead of scoring
 
-One run is one execution of one case: what `runs: N` counts, what the gate prints as
-`run N`, and what gets a directory at `traces/<case>/run-<n>/`. A whole `cowork_evals run`
-is an invocation, and this plan never calls one a run.
+An eval sends a prompt to a model and grades the answer. If the model never got a tool it
+needed, that answer says something about this repository's configuration and nothing about
+the plugin. It is scored anyway.
 
-A run in which the agent never got the tool it needed is not a measurement of the plugin. It
-is a measurement of this repository's configuration, and it is scored like any other run.
-Measured on 2026-09-12 and recorded in [`../docs/running_evals.md`](../docs/running_evals.md):
-a `Write` call the permission mode refused left a record in the trace and the run still
-scored, and a shell tool that was never offered left no record at all and the run still
-scored.
+Two ways that happens, both measured on 2026-09-12 and recorded in
+[`../docs/running_evals.md`](../docs/running_evals.md). A `Write` call the permission mode
+refused left a record in the trace, and the eval scored. A shell tool that was never offered
+left no record at all, and the eval scored.
 
-This plan makes such a run fail loudly, makes the summary counts honest, and states the kept
-artefact layout as a contract that a consumer's post-suite content checker reads.
+This plan fails those evals, stops the summary line contradicting the failures printed above
+it, and states the kept artefact layout as a contract a consumer's content checker reads.
 
 The rule it implements, and what it follows from, is the decisions table in
 [`plan_believable_results.md`](plan_believable_results.md). Do not re-derive it here.
@@ -29,28 +27,24 @@ Branch: `feat/run-validity`.
 | The backend declaration on a case                                | [`plan_runnability.md`](plan_runnability.md) |
 | The tool grant                                                   | Already done. `eval.allow_tools` is the session mirror in [`../docs/running_evals.md`](../docs/running_evals.md) |
 
-The grant was the rider this plan was going to carry. It landed on 2026-09-12 instead,
-because a validity check over a grant this repository got wrong would redden every suite for
-its own misconfiguration. There is nothing left of it here.
+The grant was going to be part of this plan. It was done on 2026-09-12 instead, because a
+check for a tool the model never got would fail every eval in the suite while the grant
+itself was still wrong.
 
-## What an exclusion glob turned out to be
+## Skipping a case with a glob is not possible
 
-`plan_believable_results.md` decided that report item 5 splits into a backend declaration and
-an exclusion glob typed on one invocation. The declaration is
-[`plan_runnability.md`](plan_runnability.md). The glob is not built, and the reason is a fact
-about the harness rather than a judgement.
+`plan_believable_results.md` planned an option to exclude a case from one command, so that
+nobody has to move the case directory. It cannot be built.
 
-`claude plugin eval --case <glob>` takes one glob over the case name, supporting `*` and `?`
-and nothing else. It has no negation, it takes no list, and `--tag` includes only. On the
-Docker backend the harness discovers and selects, so this package has nothing to filter: it
-can only hand the harness one glob. Expressing an exclusion there would mean one harness
-invocation per case, which is one result document per case, which breaks the one document per
-plugin the log layout and the gate both rest on.
+`claude plugin eval --case <glob>` takes one glob matching the case name, with `*` and `?`.
+There is no negation and no list, and `--tag` only includes. On Docker the harness finds and
+picks the cases, so this package has nothing to filter: it hands over one glob and that is
+all. Excluding a case would mean calling the harness once per case, which writes one result
+file per case, and the log layout and the gate both expect one per plugin.
 
-So the exclusion is dropped and the other half of that rider is built: the counts say how
-many cases were discovered, how many were selected and how many ran, which is what makes a
-filtered or truncated sweep readable. Phase 5 writes the fact into
-[`../docs/cli.md`](../docs/cli.md) so that the next person does not re-derive it.
+So the option is dropped. What is built instead is the counts: how many cases were found, how
+many were picked, and how many ran. Phase 5 writes this into
+[`../docs/cli.md`](../docs/cli.md) so nobody works it out again.
 
 ## Orientation
 
@@ -85,74 +79,76 @@ four runs that produced them. Nothing in this phase is outstanding.
 
 ### Phase 2: the check
 
-Two checks, because phase 1 found two failure modes. Both read the kept trace, and both put
-their finding into the result document so that the gate keeps reading one thing.
+Two checks, one per failure mode. Both read the trace the run already kept, and both write
+what they found into the result file, so the gate still reads only that file.
 
-- [ ] `traces.py` scans each kept trace in the same pass that already reads it for
-      `last_message`. One read of one file, not three
-- [ ] Check one, the denial. Every `system` record of subtype `permission_denied` carrying
-      `decision_reason_type: mode` yields its `tool_name`
-- [ ] Check two, the silent absence. The `system` `init` record's `tools` list is held
-      against the grant the run was given, and every granted tool missing from it yields its
-      name. The run's grant reaches the scan from `RunOptions`, which the backend already
-      holds, rather than being re-read from configuration
-- [ ] Both findings go into that run's entry in the result document, as this repository's own
-      added fields beside the `tracePath` rewrite `collect` already does. Each is absent when
-      empty, so a healthy document is unchanged
-- [ ] `gate.py` fails a run carrying either, one line each, naming the tools and carrying the
-      `[artifacts: ...]` suffix every line somebody investigates already carries
-- [ ] A denial from a plugin's own hook does not gate. Check one matches on the reason type
-      and never on the tool name
-- [ ] Nothing changes on the CoWork backend. A session has no permission mode and no `init`
-      record, both fields never appear, and one gate still covers both backends
-- [ ] A run that hit its turn cap or timed out already carries `error` and already gates.
-      Confirm that against the gate table and add nothing
+- [ ] `traces.py` reads each kept trace once, for the final message as it does now and for
+      both checks
+- [ ] Check one: every `permission_denied` record whose `decision_reason_type` is `mode`
+      gives up its `tool_name`
+- [ ] Check two: the `init` record lists the tools the run offered the model. Every granted
+      tool missing from that list is named. The grant comes from `RunOptions`, which the
+      backend already has, and is not read from the config file again
+- [ ] Both go into that run's entry in the result file, beside the `tracePath` that `collect`
+      already rewrites. Neither is written when there is nothing to write, so a healthy file
+      is unchanged
+- [ ] `gate.py` fails a run carrying either, one line each, naming the tools and the
+      directory holding that run's trace
+- [ ] A denial from the plugin's own hook does not fail anything. Check one matches on the
+      reason, never on the tool name
+- [ ] Nothing changes on CoWork. A session has no permission mode and writes no tool list, so
+      neither field ever appears and one gate still covers both backends
+- [ ] A run that hit its turn cap or timed out already carries `error` and already fails.
+      Check that against the gate table and add nothing
 
 ### Phase 3: honest counts
 
-The summary line lies in two ways, and one of them needs no truncation at all. Measured
-2026-09-12: a `cowork_evals run --docker plugins/smoke --allow-tools Read` whose only grader
-failed printed `FAIL ...` and then `1 cases, 1 passed, overall score 0.00` on the next line.
-`casesPassed` is the harness's rule, a case scoring at or above the threshold, and the
-threshold is pinned to 0 so that the gate decides instead. Every case therefore counts as
-passed in that line whatever the gate said. The truncated sweep the report describes is the
-second way.
+The last line the gate prints says how many cases passed, and it is wrong twice.
 
-The exit code is right in both. The summary line is what lies.
+Measured 2026-09-12. `cowork_evals run --docker plugins/smoke --allow-tools Read`, one case,
+its only grader failed. It printed `FAIL ...` and then, on the next line,
+`1 cases, 1 passed, overall score 0.00`. The count comes from `casesPassed` in the result
+file, which the harness sets for any case scoring at or above `--threshold`, and we pin that
+threshold to 0 so our own gate decides instead. So every case counts as passed there, always.
 
-- [ ] The CLI already discovers the case tree in its preflight. It passes the discovered
-      count and the selected count into the gate, the way it already passes `extra`
-- [ ] The summary line names four numbers: discovered, selected, ran, and how many the gate
-      passed, with the overall score after them. `passed` is the gate's own count and never
-      `casesPassed`, which counts a case the gate failed
-- [ ] A document carrying `partial: true` makes the summary say the sweep was truncated and
-      name the reason, so the last line a person reads says it as well as the failure line
-- [ ] Selected and ran differing is not itself a failure. On the Docker backend the harness
-      discovers and this package's count is a second opinion, so the two are printed and
-      neither is asserted against the other
+The second way is the one in the report: a sweep the cost ceiling stopped early still reads
+as if every case ran.
 
-### Phase 4: the kept artefact layout, as a contract
+The exit code is right in both. Only the line is wrong.
 
-Documentation only. No code changes in this phase.
+- [ ] The command already reads the case tree before it runs anything. It hands the gate two
+      numbers, how many cases it found and how many it picked, the way it already hands over
+      `extra`
+- [ ] The line names four numbers: found, picked, ran, passed, then the score. `passed` is
+      the gate's own count, never `casesPassed`
+- [ ] A result file marked `partial` makes the line say the sweep stopped early and why
+- [ ] Picked and ran differing is not a failure. The harness counts one and this package
+      counts the other, so both are printed and neither is checked against the other
 
-- [ ] [`../docs/running_evals.md`](../docs/running_evals.md) states the layout a consumer's
-      post-suite content checker reads: the exact path per run, one directory per run, the
-      three names in it, and that the tree is read-only
-- [ ] The same section states that `home/` and `tmp/` inside a kept sandbox are sealed on
-      purpose, that `logs.unseal` is what opens them, and that a checker reads the collected
-      `workspace/` rather than a sandbox
-- [ ] It states what is out of scope and stays out: nothing merges a verdict produced outside
-      the harness into the result document, so a checker's finding does not gate
+### Phase 4: write down what a run leaves on disk
 
-### Phase 5: what selection can and cannot say
+Documentation only. No code.
+
+Every run keeps its transcript, its final message and its working directory. A consumer
+writes their own checker over that, to look at the files an eval produced, so the layout has
+to be something they can rely on.
+
+- [ ] [`../docs/running_evals.md`](../docs/running_evals.md) gives the path, one directory
+      per run, the three names in it, and that nothing here writes into it afterwards
+- [ ] It says that `home/` and `tmp/` inside a kept sandbox are locked at mode 000 on
+      purpose, that `logs.unseal` opens them, and that a checker should read the collected
+      `workspace/` instead
+- [ ] It says that a checker's verdict does not reach the result file and does not fail
+      anything. That stays out until somebody asks for it
+
+### Phase 5: write down that you cannot exclude a case
 
 Documentation only.
 
-- [ ] [`../docs/cli.md`](../docs/cli.md) records that `--case` takes one glob over the case
-      name, that `--tag` includes only, and that neither can express an exclusion, with the
-      harness reference as the source
-- [ ] It records the one route that does exist: a case a person wants out of a sweep carries
-      a tag of its own and the sweep selects on tags
+- [ ] [`../docs/cli.md`](../docs/cli.md) says that `--case` takes one glob over the case name
+      and `--tag` only includes, so neither can leave a case out, and points at the harness
+      reference for it
+- [ ] It gives the one thing that does work: put a tag on the case and select on tags
 
 ### Phase 6: tests
 
@@ -163,33 +159,31 @@ Unit tier throughout. Nothing here needs a model.
 - [ ] A trace holding a hook denial yields none
 - [ ] A trace whose `init` list is missing a granted tool yields that tool's name
 - [ ] A trace whose `init` list carries every granted tool yields none
-- [ ] A trace with no `init` record yields none, because a run that wrote none says nothing
-      about its tools
-- [ ] A trace holding neither finding yields neither, and the document is byte for byte what
-      it was
-- [ ] The gate fails a document whose run carries the field, and the line names the tools and
-      the artefacts directory
-- [ ] The gate passes a document with no such field, so an old document reads as it did
-- [ ] The summary line carries the four counts, and says truncated on a partial document
-- [ ] Every existing gate test still passes unchanged, or its change is in the same commit
+- [ ] A trace with no `init` record yields none. A run that wrote no tool list says nothing
+      about what it had
+- [ ] A trace with neither problem yields neither, and the result file is unchanged
+- [ ] The gate fails a result file carrying either field, and the line names the tools and
+      the directory holding the trace
+- [ ] The gate passes a result file with neither, so a file written before this existed reads
+      as it did
+- [ ] The last line carries the four counts, and says so when a sweep stopped early
+- [ ] Every gate test that already exists still passes, or its change goes in the same commit
       with the reason in the message
 
 ### Phase 7: documentation
 
-- [ ] The gate table in [`../docs/running_evals.md`](../docs/running_evals.md) carries the
-      new condition
-- [ ] The summary line's four counts are stated where that file describes the gate's last
-      line
-- [ ] The added result-document field is stated where that file describes what this
-      repository writes into the harness's document, beside the `tracePath` rewrite
-- [ ] [`../docs/approaches.md`](../docs/approaches.md) says that the check is a Docker
-      backend fact, because CoWork has no permission mode
+- [ ] The gate table in [`../docs/running_evals.md`](../docs/running_evals.md) gains the new
+      condition
+- [ ] The same file says what the four counts on the last line mean
+- [ ] It says what the two new fields in the result file are, next to where it describes the
+      `tracePath` rewrite
+- [ ] [`../docs/approaches.md`](../docs/approaches.md) says this check is Docker only,
+      because CoWork has no permission mode
 - [ ] Nothing in `plans/done/` is read or corrected
 
-### Phase 8: integration
+### Phase 8: run it for real
 
-- [ ] `plugins/smoke/` on the Docker backend, from the integration tier, green
-- [ ] A fixture case asking for a `Write` call, granted `Bash` alone, from the integration
-      tier, red, with the failure line naming `Write`. That is the run phase 1 already made
-      by hand
+- [ ] `plugins/smoke/` on Docker, from the integration tier, passes
+- [ ] A case asking for a `Write` call under a grant without `Write`, from the integration
+      tier, fails, and the line names `Write`. Phase 1 already ran this by hand
 - [ ] `scripts/test.sh` and `ruff` clean
