@@ -191,12 +191,12 @@ Every run keeps its transcript, its final message and its working directory. A c
 writes their own checker over that, to look at the files an eval produced, so the layout has
 to be something they can rely on.
 
-- [ ] [`../docs/running_evals.md`](../docs/running_evals.md) gives the path, one directory
+- [x] [`../docs/running_evals.md`](../docs/running_evals.md) gives the path, one directory
       per run, the three names in it, and that nothing here writes into it afterwards
-- [ ] It says that `home/` and `tmp/` inside a kept sandbox are locked at mode 000 on
+- [x] It says that `home/` and `tmp/` inside a kept sandbox are locked at mode 000 on
       purpose, that `logs.unseal` opens them, and that a checker should read the collected
       `workspace/` instead
-- [ ] It says that a checker's verdict does not reach the result file and does not fail
+- [x] It says that a checker's verdict does not reach the result file and does not fail
       anything. That stays out until somebody asks for it
 
 ### Phase 5: write down that you cannot exclude a case

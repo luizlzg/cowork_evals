@@ -279,6 +279,41 @@ anything about the run, and it is 40 times the size of what is kept.
 Nothing under a CoWork profile is written, moved or removed. The driver's rule holds here:
 [cowork_driver.md](cowork_driver.md).
 
+### What a checker reads
+
+A consumer who wants to know what an eval produced, such as whether the `.pptx` a skill wrote
+will open, writes their own script over the files a run left. That script is theirs and lives
+in their repository: [library.md](library.md). This is the layout it reads.
+
+One directory per run:
+
+```
+<log root>/<yyyymmdd-hhmmss>-<scope>/<plugin>/traces/<case>/run-<n>/
+  trace.jsonl
+  last_message.txt
+  workspace/
+```
+
+`<n>` is 1-based and is the number the verdict line prints as `run N`. A second case of the
+same name inside one plugin is suffixed `-2`, as a second plugin of one name is. The whole
+path is under the run directory the invocation printed, and a failure line about that run
+names the directory as `[artifacts: <dir>]`.
+
+Nothing in this package writes into a run directory after collection. The three names are
+written once, by `traces.collect`, before the verdict is reached. The one field it changes
+afterwards is in the result document, not here.
+
+A kept sandbox is not the place to read. `--keep-temp` leaves the sandbox read-only, with the
+`home/` and `tmp/` trees the plugin under test wrote at mode 000 under `sealed/`, which is
+deliberate: the harness seals them so that nothing walks into a tree the workload wrote.
+`logs.unseal` opens one so that collection can move the workspace out of it, and the sandbox
+root is removed once collection is done. A checker reads the collected `workspace/` instead,
+which is that same working directory under the run directory, at the modes the agent left.
+
+A checker's verdict stays outside. It does not reach `aggregate-result.json` and it fails
+nothing: `cowork_evals run` exits on the conditions in the table below and on no other. There
+is no route for a script to add one, and none is built until somebody asks for it.
+
 ### The two transcript formats
 
 `trace.jsonl` is the transcript the backend that produced it wrote, and neither is rewritten.
