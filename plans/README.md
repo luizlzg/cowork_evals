@@ -42,7 +42,7 @@ not the system's: what is built and usable is
 | - | [`done/plan_believable_results.20260912.md`](done/plan_believable_results.20260912.md) | Nothing. The measurements, the decisions, and the four plans that follow them | implemented |                       |
 | 10 | [`done/plan_run_validity.20260912.md`](done/plan_run_validity.20260912.md) | A run that never got its tool fails instead of scoring, and honest counts | implemented | `feat/run-validity`   |
 | 11 | [`done/plan_runnability.20260912.md`](done/plan_runnability.20260912.md) | The `no-cowork` tag on a case, enforced both ways, counted rather than failed | implemented | `feat/runnability`    |
-| 12 | [`plan_env_passthrough.md`](plan_env_passthrough.md) | Named host variables forwarded into the run container, values never logged | not started | `feat/env-passthrough` |
+| 12 | [`done/plan_env_passthrough.20260912.md`](done/plan_env_passthrough.20260912.md) | Named host variables forwarded into the run container, values never logged | implemented | `feat/env-passthrough` |
 | 13 | [`plan_ablation.md`](plan_ablation.md) | The baseline arm, and a verdict that decides on the per-case delta | not started | `feat/ablation`       |
 
 | Status        | Means                                                                     |
