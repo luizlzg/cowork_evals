@@ -47,3 +47,10 @@ docker:
   # An extra root CA, for a host whose network inspects TLS. Unset, or naming a file that
   # is not there, passes nothing. The certificate never enters this repository.
   # extra_ca_file: ~/extra_root_ca.pem
+  # Host variable names forwarded into the run container, for a skill that reads a
+  # credential from the environment. [ACME_API_KEY] forwards that one name. The names
+  # alone, never a value. What a name holds stays on the host and in the container, and
+  # reaches no log and no result. A name that is unset or empty on the host fails the
+  # preflight, and a name that would carry Claude's own credential is refused.
+  # docs/docker.md.
+  # env_passthrough: []

@@ -253,7 +253,8 @@ code unchanged.
 is how a question about what a live session does is answered by asking one.
 
 Every option has a default in `cowork_evals.yaml`, in the working directory. That file is the
-only configuration route: nothing is read from the process environment, and there is no `.env`.
+only configuration route: nothing is read from the process environment except the variables
+that file names for the run container, and there is no `.env`.
 `cowork_evals init` writes it with every key and every default. Runs write to `logs/` under the
 working directory.
 

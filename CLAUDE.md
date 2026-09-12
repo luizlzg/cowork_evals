@@ -29,8 +29,10 @@ before changing anything under it. Never restate one of these in another file; l
   per-backend executable. The surface is `docs/cli.md`.
 - **One config file.** `cowork_evals.yaml` holds every setting this repository defines: the
   driver's, each backend's, the models, the tool grants, the ceilings. There is no second
-  route. Nothing is read from the process environment. There is no `.env`. A command-line
-  option beats the file. The file beats the built-in default. See `docs/library.md`.
+  route. Nothing is read from the process environment except the variables `docker.env_passthrough`
+  names, whose values are forwarded into the run container and read as configuration nowhere.
+  There is no `.env`. A command-line option beats the file. The file beats the built-in
+  default. See `docs/library.md`.
 - **A split needs a rule.** Wherever one thing is divided across two files, two modules or
   two mechanisms, write down the rule that decides which side a new item goes on. It holds
   for every item already there. A split with no such rule is a defect. Build order is not a

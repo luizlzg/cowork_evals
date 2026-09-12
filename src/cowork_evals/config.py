@@ -1,7 +1,9 @@
 """`cowork_evals.yaml`, and the frozen `Config` it produces.
 
 Every setting this package defines is in that file. There is no second route: nothing is read
-from the process environment, and there is no `.env`. The three sections and the ladder over
+from the process environment except the variables `docker.env_passthrough` names, whose values
+are forwarded into the run container and read as configuration nowhere, and there is no
+`.env`. The three sections and the ladder over
 them are docs/library.md. The `cowork:` keys and their defaults are docs/cowork_driver.md, the
 `eval:` keys docs/running_evals.md, and the `docker:` keys docs/docker.md.
 

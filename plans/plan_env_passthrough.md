@@ -163,17 +163,17 @@ Unit tier, except phase 4's runs.
 
 ### Phase 6: documentation
 
-- [ ] [`../docs/library.md`](../docs/library.md): the rule that nothing is read from the
+- [x] [`../docs/library.md`](../docs/library.md): the rule that nothing is read from the
       process environment is amended to the one exception, with the two rules above
-- [ ] `CLAUDE.md`: the same amendment, in the one-config-file rule
-- [ ] [`../docs/docker.md`](../docs/docker.md): the setting, the preflight, what is
+- [x] `CLAUDE.md`: the same amendment, in the one-config-file rule
+- [x] [`../docs/docker.md`](../docs/docker.md): the setting, the preflight, what is
       forwarded, the credential refusal, and phase 4's measurement
-- [ ] [`../docs/cli.md`](../docs/cli.md): the preflight table gains the new conditions
-- [ ] [`../docs/running_evals.md`](../docs/running_evals.md): `env.txt` gains its row
-- [ ] `src/cowork_evals/data/cowork_evals.example.yaml` carries the key, commented, with no
+- [x] [`../docs/cli.md`](../docs/cli.md): the preflight table gains the new conditions
+- [x] [`../docs/running_evals.md`](../docs/running_evals.md): `env.txt` gains its row
+- [x] `src/cowork_evals/data/cowork_evals.example.yaml` carries the key, commented, with no
       value. That file is what `init` writes, so a consumer sees the key without reading a
       document
-- [ ] Nothing in `plans/done/` is read or corrected
+- [x] Nothing in `plans/done/` is read or corrected
 
 ### Phase 7: integration
 
