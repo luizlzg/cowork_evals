@@ -200,6 +200,11 @@ file stays, but nothing durable may live only in it. A row in `docs/` still read
 A plan is done when every box is ticked and its branch is merged. Neither half alone is
 enough: a full checklist on an unmerged branch is still work in progress.
 
+Done and retired are not the same thing. A plan that builds nothing has no branch, and it is
+done when its last box is ticked. It still waits in `plans/` while anything outside `done/`
+depends on it, because nothing outside `done/` may depend on a file inside it. That is the
+`complete` status, and the plan itself names what is holding it.
+
 On the merge, move the file to `done/` and rename it `plan_<name>.<YYYYMMDD>.md`. The date
 is the date it was merged, so `plan_docker.md` merged on 2026-09-08 becomes
 `done/plan_docker.20260908.md`. Update its row in the table above to the new path. The date
