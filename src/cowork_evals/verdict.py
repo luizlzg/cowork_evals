@@ -21,6 +21,7 @@ from typing import Any
 
 from .cases import JUDGED
 from .harness import RESULT_NAME
+from .traces import DENIED, UNOFFERED
 
 # The one schema this module reads. The contract is additive-only, so an unknown field is
 # ignored and a different version is a failure.
@@ -39,6 +40,14 @@ NOTE = "NOTE"
 # docs/running_evals.md; the container backend fills it through traces.py.
 ARTIFACTS = "artifacts"
 
+# The two validity fields traces.py writes, and what a run carrying each is told. Both say
+# the model never had a tool the case was granted, so the score is not a fact about the
+# plugin. docs/running_evals.md.
+VALIDITY = {
+    DENIED: "the permission mode refused",
+    UNOFFERED: "the run was never offered",
+}
+
 
 @dataclass(frozen=True, slots=True)
 class Verdict:
@@ -52,16 +61,20 @@ class Verdict:
         return "".join(f"{line}\n" for line in self.lines)
 
 
-def decide(run_dir: Path | str, *, extra: tuple[str, ...] = ()) -> Verdict:
+def decide(run_dir: Path | str, *, found: int, picked: int, extra: tuple[str, ...] = ()) -> Verdict:
     """Read every result document one level under the run directory and decide once.
 
     `extra` is a failure line the caller already holds, which is how a sweep stopped by the
     total cost ceiling reaches the verdict without a second code path.
+
+    `found` and `picked` are the caller's counts over the case tree it read before it ran
+    anything: how many cases are there, and how many the filters kept. This module counts the
+    other two, and the summary line prints all four. docs/running_evals.md.
     """
     directory = Path(run_dir)
     failures = [f"{FAIL} {line}" for line in extra]
     notes: list[str] = []
-    totals = _Totals()
+    totals = _Totals(found=found, picked=picked)
 
     for plugin in sorted(child for child in directory.iterdir() if child.is_dir()):
         document, unreadable = _read(plugin / RESULT_NAME)
@@ -69,7 +82,7 @@ def decide(run_dir: Path | str, *, extra: tuple[str, ...] = ()) -> Verdict:
             failures.append(f"{FAIL} {unreadable}")
             continue
         totals.add(document)
-        _judge_document(plugin.name, document, failures, notes)
+        _judge_document(plugin.name, document, failures, notes, totals)
 
     return Verdict(passed=not failures, lines=(*failures, *notes, totals.summary))
 
@@ -94,16 +107,27 @@ def _read(path: Path) -> tuple[dict[str, Any], None] | tuple[dict[str, Any], str
 
 
 def _judge_document(
-    plugin: str, document: dict[str, Any], failures: list[str], notes: list[str]
+    plugin: str, document: dict[str, Any], failures: list[str], notes: list[str], totals: _Totals
 ) -> None:
     if document.get("partial"):
         reason = document.get("partialReason")
         failures.append(f"{FAIL} {plugin}: partial results: {reason}")
+        totals.stopped(reason)
     for case in document.get("cases") or []:
-        _judge_case(plugin, case, failures, notes)
+        _judge_case(plugin, case, failures, notes, totals)
 
 
-def _judge_case(plugin: str, case: dict[str, Any], failures: list[str], notes: list[str]) -> None:
+def _judge_case(
+    plugin: str, case: dict[str, Any], failures: list[str], notes: list[str], totals: _Totals
+) -> None:
+    """One case, and whether anything about it failed.
+
+    The pass count is this package's own: a case passed when it produced no failure line.
+    `aggregates.casesPassed` is the harness's count under `--threshold 0`, which is every
+    case always, so reading it back would print a pass beside a failure line.
+    docs/running_evals.md.
+    """
+    before = len(failures)
     where = f"{plugin}/{case.get('name')}"
     if case.get("skipped"):
         failures.append(f"{FAIL} {where}: the case was skipped: {case.get('skipReason')}")
@@ -115,6 +139,8 @@ def _judge_case(plugin: str, case: dict[str, Any], failures: list[str], notes: l
     }
     for index, run in enumerate(case.get("arms", {}).get(ARM) or [], start=1):
         _judge_run(f"{where}: run {index}", run, definitions, failures, notes)
+    if len(failures) == before:
+        totals.pass_one()
 
 
 def _judge_run(
@@ -124,16 +150,29 @@ def _judge_run(
     failures: list[str],
     notes: list[str],
 ) -> None:
-    """One run of one case. An `error` fails on every backend.
+    """One run of one case. An `error` fails on every backend, and so does either validity
+    field.
 
-    On CoWork it is a case the driver could not run or collect. On the harness it is a run
-    that timed out, hit the turn cap or exited non-zero, each of which is still graded on
+    On CoWork an `error` is a case the driver could not run or collect. On the harness it is a
+    run that timed out, hit the turn cap or exited non-zero, each of which is still graded on
     what it produced, so the score alone does not catch it.
+
+    The two validity fields are the container backend's, written by traces.py out of the
+    kept trace. A run that never had a tool the case was granted is scored on what the model
+    wrote without it, so the score is not a fact about the plugin and the run fails instead.
+    Neither field appears on a CoWork run or on a run that kept no trace.
     """
     kept = artifacts(run)
     error = run.get("error")
     if error:
         failures.append(f"{FAIL} {where}: {error}{kept}")
+    for field, what in VALIDITY.items():
+        named = run.get(field)
+        if named:
+            tools = ", ".join(str(tool) for tool in named)
+            failures.append(
+                f"{FAIL} {where}: {what} {tools}, so the score is not a fact about the plugin{kept}"
+            )
     for result in run.get("graders") or []:
         _judge_grader(where, result, definitions, failures, notes, kept)
 
@@ -209,25 +248,53 @@ def _display(directory: Path) -> str:
 
 
 class _Totals:
-    """The case counts summed across plugins, and the mean of each document's score.
+    """The four counts on the last line, and the mean of each document's score.
+
+    | Count    | Is                                          | Counted by       |
+    | -------- | ------------------------------------------- | ---------------- |
+    | `found`  | The cases under the path, before any filter | the caller       |
+    | `picked` | The cases `--tag` and `--case` kept         | the caller       |
+    | `ran`    | The cases a backend reported running        | `casesTotal`     |
+    | `passed` | The cases that produced no failure line     | this module      |
+
+    Picked and ran are two counts of two things, the second of which is the harness's. They
+    differ when a plugin failed to run, when the sweep stopped early, or when the harness
+    picked differently. Both are printed and neither is checked against the other.
 
     A document whose `casesTotal` is 0 is counted and is not a failure. A `--tag` sweep
     matches no case in most plugins, and failing on that would make every filtered sweep
     red. docs/running_evals.md.
     """
 
-    def __init__(self) -> None:
-        self.cases = 0
+    def __init__(self, *, found: int, picked: int) -> None:
+        self.found = found
+        self.picked = picked
+        self.ran = 0
         self.passed = 0
         self.scores: list[float] = []
+        self.reasons: list[str] = []
 
     def add(self, document: dict[str, Any]) -> None:
         aggregates = document.get("aggregates") or {}
-        self.cases += int(aggregates.get("casesTotal") or 0)
-        self.passed += int(aggregates.get("casesPassed") or 0)
+        self.ran += int(aggregates.get("casesTotal") or 0)
         self.scores.append(float(aggregates.get("overallScore") or 0.0))
+
+    def pass_one(self) -> None:
+        self.passed += 1
+
+    def stopped(self, reason: Any) -> None:
+        """Why a document says the sweep stopped early, once per distinct reason."""
+        said = str(reason)
+        if said not in self.reasons:
+            self.reasons.append(said)
 
     @property
     def summary(self) -> str:
         mean = sum(self.scores) / len(self.scores) if self.scores else 0.0
-        return f"{self.cases} cases, {self.passed} passed, overall score {mean:.2f}"
+        line = (
+            f"{self.found} found, {self.picked} picked, {self.ran} ran, "
+            f"{self.passed} passed, overall score {mean:.2f}"
+        )
+        if self.reasons:
+            line += f", stopped early: {'; '.join(self.reasons)}"
+        return line

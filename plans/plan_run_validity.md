@@ -132,29 +132,29 @@ against what it records.
       in [`../docs/running_evals.md`](../docs/running_evals.md): the exact strings the `init`
       record's tool list carries for all eight granted names. The snapshot already there
       measured two narrowed grants and not this one
-- [ ] A granted name and an offered name are compared on the part before any `(`. The
+- [x] A granted name and an offered name are compared on the part before any `(`. The
       reference records that a bare `Read`, `Glob` or `Grep` reaches the child as a
       path-scoped grant, and `eval.allow_tools` may name `WebFetch(domain:...)`, so a literal
       comparison would report every run as missing a tool it had. If the measurement shows a
       granted name reaching the list in a shape this rule does not close, that name is
       excluded by name in one place, with the measurement cited beside it
-- [ ] `traces.py` reads each kept trace once, for the final message as it does now and for
+- [x] `traces.py` reads each kept trace once, for the final message as it does now and for
       both checks
-- [ ] Check one: every `permission_denied` record whose `decision_reason_type` is `mode`
+- [x] Check one: every `permission_denied` record whose `decision_reason_type` is `mode`
       gives up its `tool_name`
-- [ ] Check two: the `init` record lists the tools the run offered the model. Every granted
+- [x] Check two: the `init` record lists the tools the run offered the model. Every granted
       tool missing from that list is named. The grant comes from `RunOptions`, which the
       backend already has, and is not read from the config file again
-- [ ] Both go into that run's entry in the result file, beside the `tracePath` that `collect`
+- [x] Both go into that run's entry in the result file, beside the `tracePath` that `collect`
       already rewrites. Neither is written when there is nothing to write, so a healthy file
       is unchanged
-- [ ] `verdict.py` fails a run carrying either, one line each, naming the tools and the
+- [x] `verdict.py` fails a run carrying either, one line each, naming the tools and the
       directory holding that run's trace
-- [ ] A denial from the plugin's own hook does not fail anything. Check one matches on the
+- [x] A denial from the plugin's own hook does not fail anything. Check one matches on the
       reason, never on the tool name
-- [ ] Nothing changes on CoWork. A session has no permission mode and writes no tool list, so
+- [x] Nothing changes on CoWork. A session has no permission mode and writes no tool list, so
       neither field ever appears and one decision still covers both backends
-- [ ] A run that hit its turn cap or timed out already carries `error` and already fails.
+- [x] A run that hit its turn cap or timed out already carries `error` and already fails.
       Check that against the pass and fail table and add nothing
 
 Both checks read the trace `traces.collect` kept, and `cli.py` calls `collect` only when the
@@ -164,7 +164,7 @@ result file. That is the honest behaviour, and a failure condition that quietly 
 under an option is the shape of defect this plan exists to remove, so it is written down
 rather than worked around.
 
-- [ ] Nothing fails and nothing warns when traces are off. A run that kept no trace says
+- [x] Nothing fails and nothing warns when traces are off. A run that kept no trace says
       nothing about what it had, which is the same rule as a trace with no `init` record.
       Phase 7 writes it down
 
@@ -174,13 +174,13 @@ The last line is wrong twice. It reads `casesPassed` back from the result docume
 problem statement above covers, and a sweep the cost ceiling stopped early still reads as if
 every case ran. The exit code is right in both. Only the line is wrong.
 
-- [ ] The command already reads the case tree before it runs anything. It hands `verdict.py`
+- [x] The command already reads the case tree before it runs anything. It hands `verdict.py`
       two numbers, how many cases it found and how many it picked, the way it already hands
       over `extra`
-- [ ] The line names four numbers: found, picked, ran, passed, then the score. `passed` is
+- [x] The line names four numbers: found, picked, ran, passed, then the score. `passed` is
       this package's own count, never `casesPassed`
-- [ ] A result file marked `partial` makes the line say the sweep stopped early and why
-- [ ] Picked and ran differing is not a failure. The harness counts one and this package
+- [x] A result file marked `partial` makes the line say the sweep stopped early and why
+- [x] Picked and ran differing is not a failure. The harness counts one and this package
       counts the other, so both are printed and neither is checked against the other
 
 ### Phase 4: write down what a run leaves on disk

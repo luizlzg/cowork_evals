@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.265",
+  "startedAt": "2026-09-09T10:00:00+00:00",
+  "durationSeconds": 3.4,
+  "costUsd": 0.06,
+  "partial": false,
+  "suite": {
+    "root": "/plugin",
+    "ablation": "none",
+    "threshold": 0,
+    "judgeModel": "haiku",
+    "plugins": [{"name": "smoke", "path": "/plugin"}]
+  },
+  "cases": [
+    {
+      "name": "judged",
+      "dir": "evals/plugin/judged",
+      "source": "prose",
+      "promptMarkdown": "Write a summary.",
+      "graders": [
+        {"name": "says-alex", "type": "regex", "weight": 1, "config": {}},
+        {"name": "reads-well", "type": "llm", "weight": 1, "config": {}},
+        {"name": "beats-baseline", "type": "baseline", "weight": 1, "config": {}}
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0.33,
+            "passed": false,
+            "turns": 2,
+            "costUsd": 0.06,
+            "judgeCostUsd": 0.008,
+            "error": null,
+            "skippedPaidGraders": false,
+            "graders": [
+              {"name": "says-alex", "passed": true, "weight": 1,
+               "explanation": "matched Alex", "withOnly": false, "scored": true},
+              {"name": "reads-well", "passed": false, "weight": 1,
+               "explanation": "1 of 3 votes", "withOnly": false, "scored": true},
+              {"name": "beats-baseline", "passed": false, "weight": 1,
+               "explanation": "the baseline read better", "withOnly": false, "scored": true}
+            ]
+          }
+        ]
+      },
+      "aggregates": {"score": 0.33, "passRate": 0.0}
+    }
+  ],
+  "aggregates": {"casesTotal": 1, "casesPassed": 1, "overallScore": 0.33, "overallPassRate": 0.0}
+}

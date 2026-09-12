@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.265",
+  "startedAt": "2026-09-09T10:00:00+00:00",
+  "durationSeconds": 0.2,
+  "costUsd": 0.0,
+  "partial": false,
+  "suite": {
+    "root": "/plugin",
+    "ablation": "none",
+    "threshold": 0,
+    "judgeModel": "haiku",
+    "plugins": [{"name": "quiet", "path": "/plugin"}],
+    "tagFilters": ["writer"]
+  },
+  "cases": [],
+  "aggregates": {"casesTotal": 0, "casesPassed": 0, "overallScore": 0.0, "overallPassRate": 0.0}
+}

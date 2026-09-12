@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.265",
+  "startedAt": "2026-09-09T10:00:00+00:00",
+  "durationSeconds": 0.1,
+  "costUsd": 0.0,
+  "partial": false,
+  "suite": {
+    "root": "/plugin",
+    "ablation": "none",
+    "threshold": 0,
+    "judgeModel": "haiku",
+    "plugins": [{"name": "smoke", "path": "/plugin"}]
+  },
+  "cases": [
+    {
+      "name": "needs-a-scaffold",
+      "dir": "evals/plugin/needs-a-scaffold",
+      "source": "mixed",
+      "promptMarkdown": "Read the staged file.",
+      "graders": [{"name": "says-alex", "type": "regex", "weight": 1, "config": {}}],
+      "arms": {"with": []},
+      "aggregates": {"score": 0.0, "passRate": 0.0},
+      "skipped": true,
+      "skipReason": "context.scaffold_script: nothing stages files into the VM"
+    }
+  ],
+  "aggregates": {"casesTotal": 1, "casesPassed": 0, "overallScore": 0.0, "overallPassRate": 0.0}
+}

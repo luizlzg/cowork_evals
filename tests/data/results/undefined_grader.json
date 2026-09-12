@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.265",
+  "startedAt": "2026-09-09T10:00:00+00:00",
+  "durationSeconds": 2.0,
+  "costUsd": 0.01,
+  "partial": false,
+  "suite": {
+    "root": "/plugin",
+    "ablation": "none",
+    "threshold": 0,
+    "judgeModel": "haiku",
+    "plugins": [{"name": "smoke", "path": "/plugin"}]
+  },
+  "cases": [
+    {
+      "name": "renamed-grader",
+      "dir": "evals/plugin/renamed-grader",
+      "source": "prose",
+      "promptMarkdown": "Do the work.",
+      "graders": [{"name": "says-alex", "type": "regex", "weight": 1, "config": {}}],
+      "arms": {
+        "with": [
+          {
+            "score": 1.0,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.01,
+            "judgeCostUsd": 0.0,
+            "error": null,
+            "skippedPaidGraders": false,
+            "graders": [
+              {"name": "says-alexandra", "passed": true, "weight": 1,
+               "explanation": "matched", "withOnly": false, "scored": true}
+            ]
+          }
+        ]
+      },
+      "aggregates": {"score": 1.0, "passRate": 1.0}
+    }
+  ],
+  "aggregates": {"casesTotal": 1, "casesPassed": 1, "overallScore": 1.0, "overallPassRate": 1.0}
+}

@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.265",
+  "startedAt": "2026-09-09T10:00:00+00:00",
+  "durationSeconds": 2.0,
+  "costUsd": 0.02,
+  "partial": false,
+  "suite": {
+    "root": "/plugin",
+    "ablation": "none",
+    "threshold": 0,
+    "judgeModel": "haiku",
+    "plugins": [{"name": "smoke", "path": "/plugin"}]
+  },
+  "cases": [
+    {
+      "name": "one-skipped-grader",
+      "dir": "evals/plugin/one-skipped-grader",
+      "source": "prose",
+      "promptMarkdown": "Send the mail.",
+      "graders": [
+        {"name": "says-alex", "type": "regex", "weight": 1, "config": {}},
+        {"name": "called-the-stand-in", "type": "regex", "weight": 1, "config": {}},
+        {"name": "unscored", "type": "tool_used", "weight": 1, "config": {}}
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1.0,
+            "passed": true,
+            "turns": 2,
+            "costUsd": 0.02,
+            "judgeCostUsd": 0.0,
+            "error": null,
+            "skippedPaidGraders": false,
+            "graders": [
+              {"name": "says-alex", "passed": true, "weight": 1,
+               "explanation": "matched Alex", "withOnly": false, "scored": true},
+              {"name": "called-the-stand-in", "passed": false, "weight": 1,
+               "explanation": "not scored", "withOnly": false, "scored": false,
+               "skipped": true,
+               "skipReason": "target: mock_calls, and no stand-in serves a CoWork run"},
+              {"name": "unscored", "passed": false, "weight": 1,
+               "explanation": "not scored", "withOnly": true, "scored": false}
+            ]
+          }
+        ]
+      },
+      "aggregates": {"score": 1.0, "passRate": 1.0}
+    }
+  ],
+  "aggregates": {"casesTotal": 1, "casesPassed": 1, "overallScore": 1.0, "overallPassRate": 1.0}
+}

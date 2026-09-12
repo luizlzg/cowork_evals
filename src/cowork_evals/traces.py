@@ -19,6 +19,12 @@ the only thing that deletes one, this module owns what is put into one of them. 
 transcript formats are each parsed where that format is already parsed: the harness's
 `trace.jsonl` here, and a session transcript by `cowork.final_text`. Neither is read twice.
 
+A kept harness trace is also read for the two things that say the run could not have passed:
+a tool the permission mode refused, and a granted tool the run never offered the model. Both
+are written into that run's entry in the result document, so pass and fail still read only
+that file. Neither runs on CoWork, and neither runs when the traces are off, because both
+read a kept trace. docs/running_evals.md.
+
 Nothing here raises. A source that is not there, a trace that will not read and a document
 that will not parse are each a warning line the caller prints, because a collection problem is
 not a failed run. Nothing here prints, and nothing here decides pass or fail.
@@ -66,6 +72,24 @@ ARM = "with"
 COWORK = "cowork"
 SESSION_DIR = "sessionDir"
 
+# The two fields the checks below add to a run's entry, read by [verdict.py](verdict.py).
+# They are this repository's own, like `cowork` above, and the contract is additive-only.
+# docs/running_evals.md.
+DENIED = "deniedTools"
+UNOFFERED = "unofferedTools"
+
+# The two records the checks read, from docs/claude_code/plugin_eval_reference.md and the
+# snapshots in docs/running_evals.md.
+SYSTEM = "system"
+INIT = "init"
+PERMISSION_DENIED = "permission_denied"
+
+# The one denial reason that invalidates a run. A session has no permission mode and is never
+# refused a tool by one, so a `mode` denial is the container failing to behave like a session.
+# A denial from the plugin's own hook carries another reason and is the plugin's behaviour,
+# which a case testing a hook is asserting over. docs/running_evals.md.
+MODE = "mode"
+
 
 @dataclass(frozen=True, slots=True)
 class Source:
@@ -107,7 +131,7 @@ def run_dir(output_dir: Path | str, case: str, index: int, *, occurrence: int = 
     return Path(output_dir) / TRACES_DIR / name / f"{RUN_PREFIX}{index}"
 
 
-def collect(output_dir: Path | str) -> list[str]:
+def collect(output_dir: Path | str, *, granted: tuple[str, ...] = ()) -> list[str]:
     """Keep each run's trace, then remove the sandboxes. Returns the warnings to print.
 
     Every run keeps the same three artefacts, whether it passed or failed and whichever
@@ -122,6 +146,11 @@ def collect(output_dir: Path | str) -> list[str]:
     The caller calls this only when the run was keeping its traces. Off, the harness kept no
     sandbox and there is nothing here to find. An empty list means there was nothing to
     collect or everything was collected.
+
+    `granted` is what the run was given, from the backend's `RunOptions`, and is what the
+    offered tool list is held against. The CoWork backend has none and passes none: it runs
+    no command line, offers no list and has no permission mode, so both checks find nothing
+    there. An empty grant is not a failure condition, it is nothing to compare.
     """
     output_dir = Path(output_dir)
     root = sandbox_root(output_dir)
@@ -132,7 +161,7 @@ def collect(output_dir: Path | str) -> list[str]:
         # reports the missing document, and there is nothing here to add.
         warnings = [unreadable] if root.is_dir() else []
     else:
-        warnings = _each_run(output_dir, root, document) + _rewrite(output_dir, document)
+        warnings = _each_run(output_dir, root, document, granted) + _rewrite(output_dir, document)
     if root.is_dir():
         warnings += _remove(root)
     return warnings
@@ -150,23 +179,89 @@ def last_message(trace: Path | str) -> str | None:
     and is read by `cowork.final_text`, which is the function the driver already reads it
     with.
     """
-    final = None
-    fallback = None
-    for record in _records(trace):
-        kind = record.get("type")
-        if kind == "result" and isinstance(record.get("result"), str):
-            final = record["result"]
-        elif kind == "assistant":
-            text = _assistant_text(record)
-            if text:
-                fallback = text
-    return final if final is not None else fallback
+    return _final(_records(trace))
+
+
+def denied_tools(records: list[dict[str, Any]]) -> list[str]:
+    """Check one: every tool the permission mode refused this run, in the order refused.
+
+    A `permission_denied` record carries the tool and why it was refused. Only `mode` is read.
+    A session has no permission mode, so a mode denial is the container failing to behave like
+    one; a denial the plugin's own hook wrote is the plugin's behaviour and is what a case
+    testing that hook asserts over. The match is on the reason and never on the tool name,
+    because narrowing it to the tools a grader names would miss every denial that broke a run
+    through a tool no grader mentions. docs/running_evals.md.
+    """
+    found: list[str] = []
+    for record in records:
+        if record.get("type") != SYSTEM or record.get("subtype") != PERMISSION_DENIED:
+            continue
+        if record.get("decision_reason_type") != MODE:
+            continue
+        tool = record.get("tool_name")
+        if isinstance(tool, str) and tool and tool not in found:
+            found.append(tool)
+    return found
+
+
+def unoffered_tools(records: list[dict[str, Any]], granted: tuple[str, ...]) -> list[str]:
+    """Check two: every granted tool the run never offered the model, in the grant's order.
+
+    The `init` record lists what the run offered. A trace with no such record says nothing
+    about what the run had, and yields nothing rather than every granted name.
+
+    A granted name and an offered name are compared on the part before any `(`. A grant may
+    be written `WebFetch(domain:example.com)`, and the reference records that a bare `Read`,
+    `Glob` or `Grep` reaches the child path-scoped, so a literal comparison would report a run
+    as missing a tool it had. The 2026-09-12 snapshot in docs/running_evals.md measured every
+    granted name arriving in the list bare, so no name needs excluding from the comparison.
+    """
+    offered = _offered(records)
+    if offered is None:
+        return []
+    missing: list[str] = []
+    for name in granted:
+        bare = _bare(name)
+        if bare and bare not in offered and bare not in missing:
+            missing.append(bare)
+    return missing
+
+
+def _note_validity(
+    run: dict[str, Any], records: list[dict[str, Any]], granted: tuple[str, ...]
+) -> None:
+    """Write what the two checks found into this run's entry, and nothing when they found
+    nothing, so a healthy document is unchanged."""
+    denied = denied_tools(records)
+    if denied:
+        run[DENIED] = denied
+    unoffered = unoffered_tools(records, granted)
+    if unoffered:
+        run[UNOFFERED] = unoffered
+
+
+def _offered(records: list[dict[str, Any]]) -> set[str] | None:
+    """The tool names the `init` record listed, or `None` when the run wrote no list."""
+    for record in records:
+        if record.get("type") != SYSTEM or record.get("subtype") != INIT:
+            continue
+        tools = record.get("tools")
+        if isinstance(tools, list):
+            return {_bare(tool) for tool in tools if isinstance(tool, str)}
+    return None
+
+
+def _bare(name: str) -> str:
+    """A tool name without the pattern a grant or a scoped offer may carry."""
+    return name.split("(", 1)[0].strip()
 
 
 # One run.
 
 
-def _each_run(output_dir: Path, root: Path, document: dict[str, Any]) -> list[str]:
+def _each_run(
+    output_dir: Path, root: Path, document: dict[str, Any], granted: tuple[str, ...]
+) -> list[str]:
     """Every run of every case, in the order the document lists them.
 
     `seen` counts the cases carrying each name, which is what `run_dir` suffixes on.
@@ -180,14 +275,25 @@ def _each_run(output_dir: Path, root: Path, document: dict[str, Any]) -> list[st
         seen[name] = seen.get(name, 0) + 1
         for index, run in enumerate(case.get("arms", {}).get(ARM) or [], start=1):
             if isinstance(run, dict):
-                warnings += _one_run(output_dir, root, name, index, run, seen[name])
+                warnings += _one_run(output_dir, root, name, index, run, seen[name], granted)
     return warnings
 
 
 def _one_run(
-    output_dir: Path, root: Path, case: str, index: int, run: dict[str, Any], occurrence: int
+    output_dir: Path,
+    root: Path,
+    case: str,
+    index: int,
+    run: dict[str, Any],
+    occurrence: int,
+    granted: tuple[str, ...],
 ) -> list[str]:
-    """One run's artefacts, and `tracePath` pointed at where the trace now is."""
+    """One run's artefacts, and `tracePath` pointed at where the trace now is.
+
+    The kept trace is read once. A harness trace answers the final message and both validity
+    checks out of the same records; a session transcript is another format and is read by
+    `cowork.final_text`, which parses it for the one thing it is asked.
+    """
     where = f"{case}: run {index}"
     source, missing = _source(root, run)
     if source is None:
@@ -205,7 +311,13 @@ def _one_run(
         return [f"{where}: the trace could not be collected: {error}"]
 
     run["tracePath"] = str(trace)
-    return _keep_last_message(source, trace, destination, where) + _keep_workspace(
+    try:
+        records = None if source.session else _records(trace)
+    except OSError as error:
+        return [f"{where}: {trace} is unreadable: {error}"]
+    if records is not None:
+        _note_validity(run, records, granted)
+    return _keep_last_message(source, trace, records, destination, where) + _keep_workspace(
         source, destination, where
     )
 
@@ -271,15 +383,21 @@ def _keep_trace(source: Source, destination: Path) -> Path:
     return trace
 
 
-def _keep_last_message(source: Source, trace: Path, destination: Path, where: str) -> list[str]:
+def _keep_last_message(
+    source: Source,
+    trace: Path,
+    records: list[dict[str, Any]] | None,
+    destination: Path,
+    where: str,
+) -> list[str]:
     """Write the final assistant message beside the trace it was read from.
 
     It is read from the collected copy rather than from the original, so what is written is
-    what the file under the run directory says.
+    what the file under the run directory says. `records` is the harness trace already read;
+    a session transcript arrives as `None` and `cowork.final_text` reads it.
     """
-    read = final_text if source.session else last_message
     try:
-        message = read(trace)
+        message = final_text(trace) if records is None else _final(records)
     except OSError as error:
         return [f"{where}: {trace} is unreadable: {error}"]
     if message is None:
@@ -389,6 +507,22 @@ def _records(trace: Path | str) -> list[dict[str, Any]]:
         if isinstance(record, dict):
             found.append(record)
     return found
+
+
+def _final(records: list[dict[str, Any]]) -> str | None:
+    """The final assistant message of an already-read harness trace. `last_message` over
+    records, so one read answers the message and both checks."""
+    final = None
+    fallback = None
+    for record in records:
+        kind = record.get("type")
+        if kind == "result" and isinstance(record.get("result"), str):
+            final = record["result"]
+        elif kind == "assistant":
+            text = _assistant_text(record)
+            if text:
+                fallback = text
+    return final if final is not None else fallback
 
 
 def _assistant_text(record: dict[str, Any]) -> str:
