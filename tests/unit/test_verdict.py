@@ -276,3 +276,71 @@ def test_a_document_whose_trace_was_not_collected_names_nothing(tmp_path: Path) 
 def test_a_document_carrying_no_trace_path_names_nothing(tmp_path: Path) -> None:
     result = judge(run_directory(tmp_path, smoke="structural_failures"))
     assert failures(result)[0].endswith("no match for Alex")
+
+
+# A run that never had the tool the case was granted.
+
+
+def test_a_mode_denial_fails_a_document_whose_graders_all_passed(tmp_path: Path) -> None:
+    """Every grader passed, and the model never had `Write`, so the score says nothing."""
+    result = judge(run_directory(tmp_path, smoke="mode_denial"))
+    assert not result.passed
+    assert failures(result) == [
+        "FAIL smoke/tool-denied: run 1: the permission mode refused Write, "
+        "so the score is not a fact about the plugin"
+    ]
+
+
+def test_a_tool_that_was_never_offered_fails_the_same_way(tmp_path: Path) -> None:
+    result = judge(run_directory(tmp_path, smoke="tool_not_offered"))
+    assert not result.passed
+    assert failures(result) == [
+        "FAIL smoke/tool-not-offered: run 1: the run was never offered Bash, "
+        "so the score is not a fact about the plugin"
+    ]
+
+
+def test_a_denial_line_names_the_directory_holding_the_trace(
+    tmp_path: Path, working_directory
+) -> None:
+    root = run_directory(tmp_path, smoke="mode_denial")
+    with_trace(root / "smoke", collected(root / "smoke", "tool-denied"))
+    with working_directory(tmp_path):
+        result = judge(root)
+    assert failures(result)[0].endswith("[artifacts: smoke/traces/tool-denied/run-1]")
+
+
+def test_a_document_carrying_neither_field_passes(tmp_path: Path) -> None:
+    """Every `--cowork` document is this shape, so one set of rules covers both backends."""
+    result = judge(run_directory(tmp_path, smoke="pass"))
+    assert result.passed
+
+
+# The four counts on the last line.
+
+
+def test_the_last_line_carries_the_four_counts(tmp_path: Path) -> None:
+    """Found and picked are the caller's, ran is the harness's, passed is this module's."""
+    result = judge(run_directory(tmp_path, smoke="structural_failures"), found=9, picked=4)
+    assert result.lines[-1] == "9 found, 4 picked, 1 ran, 0 passed, overall score 0.00"
+
+
+def test_the_pass_count_is_not_read_back_from_the_document(tmp_path: Path) -> None:
+    """`casesPassed` is 1 in that document, under a threshold of 0. One case failed."""
+    document = run_directory(tmp_path, smoke="structural_failures") / "smoke" / RESULT_NAME
+    assert json.loads(document.read_text())["aggregates"]["casesPassed"] == 1
+    assert judge(document.parent.parent).lines[-1].endswith("0 passed, overall score 0.00")
+
+
+def test_the_last_line_says_when_a_sweep_stopped_early(tmp_path: Path) -> None:
+    result = judge(run_directory(tmp_path, smoke="partial"), found=3, picked=3)
+    assert result.lines[-1] == (
+        "3 found, 3 picked, 1 ran, 1 passed, overall score 1.00, stopped early: interrupted"
+    )
+
+
+def test_picked_and_ran_differing_is_not_a_failure(tmp_path: Path) -> None:
+    """This package counts one and the harness counts the other, and neither checks the other."""
+    result = judge(run_directory(tmp_path, smoke="pass"), found=4, picked=4)
+    assert result.passed
+    assert result.lines[-1] == "4 found, 4 picked, 1 ran, 1 passed, overall score 1.00"

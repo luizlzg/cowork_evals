@@ -212,24 +212,24 @@ Documentation only.
 
 Unit tier throughout. Nothing here needs a model.
 
-- [ ] A trace holding a mode denial yields the tool names, over a fixture trace written in
+- [x] A trace holding a mode denial yields the tool names, over a fixture trace written in
       the test
-- [ ] A trace holding a hook denial yields none
-- [ ] A trace whose `init` list is missing a granted tool yields that tool's name
-- [ ] A trace whose `init` list carries every granted tool yields none
-- [ ] A grant of `WebFetch(domain:example.com)` against an `init` list carrying `WebFetch`
+- [x] A trace holding a hook denial yields none
+- [x] A trace whose `init` list is missing a granted tool yields that tool's name
+- [x] A trace whose `init` list carries every granted tool yields none
+- [x] A grant of `WebFetch(domain:example.com)` against an `init` list carrying `WebFetch`
       yields none, and a bare `Read` against a list carrying only `Read(//home/**)` yields
       none. The comparison is on the part before the `(`
-- [ ] A trace with no `init` record yields none. A run that wrote no tool list says nothing
+- [x] A trace with no `init` record yields none. A run that wrote no tool list says nothing
       about what it had
-- [ ] A trace with neither problem yields neither, and the result file is unchanged
-- [ ] A result file carrying either field fails, and the line names the tools and the
+- [x] A trace with neither problem yields neither, and the result file is unchanged
+- [x] A result file carrying either field fails, and the line names the tools and the
       directory holding the trace
-- [ ] A result file carrying neither field passes. That is not a courtesy to old documents:
+- [x] A result file carrying neither field passes. That is not a courtesy to old documents:
       the CoWork backend never writes either field, so every `--cowork` document is this
       shape and one set of rules still covers both backends
-- [ ] The last line carries the four counts, and says so when a sweep stopped early
-- [ ] Every `verdict.py` test that already exists still passes, or its change goes in the
+- [x] The last line carries the four counts, and says so when a sweep stopped early
+- [x] Every `verdict.py` test that already exists still passes, or its change goes in the
       same commit with the reason in the message
 
 ### Phase 7: documentation

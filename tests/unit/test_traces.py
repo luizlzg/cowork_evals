@@ -420,3 +420,131 @@ def test_the_cowork_key_and_not_its_value_decides_the_backend(tmp_path: Path) ->
     output.mkdir()
     write_document(output, {"passed": True, "cowork": {"sessionDir": None}})
     assert "sandbox" not in traces.collect(output)[0]
+
+
+# The two validity checks, over traces written by the test.
+
+# The two records the checks read, in the shape docs/running_evals.md records. A hook denial
+# is the same record with another reason, which is the plugin's own behaviour and not the
+# container failing to behave like a session.
+GRANT = ("Bash", "Read", "Glob", "Grep", "Write", "Edit", "WebFetch", "Skill")
+OFFERED = [
+    "Task",
+    "Bash",
+    "Edit",
+    "Glob",
+    "Grep",
+    "NotebookEdit",
+    "Read",
+    "Skill",
+    "WebFetch",
+    "WebSearch",
+    "Write",
+]
+
+
+def init(tools: list[str] | None = None) -> dict:
+    return {"type": "system", "subtype": "init", "tools": OFFERED if tools is None else tools}
+
+
+def denial(tool: str, reason: str = "mode") -> dict:
+    return {
+        "type": "system",
+        "subtype": "permission_denied",
+        "tool_name": tool,
+        "decision_reason_type": reason,
+    }
+
+
+def validity_run(tmp_path: Path, records: list[dict], granted: tuple[str, ...] = GRANT) -> dict:
+    """Collect one harness run over the given trace, and return its entry in the document."""
+    output = tmp_path / "logs"
+    output.mkdir()
+    write_sandbox(traces.sandbox_root(output), trace=records)
+    write_document(output, run_entry(True))
+
+    assert traces.collect(output, granted=granted) == []
+    return collected(output)["cases"][0]["arms"]["with"][0]
+
+
+def test_a_mode_denial_yields_the_tool_it_named(tmp_path: Path) -> None:
+    """A session has no permission mode, so a mode denial is the container being unlike one."""
+    entry = validity_run(tmp_path, [init(), denial("Write"), *TRACE[1:]])
+    assert entry[traces.DENIED] == ["Write"]
+
+
+def test_two_mode_denials_yield_both_tools_once_each(tmp_path: Path) -> None:
+    records = [init(), denial("Write"), denial("Edit"), denial("Write"), *TRACE[1:]]
+    assert validity_run(tmp_path, records)[traces.DENIED] == ["Write", "Edit"]
+
+
+def test_a_hook_denial_yields_nothing(tmp_path: Path) -> None:
+    """A hook denial is the plugin's own behaviour, which a case testing a hook asserts over."""
+    entry = validity_run(tmp_path, [init(), denial("Write", "hook"), *TRACE[1:]])
+    assert traces.DENIED not in entry
+
+
+def test_the_denial_reason_and_never_the_tool_name_decides(tmp_path: Path) -> None:
+    """A tool no grader names still broke the run, so the rule cannot narrow to named tools."""
+    records = [init(), denial("mcp__plugin_acme_jira__create_issue"), *TRACE[1:]]
+    assert validity_run(tmp_path, records)[traces.DENIED] == ["mcp__plugin_acme_jira__create_issue"]
+
+
+def test_a_granted_tool_missing_from_the_offered_list_is_named(tmp_path: Path) -> None:
+    offered = [tool for tool in OFFERED if tool != "Bash"]
+    entry = validity_run(tmp_path, [init(offered), *TRACE[1:]])
+    assert entry[traces.UNOFFERED] == ["Bash"]
+
+
+def test_an_offered_list_carrying_every_granted_tool_yields_nothing(tmp_path: Path) -> None:
+    assert traces.UNOFFERED not in validity_run(tmp_path, [init(), *TRACE[1:]])
+
+
+def test_a_grant_and_an_offer_are_compared_before_the_bracket(tmp_path: Path) -> None:
+    """A grant may carry a pattern, and a read reaches the child path-scoped."""
+    offered = ["WebFetch", "Read(//home/**)", "Skill"]
+    granted = ("WebFetch(domain:example.com)", "Read", "Skill")
+    entry = validity_run(tmp_path, [init(offered), *TRACE[1:]], granted)
+    assert traces.UNOFFERED not in entry
+
+
+def test_a_trace_with_no_init_record_yields_nothing(tmp_path: Path) -> None:
+    """A run that wrote no tool list says nothing about what it had."""
+    entry = validity_run(tmp_path, [record for record in TRACE if record["type"] != "system"])
+    assert traces.UNOFFERED not in entry
+
+
+def test_an_empty_grant_names_nothing(tmp_path: Path) -> None:
+    """The CoWork backend passes none, and nothing to compare is not a failure."""
+    assert traces.UNOFFERED not in validity_run(tmp_path, [init(), *TRACE[1:]], ())
+
+
+def test_a_healthy_run_carries_neither_field(tmp_path: Path) -> None:
+    entry = validity_run(tmp_path, [init(), *TRACE[1:]])
+    assert traces.DENIED not in entry
+    assert traces.UNOFFERED not in entry
+
+
+def test_a_cowork_run_carries_neither_field(tmp_path: Path) -> None:
+    """A session has no permission mode and writes no tool list, so neither check applies."""
+    session = write_session(tmp_path / "profile")
+    output = tmp_path / "logs"
+    output.mkdir()
+    write_document(output, session_entry(session))
+
+    assert traces.collect(output, granted=GRANT) == []
+    entry = collected(output)["cases"][0]["arms"]["with"][0]
+    assert traces.DENIED not in entry
+    assert traces.UNOFFERED not in entry
+
+
+def test_the_final_message_is_still_written_beside_the_checks(tmp_path: Path) -> None:
+    """One read answers the message and both checks, so neither costs the other."""
+    output = tmp_path / "logs"
+    output.mkdir()
+    write_sandbox(traces.sandbox_root(output), trace=[init(), denial("Write"), *TRACE[1:]])
+    write_document(output, run_entry(True))
+
+    assert traces.collect(output, granted=GRANT) == []
+    kept = traces.run_dir(output, "python-version", 1)
+    assert (kept / traces.LAST_MESSAGE_NAME).read_text(encoding="utf-8") == "Python 3.10.12"
