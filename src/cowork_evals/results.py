@@ -5,9 +5,10 @@ docs/claude_code/plugin_eval_reference.md: canonical camelCase, `schemaVersion: 
 additive-only, and an optional field absent rather than null.
 
 Additive-only is what permits the three fields this backend adds and the one it widens:
-`skipped` and `skipReason` on a case and on a grader result, `cowork` on a run, and `scored`,
-which is `not skipped` here rather than `not withOnly`. Every one of them, and the one
-behavioural departure in `casesPassed`, is recorded in docs/cowork_backend.md.
+`declaredUnrunnable` and `declaredReason` on a case, `skipped` and `skipReason` on a grader
+result, `cowork` on a run, and `scored`, which is `not skipped` here rather than
+`not withOnly`. Every one of them, and the one behavioural departure in `casesPassed`, is
+recorded in docs/cowork_backend.md.
 """
 
 from __future__ import annotations
@@ -47,12 +48,18 @@ GRADER_DEFAULTS: dict[str, dict[str, Any]] = {
 # The case keys the document records as declared, and their camelCase names. They are the
 # case's own values and never an override: what actually ran is read from `arms.with` and
 # from each run's `cowork` object.
-DECLARED = {
+DECLARED_KEYS = {
     "model": "model",
     "runs": "runsPerCase",
     "timeout_seconds": "timeoutSeconds",
     "max_turns": "maxTurns",
 }
+
+# The two fields a case the backend did not run carries, and this repository's own. They are
+# not `skipped`: a skip fails the run, and a case that declared itself unrunnable here is
+# counted instead. docs/cowork_backend.md.
+DECLARED_UNRUNNABLE = "declaredUnrunnable"
+DECLARED_REASON = "declaredReason"
 
 
 @dataclass(frozen=True, slots=True)
@@ -149,15 +156,15 @@ class Run:
 class CaseResult:
     """One case: what it asked for, every run of it, and why there were none.
 
-    `skipped` and `skip_reason` are what the document says. The rule that decides them is
-    `cowork_backend.skips`, and nothing here reads it: this module owns the document, and
-    that one owns what this backend can honour.
+    `declared` and `declared_reason` are what the document says. The rule that decides them
+    is `cowork_backend.declared`, and nothing here reads it: this module owns the document,
+    and that one owns which case this backend runs.
     """
 
     case: Case
     runs: tuple[Run, ...] = ()
-    skipped: bool = False
-    skip_reason: str | None = None
+    declared: bool = False
+    declared_reason: str | None = None
 
     @property
     def score(self) -> float:
@@ -179,15 +186,15 @@ class CaseResult:
             "source": self.case.source,
             "promptMarkdown": self.case.prompt,
         }
-        for key, camel in DECLARED.items():
+        for key, camel in DECLARED_KEYS.items():
             if key in self.case.frontmatter_keys:
                 entry[camel] = self.case.frontmatter_keys[key]
         entry["graders"] = [_grader_definition(grader) for grader in self.case.graders]
         entry["arms"] = {"with": [run.document() for run in self.runs]}
         entry["aggregates"] = {"score": self.score, "passRate": self.pass_rate}
-        if self.skipped:
-            entry["skipped"] = True
-            entry["skipReason"] = self.skip_reason
+        if self.declared:
+            entry[DECLARED_UNRUNNABLE] = True
+            entry[DECLARED_REASON] = self.declared_reason
         return entry
 
 
@@ -284,13 +291,13 @@ def _aggregates(cases: list[CaseResult]) -> dict[str, Any]:
     """The suite's four numbers. A mean over nothing is 0, never a division by zero.
 
     `casesPassed` is the reference's rule, a case scoring at or above `threshold`, minus
-    every skipped case. `threshold` is 0 here, so without that subtraction a skipped case
-    would count as passed.
+    every declared case. `threshold` is 0 here, so without that subtraction a case this
+    backend never ran would count as passed.
     """
     total = len(cases)
     return {
         "casesTotal": total,
-        "casesPassed": sum(1 for case in cases if not case.skipped),
+        "casesPassed": sum(1 for case in cases if not case.declared),
         "overallScore": (sum(case.score for case in cases) / total) if total else 0.0,
         "overallPassRate": (sum(case.pass_rate for case in cases) / total) if total else 0.0,
     }

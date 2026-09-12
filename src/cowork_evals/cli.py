@@ -73,8 +73,8 @@ OPTION_ATTRIBUTES = {
 UNTYPED = {"--build-missing": False}
 
 # What each backend cannot honour. An option here is an operator mistake, so it is a usage
-# error. A *case* that needs a field the backend cannot honour is reported skipped and
-# fails the run instead, and the two are never conflated. docs/cli.md.
+# error. A *case* that needs a field the backend cannot honour declares it with a tag and is
+# counted instead, and the two are never conflated. docs/cli.md.
 REFUSED = {
     DOCKER: ("--timeout-seconds",),
     COWORK: ("--model", "--allow-tools", "--max-cost-usd", "--build-missing"),
@@ -483,39 +483,26 @@ def _dry_run(
 ) -> int:
     """What would run, and no run directory. Pruning already happened above.
 
-    A dry run reports the exit code the run would reach, so it is not always 0. On `--cowork`
-    a suite whose every case is skipped would fail the run, and this returns its code
-    rather than a pass: a dry run wired into CI as a portability check has to go red on a
-    suite that is dead on that backend. The container backend's skips are the harness's and
-    are decided at run time, so a dry run there cannot know them and reports nothing.
-    docs/cli.md.
+    It exits 0 on both backends. A case this backend cannot run declares it, is counted
+    rather than failed, and a suite of nothing but declared cases is a pass. docs/cli.md.
     """
-    dead = False
     for plugin, target in targets:
         name = plugin_name(plugin)
         print(f"# {name}")
         if args.backend == COWORK:
-            dead = _dry_run_cowork(args, config, target, tags) or dead
+            _dry_run_cowork(args, config, target, tags)
             continue
         would_be = root / logs.run_dir_name(logs.scope_name(target, [plugin])) / logs.slug(name)
         for argument in Docker(config).run_argv(target, would_be, _options(args, config, tags)):
             print(argument)
-    if dead:
-        return _refuse(
-            ["every selected case is skipped on this backend, so the run would fail"],
-            FAILED,
-        )
     return OK
 
 
-def _dry_run_cowork(args: argparse.Namespace, config: Config, target: Path, tags: tuple) -> bool:
+def _dry_run_cowork(args: argparse.Namespace, config: Config, target: Path, tags: tuple) -> None:
     """One line per case, then the ceiling arithmetic. This backend builds no command line.
 
-    The skips are the point: a skipped case fails the run, so an operator reads which ones
-    before spending a VM boot on the rest.
-
-    It returns whether the suite is dead here, meaning it planned no submission at all
-    because every case was skipped. An empty selection is not that: it is refused earlier.
+    What each case declares is the point: a declared case submits nothing, so an operator
+    reads which ones before spending a VM boot on the rest.
     """
     prepared = cowork_backend.plan(
         target,
@@ -527,12 +514,11 @@ def _dry_run_cowork(args: argparse.Namespace, config: Config, target: Path, tags
     )
     for entry in prepared.entries:
         print(f"{entry.name}: runs {entry.runs}, timeout {entry.timeout_seconds}s")
-        for reason in entry.skips.case:
-            print(f"  skip: {reason}")
-        for grader, reason in sorted(entry.skips.graders.items()):
+        if entry.declared is not None:
+            print(f"  declared: {entry.declared}")
+        for grader, reason in sorted(entry.graders.items()):
             print(f"  grader skip {grader}: {reason}")
     print(prepared.arithmetic)
-    return prepared.submissions == 0
 
 
 def _options(args: argparse.Namespace, config: Config, tags: tuple) -> RunOptions:

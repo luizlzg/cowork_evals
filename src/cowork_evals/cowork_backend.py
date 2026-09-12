@@ -4,15 +4,16 @@ The layer above the driver. It reads the case tree `cases.py` produced, submits 
 prompt through `CoWork`, grades the session document, and writes the same
 `aggregate-result.json` v1 document every other backend writes.
 
-The skip rule is docs/running_evals.md: a key the case wrote out is honoured when this backend's
-behaviour already satisfies it, and skipped otherwise. A key the case left to its default is not
-a request and is not a skip, which is why this reads `Case.frontmatter_keys` and
-`Case.case_yaml_keys` and never a merged value.
+What this backend cannot run is docs/eval_format.md: a case asking for something a live session
+does not offer carries the `no-cowork` tag, submits nothing here and is counted rather than
+failed. It reads the tag and decides no case skip of its own. A key the case left to its default
+is not a request, which is why this reads `Case.frontmatter_keys` and `Case.case_yaml_keys` and
+never a merged value.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -87,38 +88,12 @@ def declared(case: Case, plugin_root: Path | str) -> str | None:
     return f"{NO_COWORK}: {'; '.join(reasons)}" if reasons else NO_COWORK
 
 
-@dataclass(frozen=True, slots=True)
-class Skips:
-    """Why a case submits nothing, and why a grader is not scored.
-
-    The two are never one list. A `case` reason submits nothing and leaves `arms.with`
-    empty. A `graders` entry runs the case and drops that grader from the score, so a case
-    does not fail for a grader that was never asked.
-    """
-
-    case: tuple[str, ...] = ()
-    graders: dict[str, str] = field(default_factory=dict)
-
-    @property
-    def skipped(self) -> bool:
-        return bool(self.case)
-
-    @property
-    def reason(self) -> str:
-        """Every case reason as one line, for the result document's `skipReason`."""
-        return "; ".join(self.case)
-
-
-def skips(case: Case, plugin_root: Path | str) -> Skips:
-    """What this backend cannot honour in one case. It reads files and submits nothing."""
-    return Skips(case=unrunnable(case, plugin_root), graders=grader_skips(case))
-
-
 def grader_skips(case: Case) -> dict[str, str]:
     """The one grader skip that is decided before a run.
 
     A grader skip runs the case and drops that grader from the score, so a case does not fail
-    for a grader that was never asked.
+    for a grader that was never asked. It is the only skip this backend decides before a run:
+    a case a session cannot run is declared by the case and is not skipped.
 
     The other grader skip, an `llm` grader whose focus turns out to be an image, is read from
     the file's bytes and so exists only after the run. `judge.py` decides that one.
@@ -156,10 +131,16 @@ RUN_TIMEOUT_CODE = 7
 
 @dataclass(frozen=True, slots=True)
 class Entry:
-    """One case as this backend will run it: what it can honour, how often, how long."""
+    """One case as this backend will run it: whether it runs here, how often, how long.
+
+    `declared` is the reason line a case carrying `no-cowork` puts in the result document,
+    and `None` for a case this backend submits. `graders` is the grader skips, which leave
+    the case running.
+    """
 
     case: Case
-    skips: Skips
+    declared: str | None
+    graders: dict[str, str]
     runs: int
     timeout_seconds: float
 
@@ -169,8 +150,8 @@ class Entry:
 
     @property
     def submissions(self) -> int:
-        """What this case costs the ceiling. A skipped case submits nothing."""
-        return 0 if self.skips.skipped else self.runs
+        """What this case costs the ceiling. A declared case submits nothing."""
+        return 0 if self.declared is not None else self.runs
 
 
 @dataclass(frozen=True, slots=True)
@@ -178,8 +159,8 @@ class Plan:
     """What a suite will do, decided without submitting anything.
 
     `run` calls this, and so does `--dry-run --cowork`, which prints exactly these and would
-    otherwise re-derive them. It carries the case skips and the grader skips `skips` decides,
-    and not the image-focus skip the judge decides after a run.
+    otherwise re-derive them. It carries what each case declares and the grader skips
+    `grader_skips` decides, and not the image-focus skip the judge decides after a run.
     """
 
     root: Path
@@ -229,7 +210,8 @@ def plan(
     entries = tuple(
         Entry(
             case=case,
-            skips=skips(case, root),
+            declared=declared(case, root),
+            graders=grader_skips(case),
             runs=_effective_runs(case, runs),
             timeout_seconds=_effective_timeout(case, timeout_seconds, settings.run_timeout),
         )
@@ -292,9 +274,9 @@ def run(
 
 
 def _run_case(entry: Entry, config: Config, model: str) -> CaseResult:
-    """Every run of one case. A skipped case submits nothing and leaves `arms.with` empty."""
-    if entry.skips.skipped:
-        return CaseResult(case=entry.case, skipped=True, skip_reason=entry.skips.reason)
+    """Every run of one case. A declared case submits nothing and leaves `arms.with` empty."""
+    if entry.declared is not None:
+        return CaseResult(case=entry.case, declared=True, declared_reason=entry.declared)
 
     # `Config` is frozen, so a differing timeout is a differing `CoWork`. The ceiling and
     # the run log are files, and still count across instances.
@@ -340,7 +322,7 @@ def _graded(session: dict[str, Any], entry: Entry, model: str, *, error: str | N
     results = []
     judge_cost = 0.0
     for grader in entry.case.graders:
-        reason = entry.skips.graders.get(grader.name)
+        reason = entry.graders.get(grader.name)
         if reason is not None:
             results.append(skipped_result(grader, reason))
         elif grader.type in JUDGED:

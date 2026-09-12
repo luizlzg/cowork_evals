@@ -135,15 +135,15 @@ Every other skip in `cowork_backend.skips` becomes a validator error or a counte
 
 ### Phase 2: the backend reads it
 
-- [ ] `cowork_backend.skips` stops turning any of the three sources into a case skip. It
+- [x] `cowork_backend.skips` stops turning any of the three sources into a case skip. It
       still reads them, through the function phase 1 exposed, because the validator enforces
       direction one over the same reasons
-- [ ] A case carrying the tag is not submitted, and produces a case entry saying it was not
+- [x] A case carrying the tag is not submitted, and produces a case entry saying it was not
       run on this backend, with the tag as the reason
-- [ ] The entry is not a skip. It carries a field of this repository's own, distinct from
+- [x] The entry is not a skip. It carries a field of this repository's own, distinct from
       `skipped`, so a reader and `verdict.py` can tell a declared case from a skipped one
-- [ ] `plan.submissions` counts it as zero, so the rate ceiling arithmetic is unchanged
-- [ ] Nothing changes on the Docker backend
+- [x] `plan.submissions` counts it as zero, so the rate ceiling arithmetic is unchanged
+- [x] Nothing changes on the Docker backend
 
 ### Phase 3: a declared case is counted
 

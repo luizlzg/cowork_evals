@@ -69,7 +69,7 @@ def test_a_case_carrying_the_reserved_tag_is_still_selected_by_its_skill_tag() -
     selected = by_name(discover(EVALS, tags=("greeter",)))
     assert list(selected) == ["greets-alex"]
     assert selected["greets-alex"].no_cowork is True
-    assert by_name(discover(EVALS))["staged"].no_cowork is False
+    assert by_name(discover(EVALS))["inner-case"].no_cowork is False
 
 
 def test_a_case_glob_matches_the_case_name_and_not_the_directory_name() -> None:
@@ -161,8 +161,8 @@ def test_a_case_yaml_is_read_and_its_context_keys_are_kept() -> None:
     assert "context" not in case.case_yaml_keys
     assert case.source == "mixed"
     assert case.name == "staged", "the case.yaml name, since the frontmatter writes none"
-    assert case.tags == ("plugin",), "the frontmatter is the override over the case.yaml"
-    assert case.frontmatter_keys == {"tags": ["plugin"]}
+    assert case.tags == ("plugin", "no-cowork"), "the frontmatter overrides the case.yaml"
+    assert case.frontmatter_keys == {"tags": ["plugin", "no-cowork"]}
 
 
 # The plugin root.
