@@ -155,3 +155,50 @@ def test_the_ceiling_reads_the_filters_it_is_given(tmp_path: Path) -> None:
     run_log(log, 3)
     config = configured(tmp_path, f"cowork:\n  max_runs: 3\n  run_log: {log}\n")
     assert preflight.cowork_ceiling(TREE / "evals", config=config, tags=("absent",)) == []
+
+
+# The forwarded variables, through the dispatch `check --docker` and `run` both use.
+# docs/docker.md.
+#
+# `monkeypatch.setenv` sets a real variable in this process, which is the environment the
+# backend reads. Nothing here stands in for the read.
+
+PROBE = "COWORK_EVALS_TEST_PROBE"
+FORWARDS = f"docker:\n  env_passthrough: [{PROBE}]\n"
+
+
+def test_an_absent_name_is_an_unmet_docker_condition(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv(PROBE, raising=False)
+    lines = preflight.checks(preflight.DOCKER, configured(tmp_path, FORWARDS))
+    assert [line for line in lines if PROBE in line and "unset or empty" in line]
+
+
+def test_an_empty_name_is_the_same_unmet_condition(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv(PROBE, "")
+    lines = preflight.checks(preflight.DOCKER, configured(tmp_path, FORWARDS))
+    assert [line for line in lines if PROBE in line and "unset or empty" in line]
+
+
+def test_a_set_name_adds_no_line(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv(PROBE, "probe-value-not-a-secret")
+    lines = preflight.checks(preflight.DOCKER, configured(tmp_path, FORWARDS))
+    assert not [line for line in lines if PROBE in line]
+
+
+def test_a_credential_name_is_refused_and_names_the_one_route(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "probe-value-not-a-secret")
+    config = configured(tmp_path, "docker:\n  env_passthrough: [ANTHROPIC_API_KEY]\n")
+    named = [
+        line
+        for line in preflight.checks(preflight.DOCKER, config)
+        if "ANTHROPIC_API_KEY" in line and "cowork_evals setup --docker" in line
+    ]
+    assert named
+    assert "probe-value-not-a-secret" not in " ".join(named)
+
+
+def test_the_forwarded_names_are_the_container_backends_alone(tmp_path: Path, monkeypatch) -> None:
+    """A session decides its own environment, so that backend has nothing to report."""
+    monkeypatch.delenv(PROBE, raising=False)
+    config = configured(tmp_path, FORWARDS + "cowork:\n  profile: /nowhere-at-all\n")
+    assert not [line for line in preflight.checks(preflight.COWORK, config) if PROBE in line]

@@ -150,15 +150,15 @@ Assertions, not arguments. Each box is a container run and a grep over what it p
 
 Unit tier, except phase 4's runs.
 
-- [ ] A configured name absent from the environment yields the preflight condition
-- [ ] A configured name present and empty yields the same condition
-- [ ] A credential name yields the refusal, whatever its value
-- [ ] `run_preamble` carries the forwarded name and value
-- [ ] `write_env` carries the name and not the value
-- [ ] The dry-run output carries the name and not the value
-- [ ] The dry-run output carries a configured name that is unset on the host, and the command
+- [x] A configured name absent from the environment yields the preflight condition
+- [x] A configured name present and empty yields the same condition
+- [x] A credential name yields the refusal, whatever its value
+- [x] `run_preamble` carries the forwarded name and value
+- [x] `write_env` carries the name and not the value
+- [x] The dry-run output carries the name and not the value
+- [x] The dry-run output carries a configured name that is unset on the host, and the command
       exits 0
-- [ ] An empty `env_passthrough` produces the argument list this package produces today, byte
+- [x] An empty `env_passthrough` produces the argument list this package produces today, byte
       for byte
 
 ### Phase 6: documentation

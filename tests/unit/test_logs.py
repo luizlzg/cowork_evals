@@ -144,6 +144,17 @@ def test_the_image_line_is_absent_without_one(tmp_path: Path) -> None:
     assert "backend: cowork\n" in written.read_text()
 
 
+def test_the_forwarded_names_are_one_line_and_no_value(tmp_path: Path) -> None:
+    """What each name held is the host's, and reaches the container and no artefact.
+    docs/docker.md."""
+    written = logs.write_env(tmp_path, "docker", env_passthrough=("ACME_API_KEY", "ACME_REGION"))
+    assert "env_passthrough: ACME_API_KEY ACME_REGION\n" in written.read_text()
+
+
+def test_the_forwarded_line_is_absent_when_none_is_forwarded(tmp_path: Path) -> None:
+    assert "env_passthrough" not in logs.write_env(tmp_path, "docker").read_text()
+
+
 def test_the_python_line_records_the_interpreter(tmp_path: Path) -> None:
     written = logs.write_env(tmp_path, "docker")
     assert f"python3: Python {sys.version_info.major}.{sys.version_info.minor}" in (

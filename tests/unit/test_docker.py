@@ -21,9 +21,11 @@ from cowork_evals.docker import (
     CONTAINER_PLUGIN,
     CONTAINER_TMPDIR,
     CONTAINER_WORK,
+    CREDENTIAL_NAMES,
     DATA,
     DOCKERFILE,
     EXTRA_CA_SECRET,
+    REDACTED,
     Condition,
     Docker,
     DockerError,
@@ -343,6 +345,125 @@ def test_a_run_that_keeps_no_trace_moves_no_tmpdir_and_keeps_no_sandbox(plugin, 
     argv = backend().run_argv(plugin, tmp_path, run_options(keep_traces=False))
     assert not [value for value in argv if value.startswith("TMPDIR=")]
     assert "--keep-temp" not in argv
+
+
+# Environment passthrough. docs/docker.md.
+#
+# `monkeypatch.setenv` sets a real variable in this process, which is the environment the
+# backend reads. Nothing here stands in for the read.
+
+# A name no machine sets, so an absent one is absent because nothing set it.
+PROBE = "COWORK_EVALS_TEST_PROBE"
+VALUE = "probe-value-not-a-secret"
+
+
+def forwarded(argv: list[str]) -> list[str]:
+    """Every `--env` value in the list, which is where a forwarded variable lands."""
+    return [argv[i + 1] for i, value in enumerate(argv) if value == "--env"]
+
+
+def test_run_preamble_carries_the_forwarded_name_and_value(monkeypatch):
+    monkeypatch.setenv(PROBE, VALUE)
+    argv = backend(env_passthrough=[PROBE]).run_preamble()
+    assert f"{PROBE}={VALUE}" in forwarded(argv)
+
+
+def test_an_empty_env_passthrough_produces_the_list_it_produces_today():
+    """Byte for byte, so a repository that names none is unaffected by the setting."""
+    assert backend().run_preamble() == [
+        "docker",
+        "run",
+        "--rm",
+        "--platform",
+        "linux/arm64",
+        "--user",
+        f"{os.getuid()}:{os.getgid()}",
+        "--env",
+        f"HOME={CONTAINER_HOME}",
+        "--env",
+        "CLAUDE_CODE_WALNUT_SPIRE=1",
+        "--security-opt",
+        "seccomp=unconfined",
+        "--security-opt",
+        "systempaths=unconfined",
+        *backend().credential_argv(),
+    ]
+
+
+def test_a_name_the_host_does_not_set_is_never_forwarded_as_an_empty_string(monkeypatch):
+    """The preflight refuses it first. This is the rule held where it would be broken."""
+    monkeypatch.delenv(PROBE, raising=False)
+    with pytest.raises(DockerError) as raised:
+        backend(env_passthrough=[PROBE]).run_preamble()
+    assert PROBE in str(raised.value)
+
+
+def test_the_redacted_list_replaces_the_value_and_reads_none(monkeypatch):
+    monkeypatch.setenv(PROBE, VALUE)
+    argv = backend(env_passthrough=[PROBE]).run_preamble(redact=True)
+    assert f"{PROBE}={REDACTED}" in forwarded(argv)
+    assert VALUE not in " ".join(argv)
+
+
+def test_the_redacted_list_carries_a_name_the_host_has_not_set(monkeypatch):
+    """A dry run skips the preflight, so it names what is configured and not what is there."""
+    monkeypatch.delenv(PROBE, raising=False)
+    argv = backend(env_passthrough=[PROBE]).run_preamble(redact=True)
+    assert f"{PROBE}={REDACTED}" in forwarded(argv)
+
+
+def test_a_value_is_read_once_and_not_again_at_container_start(monkeypatch):
+    """`check` reads the host, and the argument list uses what it read."""
+    monkeypatch.setenv(PROBE, VALUE)
+    docker = backend(env_passthrough=[PROBE])
+    assert docker.check_environment() == []
+    monkeypatch.setenv(PROBE, "a-different-value")
+    assert f"{PROBE}={VALUE}" in forwarded(docker.run_preamble())
+
+
+def test_an_absent_name_is_one_unmet_condition_naming_it(monkeypatch):
+    monkeypatch.delenv(PROBE, raising=False)
+    unmet = backend(env_passthrough=[PROBE]).check_environment()
+    assert [condition for condition, _ in unmet] == [Condition.ENVIRONMENT]
+    assert PROBE in unmet[0][1]
+
+
+def test_an_empty_name_is_the_same_condition(monkeypatch):
+    """An empty string is not a value."""
+    monkeypatch.setenv(PROBE, "")
+    assert [condition for condition, _ in backend(env_passthrough=[PROBE]).check_environment()] == [
+        Condition.ENVIRONMENT
+    ]
+
+
+def test_a_credential_name_is_refused_whatever_it_holds(monkeypatch):
+    for name in sorted(CREDENTIAL_NAMES):
+        monkeypatch.setenv(name, VALUE)
+        unmet = backend(env_passthrough=[name]).check_environment()
+        assert [condition for condition, _ in unmet] == [Condition.ENV_CREDENTIAL], name
+        assert name in unmet[0][1]
+        assert "cowork_evals setup --docker" in unmet[0][1]
+
+
+def test_a_credential_name_is_refused_when_the_host_does_not_set_it_either(monkeypatch):
+    for name in sorted(CREDENTIAL_NAMES):
+        monkeypatch.delenv(name, raising=False)
+        unmet = backend(env_passthrough=[name]).check_environment()
+        assert [condition for condition, _ in unmet] == [Condition.ENV_CREDENTIAL], name
+
+
+def test_no_message_about_a_forwarded_variable_carries_its_value(monkeypatch):
+    monkeypatch.setenv(PROBE, VALUE)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", VALUE)
+    unmet = backend(env_passthrough=[PROBE, "ANTHROPIC_API_KEY"]).check_environment()
+    assert VALUE not in " ".join(message for _, message in unmet)
+
+
+def test_the_conditions_reach_the_whole_check(monkeypatch):
+    """`check --docker` reports them, so a developer sees them without starting a run."""
+    monkeypatch.delenv(PROBE, raising=False)
+    unmet = backend(env_passthrough=[PROBE]).check()
+    assert Condition.ENVIRONMENT in [condition for condition, _ in unmet]
 
 
 def credential(docker, **oauth) -> None:
