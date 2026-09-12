@@ -170,10 +170,13 @@ what the reference says, the constant changes and nothing else does.
 - [ ] Both arms are read when the document holds two
 - [ ] Per case, with minus without, failing below `eval.delta_threshold`, one line naming
       both scores and the delta
-- [ ] A two-arm case the document says is not comparable fails, and the line says which of
-      the two reasons phase 1 recorded it was. A two-arm run that produced no delta did not
-      do what the invocation asked, and passing it would be the green-on-nothing this plan
-      exists to remove
+- [ ] A two-arm case the document says is not comparable fails. A two-arm run that produced
+      no delta did not do what the invocation asked, and passing it would be the
+      green-on-nothing this plan exists to remove
+- [ ] The line names which of the two reasons it was when phase 1 found the document
+      distinguishes them, and says only that the arms were not comparable when it does not.
+      The failure is the same either way, so the measurement decides the wording and nothing
+      else
 - [ ] The `scored: false` condition splits along the table above: a skip in a one-arm run, an
       indicator in a two-arm run
 - [ ] A case whose graders are all with-only is the harness's stated exception, scored
