@@ -41,8 +41,9 @@ its own environment, which is why `env:` is already a key the CoWork backend can
 That is the rule for the split, and it is not a build-order accident.
 
 Two kinds of case depend on a forwarded variable, and they land differently. A case that
-writes `env:` is one [`plan_runnability.md`](plan_runnability.md) has already made declare
-itself, so it never reaches a CoWork run. A case whose skill simply reads a variable writes
+writes `env:` carries the `no-cowork` tag, which
+[`../docs/eval_format.md`](../docs/eval_format.md) defines and the validator enforces, so it
+never reaches a CoWork run. A case whose skill simply reads a variable writes
 nothing, carries no tag, and fails on CoWork for a missing credential. That is left as it is:
 it is the skill failing the way it would fail in a session that never had the credential,
 which is a true result and not a defect in this package.

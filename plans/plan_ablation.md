@@ -26,9 +26,8 @@ difference between the two scores rather than on the score alone.
 
 Off by default, because it runs every case twice and so costs twice as much.
 
-Last of the four plans, because it rewrites the pass and fail rules that
-[`plan_runnability.md`](plan_runnability.md) changes and that the run validity work already
-changed. What those rules are today is
+Last of the four plans, because it rewrites the pass and fail rules that the runnability work
+and the run validity work both changed already. What those rules are today is
 [`../docs/running_evals.md`](../docs/running_evals.md).
 
 Branch: `feat/ablation`.
