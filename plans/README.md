@@ -41,7 +41,7 @@ not the system's: what is built and usable is
 | 9 | [`done/plan_focus.20260912.md`](done/plan_focus.20260912.md) | The consent modal, the frontmost guard and the composer clear, in the driver | implemented | `feat/focus`          |
 | - | [`done/plan_believable_results.20260912.md`](done/plan_believable_results.20260912.md) | Nothing. The measurements, the decisions, and the four plans that follow them | implemented |                       |
 | 10 | [`done/plan_run_validity.20260912.md`](done/plan_run_validity.20260912.md) | A run that never got its tool fails instead of scoring, and honest counts | implemented | `feat/run-validity`   |
-| 11 | [`plan_runnability.md`](plan_runnability.md) | The `no-cowork` tag on a case, enforced both ways, counted rather than failed | written     | `feat/runnability`    |
+| 11 | [`done/plan_runnability.20260912.md`](done/plan_runnability.20260912.md) | The `no-cowork` tag on a case, enforced both ways, counted rather than failed | implemented | `feat/runnability`    |
 | 12 | [`plan_env_passthrough.md`](plan_env_passthrough.md) | Named host variables forwarded into the run container, values never logged | not started | `feat/env-passthrough` |
 | 13 | [`plan_ablation.md`](plan_ablation.md) | The baseline arm, and a verdict that decides on the per-case delta | not started | `feat/ablation`       |
 
@@ -101,13 +101,6 @@ whether the cases passed. They are
 implemented in that order. Plan 13 is last because it rewrites the pass and fail rules that
 plans 10 and 11
 both change, and plan 12 is independent of all three.
-
-Plan 11 is merged and not retired. One box is open: `plugins/smoke/` on both backends, from
-the integration tier. The Docker half is green, and the CoWork half fires two cases into a live
-session, which takes the desktop application and the keyboard and was not available at the
-merge. Everything else it builds is exercised without a session, because a case carrying
-`no-cowork` is decided without one. The file stays here until that box is ticked, because a
-checklist that is not finished is not a plan that moves.
 
 Plans 2 and 3 each build one backend whole. Running an eval on those two backends is
 `claude plugin eval`, which discovers the cases, runs them, grades them and writes
