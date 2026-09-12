@@ -662,6 +662,10 @@ def _ask(args: argparse.Namespace, config: Config) -> int:
     Accessibility grant. `--dry-run` skips it for the reason `run --dry-run` does, which is
     that nothing behind the preflight is reached: the deep link is built from the prompt and
     the ceiling arithmetic is read from the run log.
+
+    The keyboard is asked for once, after the preflight and before the submission, which is
+    where `_each_plugin` asks for it too. Cancel is the driver's code 2 and reaches the
+    preflight's exit code, and nothing has fired at that point. docs/cowork_driver.md.
     """
     refused = _ask_refusal(args)
     if refused is not None:
@@ -679,6 +683,7 @@ def _ask(args: argparse.Namespace, config: Config) -> int:
         unmet = preflight.checks(COWORK, config)
         if unmet:
             return _refuse(unmet, PREFLIGHT_FAILED)
+        cowork.consent(config.cowork)
         return _ask_print(driver.run(prompt), args)
     except CoWorkError as error:
         return _ask_failure(args, config, prompt, error)

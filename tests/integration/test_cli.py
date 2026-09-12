@@ -186,13 +186,17 @@ def cowork_ready() -> None:
 
 @pytest.mark.live
 def test_one_ask_prints_a_non_empty_answer_and_names_a_session_that_exists(
-    cowork_ready, capsys
+    cowork_ready, unattended: Path, monkeypatch, capsys
 ) -> None:
     """One submission, one printed answer, and no run directory anywhere.
 
     It calls `main` rather than the executable, so the footer is read off the two streams
-    this command wrote rather than out of a subprocess's buffers.
+    this command wrote rather than out of a subprocess's buffers. `main` reads the
+    configuration file in the working directory, so the working directory is the one the
+    `unattended` fixture wrote its file into, exactly as a consumer runs the command from a
+    directory holding one. That file is what keeps the consent modal out of a test run.
     """
+    monkeypatch.chdir(unattended.parent)
     before = sorted(ROOT.iterdir())
     assert main(["ask", "--cowork", ASK_PROMPT]) == 0
     printed = capsys.readouterr()

@@ -8,6 +8,8 @@ other refusal is a value `main` returns. The surface is docs/cli.md. See ../READ
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -15,8 +17,8 @@ import pytest
 
 from cowork_evals import cli, logs, preflight, results
 from cowork_evals.cases import plugin_name, plugin_roots
-from cowork_evals.cli import FAILED, OK, USAGE, main, parse_args
-from cowork_evals.config import Config, EvalSection
+from cowork_evals.cli import FAILED, OK, PREFLIGHT_FAILED, USAGE, main, parse_args
+from cowork_evals.config import Config, CoWorkError, EvalSection
 from cowork_evals.docker import Docker
 from cowork_evals.docker.pytest_image import PytestImage
 from cowork_evals.harness import RESULT_NAME
@@ -848,3 +850,90 @@ def test_a_dry_run_needs_no_profile_and_no_backend(tmp_path: Path, capsys) -> No
     )
     assert cli._ask(parse("ask", "--cowork", "--dry-run", "hello"), config) == OK
     assert "no readable sessions root" not in capsys.readouterr().err
+
+
+def test_a_prompt_of_one_dash_is_read_from_standard_input(tmp_path: Path) -> None:
+    """The real executable, because standard input is a descriptor and not a Python name.
+
+    A dry run, so nothing is submitted: what is asserted is that the prompt the deep link
+    carries came off the pipe rather than off the command line.
+    """
+    (tmp_path / "cowork_evals.yaml").write_text(
+        f"cowork:\n  run_log: {tmp_path / 'runs.jsonl'}\n", encoding="utf-8"
+    )
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from cowork_evals.cli import console_main; console_main()",
+            "ask",
+            "--cowork",
+            "--dry-run",
+            cli.STDIN,
+        ],
+        input="from the pipe",
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == OK, completed.stderr
+    assert completed.stdout.strip() == ("claude://claude.ai/new?q=from%20the%20pipe&surface=cowork")
+
+
+# What a raised driver code becomes. The error objects below are the driver's own, built
+# with the codes docs/cowork_driver.md gives them, and the collection behind code 7 reads
+# the session fixture on disk with the real reader.
+
+
+def test_a_driver_refusal_reaches_the_preflight_code(tmp_path: Path, capsys) -> None:
+    """Code 2 is configuration or the rate ceiling, which is the preflight class."""
+    args = parse("ask", "--cowork", "hi")
+    error = CoWorkError(2, "max_runs is 0")
+    assert cli._ask_failure(args, ask_settings(tmp_path), "hi", error) == PREFLIGHT_FAILED
+    assert "2: max_runs is 0" in capsys.readouterr().err
+
+
+def test_every_other_driver_code_fails_and_prints_no_session_document(
+    tmp_path: Path, capsys
+) -> None:
+    args = parse("ask", "--cowork", "hi")
+    error = CoWorkError(6, "the deep link did not open")
+    assert cli._ask_failure(args, ask_settings(tmp_path), "hi", error) == FAILED
+    printed = capsys.readouterr()
+    assert printed.out == ""
+    assert "6: the deep link did not open" in printed.err
+
+
+def test_a_run_timeout_prints_what_the_session_produced_and_still_fails(
+    tmp_path: Path, capsys
+) -> None:
+    """The session keeps running in the VM, so what it produced by then is worth reading."""
+    error = CoWorkError(7, "the run timed out", session_dir=ONE_TURN)
+    args = parse("ask", "--cowork", "hi")
+    assert cli._ask_failure(args, ask_settings(tmp_path), "hi", error) == FAILED
+    printed = capsys.readouterr()
+    assert printed.out == "PONG\n"
+    assert "7: the run timed out" in printed.err
+    assert f"session: {ONE_TURN}" in printed.err
+
+
+def test_a_run_timeout_that_produced_no_text_prints_the_collection_failure(
+    tmp_path: Path, capsys
+) -> None:
+    """Code 8 from the collection, and the timeout is still what the verb exits on."""
+    empty = SESSIONS / "acct0000" / "prof0000" / "no_transcript"
+    error = CoWorkError(7, "the run timed out", session_dir=empty)
+    args = parse("ask", "--cowork", "hi")
+    assert cli._ask_failure(args, ask_settings(tmp_path), "hi", error) == FAILED
+    printed = capsys.readouterr()
+    assert printed.out == ""
+    assert "8: " in printed.err
+
+
+def test_a_run_timeout_with_no_session_directory_is_a_plain_failure(tmp_path: Path, capsys) -> None:
+    """Nothing was discovered, so there is nothing to collect and nothing to print."""
+    args = parse("ask", "--cowork", "hi")
+    error = CoWorkError(7, "the run timed out")
+    assert cli._ask_failure(args, ask_settings(tmp_path), "hi", error) == FAILED
+    assert capsys.readouterr().out == ""

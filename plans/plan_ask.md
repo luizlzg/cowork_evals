@@ -126,10 +126,10 @@ Work in order. Tick a box when it is verified, then commit. Do not batch ticks.
       `--timeout-seconds`, `--json`, `--dry-run`, and `_backend_group(verb, COWORK)`
 - [x] The four usage refusals, returning 2 with a message naming what was typed
 - [x] `_ask(args, config)`: the CoWork preflight unless `--session`, then the driver call
-- [ ] `-` as the prompt reads standard input
+- [x] `-` as the prompt reads standard input
 - [x] `--dry-run` prints `CoWork.deep_link` and the ceiling arithmetic, and submits nothing
 - [x] The two printed forms, on the two streams the table above names
-- [ ] The exit code mapping, including the code 7 collection
+- [x] The exit code mapping, including the code 7 collection
 - [x] `ask` is dispatched from `_dispatch`
 
 ### Phase 2: the skills directory

@@ -174,12 +174,14 @@ checked inside it. `ask --session` verifies nothing: it reads a directory alread
 
 ### Taking the keyboard
 
-A CoWork run types into the frontmost application, so `run --cowork` asks for the keyboard
-once per invocation, in a modal that forces itself in front of whatever you are working in.
-It asks once before the first plugin, whatever the suite holds. Cancel refuses: the sweep
-fails the gate and exits 1, and nothing has fired at that point.
+A CoWork submission types into the frontmost application, so `run --cowork` and
+`ask --cowork` each ask for the keyboard once per invocation, in a modal that forces itself
+in front of whatever you are working in. `run` asks once before the first plugin, whatever
+the suite holds, and `ask` asks once before its one submission. Cancel refuses, and nothing
+has fired at that point: the sweep fails the gate and exits 1, and `ask` exits 3.
 
-`--dry-run` never asks, because nothing would be submitted.
+`--dry-run` never asks, because nothing would be submitted, and neither does `ask --session`,
+which reads a directory.
 
 `cowork.consent: none` in the configuration file fires without asking, which is the route for
 an unattended run. `cowork.consent_timeout` is how long the modal waits before going ahead on
@@ -324,6 +326,9 @@ has no CoWork.
 `--dry-run` skips it too, for the reason `run --dry-run` does: nothing behind the preflight is
 reached. The deep link is built from the prompt and the ceiling arithmetic is read from the
 run log, so a dry run checks a prompt on a machine with no CoWork at all.
+
+A submission asks for the keyboard once, after the preflight, in the modal
+[Taking the keyboard](#taking-the-keyboard) describes. Cancel exits 3 and fires nothing.
 
 ### Exit codes
 
