@@ -54,7 +54,7 @@ from its prompt and from habit, and both go stale.
 | Can it write a file?          | write one, at a named path, with named contents           | `outputs` in the footer |
 | Can it run a shell command?   | run one whose output cannot be guessed                    | `tools`, then the text  |
 | Which tools does it have?     | use the tool                                              | `tools` in the footer   |
-| Does a skill fire?            | give it the request the skill's own description triggers on | `tools` in the footer |
+| Does a skill fire?            | give it the request the skill's own description triggers on | `tool_calls` under `--json`. There is no `Skill` tool in a session: it reads `SKILL.md` over the mount, which `docs cowork_desktop` records |
 
 `--json` prints the whole session document, and `tool_calls` in it carries each call's input
 and its result. That is what a claim about a tool is checked against.

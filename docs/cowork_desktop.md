@@ -20,7 +20,8 @@ drive it. These are the measured internals. What the driver does with them is
 
 Captured 2026-09-02 on a macOS development machine by direct probe, re-probed 2026-09-08 for
 section 3, which reads session directories already on disk, and extended 2026-09-12 with the
-process name and what the keyboard does to a submission. Expect any release to change these.
+process name, what the keyboard does to a submission, and section 5, which is what four real
+sessions did when asked. Expect any release to change these.
 
 ## Measured facts
 
@@ -37,6 +38,8 @@ process name and what the keyboard does to a submission. Expect any release to c
 | New session boot  | About 45 seconds from deep link to the first tool call in the guest  |
 | Driven run        | 8.2 seconds end to end, deep link to collected result. Snapshot 2026-09-08 |
 | Guest bash tool   | `mcp__workspace__bash`, an MCP tool, not Claude Code's own `Bash`     |
+| Guest fetch tool  | `mcp__workspace__web_fetch`. Snapshot 2026-09-12                     |
+| Host write tool   | `Write`, which names a host path and lands in `outputs/`. Snapshot 2026-09-12 |
 
 A build may install more than one profile directory. Which one is active is read from `lsof`
 on the running process. Name the active profile in `cowork_evals.yaml`; do not hardcode it.
@@ -217,6 +220,38 @@ Never write anywhere under the profile. These directories are application manage
 writing into them may corrupt a profile. To stage a plugin, use the install deep link, on a
 throwaway profile first.
 
+## 5. What a session does when asked
+
+Snapshot, captured 2026-09-12 on application version 1.52386.0. Four prompts through
+`cowork_evals ask --cowork`, one submission each, on a profile with nothing granted to the
+session beyond what a fresh session has. Every prompt asked the session to do the thing. What
+a session says about its own configuration is not evidence, so every row below is read from
+the session document's `tool_calls` and `outputs`, and from the host filesystem afterwards.
+
+| Asked for                       | Tool called                  | Result                                   |
+| ------------------------------- | ---------------------------- | ---------------------------------------- |
+| Write a file                    | `Write`                      | Wrote `outputs/<name>.txt`, 1 assistant turn |
+| Run a shell command             | `mcp__workspace__bash`       | `Linux 6.8.0-136-generic`, `Python 3.10.12`, and the session name as the guest user |
+| Fetch a URL                     | `mcp__workspace__web_fetch`  | `HTTP 200 OK` and the page body, from `https://example.com` |
+| Produce a `.pptx`               | `mcp__workspace__bash`, six times | Read `.claude/skills/pptx/SKILL.md` with `cat`, `npm install`ed a library and wrote a 44 KB `outputs/<name>.pptx` |
+
+Every one of the four ran to `completed` with no interaction. Nothing was granted, nothing
+was asked, and the driver sends the deep link and one Return and nothing else, so a permission
+prompt would have stalled the run until the run timeout. A session writes files, shells out and
+reaches the network on its own.
+
+Four consequences a case format and a grader act on.
+
+| Measured                                                | Consequence                                                    |
+| ------------------------------------------------------- | --------------------------------------------------------------- |
+| No tool was granted and four were used                  | A tool grant is not a key a CoWork case can honour. It is the Docker backend's, and only there |
+| `Write` named a host path, `mcp__workspace__bash` named a guest path | Both landed in the same `outputs/` directory. `Write` runs on the host and the bash tool runs in the guest, over the mount section 4 records |
+| A skill was read with `cat` over its mounted directory  | There is no `Skill` tool in the transcript. A grader that looks for one finds nothing |
+| `rm` of a file the session had created under `outputs/` was refused, `Operation not permitted` | A file a session wrote into `outputs/` stays there, so a collector reads a complete set |
+
+The guest reported Python 3.10.12, which is the interpreter the code under test runs on. See
+[runtime.md](runtime.md).
+
 ## Authorizations
 
 None of these is discoverable from the code. A second machine needs all of them.
@@ -258,7 +293,8 @@ The `claude://claude.ai/new` route, the `q`, `surface`, `file` and `folder` para
 the 14336 cap, the `Claude` process name `System Events` reports, the sessions root path, the three level session directory depth, the
 `audit.jsonl` filename, the `user` and `command_lifecycle` record types, the `state` values,
 the transcript path under `.claude/projects/session`, the `subagents/*.jsonl` layout, the
-`tool_use` `id` and `tool_result` `tool_use_id` fields, and the `outputs/` directory.
+`tool_use` `id` and `tool_result` `tool_use_id` fields, the `outputs/` directory, and the
+`Write`, `mcp__workspace__bash` and `mcp__workspace__web_fetch` tool names.
 
 Every field a reader of a collected session acts on, by file:
 

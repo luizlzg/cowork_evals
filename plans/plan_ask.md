@@ -171,7 +171,7 @@ no skip.
 - [x] Unit: `--dry-run` prints a deep link carrying the encoded prompt, and writes no run log
       entry
 - [x] Unit: `--session` naming a directory that is not there exits 1 and says so
-- [ ] Integration: one real `ask --cowork` against the configured profile exits 0, prints a
+- [x] Integration: one real `ask --cowork` against the configured profile exits 0, prints a
       non-empty answer, and names a session directory that exists
 
 ### Phase 5: documentation, and the first measurement
@@ -182,9 +182,9 @@ no skip.
       states the rule that separates the two
 - [x] `README.md`: the verb appears in the two command listings that name the verb set
 - [x] `scripts/README.md`: the `dev_skills.sh` row
-- [ ] Fire four asks against a real session: write a file, run a shell command, fetch a URL,
+- [x] Fire four asks against a real session: write a file, run a shell command, fetch a URL,
       and fire a skill the account has. Record what each did
-- [ ] `docs/cowork_desktop.md`: one section holding those four results, dated, and called a
+- [x] `docs/cowork_desktop.md`: one section holding those four results, dated, and called a
       snapshot
 - [ ] `plans/README.md`: the row moves to `implemented` on the merge, and the file moves to
       `done/plan_ask.<YYYYMMDD>.md`
@@ -198,8 +198,8 @@ result: the verb and the skill are what it builds, and the snapshot is what they
 - [x] `scripts/lint.sh`
 - [x] `scripts/test.sh tests/unit`
 - [x] `scripts/test.sh` with the default selection, green
-- [ ] `scripts/test.sh -m integration -k ask`, on a machine with the profile and the grant
+- [x] `scripts/test.sh -m integration -k ask`, on a machine with the profile and the grant
 - [x] `cowork_evals ask --cowork --dry-run "hello"` prints a deep link and spends nothing
-- [ ] `cowork_evals ask --cowork "Reply with the single word: ready"` prints `ready`
-- [ ] `scripts/dev_skills.sh`, then a Claude Code session in this repository fires
+- [x] `cowork_evals ask --cowork "Reply with the single word: ready"` prints `ready`
+- [x] `scripts/dev_skills.sh`, then a Claude Code session in this repository fires
       `cowork-ask` on the question "what tools does a CoWork session have"
