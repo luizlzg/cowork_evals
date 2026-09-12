@@ -16,11 +16,12 @@ while the work happens.
 
 ## Plans
 
-Nine plans. Eight build something and are numbered in build order, and one of those eight
-is skipped. Plan 8 is written on `feat/ask` and is not in this index yet, which is why the
-numbering steps from 7 to 9; its row joins when that branch merges. `plan_fix` builds nothing, so it carries no number: it corrects what the others
+Eleven plans. Nine build something and are numbered in build order, and one of those nine
+is skipped. `plan_fix` builds nothing, so it carries no number: it corrects what the others
 wrote, and it ran before `plan_cowork_backend.md` because it changes what that plan and
-`plan_cli.md` both read. The order is the order they are built in, not a gate: a plan is
+`plan_cli.md` both read. `plan_believable_results` carries no number for the same reason:
+it holds measurements and decisions, and its product is four plan files. The order is the
+order they are built in, not a gate: a plan is
 written whenever the developer decides to write it, and a plan whose inputs already exist is
 executable whether or not the plan before it is finished. `status` is the plan's own state,
 not the system's: what is built and usable is
@@ -36,7 +37,9 @@ not the system's: what is built and usable is
 | 6 | [`done/plan_cli.20260909.md`](done/plan_cli.20260909.md) | Scope resolution, the run directory, the gate, and the command                    | implemented | `feat/cli`            |
 | - | [`done/plan_fix.20260909.md`](done/plan_fix.20260909.md) | Nothing. One configuration file, one name per artifact, and the false statements  | implemented | `feat/fix-consistency` |
 | 7 | [`done/plan_consumer.20260909.md`](done/plan_consumer.20260909.md) | The shipped documentation, the `docs` and `init` verbs, and the eval-authoring skill | implemented | `feat/consumer`       |
+| 8 | [`plan_ask.md`](plan_ask.md) | The `ask` verb over the driver, and the skill that asks a live session what it does | written     | `feat/ask`            |
 | 9 | [`plan_focus.md`](plan_focus.md) | The consent modal, the frontmost guard and the composer clear, in the driver | written     | `feat/focus`          |
+| - | [`plan_believable_results.md`](plan_believable_results.md) | Nothing. The measurements, the decisions, and the four plans that follow them | written     |                       |
 
 | Status        | Means                                                                     |
 | ------------- | --------------------------------------------------------------------------- |
@@ -69,6 +72,13 @@ the way out are corrected, and two verbs and one skill put the shipped tree in f
 Claude Code session in the consumer repository. The boundary it moves is
 [`../docs/library.md`](../docs/library.md).
 
+Plan 8 builds no part of an eval either. It puts a verb on the driver plan 1 built and a
+skill on that verb, so a question about what a live CoWork session does is answered by
+asking one rather than by argument. Several decisions in later plans rest on facts only a
+session can settle, and the command surface it adds is
+[`../docs/cli.md`](../docs/cli.md). Its branch is not merged, so what `main` carries today is
+the plan, not the verb.
+
 Plan 9 corrects a defect in plan 1. The driver takes the keyboard without asking and types
 into a composer it never clears, so a developer working in another window contaminates the
 prompt. It is the driver's and not any one verb's: every `run --cowork` case goes through the
@@ -90,14 +100,17 @@ suite, or introduces a cadence. Those belong to the consumer repository, and the
 
 A mechanism still has to be shown to work, and some facts about one cannot be reached by
 reading a file. Each of plans 2, 3 and 4 therefore ends by firing `plugins/smoke/` once,
-from the integration tier, and recording what that settled. Plan 5 fires nothing: every
-fact it needs is a container with a fixed command and a fixed expected output.
+from the integration tier, and recording what that settled. Plan 8 fires no case tree: it
+fires four prompts, because what it has to establish is what a session does and not what a
+grader scores. Plan 5 fires nothing: every fact it needs is a container with a fixed command
+and a fixed expected output.
 
 | Plan | Fires once to establish                                                              |
 | ---- | -------------------------------------------------------------------------------------- |
 | 2    | Whether the harness runs end to end inside the container, and whether a case there reaches a running command |
 | 3    | Whether a staged interpreter is reachable from inside the OS sandbox, and whether a case that shells out gets 3.10 |
 | 4    | Whether a case tree reaches a real CoWork session, and whether the grader scores what that session produced |
+| 8    | What a live session does when it is asked to write a file, shell out, fetch a URL and fire a skill |
 | 9    | Whether clearing the composer before the deep link removes the contamination, and what `System Events` calls the CoWork process |
 
 Everything else those plans measure is a `docker run` or a subprocess with a fixed command
