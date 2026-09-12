@@ -157,6 +157,94 @@ def test_a_weight_at_or_below_zero_is_a_violation() -> None:
     assert rules_at(violations(BROKEN), path) == ["grader-weight"]
 
 
+# The reserved tag, in both directions.
+
+
+def _runnability_case(
+    root: Path,
+    *,
+    tags: str = "[greeter]",
+    extra: str = "",
+    case_yaml: str | None = None,
+    mocks_at: tuple[str, ...] = (),
+    depth: tuple[str, ...] = (),
+) -> Path:
+    """One plugin root holding one case, with whatever makes it unrunnable on CoWork.
+
+    `depth` is the grouping directories between `evals/greeter/` and the case, which is how
+    a case several layers below an `evals/mocks/` is written.
+    """
+    (root / ".claude-plugin").mkdir()
+    (root / ".claude-plugin" / "plugin.json").write_text('{"name": "one"}')
+    (root / "skills" / "greeter").mkdir(parents=True)
+    case = root.joinpath("evals", "greeter", *depth, "hello")
+    case.mkdir(parents=True)
+    up = "/".join([".."] * (3 + len(depth)))
+    (case / "prompt.md").write_text(
+        f'---\nname: hello\ntags: {tags}\nplugins: ["{up}"]\n{extra}---\n\nSay hello.\n'
+    )
+    if case_yaml is not None:
+        (case / "case.yaml").write_text(case_yaml)
+    for relative in mocks_at:
+        (root / relative / "mocks" / "mailer").mkdir(parents=True)
+        (root / relative / "mocks" / "mailer" / "send.md").write_text("---\ntool: send\n---\n")
+    return root
+
+
+def test_an_unhonoured_key_with_no_tag_is_a_violation_naming_the_key(tmp_path: Path) -> None:
+    found = violations(_runnability_case(tmp_path, extra="max_turns: 10\n"))
+    assert [violation.rule for violation in found] == ["no-cowork-missing"]
+    assert found[0].detail == (
+        "max_turns: no turn cap reaches a CoWork session, and tags does not carry no-cowork"
+    )
+
+
+def test_a_context_key_with_no_tag_is_a_violation_naming_the_key(tmp_path: Path) -> None:
+    found = violations(
+        _runnability_case(
+            tmp_path,
+            case_yaml='schema_version: "1.1"\nname: hello\ncontext:\n  add_dirs: ["fixtures"]\n',
+        )
+    )
+    assert [violation.rule for violation in found] == ["no-cowork-missing"]
+    assert found[0].detail == (
+        "context.add_dirs: nothing stages files into the VM, and tags does not carry no-cowork"
+    )
+
+
+def test_a_mocks_directory_with_no_tag_is_a_violation_naming_the_directory(tmp_path: Path) -> None:
+    found = violations(_runnability_case(tmp_path, mocks_at=("evals",)))
+    assert [violation.rule for violation in found] == ["no-cowork-missing"]
+    assert found[0].detail.startswith(str(tmp_path / "evals" / "mocks"))
+    assert "and tags does not carry no-cowork" in found[0].detail
+
+
+def test_the_tag_on_a_case_nothing_stops_is_a_violation(tmp_path: Path) -> None:
+    """The second direction, which is what keeps the tag from switching a case off."""
+    found = violations(_runnability_case(tmp_path, tags="[greeter, no-cowork]"))
+    assert [violation.rule for violation in found] == ["no-cowork-unneeded"]
+    assert found[0].detail == "tags carries no-cowork, and a CoWork session can run this case"
+
+
+def test_an_unhonoured_key_with_the_tag_is_valid(tmp_path: Path) -> None:
+    assert (
+        violations(
+            _runnability_case(tmp_path, tags="[greeter, no-cowork]", extra="max_turns: 10\n")
+        )
+        == []
+    )
+
+
+def test_a_mocks_directory_several_layers_above_the_case_is_valid_with_the_tag(
+    tmp_path: Path,
+) -> None:
+    """The chain is walked from the plugin root, not from the case's own directory."""
+    root = _runnability_case(
+        tmp_path, tags="[greeter, no-cowork]", mocks_at=("evals",), depth=("group", "inner")
+    )
+    assert violations(root) == []
+
+
 # The whole list.
 
 
@@ -193,7 +281,9 @@ def _one_case(root: Path, extra: str) -> Path:
     (root / "skills" / "greeter").mkdir(parents=True)
     case = root / "evals" / "greeter" / "hello"
     case.mkdir(parents=True)
+    # The tag, because the one caller writes `max_turns`. docs/eval_format.md.
     (case / "prompt.md").write_text(
-        f'---\nname: hello\ntags: [greeter]\nplugins: ["../../.."]\n{extra}---\n\nSay hello.\n'
+        f'---\nname: hello\ntags: [greeter, no-cowork]\nplugins: ["../../.."]\n'
+        f"{extra}---\n\nSay hello.\n"
     )
     return root

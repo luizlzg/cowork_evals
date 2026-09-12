@@ -60,6 +60,18 @@ def test_a_tag_filter_keeps_a_case_carrying_any_of_them() -> None:
     assert discover(EVALS, tags=("absent",)) == []
 
 
+def test_a_case_carrying_the_reserved_tag_is_still_selected_by_its_skill_tag() -> None:
+    """`no-cowork` is one more tag, so a case carrying it and `greeter` answers to either.
+
+    `every-key` writes the keys a CoWork session cannot honour, which is why it carries the
+    tag. docs/eval_format.md.
+    """
+    selected = by_name(discover(EVALS, tags=("greeter",)))
+    assert list(selected) == ["greets-alex"]
+    assert selected["greets-alex"].no_cowork is True
+    assert by_name(discover(EVALS))["inner-case"].no_cowork is False
+
+
 def test_a_case_glob_matches_the_case_name_and_not_the_directory_name() -> None:
     """`greets-alex` lives in `every-key/`, so the two selectors differ here."""
     assert [case.name for case in discover(EVALS, case_glob="greets-*")] == ["greets-alex"]
@@ -75,7 +87,7 @@ def test_every_frontmatter_key_is_kept_as_authored() -> None:
         "schema_version": "1.1",
         "name": "greets-alex",
         "description": "Every key the format allows, written out.",
-        "tags": ["greeter", "smoke"],
+        "tags": ["greeter", "smoke", "no-cowork"],
         "plugins": ["../../.."],
         "runs": 2,
         "max_turns": 12,
@@ -87,7 +99,7 @@ def test_every_frontmatter_key_is_kept_as_authored() -> None:
         "expected_outcome": "The reply names Alex.",
     }
     assert case.name == "greets-alex"
-    assert case.tags == ("greeter", "smoke")
+    assert case.tags == ("greeter", "smoke", "no-cowork")
     assert case.prompt == "Say hello to Alex."
     assert case.source == "prose"
     assert case.case_yaml_keys == {}
@@ -149,8 +161,8 @@ def test_a_case_yaml_is_read_and_its_context_keys_are_kept() -> None:
     assert "context" not in case.case_yaml_keys
     assert case.source == "mixed"
     assert case.name == "staged", "the case.yaml name, since the frontmatter writes none"
-    assert case.tags == ("plugin",), "the frontmatter is the override over the case.yaml"
-    assert case.frontmatter_keys == {"tags": ["plugin"]}
+    assert case.tags == ("plugin", "no-cowork"), "the frontmatter overrides the case.yaml"
+    assert case.frontmatter_keys == {"tags": ["plugin", "no-cowork"]}
 
 
 # The plugin root.

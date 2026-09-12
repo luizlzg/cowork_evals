@@ -1,6 +1,6 @@
 ---
 name: compose
-tags: [plugin]
+tags: [plugin, no-cowork]
 plugins: ["../../.."]
 ---
 

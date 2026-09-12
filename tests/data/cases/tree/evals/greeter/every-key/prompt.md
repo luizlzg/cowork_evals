@@ -2,7 +2,7 @@
 schema_version: "1.1"
 name: greets-alex
 description: Every key the format allows, written out.
-tags: [greeter, smoke]
+tags: [greeter, smoke, no-cowork]
 plugins: ["../../.."]
 runs: 2
 max_turns: 12

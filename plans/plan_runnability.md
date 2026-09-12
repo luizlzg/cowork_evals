@@ -121,65 +121,65 @@ Every other skip in `cowork_backend.skips` becomes a validator error or a counte
 
 ### Phase 1: the tag, read and written
 
-- [ ] `cases.py` names the reserved tag in one place and exposes whether a case carries it.
+- [x] `cases.py` names the reserved tag in one place and exposes whether a case carries it.
       No other module spells the string
-- [ ] `cowork_backend` exposes the reasons a case is unrunnable, all three sources, as the
+- [x] `cowork_backend` exposes the reasons a case is unrunnable, all three sources, as the
       one function both the validator and the backend call. It takes the case and the plugin
       root, which is what `_mock_layers` already needs, and it is what `skips` reads today
-- [ ] `validate.py` enforces both directions of the table above over that function, one rule
+- [x] `validate.py` enforces both directions of the table above over that function, one rule
       name each. The message names what makes the case unrunnable: the key, or the `mocks/`
       directory as a path
-- [ ] A case carrying the tag is still selected by `--tag <skill>`, and a test says so
-- [ ] The tag is not added to `PROMPT_KEYS`. It is a tag value, not a key, so nothing about
+- [x] A case carrying the tag is still selected by `--tag <skill>`, and a test says so
+- [x] The tag is not added to `PROMPT_KEYS`. It is a tag value, not a key, so nothing about
       the key set changes
 
 ### Phase 2: the backend reads it
 
-- [ ] `cowork_backend.skips` stops turning any of the three sources into a case skip. It
+- [x] `cowork_backend.skips` stops turning any of the three sources into a case skip. It
       still reads them, through the function phase 1 exposed, because the validator enforces
       direction one over the same reasons
-- [ ] A case carrying the tag is not submitted, and produces a case entry saying it was not
+- [x] A case carrying the tag is not submitted, and produces a case entry saying it was not
       run on this backend, with the tag as the reason
-- [ ] The entry is not a skip. It carries a field of this repository's own, distinct from
+- [x] The entry is not a skip. It carries a field of this repository's own, distinct from
       `skipped`, so a reader and `verdict.py` can tell a declared case from a skipped one
-- [ ] `plan.submissions` counts it as zero, so the rate ceiling arithmetic is unchanged
-- [ ] Nothing changes on the Docker backend
+- [x] `plan.submissions` counts it as zero, so the rate ceiling arithmetic is unchanged
+- [x] Nothing changes on the Docker backend
 
 ### Phase 3: a declared case is counted
 
-- [ ] A case declared unrunnable on the backend that ran is counted, never failed
-- [ ] A case reporting `skipped` still fails, so the one run-time grader skip and every
+- [x] A case declared unrunnable on the backend that ran is counted, never failed
+- [x] A case reporting `skipped` still fails, so the one run-time grader skip and every
       harness skip fail exactly as they did
-- [ ] The summary line names how many cases were declared unrunnable, beside the four counts
+- [x] The summary line names how many cases were declared unrunnable, beside the four counts
       it already carries, found, picked, ran and passed, so a counted case is visible rather
       than silently absent. What each of the four means is
       [`../docs/running_evals.md`](../docs/running_evals.md)
-- [ ] A declared case leaves all four numbers in `results._aggregates`, not one. It is out of
+- [x] A declared case leaves all four numbers in `results._aggregates`, not one. It is out of
       `casesTotal`, out of `casesPassed`, and out of both means. Subtracting it from
       `casesTotal` alone would leave it counted as passed, because `casesPassed` counts a
       case that is not `skipped` and a declared case is not skipped, and would leave its 0.0
       dragging `overallScore` down for a case that never ran
-- [ ] A suite whose every case is declared reports zero cases and a score of 0.0, which is
+- [x] A suite whose every case is declared reports zero cases and a score of 0.0, which is
       the same shape `_aggregates` already produces for a suite of no cases at all
 
 ### Phase 4: tests
 
 Unit tier throughout, except the last box.
 
-- [ ] Direction one, once per source: a case writing `max_turns`, a case writing a
+- [x] Direction one, once per source: a case writing `max_turns`, a case writing a
       `context.*` key, and a case under an `evals/mocks/` directory, each without the tag, is
       a violation naming what made it unrunnable
-- [ ] Direction two: a case carrying the tag and carrying no source is a violation
-- [ ] A case writing `max_turns` and carrying the tag is valid
-- [ ] A case whose only source is an `evals/mocks/` directory several layers above it, and
+- [x] Direction two: a case carrying the tag and carrying no source is a violation
+- [x] A case writing `max_turns` and carrying the tag is valid
+- [x] A case whose only source is an `evals/mocks/` directory several layers above it, and
       which carries the tag, is valid. The chain is walked from the plugin root, not from the
       case's own directory
-- [ ] A case carrying the tag is still returned by a `--tag <skill>` selection
-- [ ] The CoWork backend submits nothing for a declared case, and the driver is never called
-- [ ] A document whose only case is declared passes, and the summary says so
-- [ ] A document whose case reports `skipped` still fails
-- [ ] `_aggregates` over one declared case reports zero cases, zero passed and a score of 0.0
-- [ ] One `plugins/smoke/` fixture case carrying the tag, run on `--cowork` from the
+- [x] A case carrying the tag is still returned by a `--tag <skill>` selection
+- [x] The CoWork backend submits nothing for a declared case, and the driver is never called
+- [x] A document whose only case is declared passes, and the summary says so
+- [x] A document whose case reports `skipped` still fails
+- [x] `_aggregates` over one declared case reports zero cases, zero passed and a score of 0.0
+- [x] One `plugins/smoke/` fixture case carrying the tag, run on `--cowork` from the
       integration tier, green and counted. It writes `max_turns`, so it satisfies direction
       two, and it runs on Docker unchanged
 
@@ -187,21 +187,21 @@ Unit tier throughout, except the last box.
 
 Five documents, and the rule that a skip fails the run is amended in one of them.
 
-- [ ] [`../docs/eval_format.md`](../docs/eval_format.md): the reserved tag, all three sources
+- [x] [`../docs/eval_format.md`](../docs/eval_format.md): the reserved tag, all three sources
       that require it, both directions, and that `tags:` is where it lives
-- [ ] [`../docs/running_evals.md`](../docs/running_evals.md): the key-by-key table stops
+- [x] [`../docs/running_evals.md`](../docs/running_evals.md): the key-by-key table stops
       saying `Skipped` for a key the case writes out and says the case declares it instead.
       The pass and fail table gains the counted condition. The rule that a skip fails the
       run stays, and is narrowed to say what is still a skip
-- [ ] [`../docs/approaches.md`](../docs/approaches.md): the honoured-feature table says a
+- [x] [`../docs/approaches.md`](../docs/approaches.md): the honoured-feature table says a
       case declares what this backend cannot run
-- [ ] [`../docs/cowork_backend.md`](../docs/cowork_backend.md): the added field, that a
+- [x] [`../docs/cowork_backend.md`](../docs/cowork_backend.md): the added field, that a
       `mocks/` directory is declared per case and not per directory, and that the image-focus
       grader skip is the one skip this backend still decides after a run
-- [ ] [`../plugins/README.md`](../plugins/README.md): the fixture case phase 4 adds
-- [ ] Nothing in `plans/done/` is read or corrected
+- [x] [`../plugins/README.md`](../plugins/README.md): the fixture case phase 4 adds
+- [x] Nothing in `plans/done/` is read or corrected
 
 ### Phase 6: integration
 
 - [ ] `plugins/smoke/` on both backends, from the integration tier, green
-- [ ] `scripts/test.sh` and `ruff` clean
+- [x] `scripts/test.sh` and `ruff` clean

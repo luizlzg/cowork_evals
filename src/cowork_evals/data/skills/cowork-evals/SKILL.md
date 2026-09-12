@@ -99,6 +99,20 @@ Summarize `notes/standup.md` in one paragraph.
 Any other key is an error. `context.*` goes in `case.yaml`, which needs
 `schema_version: "1.1"` and `name`.
 
+## The no-cowork tag
+
+`no-cowork` is the one reserved tag value. A case carrying it in `tags:` declares that a live
+CoWork session cannot run it: the case is not submitted on `--cowork`, and is counted rather
+than failed. On `--docker` it is one more tag. `--tag <skill>` still selects the case, because
+the case carries both tags.
+
+A case carries it when, and only when, it writes `max_turns`, `model`, `allowed_tools`,
+`append_system_prompt` or `env`, writes any `context.*` key in `case.yaml`, or sits under a
+`mocks/` directory, including a suite-wide `evals/mocks/` several levels above it. The
+validator checks both directions and exits 3 on either: a case that needs the tag and lacks
+it, and a case that carries it and needs nothing. There is no `skip:` field, and the tag is
+not one.
+
 ## Graders
 
 One grader per file under `graders/`, frontmatter then the rubric or pattern. Structural

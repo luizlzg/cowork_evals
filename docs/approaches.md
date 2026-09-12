@@ -13,7 +13,8 @@ replaces the other.
   session in a real account**, and has no headless route.
 - One case format serves both. The backend changes, the case does not.
 - The CoWork backend honours a subset of the format, because it drives a live session rather
-  than the harness.
+  than the harness. A case outside that subset carries the `no-cowork` tag and is counted
+  there rather than run.
 - A third backend, Claude Code against a 3.10 mirror on the host, is designed and not built.
   See [staged_runtime.md](staged_runtime.md).
 
@@ -67,6 +68,12 @@ and reads what the session wrote, so it honours a subset of the format.
 | `context.add_dirs`, `context.scaffold_script`           | yes              | no, nothing stages files into the VM    |
 | `mocks/`                                                | yes              | no, the MCP servers are the real ones   |
 | `arm:` on a grader                                      | read, but inert  | read, but inert                         |
+| `no-cowork` in `tags:`                                  | one more tag     | the case is not submitted, and is counted |
+
+A case that needs any of the four rows this backend answers `no` to says so itself, with the
+`no-cowork` tag in its own `tags:`. The tag is [eval_format.md](eval_format.md), and the
+validator enforces it in both directions, so this table and the case cannot disagree. There is
+no `no-docker` counterpart: nothing names a case key the Docker backend cannot honour.
 
 A session used four tools with nothing granted to it, which is what `no, the session decides`
 above is read from. The four probes are section 5 of
@@ -85,11 +92,11 @@ list. A session has no permission mode, is never refused a tool by one, and writ
 list, so neither is ever found on CoWork and every `--cowork` document is the shape that
 passes. One decision still covers both backends. See [running_evals.md](running_evals.md).
 
-A case that writes out a key the CoWork backend cannot honour is reported by that backend as
-skipped, never as passed. A default is not a request, so a case that writes no `runs` key
-runs once rather than skipping; the exact rule is in [running_evals.md](running_evals.md). A
-command-line option a backend cannot honour is a usage error instead, and the difference is
-stated in [cli.md](cli.md).
+A case that writes out a key the CoWork backend cannot honour carries the tag, submits nothing
+there and is counted, never passed and never failed. A default is not a request, so a case that
+writes no `runs` key runs once rather than declaring anything; the exact rule is in
+[running_evals.md](running_evals.md). A command-line option a backend cannot honour is a usage
+error instead, and the difference is stated in [cli.md](cli.md).
 
 ## What each one costs
 

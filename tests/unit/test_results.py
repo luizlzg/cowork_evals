@@ -190,15 +190,15 @@ def test_case_aggregates_are_the_mean_score_and_the_pass_rate() -> None:
     assert disagreeing.document(TREE.resolve())["aggregates"] == {"score": 0.75, "passRate": 0.5}
 
 
-def test_a_skipped_case_submits_nothing_and_carries_its_reason() -> None:
-    skipped = CaseResult(
-        case=case("staged", max_turns=12),
-        skipped=True,
-        skip_reason="max_turns: no turn cap reaches a CoWork session",
+def test_a_declared_case_submits_nothing_and_carries_its_reason() -> None:
+    reason = "no-cowork: max_turns: no turn cap reaches a CoWork session"
+    unrunnable = CaseResult(
+        case=case("staged", max_turns=12), declared=True, declared_reason=reason
     )
-    document = skipped.document(TREE.resolve())
-    assert document["skipped"] is True
-    assert document["skipReason"] == "max_turns: no turn cap reaches a CoWork session"
+    document = unrunnable.document(TREE.resolve())
+    assert document["declaredUnrunnable"] is True
+    assert document["declaredReason"] == reason
+    assert "skipped" not in document, "a declared case is not a skipped one"
     assert document["arms"]["with"] == []
     assert document["aggregates"] == {"score": 0.0, "passRate": 0.0}
     assert "score" not in document, "a case has no score of its own in v1"
@@ -256,15 +256,32 @@ def test_the_suite_cost_is_the_judge_spend_alone() -> None:
     assert suite(cases)["costUsd"] == pytest.approx(0.007)
 
 
-def test_a_skipped_case_is_subtracted_from_cases_passed() -> None:
+def test_a_declared_case_leaves_all_four_aggregates() -> None:
+    """It is in `cases`, and out of `casesTotal`, `casesPassed` and both means."""
     cases = [
         CaseResult(case=case("runs"), runs=(Run(graders=(result("a", True),)),)),
-        CaseResult(case=case("skipped"), skipped=True, skip_reason="model: the session decides"),
+        CaseResult(case=case("declared"), declared=True, declared_reason="no-cowork"),
     ]
     document = suite(cases)
-    assert document["aggregates"]["casesTotal"] == 2
-    assert document["aggregates"]["casesPassed"] == 1
-    assert document["aggregates"]["overallScore"] == 0.5
+    assert len(document["cases"]) == 2
+    assert document["aggregates"] == {
+        "casesTotal": 1,
+        "casesPassed": 1,
+        "overallScore": 1.0,
+        "overallPassRate": 1.0,
+    }
+
+
+def test_a_suite_of_nothing_but_declared_cases_reports_no_case_at_all() -> None:
+    """The same four numbers a suite of no cases reports."""
+    only = CaseResult(case=case("declared"), declared=True, declared_reason="no-cowork")
+    document = suite([only])
+    assert document["aggregates"] == {
+        "casesTotal": 0,
+        "casesPassed": 0,
+        "overallScore": 0.0,
+        "overallPassRate": 0.0,
+    }
 
 
 def test_a_selection_that_matched_no_case_divides_by_nothing() -> None:

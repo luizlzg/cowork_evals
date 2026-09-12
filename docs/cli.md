@@ -139,8 +139,9 @@ which graders are scored. `eval.max_cost_total_usd` has no option either; it bou
 invocation rather than a run.
 
 An option the chosen backend cannot honour is refused at parse time. That is an operator
-mistake, so it is a usage error. A *case* that needs a field the backend cannot honour is
-reported skipped and fails the run. The two are different and are never conflated.
+mistake, so it is a usage error. A *case* that needs a field the backend cannot honour says so
+with a tag, is not submitted there and is counted. The two are different and are never
+conflated. The tag is [eval_format.md](eval_format.md).
 
 `--dry-run` exits 0 without running anything and without creating a run directory. What it
 prints differs per backend, because only one of them builds a command line.
@@ -148,11 +149,11 @@ prints differs per backend, because only one of them builds a command line.
 | Backend    | Prints                                                                        |
 | ---------- | ------------------------------------------------------------------------------- |
 | `--docker` | the `docker run` command line, one argument per line, `--keep-temp` and the `TMPDIR` behind it included |
-| `--cowork` | one line per case with its run count, its timeout and its skips, then the rate ceiling arithmetic |
+| `--cowork` | one line per case with its run count, its timeout, what it declares and its grader skips, then the rate ceiling arithmetic |
 
-The skips are the point of the CoWork dry run: a skipped case fails the run, so an operator
-reads which ones before spending. Pruning of old run directories happens before the exit, so
-an unattended dry run still reclaims space. The tests assert over both, so the option surface,
+What each case declares is the point of the CoWork dry run: a declared case submits nothing, so
+an operator reads which ones before spending. Pruning of old run directories happens before the
+exit, so an unattended dry run still reclaims space. The tests assert over both, so the option surface,
 the backend mapping and the target's position ahead of the variadic flags are covered without
 a live run.
 
@@ -261,16 +262,11 @@ preflight, and a dry run on `--cowork` prints the same arithmetic instead of ref
 That is what makes `run --dry-run` the way to check a case without spending anything. There
 is no separate validate verb.
 
-A dry run reports the code the run would reach, so it is not always 0.
-
-| On         | Exits 1 when                                                        |
-| ---------- | -------------------------------------------------------------------- |
-| `--cowork` | every selected case is skipped, so the suite plans no submission     |
-| `--docker` | never. The harness decides its skips at run time, and a dry run cannot know them |
-
-A skipped case fails the run, so a suite that is dead on CoWork would fail a real run. A dry
-run that exited 0 on it would pass a portability check in CI while the run went red. An empty
-selection is a different thing and is refused earlier, with exit 2.
+A dry run exits 0 on both backends once the preflight it skips and the validation it keeps are
+past. A suite whose every case declares `no-cowork` plans no submission and is a pass, because
+a declared case is counted rather than failed, and a real run of it would exit 0 as well. An
+empty selection is a different thing and is refused earlier, with exit 2. A malformed case,
+the missing tag and the unneeded tag included, is exit 3.
 
 `claude` is a `--cowork` precondition because the judge behind an `llm` or `baseline` grader
 is `claude -p`, and because `claudeVersion` in the result document is the host

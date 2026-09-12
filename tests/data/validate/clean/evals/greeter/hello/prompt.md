@@ -1,7 +1,7 @@
 ---
 name: hello
 description: The greeter answers by name.
-tags: [greeter]
+tags: [greeter, no-cowork]
 plugins: ["../../.."]
 runs: 3
 max_turns: 10

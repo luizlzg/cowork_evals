@@ -499,7 +499,7 @@ def test_the_cowork_dry_run_prints_a_case_its_skips_and_the_arithmetic(tmp_path,
     ]
 
 
-def test_the_cowork_dry_run_names_every_skip(tmp_path, capsys) -> None:
+def test_the_cowork_dry_run_names_what_each_declared_case_declares(tmp_path, capsys) -> None:
     log = tmp_path / "runs.jsonl"
     log.write_text("", encoding="utf-8")
     config = settings(tmp_path, f"cowork:\n  run_log: {log}\n")
@@ -507,8 +507,8 @@ def test_the_cowork_dry_run_names_every_skip(tmp_path, capsys) -> None:
     args = parse("run", "--cowork", str(tree / "evals"))
     cli._dry_run(args, config, tmp_path / "logs", [(tree, tree / "evals")], ())
     printed = capsys.readouterr().out
-    assert "  skip: max_turns: no turn cap reaches a CoWork session" in printed
-    assert "  skip: context.add_dirs: nothing stages files into the VM" in printed
+    assert "  declared: no-cowork: max_turns: no turn cap reaches a CoWork session" in printed
+    assert "  declared: no-cowork: context.add_dirs: nothing stages files into the VM" in printed
 
 
 def test_the_test_dry_run_prints_the_pytest_container_and_starts_none(capsys) -> None:
@@ -579,8 +579,8 @@ def test_check_returns_three_and_names_every_unmet_condition(tmp_path, capsys) -
 def _plugin(root: Path, *, portable: bool) -> Path:
     """One plugin, one skill, one case, one grader. `portable` decides one frontmatter key.
 
-    `allowed_tools` is honoured by the container backend and not by CoWork, so writing it out
-    is what makes the case skipped there and the suite dead. Nothing else differs.
+    `allowed_tools` is honoured by the container backend and not by CoWork, so a case writing
+    it out carries `no-cowork` and is not submitted there. Nothing else differs.
     """
     plugin = root / "one"
     case = plugin / "evals" / "greeter" / "only"
@@ -590,8 +590,9 @@ def _plugin(root: Path, *, portable: bool) -> Path:
     (plugin / "skills" / "greeter").mkdir(parents=True)
     (plugin / "skills" / "greeter" / "SKILL.md").write_text("---\nname: greeter\n---\n")
     unhonoured = "" if portable else "allowed_tools: [Skill]\n"
+    tags = "[greeter]" if portable else "[greeter, no-cowork]"
     (case / "prompt.md").write_text(
-        f"---\nname: only\ntags: [greeter]\nplugins: ['../../..']\n{unhonoured}---\n\nSay hello.\n"
+        f"---\nname: only\ntags: {tags}\nplugins: ['../../..']\n{unhonoured}---\n\nSay hello.\n"
     )
     (case / "graders" / "said.md").write_text(
         "---\ntype: regex\ntarget: last_message\npattern: 'hello'\n---\n"
@@ -621,23 +622,23 @@ def test_a_dry_run_still_refuses_a_malformed_case(tmp_path, capsys) -> None:
     assert capsys.readouterr().err.strip()
 
 
-def test_a_dry_run_fails_when_every_case_is_skipped_on_cowork(tmp_path, capsys) -> None:
-    """A suite dead on this backend would fail the run, so the dry run says so."""
+def test_a_dry_run_of_a_suite_that_declares_every_case_passes(tmp_path, capsys) -> None:
+    """A declared case is counted rather than failed, so the suite plans nothing and passes."""
     plugin = _plugin(tmp_path, portable=False)
     config = settings(tmp_path, "cowork:\n  profile: /nowhere-at-all\n")
-    assert cli._run(parse("run", "--cowork", str(plugin), "--dry-run"), config) == 1
+    assert cli._run(parse("run", "--cowork", str(plugin), "--dry-run"), config) == 0
     printed = capsys.readouterr()
-    assert "skip: allowed_tools" in printed.out
+    assert "declared: no-cowork: allowed_tools" in printed.out
     assert "0 submissions planned" in printed.out
-    assert "the run would fail" in printed.err
+    assert printed.err == ""
 
 
-def test_the_same_dead_suite_is_not_a_failure_on_docker(tmp_path, capsys) -> None:
-    """That backend honours the key, and its skips are the harness's own at run time."""
+def test_the_same_suite_is_a_pass_on_docker_too(tmp_path, capsys) -> None:
+    """That backend honours the key, and the tag is a tag there."""
     plugin = _plugin(tmp_path, portable=False)
     config = settings(tmp_path, "cowork:\n  profile: /nowhere-at-all\n")
     assert cli._run(parse("run", "--docker", str(plugin), "--dry-run"), config) == 0
-    assert "the run would fail" not in capsys.readouterr().err
+    assert capsys.readouterr().err == ""
 
 
 def test_an_uncovered_skill_prints_once_and_on_one_stream(tmp_path, capsys) -> None:

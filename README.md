@@ -47,7 +47,8 @@ The last line installs the command on its own, outside any project.
 
 Those three track the default branch. Appending `@<reference>`, a tag, a branch or a commit,
 pins instead. Pin in a repository that runs evals in CI: `run` decides pass and fail, so a
-change to the verdict or the skip rules moves it without the consumer's cases changing.
+change to the verdict or to what a backend can run moves it without the consumer's cases
+changing.
 `cowork_evals --version` prints what is installed, and every run records it in `env.txt`.
 
 The distribution is `cowork-evals`. The command it installs is `cowork_evals`.

@@ -13,7 +13,8 @@ backends.
   judged graders call a model and are printed. Prefer a structural one.
 - **Only two grader types choose what they look at, and they use different keys.** `regex`
   uses `target`, `llm` uses `focus`.
-- **Writing out a key a backend cannot honour skips the case there.** Leaving it out does not.
+- **A case a CoWork session cannot run says so, with the `no-cowork` tag.** The validator
+  checks it in both directions.
 - **Every trap in the last section has a silent failure mode.** Read it before writing a case.
 
 The format is `claude plugin eval`'s own, so a case needs no adapter to run under that
@@ -23,9 +24,9 @@ field is [approaches.md](approaches.md). The full field-by-field reference is ve
 [claude_code/plugin_eval_reference.md](claude_code/plugin_eval_reference.md), and it is the
 authority where this file is silent.
 
-Two rules here are this repository's own and not the harness's: the `<skill>` layer under
-`evals/`, and the two addressability keys below. Everything else is the harness.
-`docs/claude_code/eval_smoke/` is deliberately outside all of it; see
+Three rules here are this repository's own and not the harness's: the `<skill>` layer under
+`evals/`, the two addressability keys below, and the reserved tag. Everything else is the
+harness. `docs/claude_code/eval_smoke/` is deliberately outside all of it; see
 [claude_code/eval_smoke/README.md](claude_code/eval_smoke/README.md).
 
 ## The tree
@@ -67,6 +68,39 @@ Two frontmatter keys make a case addressable, and both are checked:
 - `plugins: ["../../.."]`, the plugin root, counted from the case directory. That is three
   levels up from a case under `evals/<skill>/<case>/`.
 
+## The reserved tag
+
+`no-cowork` is the one reserved tag value, and there is no other. A case carrying it declares
+that a live CoWork session cannot run it. It lives in `tags:`, beside the `<skill>` tag the
+case already carries, so `--tag <skill>` still selects it.
+
+Three things make a case unrunnable there, and a case carrying any of them carries the tag.
+
+| Source                                               | Written in                       | Why a session cannot honour it        |
+| ---------------------------------------------------- | -------------------------------- | ------------------------------------- |
+| `max_turns`, `model`, `allowed_tools`, `append_system_prompt` or `env` | `prompt.md` frontmatter | [approaches.md](approaches.md), key by key |
+| Any `context.*` key                                  | `case.yaml`                      | Nothing stages files into the VM      |
+| A `mocks/` directory on the case's layer chain       | `evals/mocks/`, or beside the case | The MCP servers here are the real ones |
+
+The third is a directory and not a key, and the case that inherits it can be several
+directories below. It is declared at each case and not at the directory, so a plugin whose
+`evals/mocks/` covers every case tags every case.
+
+The validator checks both directions, and each costs exit 3 inside `run`'s preflight.
+
+| The case                                                  | Rule                 |
+| --------------------------------------------------------- | -------------------- |
+| Carries a source above and no `no-cowork`                 | `no-cowork-missing`  |
+| Carries `no-cowork` and no source above                   | `no-cowork-unneeded` |
+
+The second direction is what keeps the tag from becoming a way to switch a case off. There is
+no `skip:` field in a case tree.
+
+On the Docker backend the tag is a tag, and the harness filters on the tags it is given. On
+the CoWork backend the case is not submitted, and is counted rather than failed. There is no
+`no-docker` counterpart, because nothing names a case key that backend cannot honour. See
+[running_evals.md](running_evals.md).
+
 ## prompt.md
 
 Frontmatter, then the prompt body.
@@ -82,8 +116,9 @@ Frontmatter, then the prompt body.
 
 Any other key is an error. `context.*` cannot be set from `prompt.md`.
 
-Writing out a key a backend cannot honour skips the case on that backend. Leaving it out
-does not, because a default is not a request. See [running_evals.md](running_evals.md).
+Writing out a key the CoWork backend cannot honour is what makes the reserved tag above
+required. Leaving it out does not, because a default is not a request. See
+[running_evals.md](running_evals.md).
 
 ### What an unknown key does, in each of the two files
 
@@ -196,6 +231,8 @@ sibling case blocks a single-case run. There is no option to skip it. See
 | Every `context.add_dirs` entry resolves inside its own case directory       |
 | Every grader has a `type` the table above lists, and a `weight` above 0     |
 | Every file under `graders/` carries a `---` block                           |
+| A case a CoWork session cannot run carries `no-cowork`                      |
+| A case carrying `no-cowork` is one a CoWork session cannot run              |
 
 A skill under `<plugin>/skills/` with no directory of that name under `evals/` is reported and
 is not a violation. Coverage is not a rule of this format, so it fails nothing on its own.

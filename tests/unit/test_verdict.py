@@ -84,19 +84,25 @@ def test_a_passing_document_passes(tmp_path: Path) -> None:
 
 def test_the_summary_is_the_last_line(tmp_path: Path) -> None:
     result = judge(run_directory(tmp_path, smoke="pass"))
-    assert result.lines[-1] == "1 found, 1 picked, 1 ran, 1 passed, overall score 1.00"
+    assert result.lines[-1] == (
+        "1 found, 1 picked, 1 ran, 1 passed, 0 declared unrunnable, overall score 1.00"
+    )
 
 
 def test_the_text_is_one_line_per_entry(tmp_path: Path) -> None:
     result = judge(run_directory(tmp_path, smoke="pass"))
-    assert result.text == "1 found, 1 picked, 1 ran, 1 passed, overall score 1.00\n"
+    assert result.text == (
+        "1 found, 1 picked, 1 ran, 1 passed, 0 declared unrunnable, overall score 1.00\n"
+    )
 
 
 def test_an_empty_document_passes(tmp_path: Path) -> None:
     """A --tag sweep matches no case in most plugins, and that is not a failure."""
     result = judge(run_directory(tmp_path, quiet="empty"), found=1, picked=0)
     assert result.passed
-    assert result.lines[-1] == "1 found, 0 picked, 0 ran, 0 passed, overall score 0.00"
+    assert result.lines[-1] == (
+        "1 found, 0 picked, 0 ran, 0 passed, 0 declared unrunnable, overall score 0.00"
+    )
 
 
 # Structural graders decide the verdict.
@@ -137,6 +143,18 @@ def test_a_grader_result_is_joined_to_its_definition_by_name(tmp_path: Path) -> 
         "FAIL smoke/renamed-grader: run 1: says-alexandra: "
         "no grader of that name is defined in the case"
     ]
+
+
+# A case the backend was told it cannot run.
+
+
+def test_a_declared_case_is_counted_and_the_suite_passes(tmp_path: Path) -> None:
+    """It produces no line of its own, and the summary is where it is visible."""
+    result = judge(run_directory(tmp_path, smoke="declared_case"), found=1, picked=1)
+    assert result.passed
+    assert result.lines == (
+        "1 found, 1 picked, 0 ran, 0 passed, 1 declared unrunnable, overall score 0.00",
+    )
 
 
 # Skips.
@@ -225,13 +243,17 @@ def test_two_plugins_are_gated_once(tmp_path: Path) -> None:
     result = judge(directory, found=2, picked=2)
     assert not result.passed
     assert len(failures(result)) == 4
-    assert result.lines[-1] == "2 found, 2 picked, 2 ran, 1 passed, overall score 0.50"
+    assert result.lines[-1] == (
+        "2 found, 2 picked, 2 ran, 1 passed, 0 declared unrunnable, overall score 0.50"
+    )
 
 
 def test_two_passing_plugins_are_one_pass(tmp_path: Path) -> None:
     result = judge(run_directory(tmp_path, mail="pass", writer="pass"), found=2, picked=2)
     assert result.passed
-    assert result.lines[-1] == "2 found, 2 picked, 2 ran, 2 passed, overall score 1.00"
+    assert result.lines[-1] == (
+        "2 found, 2 picked, 2 ran, 2 passed, 0 declared unrunnable, overall score 1.00"
+    )
 
 
 # What a failure line says about where to look.
@@ -316,26 +338,31 @@ def test_a_document_carrying_neither_field_passes(tmp_path: Path) -> None:
     assert result.passed
 
 
-# The four counts on the last line.
+# The five counts on the last line.
 
 
-def test_the_last_line_carries_the_four_counts(tmp_path: Path) -> None:
-    """Found and picked are the caller's, ran is the harness's, passed is this module's."""
+def test_the_last_line_carries_the_five_counts(tmp_path: Path) -> None:
+    """Found and picked are the caller's, ran is the harness's, the last two are this
+    module's."""
     result = judge(run_directory(tmp_path, smoke="structural_failures"), found=9, picked=4)
-    assert result.lines[-1] == "9 found, 4 picked, 1 ran, 0 passed, overall score 0.00"
+    assert result.lines[-1] == (
+        "9 found, 4 picked, 1 ran, 0 passed, 0 declared unrunnable, overall score 0.00"
+    )
 
 
 def test_the_pass_count_is_not_read_back_from_the_document(tmp_path: Path) -> None:
     """`casesPassed` is 1 in that document, under a threshold of 0. One case failed."""
     document = run_directory(tmp_path, smoke="structural_failures") / "smoke" / RESULT_NAME
     assert json.loads(document.read_text())["aggregates"]["casesPassed"] == 1
-    assert judge(document.parent.parent).lines[-1].endswith("0 passed, overall score 0.00")
+    last = judge(document.parent.parent).lines[-1]
+    assert last.endswith("0 passed, 0 declared unrunnable, overall score 0.00")
 
 
 def test_the_last_line_says_when_a_sweep_stopped_early(tmp_path: Path) -> None:
     result = judge(run_directory(tmp_path, smoke="partial"), found=3, picked=3)
     assert result.lines[-1] == (
-        "3 found, 3 picked, 1 ran, 1 passed, overall score 1.00, stopped early: interrupted"
+        "3 found, 3 picked, 1 ran, 1 passed, 0 declared unrunnable, "
+        "overall score 1.00, stopped early: interrupted"
     )
 
 
@@ -343,4 +370,6 @@ def test_picked_and_ran_differing_is_not_a_failure(tmp_path: Path) -> None:
     """This package counts one and the harness counts the other, and neither checks the other."""
     result = judge(run_directory(tmp_path, smoke="pass"), found=4, picked=4)
     assert result.passed
-    assert result.lines[-1] == "4 found, 4 picked, 1 ran, 1 passed, overall score 1.00"
+    assert result.lines[-1] == (
+        "4 found, 4 picked, 1 ran, 1 passed, 0 declared unrunnable, overall score 1.00"
+    )

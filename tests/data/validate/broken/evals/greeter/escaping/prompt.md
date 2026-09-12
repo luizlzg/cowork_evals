@@ -1,6 +1,6 @@
 ---
 name: escaping
-tags: [greeter]
+tags: [greeter, no-cowork]
 plugins: ["../../.."]
 ---
 
