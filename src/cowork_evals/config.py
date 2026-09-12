@@ -15,6 +15,7 @@ imports it rather than the other way round.
 from __future__ import annotations
 
 import dataclasses
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -23,6 +24,11 @@ from typing import Any, ClassVar, TypeVar
 import yaml
 
 CONFIG_FILENAME = "cowork_evals.yaml"
+
+# What `docker.env_passthrough` may name: the shape a shell accepts as a variable name. The
+# one exception to the rule that nothing is read from the process environment is
+# docs/library.md, and what the container backend does with the names is docs/docker.md.
+ENV_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 # The deep link prompt cap. docs/cowork_desktop.md.
 PROMPT_LIMIT = 14336
@@ -110,6 +116,23 @@ def _tools(name: str, value: Any) -> tuple[str, ...]:
     if isinstance(value, str) or not isinstance(value, list | tuple):
         raise CoWorkError(2, f"{name}: expected a list of tool names, got {type(value).__name__}")
     return tuple(_text(name, item) for item in value)
+
+
+def _env_names(name: str, value: Any) -> tuple[str, ...]:
+    """A list of environment variable names, each one a name a shell would accept.
+
+    A value that is not a name is refused at load, with the line named, rather than reaching
+    `docker run` as an argument it would take for the start of the image tag.
+    """
+    if isinstance(value, str) or not isinstance(value, list | tuple):
+        raise CoWorkError(
+            2, f"{name}: expected a list of variable names, got {type(value).__name__}"
+        )
+    names = tuple(_text(name, item) for item in value)
+    for item in names:
+        if not ENV_NAME.fullmatch(item):
+            raise CoWorkError(2, f"{name}: {item!r} is not an environment variable name")
+    return names
 
 
 def _convert(section: Any) -> None:
@@ -235,12 +258,16 @@ class DockerSection:
     claude_code_version: str = "2.1.265"
     login_dir: Path = Path("~/.cache/cowork_evals/claude")
     extra_ca_file: Path | None = None
+    # The one route from the process environment into a run. Empty by default, so a
+    # repository that names none is unaffected. docs/docker.md.
+    env_passthrough: tuple[str, ...] = ()
 
     _FIELDS: ClassVar[dict[str, Callable[[str, Any], Any]]] = {
         "platform": _text,
         "claude_code_version": _text,
         "login_dir": _path,
         "extra_ca_file": _optional_path,
+        "env_passthrough": _env_names,
     }
 
     def __post_init__(self) -> None:

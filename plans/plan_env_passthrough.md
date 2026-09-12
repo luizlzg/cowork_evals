@@ -102,11 +102,11 @@ becomes a second one.
 
 ### Phase 1: the setting
 
-- [ ] `docker.env_passthrough`, a list of variable names, defaulting to empty. In the
+- [x] `docker.env_passthrough`, a list of variable names, defaulting to empty. In the
       `docker:` section, because the container backend is what reads it
-- [ ] A name that is not a plausible environment variable name is refused at load, with the
+- [x] A name that is not a plausible environment variable name is refused at load, with the
       message naming the line
-- [ ] Empty by default, so a repository that names none behaves exactly as it does today
+- [x] Empty by default, so a repository that names none behaves exactly as it does today
 
 ### Phase 2: the preflight
 
