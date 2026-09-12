@@ -215,6 +215,40 @@ skill fired and scored, so a denied `Skill` call in a consumer's trace came from
 other than this default. `Write`, `Edit` and `WebFetch` are what it denied, and they are the
 tools a session uses most.
 
+### What the shipping grant offers
+
+Snapshot, 2026-09-12, CLI 2.1.265, image `cowork-evals:57f48ba2adac`, one container run of
+`plugins/smoke/` under the default `eval.allow_tools`. The `init` record's `tools` list read:
+
+```
+Task Bash CronCreate CronDelete CronList Edit Glob Grep ListAgents NotebookEdit Read
+RemoteTrigger ReportFindings ScheduleWakeup SendMessage Skill TaskOutput TaskStop ToolSearch
+WebFetch WebSearch Workflow Write
+```
+
+All eight granted names are in it, each as the bare name the grant wrote: `Bash`, `Read`,
+`Glob`, `Grep`, `Write`, `Edit`, `WebFetch`, `Skill`. None arrives in a `Tool(pattern)` shape.
+The path scoping the harness applies to a bare `Read`, `Glob` or `Grep` is in the child's
+permission rules and not in this list.
+
+The list is longer than the grant. `WebSearch` and the rest are offered without being granted,
+so a name in the list is not a statement that the run may call it. The check below reads the
+list in one direction only: a granted name absent from it was never offered.
+
+Two narrowed grants over `plugins/smoke/evals/plugin/writes-a-file`, which asks for a file to
+be created and writes no `allowed_tools` of its own, same date and image:
+
+| The grant                             | What the run did                                                    |
+| ------------------------------------- | ------------------------------------------------------------------- |
+| Everything above but `Write`          | The `Write` call went through, the file was created and the case scored 1.00 |
+| `Read Glob Grep Skill`                | The call was refused, one `permission_denied` record with `tool_name: Write` and `decision_reason_type: mode`, and the file was not created |
+
+So dropping a name from the grant does not by itself take the tool away from a case that did
+not ask for it: the first grant still named `Bash` and `Edit`, and the run wrote the file. A
+grant that carries no tool able to create a file is what produces the denial. The `init` list
+was the full list above in both, so the offered list is not the grant and check two cannot be
+reached this way.
+
 The Docker backend exports `CLAUDE_CODE_WALNUT_SPIRE`, the early-access enablement variable,
 so no developer sets it by hand. It is a constant in `harness.py` and not a configuration key.
 See [plugin_eval.md](plugin_eval.md).
@@ -258,6 +292,41 @@ anything about the run, and it is 40 times the size of what is kept.
 
 Nothing under a CoWork profile is written, moved or removed. The driver's rule holds here:
 [cowork_driver.md](cowork_driver.md).
+
+### What a checker reads
+
+A consumer who wants to know what an eval produced, such as whether the `.pptx` a skill wrote
+will open, writes their own script over the files a run left. That script is theirs and lives
+in their repository: [library.md](library.md). This is the layout it reads.
+
+One directory per run:
+
+```
+<log root>/<yyyymmdd-hhmmss>-<scope>/<plugin>/traces/<case>/run-<n>/
+  trace.jsonl
+  last_message.txt
+  workspace/
+```
+
+`<n>` is 1-based and is the number the verdict line prints as `run N`. A second case of the
+same name inside one plugin is suffixed `-2`, as a second plugin of one name is. The whole
+path is under the run directory the invocation printed, and a failure line about that run
+names the directory as `[artifacts: <dir>]`.
+
+Nothing in this package writes into a run directory after collection. The three names are
+written once, by `traces.collect`, before the verdict is reached. The one field it changes
+afterwards is in the result document, not here.
+
+A kept sandbox is not the place to read. `--keep-temp` leaves the sandbox read-only, with the
+`home/` and `tmp/` trees the plugin under test wrote at mode 000 under `sealed/`, which is
+deliberate: the harness seals them so that nothing walks into a tree the workload wrote.
+`logs.unseal` opens one so that collection can move the workspace out of it, and the sandbox
+root is removed once collection is done. A checker reads the collected `workspace/` instead,
+which is that same working directory under the run directory, at the modes the agent left.
+
+A checker's verdict stays outside. It does not reach `aggregate-result.json` and it fails
+nothing: `cowork_evals run` exits on the conditions in the table below and on no other. There
+is no route for a script to add one, and none is built until somebody asks for it.
 
 ### The two transcript formats
 
@@ -326,6 +395,8 @@ covers both backends, and it always runs in the `cowork_evals` process on the ho
 | Any case or grader reported skipped, or a grader reported `scored: false` | exit 1   |
 | `partial: true`, whatever `partialReason` says                       | exit 1       |
 | A run carrying `error`, on either backend                            | exit 1       |
+| A run the permission mode refused a tool, on `--docker`              | exit 1       |
+| A run never offered a tool the grant named, on `--docker`            | exit 1       |
 | A sweep stopped by `eval.max_cost_total_usd`                         | exit 1       |
 | A results document is missing, unparsable, or of another `schemaVersion` | exit 1   |
 | A grader result naming no grader the case defines                    | exit 1       |
@@ -351,8 +422,71 @@ would make every filtered sweep red. A selection matching no case *anywhere* is 
 the run instead, with exit 2. See [cli.md](cli.md).
 
 Every line printed carries `FAIL` or `NOTE`, so a judged failure is never read as the
-cause of exit 1. The last line is the case counts and the overall score, summed and averaged
-across every plugin in the run directory.
+cause of exit 1.
+
+### A run that never had the tool
+
+A run scored on what the model wrote without a tool the case was granted is not a fact about
+the plugin. It is usually 0, and it is 1 when the grader's pattern happens to match the
+refusal. Two conditions above catch it, one per way a run loses a tool, and both are read out
+of the kept trace by `traces.py` and written into that run's entry in the result document.
+
+| The tool was                                    | The trace holds                        | The field       |
+| ----------------------------------------------- | -------------------------------------- | --------------- |
+| Granted, and the call refused                   | a `permission_denied` record naming it | `deniedTools`   |
+| Granted, and never offered to the model         | an `init` list missing it              | `unofferedTools` |
+| Never granted, so never offered and never tried | nothing                                | neither         |
+
+Only `decision_reason_type: mode` counts as a denial. A session has no permission mode and is
+never refused a tool by one, so a mode denial is the container failing to behave like a
+session and nothing else. A denial the plugin's own hook wrote is the plugin's behaviour,
+which a session has too and which a case testing that hook is asserting over. The rule matches
+on the reason and never on the tool name, because narrowing it to the tools a grader names
+would miss every denial that broke a run through a tool no grader mentions.
+
+A granted name and an offered name are compared on the part before any `(`. A grant may be
+written `WebFetch(domain:example.com)`, and a bare `Read`, `Glob` or `Grep` reaches the child
+path-scoped. The snapshot above measured every granted name reaching the offered list bare, so
+no name is excluded from the comparison.
+
+Both conditions need a kept trace, so `--no-keep-traces` and `eval.keep_traces: false` give up
+both. Off, the harness is handed no `--keep-temp`, no sandbox reaches the host, there is no
+trace to read, and neither field reaches the result document. A run that kept no trace says
+nothing about what it had, which is the same rule as a trace with no `init` record: it yields
+nothing rather than every granted name. Nothing warns about it.
+
+Neither condition can fire on CoWork. A session has no permission mode and writes no tool
+list, so neither field ever appears there and one decision still covers both backends. See
+[approaches.md](approaches.md).
+
+**The bound.** Both checks start from the grant. A tool the case needed and nobody granted is
+never offered and never tried, leaves nothing in the trace, and is caught by neither. That is
+the case for a plugin's own MCP server, whose tools are named
+`mcp__plugin_<plugin>_<server>__<tool>` and which no built-in default can name, and for
+`WebSearch`, which the session mirror omits. A green suite is not proof that every run had
+everything its case asked for.
+
+### The last line
+
+The last line carries four counts and the overall score:
+
+| Count    | Is                                                   | Counted by             |
+| -------- | ---------------------------------------------------- | ---------------------- |
+| `found`  | The cases under the path, before any filter          | this package's reader  |
+| `picked` | The cases `--tag` and `--case` kept                  | the same reader        |
+| `ran`    | The cases a backend reported running, `casesTotal`   | the backend            |
+| `passed` | The cases that produced no failure line              | the verdict            |
+
+`passed` is this package's own count and is never `aggregates.casesPassed`. The harness counts
+a case as passed at or above `--threshold`, which is pinned to 0 here, so `casesPassed` is
+every case always and reading it back would print a pass on the line under a failure.
+
+Picked and ran are two counts of two things. They differ when a plugin failed to run, when the
+sweep stopped early, or when the harness picked differently. Both are printed, and neither is
+checked against the other.
+
+The score is the mean of each document's `overallScore`. A document marked `partial` adds
+`stopped early` and the reason to the end of the line.
 
 A line about what one run produced ends with `[artifacts: <dir>]`, naming the directory
 holding that run's transcript. It is on a failed structural grader, a failed judged grader and
@@ -365,6 +499,18 @@ document written before this was built, and a run whose trace was not collected,
 as they did before. `traces.py` rewrites that field to the trace it collected on both backends,
 so the line says the same thing whichever one produced the run. A CoWork run's session
 directory is still in `cowork.sessionDir`.
+
+`traces.py` writes two more fields into the same run entry, beside the rewritten `tracePath`.
+Both are this repository's own, like `cowork`, and the contract is additive-only:
+
+| Field            | Is                                                             |
+| ---------------- | -------------------------------------------------------------- |
+| `deniedTools`    | Every tool a `permission_denied` record with `decision_reason_type: mode` named |
+| `unofferedTools` | Every granted tool the `init` record's tool list does not carry |
+
+Neither is written when there is nothing to write, so a healthy document is unchanged and a
+document produced on CoWork or under `--no-keep-traces` carries neither. The conditions over
+them are above.
 
 The verdict reads every `<plugin>/aggregate-result.json` under the run directory and decides once
 for the whole invocation, so a sweep is decided once and not once per plugin.

@@ -174,7 +174,7 @@ Each has a silent failure mode.
 | Exit | Means                                                            |
 | ---- | ---------------------------------------------------------------- |
 | 0    | the run passed                                                  |
-| 1    | a structural grader failed, or a case or grader was skipped      |
+| 1    | a structural grader failed, a case or grader was skipped, or a run never had a tool it was granted |
 | 2    | usage error                                                      |
 | 3    | the preflight failed. Nothing ran, and the message names the fix |
 
@@ -204,7 +204,10 @@ The three names are the same on `--docker` and `--cowork`. `trace.jsonl` is what
 the backend that produced it wrote, and the two are close but not identical: a harness trace
 ends in a `result` record and a CoWork one does not. `cowork_evals docs running_evals` has the
 table, and it names the document that owns each format. `--no-keep-traces` turns it off, and
-`eval.keep_traces: false` does the same from the file.
+`eval.keep_traces: false` does the same from the file. It also gives up two pass and fail
+conditions, which read the kept trace: a run refused a tool by the permission mode, and a run
+never offered a tool the grant named. Both fail rather than score, because a run that never
+had the tool is not a fact about the plugin. `cowork_evals docs running_evals` has them.
 
 ## The runtime under test
 

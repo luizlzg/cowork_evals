@@ -197,14 +197,18 @@ def log(path: Path, submissions: int) -> None:
 
 
 def test_the_smoke_fixture_is_found_and_reports_no_skip(tmp_path: Path) -> None:
+    """Both cases, and neither writes a key this backend cannot honour."""
     prepared = plan(SMOKE, config=settings(tmp_path))
     assert prepared.root == SMOKE.resolve()
-    assert [entry.name for entry in prepared.entries] == ["python-version"]
-    entry = prepared.entries[0]
-    assert entry.skips.case == ()
-    assert entry.skips.graders == {}
-    assert entry.runs == 1, "the case writes runs: 1"
-    assert prepared.submissions == 1
+    assert sorted(entry.name for entry in prepared.entries) == [
+        "python-version",
+        "writes-a-file",
+    ]
+    for entry in prepared.entries:
+        assert entry.skips.case == (), entry.name
+        assert entry.skips.graders == {}, entry.name
+        assert entry.runs == 1, "each case writes runs: 1"
+    assert prepared.submissions == 2
 
 
 def test_a_case_that_writes_no_runs_key_runs_once(tmp_path: Path) -> None:
@@ -246,15 +250,16 @@ def test_a_skipped_case_costs_no_ceiling_entry(tmp_path: Path) -> None:
 
 
 def test_the_ceiling_arithmetic_is_the_plan_plus_the_run_log(tmp_path: Path) -> None:
+    """One case of the two, so the arithmetic is read off one number and not off the suite."""
     config = settings(tmp_path, max_runs=3)
     log(tmp_path / "runs.jsonl", 2)
-    prepared = plan(SMOKE, config=config, runs=1)
+    prepared = plan(SMOKE, config=config, runs=1, case_glob="python-version")
     assert prepared.recent == 2
     assert prepared.max_runs == 3
     assert prepared.submissions == 1
     assert prepared.over_ceiling is False
 
-    prepared = plan(SMOKE, config=config, runs=2)
+    prepared = plan(SMOKE, config=config, runs=2, case_glob="python-version")
     assert prepared.over_ceiling is True
     assert "max_runs is 3" in prepared.refusal
 

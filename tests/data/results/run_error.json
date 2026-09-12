@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.265",
+  "startedAt": "2026-09-09T10:00:00+00:00",
+  "durationSeconds": 1800.0,
+  "costUsd": 0.0,
+  "partial": false,
+  "suite": {
+    "root": "/plugin",
+    "ablation": "none",
+    "threshold": 0,
+    "judgeModel": "haiku",
+    "plugins": [{"name": "smoke", "path": "/plugin"}]
+  },
+  "cases": [
+    {
+      "name": "timed-out",
+      "dir": "evals/plugin/timed-out",
+      "source": "prose",
+      "promptMarkdown": "Do the long thing.",
+      "graders": [{"name": "says-alex", "type": "regex", "weight": 1, "config": {}}],
+      "arms": {
+        "with": [
+          {
+            "score": 1.0,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.0,
+            "judgeCostUsd": 0.0,
+            "error": "7: the run did not finish inside 1800.0 seconds",
+            "skippedPaidGraders": false,
+            "graders": [
+              {"name": "says-alex", "passed": true, "weight": 1,
+               "explanation": "matched Alex", "withOnly": false, "scored": true}
+            ]
+          }
+        ]
+      },
+      "aggregates": {"score": 1.0, "passRate": 1.0}
+    }
+  ],
+  "aggregates": {"casesTotal": 1, "casesPassed": 1, "overallScore": 1.0, "overallPassRate": 1.0}
+}

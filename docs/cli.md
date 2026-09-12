@@ -119,6 +119,12 @@ file's value, and both `--keep-traces` and `--no-keep-traces` beat the file. `Fa
 value an operator typed and not a default, which is why the refusal table cannot read it as
 untyped and why the option carries both forms.
 
+`--no-keep-traces` also gives up two pass and fail conditions. A run that was refused a tool by
+the permission mode, and a run that was never offered a tool the grant named, are both read out
+of the kept trace, so with no trace neither is found and neither fails. The suite then scores a
+run that could not have passed and says nothing about it. Both conditions are
+[running_evals.md](running_evals.md).
+
 `--out DIR` replaces the whole `logs/evals` root, so the run directory is
 `<out>/<stamp>-<scope>`. It is accepted on `prune` too, which otherwise resolves
 `<cwd>/logs/evals`. `--older-than DAYS` is a `prune` flag only: `run` prunes at a fixed 30
@@ -219,6 +225,28 @@ format, which is why it is a flag and not a violation.
 A selection matching no case at all is an operator mistake: a mistyped `--tag` must not read
 as a pass, and the refusal catches it before a container starts. One plugin of a sweep
 matching none is normal under `--tag` and is not a failure.
+
+### A case cannot be left out of one invocation
+
+`--case GLOB` takes one glob over the case name, with `*` and `?`. There is no negation and
+no list. `--tag T` only includes, and repeating it widens the selection. Neither can leave one
+case out: the options say which cases to keep, never which to drop. The flags behind them are
+`claude plugin eval --case` and `--tag`, in
+[claude_code/plugin_eval_reference.md](claude_code/plugin_eval_reference.md), and on the
+container backend the harness finds and picks the cases itself, so there is nothing here to
+filter after it.
+
+No option is added for it. Excluding a case would mean invoking the harness once per case,
+which writes one result document per case, and both the log layout and the pass and fail
+rules in [running_evals.md](running_evals.md) read one document per plugin.
+
+What works is a tag on the case. Put one in the case's frontmatter, name it in `--tag`, and
+the set is the cases carrying it. A case to be left out of the usual sweep carries a tag the
+usual sweep does not name. The frontmatter key is [eval_format.md](eval_format.md).
+
+What the invocation selected is printed rather than inferred. The verdict's last line carries
+how many cases the path holds, how many the filters kept, how many ran and how many passed.
+[running_evals.md](running_evals.md) says what each of the four means.
 
 The order is preflight, then validation, then the selection count, then pruning, then the
 `--dry-run` exit.

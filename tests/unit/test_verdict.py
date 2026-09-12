@@ -55,6 +55,16 @@ def collected(root: Path, case: str = "every-structural", index: int = 1) -> Pat
     return directory / "trace.jsonl"
 
 
+def judge(directory: Path, *, found: int = 1, picked: int = 1, **kwargs) -> Verdict:
+    """`decide` with the two counts its caller holds.
+
+    `found` and `picked` are the command's own counts over the case tree, which this module
+    writes no case tree for. A test that asserts the summary line passes them itself; every
+    other test here is about a document and states the pair that matches it.
+    """
+    return decide(directory, found=found, picked=picked, **kwargs)
+
+
 def failures(result: Verdict) -> list[str]:
     return [line for line in result.lines if line.startswith("FAIL ")]
 
@@ -67,33 +77,33 @@ def notes(result: Verdict) -> list[str]:
 
 
 def test_a_passing_document_passes(tmp_path: Path) -> None:
-    result = decide(run_directory(tmp_path, smoke="pass"))
+    result = judge(run_directory(tmp_path, smoke="pass"))
     assert result.passed
     assert failures(result) == []
 
 
 def test_the_summary_is_the_last_line(tmp_path: Path) -> None:
-    result = decide(run_directory(tmp_path, smoke="pass"))
-    assert result.lines[-1] == "1 cases, 1 passed, overall score 1.00"
+    result = judge(run_directory(tmp_path, smoke="pass"))
+    assert result.lines[-1] == "1 found, 1 picked, 1 ran, 1 passed, overall score 1.00"
 
 
 def test_the_text_is_one_line_per_entry(tmp_path: Path) -> None:
-    result = decide(run_directory(tmp_path, smoke="pass"))
-    assert result.text == "1 cases, 1 passed, overall score 1.00\n"
+    result = judge(run_directory(tmp_path, smoke="pass"))
+    assert result.text == "1 found, 1 picked, 1 ran, 1 passed, overall score 1.00\n"
 
 
 def test_an_empty_document_passes(tmp_path: Path) -> None:
     """A --tag sweep matches no case in most plugins, and that is not a failure."""
-    result = decide(run_directory(tmp_path, quiet="empty"))
+    result = judge(run_directory(tmp_path, quiet="empty"), found=1, picked=0)
     assert result.passed
-    assert result.lines[-1] == "0 cases, 0 passed, overall score 0.00"
+    assert result.lines[-1] == "1 found, 0 picked, 0 ran, 0 passed, overall score 0.00"
 
 
 # Structural graders decide the verdict.
 
 
 def test_every_structural_grader_failure_is_a_failure(tmp_path: Path) -> None:
-    result = decide(run_directory(tmp_path, smoke="structural_failures"))
+    result = judge(run_directory(tmp_path, smoke="structural_failures"))
     assert not result.passed
     assert failures(result) == [
         "FAIL smoke/every-structural: run 1: says-alex: the regex grader failed: no match for Alex",
@@ -110,7 +120,7 @@ def test_every_structural_grader_failure_is_a_failure(tmp_path: Path) -> None:
 
 
 def test_a_judged_grader_failure_is_printed_and_gates_nothing(tmp_path: Path) -> None:
-    result = decide(run_directory(tmp_path, smoke="judged_failure"))
+    result = judge(run_directory(tmp_path, smoke="judged_failure"))
     assert result.passed
     assert notes(result) == [
         "NOTE smoke/judged: run 1: reads-well: the llm grader failed: 1 of 3 votes",
@@ -121,7 +131,7 @@ def test_a_judged_grader_failure_is_printed_and_gates_nothing(tmp_path: Path) ->
 
 def test_a_grader_result_is_joined_to_its_definition_by_name(tmp_path: Path) -> None:
     """A result carries `name`, `passed` and `scored`, never `type`."""
-    result = decide(run_directory(tmp_path, smoke="undefined_grader"))
+    result = judge(run_directory(tmp_path, smoke="undefined_grader"))
     assert not result.passed
     assert failures(result) == [
         "FAIL smoke/renamed-grader: run 1: says-alexandra: "
@@ -133,7 +143,7 @@ def test_a_grader_result_is_joined_to_its_definition_by_name(tmp_path: Path) -> 
 
 
 def test_a_skipped_case_fails_with_its_reason(tmp_path: Path) -> None:
-    result = decide(run_directory(tmp_path, smoke="skipped_case"))
+    result = judge(run_directory(tmp_path, smoke="skipped_case"))
     assert not result.passed
     assert failures(result) == [
         "FAIL smoke/needs-a-scaffold: the case was skipped: "
@@ -142,7 +152,7 @@ def test_a_skipped_case_fails_with_its_reason(tmp_path: Path) -> None:
 
 
 def test_a_skipped_grader_and_an_unscored_one_each_fail(tmp_path: Path) -> None:
-    result = decide(run_directory(tmp_path, smoke="unscored_grader"))
+    result = judge(run_directory(tmp_path, smoke="unscored_grader"))
     assert not result.passed
     assert failures(result) == [
         "FAIL smoke/one-skipped-grader: run 1: called-the-stand-in: the grader was skipped: "
@@ -156,7 +166,7 @@ def test_a_skipped_grader_and_an_unscored_one_each_fail(tmp_path: Path) -> None:
 
 
 def test_partial_fails_whatever_the_reason_says(tmp_path: Path) -> None:
-    result = decide(run_directory(tmp_path, smoke="partial"))
+    result = judge(run_directory(tmp_path, smoke="partial"))
     assert not result.passed
     assert failures(result) == ["FAIL smoke: partial results: interrupted"]
 
@@ -164,7 +174,7 @@ def test_partial_fails_whatever_the_reason_says(tmp_path: Path) -> None:
 def test_a_run_carrying_an_error_fails_under_an_otherwise_passing_document(
     tmp_path: Path,
 ) -> None:
-    result = decide(run_directory(tmp_path, smoke="run_error"))
+    result = judge(run_directory(tmp_path, smoke="run_error"))
     assert not result.passed
     assert failures(result) == [
         "FAIL smoke/timed-out: run 1: 7: the run did not finish inside 1800.0 seconds"
@@ -172,13 +182,13 @@ def test_a_run_carrying_an_error_fails_under_an_otherwise_passing_document(
 
 
 def test_a_missing_document_is_a_failure_naming_the_path(tmp_path: Path) -> None:
-    result = decide(run_directory(tmp_path, smoke=""))
+    result = judge(run_directory(tmp_path, smoke=""))
     assert not result.passed
     assert failures(result) == [f"FAIL {tmp_path / 'smoke' / RESULT_NAME}: no result document"]
 
 
 def test_an_unparsable_document_is_a_failure_naming_the_path(tmp_path: Path) -> None:
-    result = decide(run_directory(tmp_path, smoke="unparsable"))
+    result = judge(run_directory(tmp_path, smoke="unparsable"))
     assert not result.passed
     assert failures(result)[0].startswith(
         f"FAIL {tmp_path / 'smoke' / RESULT_NAME}: unparsable result document: "
@@ -186,7 +196,7 @@ def test_an_unparsable_document_is_a_failure_naming_the_path(tmp_path: Path) -> 
 
 
 def test_a_document_of_another_schema_version_is_a_failure(tmp_path: Path) -> None:
-    result = decide(run_directory(tmp_path, smoke="wrong_schema"))
+    result = judge(run_directory(tmp_path, smoke="wrong_schema"))
     assert not result.passed
     assert failures(result) == [
         f"FAIL {tmp_path / 'smoke' / RESULT_NAME}: schemaVersion is 2, and this module reads 1"
@@ -198,29 +208,30 @@ def test_an_unknown_field_is_ignored(tmp_path: Path) -> None:
     directory = run_directory(tmp_path, smoke="pass")
     document = directory / "smoke" / RESULT_NAME
     document.write_text(document.read_text().replace('"partial": false', '"invented": 1'))
-    assert decide(directory).passed
+    assert judge(directory).passed
 
 
 # The extra line, and a sweep.
 
 
 def test_an_extra_line_is_a_failure_the_caller_already_had(tmp_path: Path) -> None:
-    result = decide(run_directory(tmp_path, smoke="pass"), extra=("the cost ceiling stopped it",))
+    result = judge(run_directory(tmp_path, smoke="pass"), extra=("the cost ceiling stopped it",))
     assert not result.passed
     assert failures(result) == ["FAIL the cost ceiling stopped it"]
 
 
 def test_two_plugins_are_gated_once(tmp_path: Path) -> None:
-    result = decide(run_directory(tmp_path, mail="pass", writer="structural_failures"))
+    directory = run_directory(tmp_path, mail="pass", writer="structural_failures")
+    result = judge(directory, found=2, picked=2)
     assert not result.passed
     assert len(failures(result)) == 4
-    assert result.lines[-1] == "2 cases, 2 passed, overall score 0.50"
+    assert result.lines[-1] == "2 found, 2 picked, 2 ran, 1 passed, overall score 0.50"
 
 
 def test_two_passing_plugins_are_one_pass(tmp_path: Path) -> None:
-    result = decide(run_directory(tmp_path, mail="pass", writer="pass"))
+    result = judge(run_directory(tmp_path, mail="pass", writer="pass"), found=2, picked=2)
     assert result.passed
-    assert result.lines[-1] == "2 cases, 2 passed, overall score 1.00"
+    assert result.lines[-1] == "2 found, 2 picked, 2 ran, 2 passed, overall score 1.00"
 
 
 # What a failure line says about where to look.
@@ -231,7 +242,7 @@ def test_a_structural_failure_names_the_run_artefacts(tmp_path: Path, working_di
     root = run_directory(tmp_path, smoke="structural_failures")
     with_trace(root / "smoke", collected(root / "smoke"))
     with working_directory(tmp_path):
-        result = decide(root)
+        result = judge(root)
     assert failures(result)[0].endswith("[artifacts: smoke/traces/every-structural/run-1]"), (
         failures(result)[0]
     )
@@ -242,7 +253,7 @@ def test_a_judged_note_names_them_too(tmp_path: Path, working_directory) -> None
     root = run_directory(tmp_path, smoke="judged_failure")
     with_trace(root / "smoke", collected(root / "smoke", "judged"))
     with working_directory(tmp_path):
-        result = decide(root)
+        result = judge(root)
     assert notes(result)[0].endswith("[artifacts: smoke/traces/judged/run-1]")
 
 
@@ -250,7 +261,7 @@ def test_an_errored_run_names_them(tmp_path: Path, working_directory) -> None:
     root = run_directory(tmp_path, smoke="run_error")
     with_trace(root / "smoke", collected(root / "smoke", "timed-out"))
     with working_directory(tmp_path):
-        result = decide(root)
+        result = judge(root)
     assert any("[artifacts: smoke/traces/timed-out/run-1]" in line for line in failures(result))
 
 
@@ -258,10 +269,78 @@ def test_a_document_whose_trace_was_not_collected_names_nothing(tmp_path: Path) 
     """It never names a path that is not there, so a run with no trace reads as before."""
     root = run_directory(tmp_path, smoke="structural_failures")
     with_trace(root / "smoke", Path("/work/logs/tmp/claude-eval-Ab12Cd/out/trace.jsonl"))
-    result = decide(root)
+    result = judge(root)
     assert failures(result)[0].endswith("no match for Alex")
 
 
 def test_a_document_carrying_no_trace_path_names_nothing(tmp_path: Path) -> None:
-    result = decide(run_directory(tmp_path, smoke="structural_failures"))
+    result = judge(run_directory(tmp_path, smoke="structural_failures"))
     assert failures(result)[0].endswith("no match for Alex")
+
+
+# A run that never had the tool the case was granted.
+
+
+def test_a_mode_denial_fails_a_document_whose_graders_all_passed(tmp_path: Path) -> None:
+    """Every grader passed, and the model never had `Write`, so the score says nothing."""
+    result = judge(run_directory(tmp_path, smoke="mode_denial"))
+    assert not result.passed
+    assert failures(result) == [
+        "FAIL smoke/tool-denied: run 1: the permission mode refused Write, "
+        "so the score is not a fact about the plugin"
+    ]
+
+
+def test_a_tool_that_was_never_offered_fails_the_same_way(tmp_path: Path) -> None:
+    result = judge(run_directory(tmp_path, smoke="tool_not_offered"))
+    assert not result.passed
+    assert failures(result) == [
+        "FAIL smoke/tool-not-offered: run 1: the run was never offered Bash, "
+        "so the score is not a fact about the plugin"
+    ]
+
+
+def test_a_denial_line_names_the_directory_holding_the_trace(
+    tmp_path: Path, working_directory
+) -> None:
+    root = run_directory(tmp_path, smoke="mode_denial")
+    with_trace(root / "smoke", collected(root / "smoke", "tool-denied"))
+    with working_directory(tmp_path):
+        result = judge(root)
+    assert failures(result)[0].endswith("[artifacts: smoke/traces/tool-denied/run-1]")
+
+
+def test_a_document_carrying_neither_field_passes(tmp_path: Path) -> None:
+    """Every `--cowork` document is this shape, so one set of rules covers both backends."""
+    result = judge(run_directory(tmp_path, smoke="pass"))
+    assert result.passed
+
+
+# The four counts on the last line.
+
+
+def test_the_last_line_carries_the_four_counts(tmp_path: Path) -> None:
+    """Found and picked are the caller's, ran is the harness's, passed is this module's."""
+    result = judge(run_directory(tmp_path, smoke="structural_failures"), found=9, picked=4)
+    assert result.lines[-1] == "9 found, 4 picked, 1 ran, 0 passed, overall score 0.00"
+
+
+def test_the_pass_count_is_not_read_back_from_the_document(tmp_path: Path) -> None:
+    """`casesPassed` is 1 in that document, under a threshold of 0. One case failed."""
+    document = run_directory(tmp_path, smoke="structural_failures") / "smoke" / RESULT_NAME
+    assert json.loads(document.read_text())["aggregates"]["casesPassed"] == 1
+    assert judge(document.parent.parent).lines[-1].endswith("0 passed, overall score 0.00")
+
+
+def test_the_last_line_says_when_a_sweep_stopped_early(tmp_path: Path) -> None:
+    result = judge(run_directory(tmp_path, smoke="partial"), found=3, picked=3)
+    assert result.lines[-1] == (
+        "3 found, 3 picked, 1 ran, 1 passed, overall score 1.00, stopped early: interrupted"
+    )
+
+
+def test_picked_and_ran_differing_is_not_a_failure(tmp_path: Path) -> None:
+    """This package counts one and the harness counts the other, and neither checks the other."""
+    result = judge(run_directory(tmp_path, smoke="pass"), found=4, picked=4)
+    assert result.passed
+    assert result.lines[-1] == "4 found, 4 picked, 1 ran, 1 passed, overall score 1.00"

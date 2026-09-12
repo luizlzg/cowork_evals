@@ -63,7 +63,7 @@ A skipped test reports as a pass and hides the thing it was written to catch.
 | `unit/test_pytest_image.py`       | The test image digest, and the build and run argument lists | yes    |
 | `unit/test_validate.py`           | The case validator and the coverage report over hand-written trees | yes |
 | `unit/test_logs.py`               | The run directory, `env.txt`, `latest`, pruning and the tee | yes    |
-| `unit/test_traces.py`             | What is kept out of a run on either backend, over sandboxes and session directories written by the test | yes |
+| `unit/test_traces.py`             | What is kept out of a run on either backend, and the two validity checks over the kept trace, over sandboxes and session directories written by the test | yes |
 | `unit/test_verdict.py`               | Pass and fail over hand-written result documents                | yes    |
 | `unit/test_preflight.py`          | Each backend's unmet conditions, and the rate ceiling      | yes    |
 | `unit/test_cli.py`                | The parser, the refusals, the verbs and the exit codes     | yes    |

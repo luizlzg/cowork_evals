@@ -128,33 +128,33 @@ Check two compares two lists of tool names, and nothing here has read the second
 the grant that ships. The first box measures it, and the two boxes after it are written
 against what it records.
 
-- [ ] Run `plugins/smoke/` on Docker under the default `eval.allow_tools` and record, dated,
+- [x] Run `plugins/smoke/` on Docker under the default `eval.allow_tools` and record, dated,
       in [`../docs/running_evals.md`](../docs/running_evals.md): the exact strings the `init`
       record's tool list carries for all eight granted names. The snapshot already there
       measured two narrowed grants and not this one
-- [ ] A granted name and an offered name are compared on the part before any `(`. The
+- [x] A granted name and an offered name are compared on the part before any `(`. The
       reference records that a bare `Read`, `Glob` or `Grep` reaches the child as a
       path-scoped grant, and `eval.allow_tools` may name `WebFetch(domain:...)`, so a literal
       comparison would report every run as missing a tool it had. If the measurement shows a
       granted name reaching the list in a shape this rule does not close, that name is
       excluded by name in one place, with the measurement cited beside it
-- [ ] `traces.py` reads each kept trace once, for the final message as it does now and for
+- [x] `traces.py` reads each kept trace once, for the final message as it does now and for
       both checks
-- [ ] Check one: every `permission_denied` record whose `decision_reason_type` is `mode`
+- [x] Check one: every `permission_denied` record whose `decision_reason_type` is `mode`
       gives up its `tool_name`
-- [ ] Check two: the `init` record lists the tools the run offered the model. Every granted
+- [x] Check two: the `init` record lists the tools the run offered the model. Every granted
       tool missing from that list is named. The grant comes from `RunOptions`, which the
       backend already has, and is not read from the config file again
-- [ ] Both go into that run's entry in the result file, beside the `tracePath` that `collect`
+- [x] Both go into that run's entry in the result file, beside the `tracePath` that `collect`
       already rewrites. Neither is written when there is nothing to write, so a healthy file
       is unchanged
-- [ ] `verdict.py` fails a run carrying either, one line each, naming the tools and the
+- [x] `verdict.py` fails a run carrying either, one line each, naming the tools and the
       directory holding that run's trace
-- [ ] A denial from the plugin's own hook does not fail anything. Check one matches on the
+- [x] A denial from the plugin's own hook does not fail anything. Check one matches on the
       reason, never on the tool name
-- [ ] Nothing changes on CoWork. A session has no permission mode and writes no tool list, so
+- [x] Nothing changes on CoWork. A session has no permission mode and writes no tool list, so
       neither field ever appears and one decision still covers both backends
-- [ ] A run that hit its turn cap or timed out already carries `error` and already fails.
+- [x] A run that hit its turn cap or timed out already carries `error` and already fails.
       Check that against the pass and fail table and add nothing
 
 Both checks read the trace `traces.collect` kept, and `cli.py` calls `collect` only when the
@@ -164,7 +164,7 @@ result file. That is the honest behaviour, and a failure condition that quietly 
 under an option is the shape of defect this plan exists to remove, so it is written down
 rather than worked around.
 
-- [ ] Nothing fails and nothing warns when traces are off. A run that kept no trace says
+- [x] Nothing fails and nothing warns when traces are off. A run that kept no trace says
       nothing about what it had, which is the same rule as a trace with no `init` record.
       Phase 7 writes it down
 
@@ -174,13 +174,13 @@ The last line is wrong twice. It reads `casesPassed` back from the result docume
 problem statement above covers, and a sweep the cost ceiling stopped early still reads as if
 every case ran. The exit code is right in both. Only the line is wrong.
 
-- [ ] The command already reads the case tree before it runs anything. It hands `verdict.py`
+- [x] The command already reads the case tree before it runs anything. It hands `verdict.py`
       two numbers, how many cases it found and how many it picked, the way it already hands
       over `extra`
-- [ ] The line names four numbers: found, picked, ran, passed, then the score. `passed` is
+- [x] The line names four numbers: found, picked, ran, passed, then the score. `passed` is
       this package's own count, never `casesPassed`
-- [ ] A result file marked `partial` makes the line say the sweep stopped early and why
-- [ ] Picked and ran differing is not a failure. The harness counts one and this package
+- [x] A result file marked `partial` makes the line say the sweep stopped early and why
+- [x] Picked and ran differing is not a failure. The harness counts one and this package
       counts the other, so both are printed and neither is checked against the other
 
 ### Phase 4: write down what a run leaves on disk
@@ -191,69 +191,69 @@ Every run keeps its transcript, its final message and its working directory. A c
 writes their own checker over that, to look at the files an eval produced, so the layout has
 to be something they can rely on.
 
-- [ ] [`../docs/running_evals.md`](../docs/running_evals.md) gives the path, one directory
+- [x] [`../docs/running_evals.md`](../docs/running_evals.md) gives the path, one directory
       per run, the three names in it, and that nothing here writes into it afterwards
-- [ ] It says that `home/` and `tmp/` inside a kept sandbox are locked at mode 000 on
+- [x] It says that `home/` and `tmp/` inside a kept sandbox are locked at mode 000 on
       purpose, that `logs.unseal` opens them, and that a checker should read the collected
       `workspace/` instead
-- [ ] It says that a checker's verdict does not reach the result file and does not fail
+- [x] It says that a checker's verdict does not reach the result file and does not fail
       anything. That stays out until somebody asks for it
 
 ### Phase 5: write down that you cannot exclude a case
 
 Documentation only.
 
-- [ ] [`../docs/cli.md`](../docs/cli.md) says that `--case` takes one glob over the case name
+- [x] [`../docs/cli.md`](../docs/cli.md) says that `--case` takes one glob over the case name
       and `--tag` only includes, so neither can leave a case out, and points at the harness
       reference for it
-- [ ] It gives the one thing that does work: put a tag on the case and select on tags
+- [x] It gives the one thing that does work: put a tag on the case and select on tags
 
 ### Phase 6: tests
 
 Unit tier throughout. Nothing here needs a model.
 
-- [ ] A trace holding a mode denial yields the tool names, over a fixture trace written in
+- [x] A trace holding a mode denial yields the tool names, over a fixture trace written in
       the test
-- [ ] A trace holding a hook denial yields none
-- [ ] A trace whose `init` list is missing a granted tool yields that tool's name
-- [ ] A trace whose `init` list carries every granted tool yields none
-- [ ] A grant of `WebFetch(domain:example.com)` against an `init` list carrying `WebFetch`
+- [x] A trace holding a hook denial yields none
+- [x] A trace whose `init` list is missing a granted tool yields that tool's name
+- [x] A trace whose `init` list carries every granted tool yields none
+- [x] A grant of `WebFetch(domain:example.com)` against an `init` list carrying `WebFetch`
       yields none, and a bare `Read` against a list carrying only `Read(//home/**)` yields
       none. The comparison is on the part before the `(`
-- [ ] A trace with no `init` record yields none. A run that wrote no tool list says nothing
+- [x] A trace with no `init` record yields none. A run that wrote no tool list says nothing
       about what it had
-- [ ] A trace with neither problem yields neither, and the result file is unchanged
-- [ ] A result file carrying either field fails, and the line names the tools and the
+- [x] A trace with neither problem yields neither, and the result file is unchanged
+- [x] A result file carrying either field fails, and the line names the tools and the
       directory holding the trace
-- [ ] A result file carrying neither field passes. That is not a courtesy to old documents:
+- [x] A result file carrying neither field passes. That is not a courtesy to old documents:
       the CoWork backend never writes either field, so every `--cowork` document is this
       shape and one set of rules still covers both backends
-- [ ] The last line carries the four counts, and says so when a sweep stopped early
-- [ ] Every `verdict.py` test that already exists still passes, or its change goes in the
+- [x] The last line carries the four counts, and says so when a sweep stopped early
+- [x] Every `verdict.py` test that already exists still passes, or its change goes in the
       same commit with the reason in the message
 
 ### Phase 7: documentation
 
-- [ ] The pass and fail table in [`../docs/running_evals.md`](../docs/running_evals.md)
+- [x] The pass and fail table in [`../docs/running_evals.md`](../docs/running_evals.md)
       gains the new condition, and says both conditions need a kept trace, so
       `--no-keep-traces` gives up both
-- [ ] The same file says what the four counts on the last line mean
-- [ ] It says what the two new fields in the result file are, next to where it describes the
+- [x] The same file says what the four counts on the last line mean
+- [x] It says what the two new fields in the result file are, next to where it describes the
       `tracePath` rewrite
-- [ ] [`../docs/cli.md`](../docs/cli.md) says against `--no-keep-traces` that the option
+- [x] [`../docs/cli.md`](../docs/cli.md) says against `--no-keep-traces` that the option
       gives up both conditions, which is where a person reading it finds out
-- [ ] [`../docs/approaches.md`](../docs/approaches.md) says this check is Docker only,
+- [x] [`../docs/approaches.md`](../docs/approaches.md) says this check is Docker only,
       because CoWork has no permission mode
-- [ ] [`../docs/running_evals.md`](../docs/running_evals.md) states the bound: both checks
+- [x] [`../docs/running_evals.md`](../docs/running_evals.md) states the bound: both checks
       start from the grant, so a tool the case needed and nobody granted is caught by
       neither, and a green suite is not proof the run had everything it asked for
-- [ ] [`../plugins/README.md`](../plugins/README.md): the fixture case phase 8 adds
-- [ ] Nothing in `plans/done/` is read or corrected
+- [x] [`../plugins/README.md`](../plugins/README.md): the fixture case phase 8 adds
+- [x] Nothing in `plans/done/` is read or corrected
 
 ### Phase 8: run it for real
 
-- [ ] `plugins/smoke/` on Docker, from the integration tier, passes
-- [ ] A `plugins/smoke/` case asking for a `Write` call, run under a deliberately narrowed
+- [x] `plugins/smoke/` on Docker, from the integration tier, passes
+- [x] A `plugins/smoke/` case asking for a `Write` call, run under a deliberately narrowed
       `--allow-tools` that omits `Write`, from the integration tier, fails, and the line names
       `Write`. The narrowing is the test's, and the default grant is untouched
-- [ ] `scripts/test.sh` and `ruff` clean
+- [x] `scripts/test.sh` and `ruff` clean

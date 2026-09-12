@@ -390,8 +390,12 @@ def _run(args: argparse.Namespace, config: Config) -> int:
     blocked = _validate(roots, require_coverage=args.require_coverage)
     if blocked:
         return _refuse(blocked, PREFLIGHT_FAILED)
-    if not _selected(targets, tags, args.case):
+    picked = _selected(targets, tags, args.case)
+    if not picked:
         return _usage(f"{args.path} selects no case{_filters(tags, args.case)}")
+    # What is there before the filters, which is the first of the four counts the verdict
+    # line prints. The same reader answers both, so the two numbers are comparable.
+    found = _selected(targets, (), None)
 
     root = logs.log_root(args.out)
     for deleted in logs.prune(root, logs.RUN_PRUNE_DAYS):
@@ -400,7 +404,7 @@ def _run(args: argparse.Namespace, config: Config) -> int:
     if args.dry_run:
         return _dry_run(args, config, root, targets, tags)
 
-    return _sweep(args, config, root, targets, tags)
+    return _sweep(args, config, root, targets, tags, found=found, picked=picked)
 
 
 def _targets(path: str, roots: list[Path]) -> list[tuple[Path, Path]]:
@@ -564,8 +568,14 @@ def _sweep(
     root: Path,
     targets: list[tuple[Path, Path]],
     tags: tuple,
+    *,
+    found: int,
+    picked: int,
 ) -> int:
-    """Every selected plugin in turn, inside one run directory, decided once."""
+    """Every selected plugin in turn, inside one run directory, decided once.
+
+    `found` and `picked` are counted over the case tree above, before anything ran, and are
+    two of the four numbers the verdict line prints. docs/running_evals.md."""
     image = Docker(config) if args.backend == DOCKER else None
     scope = logs.scope_name(args.path, [plugin for plugin, _ in targets])
     directory = logs.run_dir(root, scope)
@@ -574,7 +584,7 @@ def _sweep(
     with logs.tee(directory):
         logs.write_env(directory, args.backend, image=None if image is None else image.tag)
         extra = _each_plugin(args, config, directory, targets, tags, image)
-        decided = verdict.decide(directory, extra=extra)
+        decided = verdict.decide(directory, found=found, picked=picked, extra=extra)
         (directory / logs.VERDICT_FILE).write_text(decided.text, encoding="utf-8")
         print(decided.text, end="")
     return OK if decided.passed else FAILED
@@ -601,6 +611,11 @@ def _each_plugin(
         except CoWorkError as error:
             return (str(error),)
 
+    # Built once: it does not vary by plugin, and the grant in it is what the validity
+    # checks hold each run's offered tool list against. The CoWork backend builds no
+    # options and grants nothing, so those checks find nothing there.
+    options = _options(args, config, tags) if image is not None else None
+
     ceiling = config.eval.max_cost_total_usd
     for plugin, target in targets:
         spent = results.spend(directory)
@@ -611,8 +626,8 @@ def _each_plugin(
             )
         output = logs.plugin_dir(directory, plugin_name(plugin))
         try:
-            if image is not None:
-                image.run(target, output, _options(args, config, tags))
+            if image is not None and options is not None:
+                image.run(target, output, options)
             else:
                 cowork_backend.run(
                     target,
@@ -632,7 +647,8 @@ def _each_plugin(
             # sandboxes, and one kept sandbox is unreadable until it is collected. A
             # collection problem is a warning and never turns a passing run into a failure.
             if _keeping(args, config):
-                for warning in traces.collect(output):
+                granted = () if options is None else options.allow_tools
+                for warning in traces.collect(output, granted=granted):
                     print(f"trace: {warning}", file=sys.stderr)
     return ()
 

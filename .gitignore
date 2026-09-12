@@ -11,9 +11,11 @@ htmlcov/
 # Build products.
 dist/
 
-# Eval output. Slow and costly to produce, never committed.
+# Eval output. Slow and costly to produce, never committed. `evals/results/` is where the
+# harness writes when it is run by hand with no --output-dir; the pattern is anchored to that
+# directory, because a bare `results/` also swallows the fixture documents under tests/data/.
 logs/
-results/
+evals/results/
 tmp/
 
 # Runtime staged into a plugin under test for the length of a run.

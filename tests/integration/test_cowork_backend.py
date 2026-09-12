@@ -144,7 +144,8 @@ def test_the_smoke_suite_runs_and_the_case_passes(unattended: Path, tmp_path: Pa
     """One VM boot, one ceiling entry, one permanent session."""
     output = tmp_path / "smoke"
     output.mkdir()
-    written = run(SMOKE, output, config=Config.load(unattended))
+    # One case by name, so this test still costs one VM boot and one ceiling entry.
+    written = run(SMOKE, output, config=Config.load(unattended), case_glob="python-version")
     assert written == output / RESULT_NAME
 
     document = json.loads(written.read_text(encoding="utf-8"))

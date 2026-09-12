@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.265",
+  "startedAt": "2026-09-09T10:00:00+00:00",
+  "durationSeconds": 4.0,
+  "costUsd": 0.06,
+  "partial": false,
+  "suite": {
+    "root": "/plugin",
+    "ablation": "none",
+    "threshold": 0,
+    "judgeModel": "haiku",
+    "plugins": [{"name": "smoke", "path": "/plugin"}]
+  },
+  "cases": [
+    {
+      "name": "every-structural",
+      "dir": "evals/plugin/every-structural",
+      "source": "prose",
+      "promptMarkdown": "Do the work.",
+      "graders": [
+        {"name": "says-alex", "type": "regex", "weight": 1, "config": {}},
+        {"name": "fired-skill", "type": "tool_used", "weight": 1, "config": {}},
+        {"name": "read-then-wrote", "type": "tool_order", "weight": 1, "config": {}},
+        {"name": "wrote-deck", "type": "file_exists", "weight": 1, "config": {}}
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0.0,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.06,
+            "judgeCostUsd": 0.0,
+            "error": null,
+            "skippedPaidGraders": false,
+            "graders": [
+              {"name": "says-alex", "passed": false, "weight": 1,
+               "explanation": "no match for Alex", "withOnly": false, "scored": true},
+              {"name": "fired-skill", "passed": false, "weight": 1,
+               "explanation": "Skill was called 0 times", "withOnly": false, "scored": true},
+              {"name": "read-then-wrote", "passed": false, "weight": 1,
+               "explanation": "Write came before Read", "withOnly": false, "scored": true},
+              {"name": "wrote-deck", "passed": false, "weight": 1,
+               "explanation": "no file matched deck.pptx", "withOnly": false, "scored": true}
+            ]
+          }
+        ]
+      },
+      "aggregates": {"score": 0.0, "passRate": 0.0}
+    }
+  ],
+  "aggregates": {"casesTotal": 1, "casesPassed": 1, "overallScore": 0.0, "overallPassRate": 0.0}
+}

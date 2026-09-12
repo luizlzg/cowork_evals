@@ -18,21 +18,37 @@ The layout is the standard one, because a fixture that does not look like a real
 proves nothing about discovery. The case format is
 [../docs/eval_format.md](../docs/eval_format.md).
 
-`smoke` holds one case at `evals/plugin/python-version/`, whose prompt asks for
-`python3 -V` and whose regex grader matches the exact string
-[../docs/runtime.md](../docs/runtime.md) records, so it proves a case reaches a running
-command on the interpreter the backend put there. See
+`smoke` holds two cases, both under `evals/plugin/`.
+
+| Case            | Asks for                              | Graded by                                    |
+| --------------- | ------------------------------------- | -------------------------------------------- |
+| `python-version` | `python3 -V`                         | a `regex` grader over the last message       |
+| `writes-a-file` | one word written to `written.txt`     | a `file_exists` grader over the created file |
+
+`python-version` matches the exact string [../docs/runtime.md](../docs/runtime.md) records, so
+it proves a case reaches a running command on the interpreter the backend put there. See
 [../docs/docker.md](../docs/docker.md) for the container's half of that. Whether this
 fixture and each backend it fires are built is the status table in
 [../docs/running_evals.md](../docs/running_evals.md).
 
-The exact string carries a patch release. The container installs it, and the CoWork VM runs
-it, so this fixture serves both backends. The CoWork backend loads no plugin, and this case
-needs none: it writes `runs: 1`, carries no skill, and asks for a command any session can
-run.
+`writes-a-file` is the fixture for the run validity check. It writes no `allowed_tools`, so
+`Write` reaches it from the operator grant alone: under the default grant the file is created
+and the case passes, and under a grant that omits `Write` the run cannot create it and the
+verdict fails the run by name rather than scoring what the model wrote instead. The narrowing
+belongs to `integration/test_cli.py`, which types it as `--allow-tools`, and the default grant
+in `cowork_evals.yaml` is untouched. The two conditions are
+[../docs/running_evals.md](../docs/running_evals.md).
 
-It carries no skill. Whether a model activates a skill is an eval question, and this fixture
-answers a mechanism question. The case is therefore a `plugin` one: a directory under
+The exact string carries a patch release. The container installs it, and the CoWork VM runs
+it, so this fixture serves both backends. The CoWork backend loads no plugin, and neither case
+needs one: each writes `runs: 1`, carries no skill, and asks for something any session can do.
+Neither writes a key that backend cannot honour, so neither is skipped there.
+
+Two cases, and each integration test that fires one names it with a case glob. A test about
+one mechanism pays for one case, and a CoWork test pays for one VM boot.
+
+Neither carries a skill. Whether a model activates a skill is an eval question, and this
+fixture answers a mechanism question. Both cases are therefore `plugin` ones: a directory under
 `evals/` is a skill name, `plugin` or `mocks`, and there is no skill to name. See
 [../docs/eval_format.md](../docs/eval_format.md).
 

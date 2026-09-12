@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.265",
+  "startedAt": "2026-09-09T10:00:00+00:00",
+  "durationSeconds": 3.1,
+  "costUsd": 0.057,
+  "partial": false,
+  "suite": {
+    "root": "/plugin",
+    "ablation": "none",
+    "threshold": 0,
+    "judgeModel": "haiku",
+    "plugins": [
+      {
+        "name": "smoke",
+        "path": "/plugin"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "tool-denied",
+      "dir": "evals/plugin/tool-denied",
+      "source": "prose",
+      "promptMarkdown": "Report the Python version.",
+      "graders": [
+        {
+          "name": "reports-3-10-12",
+          "type": "regex",
+          "weight": 1,
+          "config": {}
+        },
+        {
+          "name": "reads-well",
+          "type": "llm",
+          "weight": 1,
+          "config": {}
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1.0,
+            "passed": true,
+            "turns": 2,
+            "costUsd": 0.057,
+            "judgeCostUsd": 0.004,
+            "error": null,
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "reports-3-10-12",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched 3.10.12",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "reads-well",
+                "passed": true,
+                "weight": 1,
+                "explanation": "2 of 3 votes",
+                "withOnly": false,
+                "scored": true
+              }
+            ],
+            "deniedTools": [
+              "Write"
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1.0,
+        "passRate": 1.0
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 1,
+    "casesPassed": 1,
+    "overallScore": 1.0,
+    "overallPassRate": 1.0
+  }
+}
