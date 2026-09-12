@@ -171,18 +171,13 @@ branch and a separate merge. What each holds is its own file; nothing is restate
 - [x] A row for each in [`README.md`](README.md), and a paragraph where that file describes
       what a plan builds
 
-### Phase 4: retire this file
+## When this file is retired
 
-Not yet, and the condition is not the one this phase was written with.
+This plan's work is finished. Its product is four plan files and phase 3 delivered them.
+Implementing those four is each of their own business, and none of it belongs on a checklist
+here.
 
-The four plans link to the decisions table above, which is the one place each of those
-decisions is derived. A file in `done/` is frozen and is never read or cited, so retiring
-this one while four live plans cite it would break that rule in four places at once.
-
-- [ ] Each of plans 10 to 13 writes what it establishes into `docs/` as it is implemented,
-      which is the rule in [`README.md`](README.md) and is what empties this file of anything
-      durable
-- [ ] When the last of the four is merged, nothing outside `done/` cites this file. Move it
-      then, under the rule in [`README.md`](README.md). It is the record of what was measured
-      and decided on 2026-09-12, which is the first thing anyone needs when one of these
-      decisions is questioned later
+Retirement is the one thing left, and it is not work. The four plans cite the decisions table
+above, which is the one place each of those decisions is derived, and nothing outside `done/`
+may depend on a file inside it. So this file moves to `done/` after the fourth of them merges,
+and not before. [`README.md`](README.md) owns when a plan moves and what it is named.

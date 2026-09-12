@@ -39,7 +39,7 @@ not the system's: what is built and usable is
 | 7 | [`done/plan_consumer.20260909.md`](done/plan_consumer.20260909.md) | The shipped documentation, the `docs` and `init` verbs, and the eval-authoring skill | implemented | `feat/consumer`       |
 | 8 | [`done/plan_ask.20260912.md`](done/plan_ask.20260912.md) | The `ask` verb over the driver, and the skill that asks a live session what it does | implemented | `feat/ask`            |
 | 9 | [`done/plan_focus.20260912.md`](done/plan_focus.20260912.md) | The consent modal, the frontmost guard and the composer clear, in the driver | implemented | `feat/focus`          |
-| - | [`plan_believable_results.md`](plan_believable_results.md) | Nothing. The measurements, the decisions, and the four plans that follow them | written     |                       |
+| - | [`plan_believable_results.md`](plan_believable_results.md) | Nothing. The measurements, the decisions, and the four plans that follow them | complete    |                       |
 | 10 | [`plan_run_validity.md`](plan_run_validity.md) | A run that never got its tool fails instead of scoring, and honest counts | not started | `feat/run-validity`   |
 | 11 | [`plan_runnability.md`](plan_runnability.md) | The `no-cowork` tag on a case, enforced both ways, counted rather than failed | not started | `feat/runnability`    |
 | 12 | [`plan_env_passthrough.md`](plan_env_passthrough.md) | Named host variables forwarded into the run container, values never logged | not started | `feat/env-passthrough` |
@@ -50,6 +50,7 @@ not the system's: what is built and usable is
 | `not written` | The plan file does not exist yet                                           |
 | `not started` | The plan file exists and no box in it is ticked                            |
 | `written`     | The plan file exists, and its checklist is not finished                    |
+| `complete`    | Every box is ticked, and something outside the plan holds the file in `plans/`. The plan says what |
 | `implemented` | Every box is ticked and the branch is merged. The file is in `done/`       |
 | `skipped`     | The developer decided not to write it. What it would build stays designed in `docs/` and unbuilt |
 
