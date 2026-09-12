@@ -26,6 +26,15 @@ from .harness import RESULT_NAME
 
 SCHEMA_VERSION = 1
 
+# The document's two arm keys, and the order every reader walks them in. `with` loads the
+# plugin under test and is the arm every backend runs; `without` is the baseline arm, which
+# only a `--ablation with-without` run on the container backend produces. They are here
+# because this module writes the document, and [traces.py](traces.py) and
+# [verdict.py](verdict.py) read it. docs/running_evals.md.
+ARM_WITH = "with"
+ARM_WITHOUT = "without"
+ARMS = (ARM_WITH, ARM_WITHOUT)
+
 # Pinned for every suite this backend runs. There is no baseline arm, and this package decides
 # pass and fail. docs/running_evals.md.
 ABLATION = "none"
@@ -190,7 +199,7 @@ class CaseResult:
             if key in self.case.frontmatter_keys:
                 entry[camel] = self.case.frontmatter_keys[key]
         entry["graders"] = [_grader_definition(grader) for grader in self.case.graders]
-        entry["arms"] = {"with": [run.document() for run in self.runs]}
+        entry["arms"] = {ARM_WITH: [run.document() for run in self.runs]}
         entry["aggregates"] = {"score": self.score, "passRate": self.pass_rate}
         if self.declared:
             entry[DECLARED_UNRUNNABLE] = True

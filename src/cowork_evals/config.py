@@ -35,6 +35,15 @@ ENV_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 # The deep link prompt cap. docs/cowork_desktop.md.
 PROMPT_LIMIT = 14336
 
+# What `eval.ablation` may be, and the flag each value becomes. `none` runs one arm, the
+# with-arm; `with-without` runs a no-plugin baseline arm beside it and the document then
+# carries a per-case delta. They live here rather than in `harness.py` because the converter
+# below reads them, and `harness.py` imports this module and not the other way round.
+# docs/running_evals.md.
+ABLATION_NONE = "none"
+ABLATION_WITH_WITHOUT = "with-without"
+ABLATION_CHOICES = (ABLATION_NONE, ABLATION_WITH_WITHOUT)
+
 # What `cowork.consent` may be. `dialog` shows the modal once per process, `none` fires
 # without asking and is the documented route for an unattended run. docs/cowork_driver.md.
 # They live here rather than in `cowork.py` because the converter below reads them, and
@@ -100,6 +109,21 @@ def _path(name: str, value: Any) -> Path:
 
 def _optional_path(name: str, value: Any) -> Path | None:
     return None if value is None else _path(name, value)
+
+
+def _fraction(name: str, value: Any) -> int | float:
+    """A number from 0 to 1. A case score is a mean of grader results and is in that range,
+    so a delta is in -1 to 1 and a threshold above 1 is one no case can meet."""
+    amount = _amount(name, value)
+    if amount > 1:
+        raise CoWorkError(2, f"{name}: expected a number from 0 to 1, got {value}")
+    return amount
+
+
+def _ablation(name: str, value: Any) -> str:
+    if _text(name, value) not in ABLATION_CHOICES:
+        raise CoWorkError(2, f"{name}: expected one of {', '.join(ABLATION_CHOICES)}, got {value}")
+    return value
 
 
 def _consent(name: str, value: Any) -> str:
@@ -228,6 +252,14 @@ class EvalSection:
         "WebFetch",
         "Skill",
     )
+    # Off, because the baseline arm runs every case twice and so costs twice as much, and
+    # because it stops scoring a `tool_used: Skill` grader in either arm.
+    # docs/running_evals.md.
+    ablation: str = ABLATION_NONE
+    # What a case's delta has to reach under `with-without`. It is read by `verdict.py` and
+    # never emitted into the harness command line, which is why `--threshold` stays pinned
+    # to 0. docs/running_evals.md.
+    delta_threshold: int | float = 0
     max_cost_usd: int | float = 5
     # It bounds a whole invocation rather than a run, so the sweep reads it and not the
     # `claude plugin eval` argument list: `cli.py` checks the spend so far before each
@@ -241,6 +273,8 @@ class EvalSection:
         "model": _text,
         "judge_model": _text,
         "allow_tools": _tools,
+        "ablation": _ablation,
+        "delta_threshold": _fraction,
         "max_cost_usd": _amount,
         "max_cost_total_usd": _amount,
         "keep_traces": _flag,

@@ -33,7 +33,7 @@ from . import (
     verdict,
 )
 from .cases import CaseError, discover, plugin_name, plugin_roots
-from .config import Config, CoWorkError
+from .config import ABLATION_CHOICES, Config, CoWorkError
 from .cowork import CoWork
 from .docker import Docker, DockerError, pytest_image
 from .docker.pytest_image import PytestImage
@@ -61,6 +61,8 @@ OPTION_ATTRIBUTES = {
     "--timeout-seconds": "timeout_seconds",
     "--model": "model",
     "--judge-model": "judge_model",
+    "--ablation": "ablation",
+    "--delta-threshold": "delta_threshold",
     "--allow-tools": "allow_tools",
     "--max-cost-usd": "max_cost_usd",
     "--keep-traces": "keep_traces",
@@ -77,13 +79,25 @@ UNTYPED = {"--build-missing": False}
 # counted instead, and the two are never conflated. docs/cli.md.
 REFUSED = {
     DOCKER: ("--timeout-seconds",),
-    COWORK: ("--model", "--allow-tools", "--max-cost-usd", "--build-missing"),
+    COWORK: (
+        "--model",
+        "--ablation",
+        "--delta-threshold",
+        "--allow-tools",
+        "--max-cost-usd",
+        "--build-missing",
+    ),
 }
 
 # Why each is refused, so a message says more than that it was.
 REFUSAL_REASONS = {
     "--timeout-seconds": "claude plugin eval has no timeout flag to map it onto",
     "--model": "the session decides its model",
+    "--ablation": (
+        "a session gets its skills from the profile the application is running, and "
+        "nothing here chooses which profile that is"
+    ),
+    "--delta-threshold": "that backend runs one arm, so there is no delta to decide on",
     "--allow-tools": "the session decides its tools",
     "--max-cost-usd": "the session is billed to the account and is not observable here",
     "--build-missing": "there is nothing to build on that backend",
@@ -142,6 +156,16 @@ def _run_parser(verbs: Any) -> None:
     verb.add_argument("--timeout-seconds", type=float, help="each run's timeout, on --cowork")
     verb.add_argument("--model", help="the model under test, on --docker")
     verb.add_argument("--judge-model", help="the model behind llm and baseline graders")
+    verb.add_argument(
+        "--ablation",
+        choices=ABLATION_CHOICES,
+        help="with-without runs a no-plugin baseline arm beside the with-arm, on --docker",
+    )
+    verb.add_argument(
+        "--delta-threshold",
+        type=float,
+        help="what a case's delta must reach under --ablation with-without, on --docker",
+    )
     verb.add_argument("--allow-tools", nargs="+", help="the tool grant, on --docker")
     verb.add_argument("--max-cost-usd", type=float, help="one suite's ceiling, on --docker")
     # Three-state, so `--no-keep-traces` beats a file that turned it on and `--keep-traces`
@@ -533,6 +557,7 @@ def _options(args: argparse.Namespace, config: Config, tags: tuple) -> RunOption
         config,
         model=args.model,
         judge_model=args.judge_model,
+        ablation=args.ablation,
         max_cost_usd=None if args.max_cost_usd is None else str(args.max_cost_usd),
         allow_tools=None if args.allow_tools is None else tuple(args.allow_tools),
         keep_traces=_keeping(args, config),
@@ -552,6 +577,18 @@ def _keeping(args: argparse.Namespace, config: Config) -> bool:
     argument, so the ladder is walked once.
     """
     return args.keep_traces if args.keep_traces is not None else config.eval.keep_traces
+
+
+def _delta_threshold(args: argparse.Namespace, config: Config) -> float:
+    """What a case's delta must reach, resolved through the one ladder. docs/library.md.
+
+    It is read here and handed to the verdict, which reads no configuration file of its own,
+    so one invocation resolves every setting once. It never reaches the harness command line:
+    `--threshold` stays pinned to 0 so this package decides. docs/running_evals.md.
+    """
+    if args.delta_threshold is not None:
+        return float(args.delta_threshold)
+    return float(config.eval.delta_threshold)
 
 
 def _sweep(
@@ -581,7 +618,13 @@ def _sweep(
             env_passthrough=() if image is None else image.env_passthrough,
         )
         extra = _each_plugin(args, config, directory, targets, tags, image)
-        decided = verdict.decide(directory, found=found, picked=picked, extra=extra)
+        decided = verdict.decide(
+            directory,
+            found=found,
+            picked=picked,
+            extra=extra,
+            delta_threshold=_delta_threshold(args, config),
+        )
         (directory / logs.VERDICT_FILE).write_text(decided.text, encoding="utf-8")
         print(decided.text, end="")
     return OK if decided.passed else FAILED

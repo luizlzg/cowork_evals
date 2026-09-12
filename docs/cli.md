@@ -97,6 +97,8 @@ runs on one backend of two, so a pass-through would be silently ignored on the o
 | `--judge-model M`        | yes        | yes, for judged graders                |
 | `--allow-tools T...`     | yes        | refused, the session decides           |
 | `--max-cost-usd N`       | yes        | refused, the driver's `max_runs` binds |
+| `--ablation MODE`        | yes        | refused, that backend runs one arm     |
+| `--delta-threshold N`    | yes        | refused, there is no delta to decide on |
 | `--keep-traces`          | yes        | yes                                    |
 | `--tag T`, `--case GLOB` | yes        | yes                                    |
 | `--out DIR`              | yes        | yes                                    |
@@ -109,6 +111,19 @@ timeout flag to map it onto. Only the CoWork backend sets a per-case `run_timeou
 
 `--require-coverage` reads the tree and not a backend, so no backend refuses it. It is off by
 default.
+
+`--ablation with-without` runs every case a second time with no plugin loaded, and the verdict
+then decides each case on the delta between the two scores rather than on the with-arm score
+alone. `--delta-threshold N` is what that delta has to reach, and a case below it fails. Both
+default to the `eval:` section, `none` and `0`. The arm is off by default because it runs
+every case twice and so costs twice as much, and because it stops scoring the one grader that
+says the skill fired at all. What the arm changes about pass and fail is
+[running_evals.md](running_evals.md).
+
+Both are refused on `--cowork`. A session gets its skills from the profile the desktop
+application is running, and nothing here chooses which profile that is, so there is no
+baseline arm on that backend and no delta to decide on. See
+[cowork_backend.md](cowork_backend.md).
 
 `--keep-traces` is on by default and `--no-keep-traces` turns it off, which is what puts each
 run's transcript, final assistant message and workspace under the run's log directory. Both

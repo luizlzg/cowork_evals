@@ -135,6 +135,17 @@ def run_entry(passed: bool, name: str = SANDBOX) -> dict:
     }
 
 
+def write_two_arm(output_dir: Path, name: str, *, with_runs: list[dict], without: list[dict]):
+    """A two-arm document, as `--ablation with-without` writes one. Both arms carry runs."""
+    document = {
+        "schemaVersion": 1,
+        "cases": [{"name": name, "arms": {"with": with_runs, "without": without}}],
+    }
+    path = output_dir / RESULT_NAME
+    path.write_text(json.dumps(document), encoding="utf-8")
+    return path
+
+
 def collected(output_dir: Path) -> dict:
     return json.loads((output_dir / RESULT_NAME).read_text(encoding="utf-8"))
 
@@ -175,6 +186,72 @@ def test_two_cases_of_one_name_do_not_land_on_each_other(tmp_path: Path) -> None
     assert traces.collect(tmp_path) == []
     assert (traces.run_dir(tmp_path, "hello", 1) / traces.TRACE_NAME).is_file()
     assert (traces.run_dir(tmp_path, "hello", 1, occurrence=2) / traces.TRACE_NAME).is_file()
+
+
+def test_the_with_arm_names_the_run_directory_and_the_baseline_arm_is_under_it(
+    tmp_path: Path,
+) -> None:
+    """One arm is the default, so its layout is the layout and a second arm is named."""
+    assert (
+        traces.run_dir(tmp_path, "python-version", 1)
+        == tmp_path / "traces" / "python-version" / "run-1"
+    )
+    assert (
+        traces.run_dir(tmp_path, "python-version", 1, arm="without")
+        == tmp_path / "traces" / "python-version" / "without" / "run-1"
+    )
+
+
+def test_both_arms_are_collected_into_one_directory_each(tmp_path: Path) -> None:
+    root = traces.sandbox_root(tmp_path)
+    write_sandbox(root, "claude-eval-With")
+    write_sandbox(root, "claude-eval-Without")
+    write_two_arm(
+        tmp_path,
+        "python-version",
+        with_runs=[run_entry(True, "claude-eval-With")],
+        without=[run_entry(False, "claude-eval-Without")],
+    )
+
+    assert traces.collect(tmp_path) == []
+    assert (traces.run_dir(tmp_path, "python-version", 1) / traces.TRACE_NAME).is_file()
+    baseline = traces.run_dir(tmp_path, "python-version", 1, arm="without")
+    assert (baseline / traces.TRACE_NAME).is_file()
+    assert (baseline / traces.LAST_MESSAGE_NAME).is_file()
+    assert (baseline / traces.WORKSPACE_NAME).is_dir()
+
+
+def test_each_arm_gets_its_own_trace_path(tmp_path: Path) -> None:
+    """A failure line about either arm names the directory holding that arm's transcript."""
+    root = traces.sandbox_root(tmp_path)
+    write_sandbox(root, "claude-eval-With")
+    write_sandbox(root, "claude-eval-Without")
+    write_two_arm(
+        tmp_path,
+        "python-version",
+        with_runs=[run_entry(True, "claude-eval-With")],
+        without=[run_entry(False, "claude-eval-Without")],
+    )
+    traces.collect(tmp_path)
+
+    arms = collected(tmp_path)["cases"][0]["arms"]
+    assert Path(arms["with"][0]["tracePath"]) == (
+        traces.run_dir(tmp_path, "python-version", 1) / traces.TRACE_NAME
+    )
+    assert Path(arms["without"][0]["tracePath"]) == (
+        traces.run_dir(tmp_path, "python-version", 1, arm="without") / traces.TRACE_NAME
+    )
+
+
+def test_a_one_arm_document_leaves_no_arm_directory(tmp_path: Path) -> None:
+    """The layout almost every run produces is the one it had before the baseline arm."""
+    write_sandbox(traces.sandbox_root(tmp_path))
+    write_document(tmp_path, run_entry(True))
+
+    assert traces.collect(tmp_path) == []
+    assert sorted(child.name for child in (tmp_path / "traces" / "python-version").iterdir()) == [
+        "run-1"
+    ]
 
 
 # The final message.

@@ -10,6 +10,12 @@ backend cannot go green by honouring nothing. A case that declared the backend c
 is counted instead, and the summary line says how many, because that is a fact about the case
 and not a backend honouring nothing.
 
+A document of two arms is decided on each case's delta as well. What the plugin changed is
+the with-arm score minus the without-arm score, the document works it out, and a case below
+`eval.delta_threshold` fails. A two-arm case the document says is not comparable fails too:
+the invocation asked for a delta and did not get one. Every other condition is unchanged and
+reads the with-arm.
+
 Nothing here writes a file or prints. The caller writes `lines` to `verdict.txt` and prints
 them, and turns `passed` into an exit code. [cli.py](cli.py).
 """
@@ -22,8 +28,9 @@ from pathlib import Path
 from typing import Any
 
 from .cases import JUDGED
+from .config import ABLATION_WITH_WITHOUT
 from .harness import RESULT_NAME
-from .results import DECLARED_UNRUNNABLE
+from .results import ARM_WITH, ARM_WITHOUT, DECLARED_UNRUNNABLE
 from .traces import DENIED, UNOFFERED
 
 # The one schema this module reads. The contract is additive-only, so an unknown field is
@@ -31,9 +38,26 @@ from .traces import DENIED, UNOFFERED
 # docs/claude_code/plugin_eval_reference.md.
 SCHEMA_VERSION = 1
 
-# The arm this module reads. There is no baseline arm on either backend.
+# What the document says the run was. Every condition but the delta reads the with-arm, on
+# one arm and on two. docs/running_evals.md.
+SUITE = "suite"
+ABLATION = "ablation"
+
+# The case aggregate the delta is read from, and the two fields beside it a failing line
+# names. The document works the delta out and this module never re-derives one.
 # docs/running_evals.md.
-ARM = "with"
+AGGREGATES = "aggregates"
+DELTA = "delta"
+SCORE = "score"
+SCORE_WITHOUT = "scoreWithout"
+
+# The document's own mean of the case deltas, on the summary line.
+MEAN_DELTA = "meanDelta"
+
+# The run field that says a run was graded under different rules from the arm it is compared
+# with. It is one of the two reasons a two-arm case carries no delta, and the other is a
+# baseline arm that ran nothing. docs/running_evals.md.
+SKIPPED_PAID = "skippedPaidGraders"
 
 # The two tags every line carries, so a judged failure is never read as the cause of exit 1.
 FAIL = "FAIL"
@@ -64,7 +88,14 @@ class Verdict:
         return "".join(f"{line}\n" for line in self.lines)
 
 
-def decide(run_dir: Path | str, *, found: int, picked: int, extra: tuple[str, ...] = ()) -> Verdict:
+def decide(
+    run_dir: Path | str,
+    *,
+    found: int,
+    picked: int,
+    extra: tuple[str, ...] = (),
+    delta_threshold: float = 0,
+) -> Verdict:
     """Read every result document one level under the run directory and decide once.
 
     `extra` is a failure line the caller already holds, which is how a sweep stopped by the
@@ -73,6 +104,11 @@ def decide(run_dir: Path | str, *, found: int, picked: int, extra: tuple[str, ..
     `found` and `picked` are the caller's counts over the case tree it read before it ran
     anything: how many cases are there, and how many the filters kept. This module counts the
     other two, and the summary line prints all four. docs/running_evals.md.
+
+    `delta_threshold` is the resolved `eval.delta_threshold`, handed in the way `extra` is.
+    Nothing here reads a configuration file, so one invocation resolves every setting once
+    and this stays a function of the run directory and its arguments. It binds on a two-arm
+    document alone: a one-arm run has no delta and is decided exactly as it was.
     """
     directory = Path(run_dir)
     failures = [f"{FAIL} {line}" for line in extra]
@@ -85,9 +121,21 @@ def decide(run_dir: Path | str, *, found: int, picked: int, extra: tuple[str, ..
             failures.append(f"{FAIL} {unreadable}")
             continue
         totals.add(document)
-        _judge_document(plugin.name, document, failures, notes, totals)
+        _judge_document(plugin.name, document, failures, notes, totals, delta_threshold)
 
     return Verdict(passed=not failures, lines=(*failures, *notes, totals.summary))
+
+
+def two_arm(document: dict[str, Any]) -> bool:
+    """Whether the run that wrote this document ran a baseline arm.
+
+    It is the suite's own record of the flag and not a count of the arms a case carries: a
+    case of a two-arm run whose baseline arm ran nothing carries one arm and is a failure,
+    not a one-arm case. docs/running_evals.md.
+    """
+    suite = document.get(SUITE)
+    values = suite if isinstance(suite, dict) else {}
+    return values.get(ABLATION) == ABLATION_WITH_WITHOUT
 
 
 # Reading one document.
@@ -110,18 +158,31 @@ def _read(path: Path) -> tuple[dict[str, Any], None] | tuple[dict[str, Any], str
 
 
 def _judge_document(
-    plugin: str, document: dict[str, Any], failures: list[str], notes: list[str], totals: _Totals
+    plugin: str,
+    document: dict[str, Any],
+    failures: list[str],
+    notes: list[str],
+    totals: _Totals,
+    delta_threshold: float,
 ) -> None:
     if document.get("partial"):
         reason = document.get("partialReason")
         failures.append(f"{FAIL} {plugin}: partial results: {reason}")
         totals.stopped(reason)
+    arms = two_arm(document)
+    totals.arms(document, arms)
     for case in document.get("cases") or []:
-        _judge_case(plugin, case, failures, notes, totals)
+        _judge_case(plugin, case, failures, notes, totals, arms, delta_threshold)
 
 
 def _judge_case(
-    plugin: str, case: dict[str, Any], failures: list[str], notes: list[str], totals: _Totals
+    plugin: str,
+    case: dict[str, Any],
+    failures: list[str],
+    notes: list[str],
+    totals: _Totals,
+    arms: bool = False,
+    delta_threshold: float = 0,
 ) -> None:
     """One case, and whether anything about it failed.
 
@@ -146,10 +207,66 @@ def _judge_case(
         for definition in case.get("graders") or []
         if isinstance(definition, dict)
     }
-    for index, run in enumerate(case.get("arms", {}).get(ARM) or [], start=1):
-        _judge_run(f"{where}: run {index}", run, definitions, failures, notes)
+    for index, run in enumerate(case.get("arms", {}).get(ARM_WITH) or [], start=1):
+        _judge_run(f"{where}: run {index}", run, definitions, failures, notes, arms)
+    if arms:
+        _judge_delta(where, case, failures, delta_threshold)
     if len(failures) == before:
         totals.pass_one()
+
+
+def _judge_delta(
+    where: str, case: dict[str, Any], failures: list[str], delta_threshold: float
+) -> None:
+    """What the plugin changed, on one case of a two-arm run.
+
+    The delta is `score - scoreWithout` and the document works it out, so this reads it and
+    re-derives nothing. A case below the threshold fails: the suite is green because the
+    model answered well on its own, which is the whole reason the arm was asked for.
+
+    A case the document says is not comparable fails as well. A two-arm run that produced no
+    delta did not do what the invocation asked, and passing it would be the green-on-nothing
+    the arm exists to remove.
+    """
+    aggregates = case.get(AGGREGATES)
+    values = aggregates if isinstance(aggregates, dict) else {}
+    delta = values.get(DELTA)
+    if not isinstance(delta, int | float) or isinstance(delta, bool):
+        failures.append(f"{FAIL} {where}: {_incomparable(case)}")
+        return
+    if delta < delta_threshold:
+        failures.append(
+            f"{FAIL} {where}: the delta is {delta:+.2f}, "
+            f"with {_number(values.get(SCORE))} and without {_number(values.get(SCORE_WITHOUT))}, "
+            f"and eval.delta_threshold is {delta_threshold}"
+        )
+
+
+def _incomparable(case: dict[str, Any]) -> str:
+    """Why a two-arm case carries no delta. The document tells the two reasons apart.
+
+    A baseline arm that ran nothing is one, and a run graded under different rules from the
+    arm it is compared with is the other. The failure is the same either way, so the reason
+    is what the line says and nothing else turns on it. docs/running_evals.md.
+    """
+    arms = case.get("arms") or {}
+    if not arms.get(ARM_WITHOUT):
+        return "the arms are not comparable: the baseline arm ran nothing"
+    for runs in arms.values():
+        for run in runs or []:
+            if isinstance(run, dict) and run.get(SKIPPED_PAID):
+                return (
+                    "the arms are not comparable: a run skipped its paid graders "
+                    "at the cost ceiling"
+                )
+    return "the arms are not comparable, and the document does not say why"
+
+
+def _number(value: Any) -> str:
+    """One of the two scores a delta line names, or what the document carries instead."""
+    if isinstance(value, int | float) and not isinstance(value, bool):
+        return f"{value:.2f}"
+    return "no score"
 
 
 def _judge_run(
@@ -158,6 +275,7 @@ def _judge_run(
     definitions: dict[Any, Any],
     failures: list[str],
     notes: list[str],
+    arms: bool = False,
 ) -> None:
     """One run of one case. An `error` fails on every backend, and so does either validity
     field.
@@ -183,7 +301,7 @@ def _judge_run(
                 f"{FAIL} {where}: {what} {tools}, so the score is not a fact about the plugin{kept}"
             )
     for result in run.get("graders") or []:
-        _judge_grader(where, result, definitions, failures, notes, kept)
+        _judge_grader(where, result, definitions, failures, notes, kept, arms)
 
 
 def _judge_grader(
@@ -193,6 +311,7 @@ def _judge_grader(
     failures: list[str],
     notes: list[str],
     kept: str = "",
+    arms: bool = False,
 ) -> None:
     """One grader result, joined to its definition by name to learn its class.
 
@@ -202,6 +321,13 @@ def _judge_grader(
     `kept` is the run's artefact suffix, on every line a person would investigate: a judged
     note needs the transcript as much as a structural failure does. A skip and an undefined
     grader do not carry one, because neither is a verdict about what the model produced.
+
+    `arms` splits the `scored: false` condition. On one arm nothing is dropped from the
+    score, so a grader that was not scored was not asked, and that is a skip. On two arms
+    the harness drops a with-only grader from the score in both arms on purpose, so it is an
+    indicator: it fails nothing, and it is printed when it did not fire. A case whose graders
+    are all with-only is the harness's own exception and arrives carrying `scored: true`,
+    which this reads rather than re-deriving. docs/running_evals.md.
     """
     name = result.get("name")
     at = f"{where}: {name}"
@@ -212,7 +338,10 @@ def _judge_grader(
         failures.append(f"{FAIL} {at}: the grader was skipped: {result.get('skipReason')}")
         return
     if not result.get("scored", True):
-        failures.append(f"{FAIL} {at}: not scored, and --ablation none drops no grader")
+        if not arms:
+            failures.append(f"{FAIL} {at}: not scored, and --ablation none drops no grader")
+        elif not result.get("passed"):
+            notes.append(f"{NOTE} {at}: the with-only indicator did not fire{kept}")
         return
     if result.get("passed"):
         return
@@ -277,6 +406,10 @@ class _Totals:
     A document whose `casesTotal` is 0 is counted and is not a failure. A `--tag` sweep
     matches no case in most plugins, and failing on that would make every filtered sweep
     red. docs/running_evals.md.
+
+    A two-arm run adds the mean delta to the same line, and a one-arm run does not: there is
+    no delta on one arm, and a number that is always 0 there would read as a plugin that
+    changed nothing.
     """
 
     def __init__(self, *, found: int, picked: int) -> None:
@@ -286,12 +419,27 @@ class _Totals:
         self.passed = 0
         self.declared = 0
         self.scores: list[float] = []
+        self.deltas: list[float] = []
+        self.two_arm = False
         self.reasons: list[str] = []
 
     def add(self, document: dict[str, Any]) -> None:
         aggregates = document.get("aggregates") or {}
         self.ran += int(aggregates.get("casesTotal") or 0)
         self.scores.append(float(aggregates.get("overallScore") or 0.0))
+
+    def arms(self, document: dict[str, Any], two: bool) -> None:
+        """What the document says about the baseline arm, and the mean delta it carries.
+
+        `meanDelta` is the document's own mean of the case deltas that are defined, and is
+        omitted when none is. A sweep's number is the mean of the documents that carried
+        one, exactly as the score is.
+        """
+        self.two_arm = self.two_arm or two
+        aggregates = document.get(AGGREGATES) or {}
+        mean = aggregates.get(MEAN_DELTA)
+        if isinstance(mean, int | float) and not isinstance(mean, bool):
+            self.deltas.append(float(mean))
 
     def pass_one(self) -> None:
         self.passed += 1
@@ -313,6 +461,19 @@ class _Totals:
             f"{self.passed} passed, {self.declared} declared unrunnable, "
             f"overall score {mean:.2f}"
         )
+        if self.two_arm:
+            line += f", mean delta {self._mean_delta}"
         if self.reasons:
             line += f", stopped early: {'; '.join(self.reasons)}"
         return line
+
+    @property
+    def _mean_delta(self) -> str:
+        """The mean of the documents that carried one, or that none did.
+
+        A two-arm run every one of whose cases was incomparable carries no delta anywhere,
+        and each of those cases has already failed on its own line.
+        """
+        if not self.deltas:
+            return "none"
+        return f"{sum(self.deltas) / len(self.deltas):+.2f}"

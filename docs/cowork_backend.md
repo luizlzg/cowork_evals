@@ -113,6 +113,14 @@ contract is additive-only, which is what permits these. Nothing else here depart
 
 `withOnly` is always `false`: `ablation` is `none` here and nothing is dropped for an arm.
 
+**This backend runs one arm, and that arm is the with-arm.** A session gets its skills from
+the profile the desktop application is running, and a plugin is absent only in a profile it
+was never installed into, which is why a baseline arm here would mean a second profile and a
+restart between the two. What a session loads and where it loads it from is
+[cowork_desktop.md](cowork_desktop.md). So `ablation` and `threshold` are constants in
+`results.py` rather than settings, and `--ablation` and `--delta-threshold` are a usage error
+on this backend. See [cli.md](cli.md).
+
 **The `cowork` key is also what says which backend produced a run.** The harness writes no
 such key, so its presence is the rule that decides where one run's artefacts are read from
 when the traces are collected: a session directory here, and a kept sandbox there. It is the

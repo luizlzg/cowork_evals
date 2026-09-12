@@ -117,18 +117,18 @@ The option this phase needs does not exist until phase 2, and `cowork_evals run`
 Build the command line from `harness.eval_argv` with `--ablation with-without` substituted,
 and run it in the container the same way `Docker.run` does.
 
-- [ ] Run `docs/claude_code/eval_smoke/` through the container with `--ablation with-without`
+- [x] Run `docs/claude_code/eval_smoke/` through the container with `--ablation with-without`
       and keep the result document. That fixture has a skill, a `tool_used: Skill` grader and
       an over-trigger case, so it exercises every shape the arm changes
-- [ ] Write into [`../docs/running_evals.md`](../docs/running_evals.md), dated: what `arms`
+- [x] Write into [`../docs/running_evals.md`](../docs/running_evals.md), dated: what `arms`
       holds, what the second arm's key is called, which graders carry `withOnly` and
       `scored`, and whether the result file carries a delta of its own or `verdict.py` has
       to work one out
-- [ ] Record what the without-arm's runs carry in place of `tracePath`, which decides phase 3
-- [ ] Record what the document holds when the arms are not comparable. The reference says
+- [x] Record what the without-arm's runs carry in place of `tracePath`, which decides phase 3
+- [x] Record what the document holds when the arms are not comparable. The reference says
       `delta` and `scoreWithout` are omitted when the without-arm is empty or a run skipped
       paid graders, and phase 4 needs to know which of the two it is looking at
-- [ ] It costs two agent runs per case. Three cases at one run each is six, and
+- [x] It costs two agent runs per case. Three cases at one run each is six, and
       [`../docs/plugin_eval.md`](../docs/plugin_eval.md) counts the rest
 
 Phases 2 to 4 are written against what this phase records. If the without-arm's key is not
@@ -136,87 +136,87 @@ what the reference says, the constant changes and nothing else does.
 
 ### Phase 2: the option and the setting
 
-- [ ] `eval.ablation` and `eval.delta_threshold` in the `eval:` section, with the defaults
+- [x] `eval.ablation` and `eval.delta_threshold` in the `eval:` section, with the defaults
       above
-- [ ] `--ablation` and `--delta-threshold` on `run`, Docker only, refused on `--cowork` with
+- [x] `--ablation` and `--delta-threshold` on `run`, Docker only, refused on `--cowork` with
       exit 2 naming why
-- [ ] `harness.ABLATION` stops being a constant and becomes the resolved option.
+- [x] `harness.ABLATION` stops being a constant and becomes the resolved option.
       `harness.THRESHOLD` stays pinned to 0, and the docstring says the delta number lives in
       `verdict.py`
-- [ ] `results.ABLATION` and `results.THRESHOLD` are untouched. They are what the CoWork
+- [x] `results.ABLATION` and `results.THRESHOLD` are untouched. They are what the CoWork
       document records, that backend runs one arm, and the section above says why
-- [ ] The pinned-flag table in [`../docs/running_evals.md`](../docs/running_evals.md) moves
+- [x] The pinned-flag table in [`../docs/running_evals.md`](../docs/running_evals.md) moves
       `--ablation` from pinned to optioned
 
 ### Phase 3: the traces
 
-- [ ] `traces.py` collects both arms, one directory per arm per run, so a failing delta can
+- [x] `traces.py` collects both arms, one directory per arm per run, so a failing delta can
       be read as two transcripts rather than one
-- [ ] The layout keeps one directory per run and adds the arm to the path. The name is fixed
+- [x] The layout keeps one directory per run and adds the arm to the path. The name is fixed
       here and stated in [`../docs/running_evals.md`](../docs/running_evals.md)
-- [ ] A one-arm run's layout is unchanged, byte for byte. One arm is the default, so this is
+- [x] A one-arm run's layout is unchanged, byte for byte. One arm is the default, so this is
       the layout almost every run produces, and `tracePath` and the `[artifacts: ...]` suffix
       both keep naming it
-- [ ] `tracePath` is rewritten for both arms, so the `[artifacts: ...]` suffix names
+- [x] `tracePath` is rewritten for both arms, so the `[artifacts: ...]` suffix names
       the right directory on a line about either
 
 ### Phase 4: deciding pass and fail
 
-- [ ] `verdict.decide` takes the resolved `eval.delta_threshold`, the way it already takes
+- [x] `verdict.decide` takes the resolved `eval.delta_threshold`, the way it already takes
       `extra`. It reads no configuration file of its own, so one invocation still resolves
       every setting once and it stays a function of the run directory and its arguments
-- [ ] Both arms are read when the document holds two
-- [ ] Per case, with minus without, failing below `eval.delta_threshold`, one line naming
+- [x] Both arms are read when the document holds two
+- [x] Per case, with minus without, failing below `eval.delta_threshold`, one line naming
       both scores and the delta
-- [ ] A two-arm case the document says is not comparable fails. A two-arm run that produced
+- [x] A two-arm case the document says is not comparable fails. A two-arm run that produced
       no delta did not do what the invocation asked, and passing it would be the
       green-on-nothing this plan exists to remove
-- [ ] The line names which of the two reasons it was when phase 1 found the document
+- [x] The line names which of the two reasons it was when phase 1 found the document
       distinguishes them, and says only that the arms were not comparable when it does not.
       The failure is the same either way, so the measurement decides the wording and nothing
       else
-- [ ] The `scored: false` condition splits along the table above: a skip in a one-arm run, an
+- [x] The `scored: false` condition splits along the table above: a skip in a one-arm run, an
       indicator in a two-arm run
-- [ ] A case whose graders are all with-only is the harness's stated exception, scored
+- [x] A case whose graders are all with-only is the harness's stated exception, scored
       normally in both arms. `verdict.py` reads what the document says and does not
       re-derive it
-- [ ] Every other condition is unchanged and applies to the with-arm, which is what a
+- [x] Every other condition is unchanged and applies to the with-arm, which is what a
       structural grader failing still means
-- [ ] The summary line names the mean delta beside the counts, when there are two arms
+- [x] The summary line names the mean delta beside the counts, when there are two arms
 
 ### Phase 5: tests
 
 Unit tier, over recorded documents, except phase 1's run.
 
-- [ ] A one-arm document decides exactly as it does today, over the existing fixtures
-- [ ] A two-arm document whose delta is above the threshold passes
-- [ ] A two-arm document whose delta is below it fails, and the line names both scores
-- [ ] A two-arm document whose case carries no delta fails, and the line names the reason
-- [ ] A `scored: false` grader fails a one-arm document and does not fail a two-arm one
-- [ ] A case whose graders are all with-only passes in a two-arm document
-- [ ] `--ablation with-without` on `--cowork` exits 2
-- [ ] The default resolves to `none`, so an unconfigured repository runs one arm
+- [x] A one-arm document decides exactly as it does today, over the existing fixtures
+- [x] A two-arm document whose delta is above the threshold passes
+- [x] A two-arm document whose delta is below it fails, and the line names both scores
+- [x] A two-arm document whose case carries no delta fails, and the line names the reason
+- [x] A `scored: false` grader fails a one-arm document and does not fail a two-arm one
+- [x] A case whose graders are all with-only passes in a two-arm document
+- [x] `--ablation with-without` on `--cowork` exits 2
+- [x] The default resolves to `none`, so an unconfigured repository runs one arm
 
 ### Phase 6: documentation
 
-- [ ] [`../docs/running_evals.md`](../docs/running_evals.md): the baseline arm stops being
+- [x] [`../docs/running_evals.md`](../docs/running_evals.md): the baseline arm stops being
       described as something you do by calling the harness yourself, and becomes an option.
       The pass and fail table gains the delta condition, the incomparable-arms condition
       beside it, and the split `scored: false` condition. The trace layout gains the arm
-- [ ] [`../docs/cli.md`](../docs/cli.md): the two options, and that both are Docker only
-- [ ] [`../docs/approaches.md`](../docs/approaches.md): `arm:` on a grader stops being inert
+- [x] [`../docs/cli.md`](../docs/cli.md): the two options, and that both are Docker only
+- [x] [`../docs/approaches.md`](../docs/approaches.md): `arm:` on a grader stops being inert
       on Docker, and stays inert on CoWork
-- [ ] [`../docs/plugin_eval.md`](../docs/plugin_eval.md): the model-call count for a two-arm
+- [x] [`../docs/plugin_eval.md`](../docs/plugin_eval.md): the model-call count for a two-arm
       suite is what a reader is pointed at for the cost
-- [ ] [`../docs/cowork_backend.md`](../docs/cowork_backend.md): one line saying that backend
+- [x] [`../docs/cowork_backend.md`](../docs/cowork_backend.md): one line saying that backend
       runs one arm and why, pointing at the measurement rather than restating it
-- [ ] Nothing in `plans/done/` is read or corrected
+- [x] Nothing in `plans/done/` is read or corrected
 
 ### Phase 7: integration
 
-- [ ] `plugins/smoke/` on the Docker backend with one arm, green, and the trace layout
+- [x] `plugins/smoke/` on the Docker backend with one arm, green, and the trace layout
       unchanged
-- [ ] `docs/claude_code/eval_smoke/` with two arms, from the integration tier, with the
+- [x] `docs/claude_code/eval_smoke/` with two arms, from the integration tier, with the
       delta printed
-- [ ] `plugins/smoke/` on CoWork, green, unaffected
-- [ ] `scripts/test.sh` and `ruff` clean
+- [x] `plugins/smoke/` on CoWork, green, unaffected
+- [x] `scripts/test.sh` and `ruff` clean

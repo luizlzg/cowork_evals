@@ -103,7 +103,7 @@ was rejected; 130 interrupted; 143 terminated.
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--model`         | `ANTHROPIC_MODEL` is not inherited by the agent under test. Unpinned, a model rollout reads as a regression                                          |
 | `--judge-model`   | Same, for the graders                                                                                                                                |
-| `--ablation none` | The default runs a no-plugin baseline arm whenever the plugin resolves, doubling cost and demoting `tool_used: Skill` graders to unscored indicators |
+| `--ablation`      | The harness default runs a no-plugin baseline arm whenever the plugin resolves, doubling cost and demoting `tool_used: Skill` graders to unscored indicators. This package emits `eval.ablation`, which is `none` unless a run asks for the arm |
 | `--threshold 0`   | Let this package decide pass and fail, so structural and judged graders can be separated                                                             |
 | `--max-cost-usd`  | Spend backstop. Hitting it exits 2 with partial results                                                                                              |
 | `--output-dir`    | Puts `aggregate-result.json` and `report.html` in a log directory rather than under the plugin                                                       |
@@ -161,5 +161,10 @@ Agent runs are `cases x runs x arms`. Each `llm` or `baseline` grader adds three
 calls. Structural graders are free.
 
 A 10-case suite at `runs: 3` with the baseline arm on is 60 agent runs before a single judge
-call. That is why `--ablation none` is the default in this repository and `with-without` is
-a manual investigation tool.
+call. That is why `eval.ablation` is `none` in this repository and `with-without` is asked
+for one sweep at a time. This table is what a reader is pointed at for what the arm costs.
+
+Measured, snapshot 2026-09-12: `docs/claude_code/eval_smoke/`, three cases at `runs: 1`, one
+`llm` grader, under `--ablation with-without`. Six agent runs, 34 s and 0.35 USD. The one-arm
+number for the same tree is half the agent runs. The option is
+[running_evals.md](running_evals.md).
