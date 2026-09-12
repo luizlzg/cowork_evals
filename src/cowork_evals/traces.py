@@ -42,6 +42,7 @@ from . import logs, results
 from .cowork import OUTPUTS as SESSION_OUTPUTS
 from .cowork import final_text
 from .harness import RESULT_NAME
+from .results import ARM_WITH, ARMS
 
 # The harness's `TMPDIR` inside the log directory, and so the parent of every kept sandbox.
 # Short, because a socket path inside it is bounded. It is removed once collection is done,
@@ -63,12 +64,6 @@ TRACE_NAME = "trace.jsonl"
 LAST_MESSAGE_NAME = "last_message.txt"
 WORKSPACE_NAME = "workspace"
 
-# The two arms a document may carry, in the order they are collected. `with` loads the plugin
-# under test and is the arm every backend runs; `without` is the baseline arm, which only a
-# `--ablation with-without` run on the container backend produces. docs/running_evals.md.
-ARM_WITH = "with"
-ARM_WITHOUT = "without"
-ARMS = (ARM_WITH, ARM_WITHOUT)
 
 # The result document field that says a run came from the CoWork backend. It is this
 # repository's own added field, and the harness writes no such key.

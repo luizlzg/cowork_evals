@@ -579,6 +579,18 @@ def _keeping(args: argparse.Namespace, config: Config) -> bool:
     return args.keep_traces if args.keep_traces is not None else config.eval.keep_traces
 
 
+def _delta_threshold(args: argparse.Namespace, config: Config) -> float:
+    """What a case's delta must reach, resolved through the one ladder. docs/library.md.
+
+    It is read here and handed to the verdict, which reads no configuration file of its own,
+    so one invocation resolves every setting once. It never reaches the harness command line:
+    `--threshold` stays pinned to 0 so this package decides. docs/running_evals.md.
+    """
+    if args.delta_threshold is not None:
+        return float(args.delta_threshold)
+    return float(config.eval.delta_threshold)
+
+
 def _sweep(
     args: argparse.Namespace,
     config: Config,
@@ -606,7 +618,13 @@ def _sweep(
             env_passthrough=() if image is None else image.env_passthrough,
         )
         extra = _each_plugin(args, config, directory, targets, tags, image)
-        decided = verdict.decide(directory, found=found, picked=picked, extra=extra)
+        decided = verdict.decide(
+            directory,
+            found=found,
+            picked=picked,
+            extra=extra,
+            delta_threshold=_delta_threshold(args, config),
+        )
         (directory / logs.VERDICT_FILE).write_text(decided.text, encoding="utf-8")
         print(decided.text, end="")
     return OK if decided.passed else FAILED

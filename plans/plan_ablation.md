@@ -162,27 +162,27 @@ what the reference says, the constant changes and nothing else does.
 
 ### Phase 4: deciding pass and fail
 
-- [ ] `verdict.decide` takes the resolved `eval.delta_threshold`, the way it already takes
+- [x] `verdict.decide` takes the resolved `eval.delta_threshold`, the way it already takes
       `extra`. It reads no configuration file of its own, so one invocation still resolves
       every setting once and it stays a function of the run directory and its arguments
-- [ ] Both arms are read when the document holds two
-- [ ] Per case, with minus without, failing below `eval.delta_threshold`, one line naming
+- [x] Both arms are read when the document holds two
+- [x] Per case, with minus without, failing below `eval.delta_threshold`, one line naming
       both scores and the delta
-- [ ] A two-arm case the document says is not comparable fails. A two-arm run that produced
+- [x] A two-arm case the document says is not comparable fails. A two-arm run that produced
       no delta did not do what the invocation asked, and passing it would be the
       green-on-nothing this plan exists to remove
-- [ ] The line names which of the two reasons it was when phase 1 found the document
+- [x] The line names which of the two reasons it was when phase 1 found the document
       distinguishes them, and says only that the arms were not comparable when it does not.
       The failure is the same either way, so the measurement decides the wording and nothing
       else
-- [ ] The `scored: false` condition splits along the table above: a skip in a one-arm run, an
+- [x] The `scored: false` condition splits along the table above: a skip in a one-arm run, an
       indicator in a two-arm run
-- [ ] A case whose graders are all with-only is the harness's stated exception, scored
+- [x] A case whose graders are all with-only is the harness's stated exception, scored
       normally in both arms. `verdict.py` reads what the document says and does not
       re-derive it
-- [ ] Every other condition is unchanged and applies to the with-arm, which is what a
+- [x] Every other condition is unchanged and applies to the with-arm, which is what a
       structural grader failing still means
-- [ ] The summary line names the mean delta beside the counts, when there are two arms
+- [x] The summary line names the mean delta beside the counts, when there are two arms
 
 ### Phase 5: tests
 
