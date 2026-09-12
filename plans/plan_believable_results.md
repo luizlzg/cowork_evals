@@ -14,14 +14,14 @@ depends on are closed.
 
 | # | Decision                                                        | Closed by                     | Recommendation |
 | - | ---------------------------------------------------------------- | ----------------------------- | -------------- |
-| 1 | Whether `eval.allow_tools: [Bash]` is the right default          | Phase 1 measurement, then the developer | Set it to what a live session actually has. The change lands in `plan_run_validity`, in the same plan as the check it feeds |
-| 2 | Which trace evidence makes a run invalid                         | The developer, after 1        | Any `permission_denied` with `decision_reason_type: mode` |
+| 2 | Which trace evidence makes a run invalid                         | The developer                 | Any `permission_denied` with `decision_reason_type: mode` |
 | 3 | How the baseline arm is reached on CoWork, or whether it is      | Phase 1 measurement, then the developer | Split it into a fifth plan if the measurement is not clean |
 | 4 | Whether the baseline arm defaults on                             | The developer                 | None. It doubles cost per case and the developer owns that |
 | 5 | What the gate compares once there are two arms                   | The developer                 | Per case, with-arm minus without-arm, above a configured threshold defaulting to 0 |
 
 Decisions 2, 4 and 5 are judgement, not measurement. Phase 2 is where they are asked, each
-with its options written out.
+with its options written out. Decision 3 is asked there too, because phase 1 measured it and
+the measurement is not clean.
 
 ## Decisions already made
 
@@ -39,6 +39,7 @@ Do not reopen these. Each was argued and settled.
 | An absent environment variable named for passthrough refuses at the preflight | A missing precondition fails. It never forwards an empty string           |
 | Environment passthrough is never a route for Claude's own credentials     | The container login is the one credential route                           |
 | The artifact content checker is built outside this package                | The report established that no harness change is needed. This repository is a library |
+| The container's tool grant mirrors a session, and is not a judgement | The Docker backend exists to run the same case the same way a session does. A session grants nothing and acts, so a container run denied a tool a session has measures this package's configuration rather than the plugin. Closed on 2026-09-12 and implemented the same day, so `plan_run_validity` inherits a grant that is already right: `docs/running_evals.md` |
 | The real gap under report item 5 is selection, and it is an exclusion glob on the invocation | `--case` takes one glob and `--tag` only includes, so there is no way to say `everything except X` without moving the directory. A glob typed on one invocation is visible in that invocation and silences nothing tomorrow. It rides in `plan_run_validity`, which is already making the selection counts honest |
 
 ## What the problem report said
@@ -141,6 +142,8 @@ rather than folded in.
 
 ### Phase 2: close decisions 2, 4 and 5
 
+- [x] Decision 1 is closed and implemented, not deferred into a plan. The grant is the
+      session mirror, in `docs/running_evals.md`. The row is in the table above
 - [ ] Put decision 2 to the developer, with the three options: any mode denial, only tools the
       case's graders name, or any denial at all. Record that a hook-gate case is a case whose
       correct behaviour is a denied call, which is why the reason type is read
