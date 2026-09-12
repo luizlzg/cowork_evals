@@ -117,7 +117,7 @@ The option this phase needs does not exist until phase 2, and `cowork_evals run`
 Build the command line from `harness.eval_argv` with `--ablation with-without` substituted,
 and run it in the container the same way `Docker.run` does.
 
-- [ ] Run `docs/claude_code/eval_smoke/` through the container with `--ablation with-without`
+- [x] Run `docs/claude_code/eval_smoke/` through the container with `--ablation with-without`
       and keep the result document. That fixture has a skill, a `tool_used: Skill` grader and
       an over-trigger case, so it exercises every shape the arm changes
 - [ ] Write into [`../docs/running_evals.md`](../docs/running_evals.md), dated: what `arms`
