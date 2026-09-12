@@ -16,8 +16,9 @@ while the work happens.
 
 ## Plans
 
-Eight plans. Seven build something and are numbered in build order, and one of those seven
-is skipped. `plan_fix` builds nothing, so it carries no number: it corrects what the others
+Nine plans. Eight build something and are numbered in build order, and one of those eight
+is skipped. Plan 8 is written on `feat/ask` and is not in this index yet, which is why the
+numbering steps from 7 to 9; its row joins when that branch merges. `plan_fix` builds nothing, so it carries no number: it corrects what the others
 wrote, and it ran before `plan_cowork_backend.md` because it changes what that plan and
 `plan_cli.md` both read. The order is the order they are built in, not a gate: a plan is
 written whenever the developer decides to write it, and a plan whose inputs already exist is
@@ -35,6 +36,7 @@ not the system's: what is built and usable is
 | 6 | [`done/plan_cli.20260909.md`](done/plan_cli.20260909.md) | Scope resolution, the run directory, the gate, and the command                    | implemented | `feat/cli`            |
 | - | [`done/plan_fix.20260909.md`](done/plan_fix.20260909.md) | Nothing. One configuration file, one name per artifact, and the false statements  | implemented | `feat/fix-consistency` |
 | 7 | [`done/plan_consumer.20260909.md`](done/plan_consumer.20260909.md) | The shipped documentation, the `docs` and `init` verbs, and the eval-authoring skill | implemented | `feat/consumer`       |
+| 9 | [`plan_focus.md`](plan_focus.md) | The consent modal, the frontmost guard and the composer clear, in the driver | written     | `feat/focus`          |
 
 | Status        | Means                                                                     |
 | ------------- | --------------------------------------------------------------------------- |
@@ -67,6 +69,11 @@ the way out are corrected, and two verbs and one skill put the shipped tree in f
 Claude Code session in the consumer repository. The boundary it moves is
 [`../docs/library.md`](../docs/library.md).
 
+Plan 9 corrects a defect in plan 1. The driver takes the keyboard without asking and types
+into a composer it never clears, so a developer working in another window contaminates the
+prompt. It is the driver's and not any one verb's: every `run --cowork` case goes through the
+same call. What it changes is [`../docs/cowork_driver.md`](../docs/cowork_driver.md).
+
 Plans 2 and 3 each build one backend whole. Running an eval on those two backends is
 `claude plugin eval`, which discovers the cases, runs them, grades them and writes
 `aggregate-result.json` itself, so there is nothing above the backend to put in a plan of its
@@ -91,6 +98,7 @@ fact it needs is a container with a fixed command and a fixed expected output.
 | 2    | Whether the harness runs end to end inside the container, and whether a case there reaches a running command |
 | 3    | Whether a staged interpreter is reachable from inside the OS sandbox, and whether a case that shells out gets 3.10 |
 | 4    | Whether a case tree reaches a real CoWork session, and whether the grader scores what that session produced |
+| 9    | Whether clearing the composer before the deep link removes the contamination, and what `System Events` calls the CoWork process |
 
 Everything else those plans measure is a `docker run` or a subprocess with a fixed command
 and a fixed expected output, and is asserted without a model. A fact that can be established
