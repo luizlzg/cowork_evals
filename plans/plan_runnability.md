@@ -2,27 +2,30 @@
 
 ## The problem
 
-Some evals cannot run on CoWork at all. A case that caps the number of turns, or picks a
-model, or stages files into the workspace, needs things a live CoWork session does not have.
+Some cases cannot run on CoWork. A case that caps the number of turns, or picks a model, or
+stages files into the workspace, is asking for something a live CoWork session does not
+offer.
 
-Today that shows up as a failure. The backend works it out while the suite is running, skips
-the case, and the gate fails the suite for the skip. Nothing can be done about it: the case
-is correct, the backend is correct, and the suite is permanently red.
+Right now the backend works this out while the suite is running, skips the case, and the gate
+fails the suite because a case was skipped. The case is fine, the backend is fine, and the
+suite is red every time it runs. There is nothing to fix, so people learn to ignore the red.
 
-A suite that is permanently red for something nobody can fix is a suite people stop looking
-at. That is worse than not running it.
-
-There is also no way to tell, by looking at a case, that it cannot run there. You have to
-read this package's source.
+There is also no way to tell from the case itself. To know that a case cannot run on CoWork,
+you have to read this package's source.
 
 ## What this plan does
 
-The case says it, in its own file, with a tag. The validator checks the tag is there when it
-should be and not there when it should not. The CoWork backend reads the tag instead of
-working it out mid-run. And the gate counts such a case rather than failing it.
+Put a tag on the case: `no-cowork`.
 
-Why a tag and not a new frontmatter key is in the decisions table in
-[`plan_believable_results.md`](plan_believable_results.md), and the fact behind it is in
+The validator checks it both ways, so a case that needs the tag and does not have it is an
+error, and so is a case that has the tag but would have run fine. The second check is what
+stops the tag becoming a way to quietly switch a case off.
+
+The CoWork backend reads the tag instead of working it out mid-run, and the gate counts such
+a case instead of failing the suite.
+
+Why a tag rather than a new frontmatter key is in the decisions table in
+[`plan_believable_results.md`](plan_believable_results.md), and the fact it rests on is in
 [`../docs/eval_format.md`](../docs/eval_format.md).
 
 Branch: `feat/runnability`.

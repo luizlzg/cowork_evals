@@ -2,35 +2,40 @@
 
 ## The problem
 
-An eval's score is meant to tell you whether the plugin works. Sometimes it tells you
-nothing, and nothing in the output says which of the two you are looking at.
+An eval gives a plugin a score. That score can be wrong, and the output does not say so.
 
-If the model is never given a tool the case needs, it cannot do the task. It says so, and the
-grader scores that sentence instead. A 0 reads like the plugin failing. A 1 happens whenever
-the grader's pattern matches the apology. Neither number is about the plugin.
+There are two ways it goes wrong.
 
-The output lies a second way as well. The gate prints its failures, and then the last line
-says every case passed.
+**The model did not have the tool.** A case asks it to write a file. The container decides
+which tools the model gets, and `Write` is not among them. The model replies that it cannot
+write files. The grader checks that reply against its pattern and produces a score. The score
+is about the tool list, not about the plugin. It is usually 0, and it is 1 if the pattern
+happens to match the reply.
 
-So a green suite is not evidence and a red one is not a diagnosis. That is what makes people
-stop reading either.
+This happens in two forms. Either the tool is in the list and the container refuses the call,
+which puts a record in the trace, or the tool is not in the list at all and the model never
+tries, which puts nothing in the trace. Both are described in
+[`../docs/running_evals.md`](../docs/running_evals.md).
+
+**The last line disagrees with the lines above it.** The gate prints one line per failure and
+then a summary. The summary takes its pass count from the harness's result file, which counts
+a case as passed if its score is at or above a threshold we set to 0. So it is every case,
+always. The gate can print a failure and then say every case passed.
 
 ## What this plan does
 
 Three things.
 
-Read each run's trace, see that the model never got the tool, and fail the eval instead of
-scoring what it wrote without it. There are two ways it happens: the tool was offered and the
-container refused the call, which leaves a record; or it was never offered, and the model
-just says it has no such tool, which leaves nothing. Both are described in
-[`../docs/running_evals.md`](../docs/running_evals.md).
+Read each run's trace. If the model never got the tool, fail the eval instead of scoring what
+it wrote without it.
 
-Make the gate's last line say what the gate decided, and say when a sweep stopped early.
+Make the summary line report what the gate decided, and say when a sweep stopped early.
 
-Write down where a run's files end up, because a consumer builds their own checker over them
-and needs a layout that does not move.
+Write down where a run's files are kept. A consumer wants to check what an eval actually
+produced, such as whether the `.pptx` a skill wrote will open, so they write their own script
+over those files. That script needs a layout that does not move.
 
-Why the rule for failing a run is what it is, is the decisions table in
+Why an eval fails on one kind of refusal and not another is the decisions table in
 [`plan_believable_results.md`](plan_believable_results.md). Do not work it out again here.
 
 Branch: `feat/run-validity`.

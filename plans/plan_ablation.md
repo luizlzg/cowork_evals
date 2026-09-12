@@ -2,25 +2,26 @@
 
 ## The problem
 
-A green suite does not mean the plugin works. It can mean the model was good enough at the
-task on its own.
+A suite that passes does not tell you the plugin works. The model may have done the task on
+its own.
 
-Ask a model to write a spreadsheet and it may well write one without your spreadsheet plugin
-loaded at all. Every grader passes. The suite is green. You have learned nothing about the
-plugin, and you cannot tell that apart from a suite that is green because the plugin is
-excellent.
+Ask a model to build a spreadsheet and it will probably build one whether or not your
+spreadsheet plugin is loaded. Every grader passes, the suite is green, and you have learned
+nothing. A suite that is green because the plugin is good and a suite that is green because
+the plugin is irrelevant look identical.
 
-The harness can answer this: run each case twice, once with the plugin loaded and once with
-nothing loaded, and compare. This package pins that off and offers no way to turn it on.
+The harness can settle it: run each case twice, once with the plugin loaded and once with
+nothing loaded, and compare the two scores. This package fixes that setting to off and offers
+no way to change it.
 
 ## What this plan does
 
-Adds the option and the config key, keeps both runs' traces, and makes the gate decide on the
-difference between the two scores rather than on the score alone.
+Adds the option and the config key, keeps the traces from both runs, and makes the gate
+decide on the difference between the two scores rather than on the score alone.
 
-Off by default, because it doubles what a suite costs.
+Off by default, because it runs every case twice and so costs twice as much.
 
-This is the last of the four plans, because it rewrites the gate that
+Last of the four plans, because it rewrites the gate that
 [`plan_run_validity.md`](plan_run_validity.md) and
 [`plan_runnability.md`](plan_runnability.md) both change.
 

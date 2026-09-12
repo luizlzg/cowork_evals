@@ -2,22 +2,24 @@
 
 ## The problem
 
-A skill that needs a credential cannot be evaluated at all.
+A skill that needs a credential cannot be evaluated.
 
-Say a skill calls an API and reads its key from the environment. The container an eval runs
-in starts with two environment variables, `HOME` and an internal flag, and there is no way to
-add a third. So the skill fails in every eval, for a reason that has nothing to do with the
-skill, and there is nothing the case author can do about it.
+A skill calls an API and reads the key from an environment variable. The container an eval
+runs in is given two environment variables, `HOME` and one internal flag, and there is no way
+to add another. The skill fails in every eval, for a reason that has nothing to do with the
+skill, and the person writing the case can do nothing about it.
 
 ## What this plan does
 
-The config file names which variables to pass from your machine into the container. The
-backend passes them. The values never appear in a log, a result file, a gate line or the
-dry-run output; the names do.
+The config file lists which environment variables to pass from your machine into the
+container. The backend passes them.
 
-It changes a rule this repository states twice: nothing is read from the process
-environment. After this, exactly one thing is, it is named in the config file, and it is
-passed through rather than read.
+The values must not end up anywhere else: not in a log, not in the result file, not in a gate
+line, not in the dry-run output. The names may, so you can see what was passed.
+
+It changes a rule this repository states in two places: nothing is read from the process
+environment. After this, one thing is, it is listed in the config file, and it is passed
+straight through rather than read and used here.
 
 Branch: `feat/env-passthrough`.
 
