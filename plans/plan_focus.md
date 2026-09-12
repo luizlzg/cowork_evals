@@ -231,13 +231,13 @@ Work in order. Tick a box when it is verified, then commit. Do not batch ticks.
 Activate the testing rules in `tests/README.md` first. No mock, no fake, no stub, no patch,
 no skip.
 
-- [ ] Unit: `consent: none` leaves the module flag alone and refuses nothing
-- [ ] Unit: `run` under `consent: dialog` with no consent given raises code 2, and fires nothing
-- [ ] Unit: `collect` and `deep_link` work under `consent: dialog` with no consent given
-- [ ] Unit: the two new keys load, take their defaults, and refuse a wrong type
-- [ ] Unit: code 9 is distinct from code 3 in the taxonomy
-- [ ] Integration: `frontmost()` returns this machine's actual frontmost process name
-- [ ] Integration: one real submission under `consent: none` clears a composer that was
+- [x] Unit: `consent: none` leaves the module flag alone and refuses nothing
+- [x] Unit: `run` under `consent: dialog` with no consent given raises code 2, and fires nothing
+- [x] Unit: `collect` and `deep_link` work under `consent: dialog` with no consent given
+- [x] Unit: the two new keys load, take their defaults, and refuse a wrong type
+- [x] Unit: code 9 is distinct from code 3 in the taxonomy
+- [x] Integration: `frontmost()` returns this machine's actual frontmost process name
+- [x] Integration: one real submission under `consent: none` clears a composer that was
       primed with text by hand, and the audit prompt matches the submitted one exactly
 
 ### Phase 5: documentation, and the measurement

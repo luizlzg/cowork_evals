@@ -9,15 +9,21 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 
 import pytest
 
 from cowork_evals import CoWork, CoWorkError, CoWorkSection
-from cowork_evals.config import CONFIG_FILENAME
+from cowork_evals import cowork as driver_module
+from cowork_evals.config import CONFIG_FILENAME, CONSENT_DIALOG, CONSENT_NONE
 
 ROOT = Path(__file__).resolve().parent.parent / "data" / "cowork" / "sessions"
 PROFILE = ROOT / "acct0000" / "prof0000"
+REPOSITORY = Path(__file__).resolve().parents[2]
+
+# One row of the failure taxonomy in docs/cowork_driver.md: a code and what it means.
+TAXONOMY_ROW = re.compile(r"^\| (\d+) +\| (.+?) +\|$", re.MULTILINE)
 
 
 @pytest.fixture
@@ -501,6 +507,59 @@ def test_a_refusal_before_firing_leaves_no_run_log_line(tmp_path: Path) -> None:
         driver.submit("x" * 14337)
     assert raised.value.code == 2
     assert driver.history() == []
+
+
+# Consent, and the taxonomy the guard added. docs/cowork_driver.md.
+#
+# Nothing in the unit tier ever grants consent, so the module flag is false throughout it.
+# Granting it means showing a modal, and no test here drives the desktop.
+
+
+def test_consent_none_shows_nothing_and_leaves_the_module_flag_alone(tmp_path: Path) -> None:
+    """`consent: none` is a configuration value a consumer sets, not an injected answer."""
+    driver_module.consent(CoWorkSection(consent=CONSENT_NONE))
+    assert driver_module._CONSENTED is False
+    build(tmp_path, consent=CONSENT_NONE)._consented()
+
+
+def test_a_submission_with_no_consent_raises_code_2_and_fires_nothing(tmp_path: Path) -> None:
+    driver = stepping(tmp_path)
+    assert driver.config.consent == CONSENT_DIALOG
+    with pytest.raises(CoWorkError) as raised:
+        driver.run("Reply with exactly: PONG")
+    assert raised.value.code == 2
+    assert "consent" in str(raised.value)
+    assert driver.history() == [], "a refusal fired nothing, so it leaves no run log line"
+    assert driver.sessions() == []
+
+
+def test_reading_a_session_never_asks_for_consent(driver: CoWork, tmp_path: Path) -> None:
+    """`collect` and `deep_link` fire nothing, so `consent: dialog` does not reach them."""
+    assert driver.config.consent == CONSENT_DIALOG
+    assert driver.collect(PROFILE / "one_turn")["final_text"] == "PONG"
+    assert driver.deep_link("PING") == "claude://claude.ai/new?q=PING&surface=cowork"
+
+    reading = build(tmp_path)
+    assert reading.config.consent == CONSENT_DIALOG
+    assert reading.sessions() == []
+    assert reading.history() == []
+    assert reading.recent() == 0
+
+
+def test_code_9_is_its_own_row_of_the_taxonomy_and_is_not_code_3() -> None:
+    """The taxonomy is a table in docs/cowork_driver.md, and a grading layer reads it.
+
+    A refusal to type is not a broken `osascript`. Collapsing the two is what this catches,
+    and the table is where a collapse would happen: the driver raises one code per site, and
+    a reader above it has only the document to tell them apart.
+    """
+    text = (REPOSITORY / "docs" / "cowork_driver.md").read_text(encoding="utf-8")
+    section = text.split("## Failure taxonomy", 1)[1].split("\n## ", 1)[0]
+    rows = dict(TAXONOMY_ROW.findall(section))
+    assert sorted(rows) == ["2", "3", "4", "5", "6", "7", "8", "9"]
+    assert len(set(rows.values())) == len(rows)
+    assert "osascript" in rows["3"]
+    assert "frontmost" in rows["9"]
 
 
 def test_recent_counts_the_trailing_24_hours_of_a_hand_written_run_log(tmp_path: Path) -> None:

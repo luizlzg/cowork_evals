@@ -441,7 +441,7 @@ checked in the preflight, and pruning happens behind every refusal, so neither b
 `partial: true` result document, and the gate turns that into exit 1. See
 [plugin_eval.md](plugin_eval.md).
 
-The CoWork driver has its own taxonomy, codes 2 to 8, carried by a raised `CoWorkError` and
+The CoWork driver has its own taxonomy, codes 2 to 9, carried by a raised `CoWorkError` and
 never by an exit code. It is in [cowork_driver.md](cowork_driver.md). The `--cowork` backend
 maps it:
 

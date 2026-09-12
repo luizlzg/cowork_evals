@@ -15,7 +15,7 @@ from the host filesystem. The only approach that exercises the deployed stack.
   `audit.jsonl` matches the one submitted. Anything else raises.
 - **The completion signal** is the `completed` `command_lifecycle` audit state, with
   quiescence as a labelled fallback.
-- **The failure taxonomy**, codes 2 to 8 on a raised `CoWorkError`. These are not exit codes.
+- **The failure taxonomy**, codes 2 to 9 on a raised `CoWorkError`. These are not exit codes.
   Nothing here exits, prints or returns an error code.
 - **A rate ceiling, not deferral.** Every run leaves a permanent session in a real account.
   The driver deletes nothing and refuses past `max_runs`.
@@ -334,6 +334,7 @@ line over it maps them onto its own.
 | 6    | A session appeared but its audit prompt does not match     |
 | 7    | The run did not complete within the timeout                |
 | 8    | The run completed with no assistant output                 |
+| 9    | CoWork was not frontmost when a keystroke was due           |
 
 A run that completed and was collected raises nothing.
 

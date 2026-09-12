@@ -158,10 +158,10 @@ it starts no CoWork session and costs no ceiling entry.
 
 ### The live marker
 
-Eight integration tests submit a real run. The three CoWork ones each cost a VM boot, count
+Nine integration tests submit a real run. The four CoWork ones each cost a VM boot, count
 against the driver's rate ceiling and leave a permanent session in the signed-in account.
 The three container ones cost the model calls their case makes, and the two judge ones cost
-short `claude -p` calls. All eight carry `live` as well as `integration`. An integration run
+short `claude -p` calls. All nine carry `live` as well as `integration`. An integration run
 that must not spend selects `-m "integration and not live"`.
 
 The CoWork ones need the macOS Accessibility grant, a signed-in CoWork, the desktop
@@ -169,6 +169,13 @@ application already running, and `cowork_evals.yaml` naming the active profile. 
 and do not skip, when no profile is configured. Nothing steals focus while one runs. See
 [../docs/cowork_desktop.md](../docs/cowork_desktop.md) for the authorizations. The three
 container ones need a credential route, and fail without one.
+
+Every CoWork test that fires reads the `unattended` fixture in
+`integration/conftest.py`. It copies this machine's `cowork_evals.yaml` and sets
+`cowork.consent: none`, which is what an unattended run sets and what keeps a modal out of a
+test run. It is a configuration value, not a seam: the fixture writes a file exactly as a
+consumer would, and no parameter injects an answer. The driver's own consent is module
+state, so a test that granted it would leak into every test after it in the same process.
 
 Everything in this repository is 3.10, tests included, and ruff targets `py310`, so a file
 here parses on the runtime as well. What still belongs to the code a consumer points the
