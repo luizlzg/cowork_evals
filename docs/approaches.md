@@ -68,6 +68,10 @@ and reads what the session wrote, so it honours a subset of the format.
 | `mocks/`                                                | yes              | no, the MCP servers are the real ones   |
 | `arm:` on a grader                                      | read, but inert  | read, but inert                         |
 
+A session used four tools with nothing granted to it, which is what `no, the session decides`
+above is read from. The four probes are section 5 of
+[cowork_desktop.md](cowork_desktop.md).
+
 `arm:` is read on both backends and changes nothing, because `--ablation` is pinned to `none`
 on the Docker backend and the CoWork backend runs one arm, which is the with-arm. There is no
 baseline arm on either backend, so `--ablation with-without` is not reachable through this

@@ -37,7 +37,7 @@ not the system's: what is built and usable is
 | 6 | [`done/plan_cli.20260909.md`](done/plan_cli.20260909.md) | Scope resolution, the run directory, the gate, and the command                    | implemented | `feat/cli`            |
 | - | [`done/plan_fix.20260909.md`](done/plan_fix.20260909.md) | Nothing. One configuration file, one name per artifact, and the false statements  | implemented | `feat/fix-consistency` |
 | 7 | [`done/plan_consumer.20260909.md`](done/plan_consumer.20260909.md) | The shipped documentation, the `docs` and `init` verbs, and the eval-authoring skill | implemented | `feat/consumer`       |
-| 8 | [`plan_ask.md`](plan_ask.md) | The `ask` verb over the driver, and the skill that asks a live session what it does | written     | `feat/ask`            |
+| 8 | [`done/plan_ask.20260912.md`](done/plan_ask.20260912.md) | The `ask` verb over the driver, and the skill that asks a live session what it does | implemented | `feat/ask`            |
 | 9 | [`done/plan_focus.20260912.md`](done/plan_focus.20260912.md) | The consent modal, the frontmost guard and the composer clear, in the driver | implemented | `feat/focus`          |
 | - | [`plan_believable_results.md`](plan_believable_results.md) | Nothing. The measurements, the decisions, and the four plans that follow them | written     |                       |
 
@@ -76,14 +76,14 @@ Plan 8 builds no part of an eval either. It puts a verb on the driver plan 1 bui
 skill on that verb, so a question about what a live CoWork session does is answered by
 asking one rather than by argument. Several decisions in later plans rest on facts only a
 session can settle, and the command surface it adds is
-[`../docs/cli.md`](../docs/cli.md). Its branch is not merged, so what `main` carries today is
-the plan, not the verb.
+[`../docs/cli.md`](../docs/cli.md). The first four facts it settled are section 5 of
+[`../docs/cowork_desktop.md`](../docs/cowork_desktop.md).
 
 Plan 9 corrected a defect in plan 1. The driver took the keyboard without asking and typed
 into a composer it never cleared, so a developer working in another window contaminated the
 prompt. It was the driver's and not any one verb's: every `run --cowork` case goes through
 the same call. What it changed is [`../docs/cowork_driver.md`](../docs/cowork_driver.md). The
-one line it names in `cli._ask` ships with `feat/ask`, which owns that verb.
+one line it names in `cli._ask` ships with plan 8, which owns that verb.
 
 Plans 2 and 3 each build one backend whole. Running an eval on those two backends is
 `claude plugin eval`, which discovers the cases, runs them, grades them and writes

@@ -186,7 +186,7 @@ no skip.
       and fire a skill the account has. Record what each did
 - [x] `docs/cowork_desktop.md`: one section holding those four results, dated, and called a
       snapshot
-- [ ] `plans/README.md`: the row moves to `implemented` on the merge, and the file moves to
+- [x] `plans/README.md`: the row moves to `implemented` on the merge, and the file moves to
       `done/plan_ask.<YYYYMMDD>.md`
 
 If the four asks in phase 5 show that a session refuses one of the four, that is the
