@@ -1,7 +1,11 @@
 # Run validity: a run that never executed the tool fails instead of scoring
 
-A run that never got the tool it needed is not a measurement of the plugin. It is a
-measurement of this repository's configuration, and today it is scored like any other run.
+One run is one execution of one case: what `runs: N` counts, what the gate prints as
+`run N`, and what gets a directory at `traces/<case>/run-<n>/`. A whole `cowork_evals run`
+is an invocation, and this plan never calls one a run.
+
+A run in which the agent never got the tool it needed is not a measurement of the plugin. It
+is a measurement of this repository's configuration, and it is scored like any other run.
 Measured on 2026-09-12 and recorded in [`../docs/running_evals.md`](../docs/running_evals.md):
 a `Write` call the permission mode refused left a record in the trace and the run still
 scored, and a shell tool that was never offered left no record at all and the run still
