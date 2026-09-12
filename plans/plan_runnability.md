@@ -166,20 +166,20 @@ Every other skip in `cowork_backend.skips` becomes a validator error or a counte
 
 Unit tier throughout, except the last box.
 
-- [ ] Direction one, once per source: a case writing `max_turns`, a case writing a
+- [x] Direction one, once per source: a case writing `max_turns`, a case writing a
       `context.*` key, and a case under an `evals/mocks/` directory, each without the tag, is
       a violation naming what made it unrunnable
-- [ ] Direction two: a case carrying the tag and carrying no source is a violation
-- [ ] A case writing `max_turns` and carrying the tag is valid
-- [ ] A case whose only source is an `evals/mocks/` directory several layers above it, and
+- [x] Direction two: a case carrying the tag and carrying no source is a violation
+- [x] A case writing `max_turns` and carrying the tag is valid
+- [x] A case whose only source is an `evals/mocks/` directory several layers above it, and
       which carries the tag, is valid. The chain is walked from the plugin root, not from the
       case's own directory
-- [ ] A case carrying the tag is still returned by a `--tag <skill>` selection
-- [ ] The CoWork backend submits nothing for a declared case, and the driver is never called
-- [ ] A document whose only case is declared passes, and the summary says so
-- [ ] A document whose case reports `skipped` still fails
-- [ ] `_aggregates` over one declared case reports zero cases, zero passed and a score of 0.0
-- [ ] One `plugins/smoke/` fixture case carrying the tag, run on `--cowork` from the
+- [x] A case carrying the tag is still returned by a `--tag <skill>` selection
+- [x] The CoWork backend submits nothing for a declared case, and the driver is never called
+- [x] A document whose only case is declared passes, and the summary says so
+- [x] A document whose case reports `skipped` still fails
+- [x] `_aggregates` over one declared case reports zero cases, zero passed and a score of 0.0
+- [x] One `plugins/smoke/` fixture case carrying the tag, run on `--cowork` from the
       integration tier, green and counted. It writes `max_turns`, so it satisfies direction
       two, and it runs on Docker unchanged
 

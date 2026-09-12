@@ -332,12 +332,14 @@ def tee(run_directory: Path | str) -> Iterator[Path]:
         sys.stdout.flush()
         sys.stderr.flush()
         # Restoring both descriptors drops the last reference to the write end, so the
-        # thread's read returns empty and it finishes on its own.
+        # thread's read returns empty and it finishes on its own. It is joined before the
+        # saved descriptors are closed, because it writes to one of them and a close under
+        # a write in flight is `OSError: Bad file descriptor` on the last chunk.
         os.dup2(saved_out, 1)
         os.dup2(saved_err, 2)
+        thread.join()
         os.close(saved_out)
         os.close(saved_err)
-        thread.join()
         os.close(read_fd)
         log.close()
 

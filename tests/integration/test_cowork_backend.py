@@ -24,6 +24,7 @@ from cowork_evals import Config, CoWork, CoWorkError, CoWorkSection, traces
 from cowork_evals.cowork import TRANSCRIPTS
 from cowork_evals.cowork_backend import run
 from cowork_evals.harness import RESULT_NAME
+from cowork_evals.verdict import decide
 
 SMOKE = Path(__file__).resolve().parent.parent.parent / "plugins" / "smoke"
 
@@ -135,6 +136,34 @@ def test_one_run_provokes_whichever_fact_the_profile_does_not_show(unattended: P
         facts = facts.with_session(document)
     print(f"\nmeasured after provoking: {facts}")
     assert isinstance(facts.both, bool)
+
+
+@pytest.mark.integration
+def test_the_declared_case_is_counted_and_submits_nothing(tmp_path: Path) -> None:
+    """The one case this backend reaches a verdict on without a submission.
+
+    `capped-turns` writes `max_turns` and carries `no-cowork`, so it costs no VM boot, no
+    ceiling entry and no session. See ../../plugins/README.md.
+    """
+    real_profile()
+    output = tmp_path / "smoke"
+    output.mkdir()
+    written = run(SMOKE, output, config=Config.load(), case_glob="capped-turns")
+
+    document = json.loads(written.read_text(encoding="utf-8"))
+    case = document["cases"][0]
+    assert case["name"] == "capped-turns"
+    assert case["declaredUnrunnable"] is True
+    assert case["declaredReason"] == ("no-cowork: max_turns: no turn cap reaches a CoWork session")
+    assert "skipped" not in case
+    assert case["arms"]["with"] == []
+    assert document["aggregates"]["casesTotal"] == 0
+
+    decided = decide(tmp_path, found=3, picked=1)
+    assert decided.passed, decided.text
+    assert decided.lines == (
+        "3 found, 1 picked, 0 ran, 0 passed, 1 declared unrunnable, overall score 0.00",
+    )
 
 
 @pytest.mark.integration
