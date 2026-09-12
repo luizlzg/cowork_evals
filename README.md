@@ -188,7 +188,7 @@ The invocation keeps everything it printed, and every run's transcript with it:
 
 ```
 logs/evals/latest/
-  verdict.txt                       # one line per finding, each carrying FAIL or NOTE
+  verdict.txt                    # one line per finding, each carrying FAIL or NOTE
   run.log                        # everything the invocation printed
   notes/report.html              # the harness's own report
   notes/aggregate-result.json    # what the verdict read

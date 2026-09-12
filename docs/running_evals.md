@@ -384,7 +384,7 @@ per plugin: runs are non-deterministic, and a per-plugin file overwrites the pre
 ```
 logs/evals/<yyyymmdd-hhmmss>-<scope>/
   run.log                        # stdout and stderr of the whole invocation, tee'd live
-  verdict.txt                       # the verdict
+  verdict.txt                    # the verdict
   env.txt                        # cowork_evals --version, claude --version, python3 -V,
                                  #   the backend, and the image on the container backend
   <plugin>/aggregate-result.json # the v1 result document
