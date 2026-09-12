@@ -16,12 +16,12 @@ Branch: `feat/ablation`.
 
 ## Docker only, and that is not a gap
 
-There is no baseline arm on CoWork, and no plan builds one. The reason is measured, in
-section 5 of [`../docs/cowork_desktop.md`](../docs/cowork_desktop.md): a session's skill set is
-the profile's mounted, application-managed tree, so a plugin is absent only in a profile it
-was never installed into, and the desktop application chooses the active profile rather than
-this package. A second arm there means a second profile and an application restart between
-arms.
+There is no baseline arm on CoWork, and no plan builds one. A session gets its skills from
+the profile the desktop application is running, and that tree is the application's to manage.
+So a plugin is absent only in a profile it was never installed into, and nothing here chooses
+which profile is active. A second arm would mean a second profile and restarting the
+application between the two. The measurement behind that is in
+[`../docs/cowork_desktop.md`](../docs/cowork_desktop.md).
 
 The arm is a statistical control, and a control belongs on the cheap backend. CoWork is the
 expensive one that checks the real thing. The decisions table in
@@ -38,10 +38,9 @@ here.
 `--ablation` and `--delta-threshold` are the command-line options over them, and the command
 line beats the file as it does for every other option.
 
-Off by default, because under `with-without` the harness stops scoring a `tool_used: Skill`
-grader and reports it as an indicator carrying `withOnly: true` and `scored: false`. On by
-default would silently stop gating skill activation, which is the defect the problem report
-opened with.
+Off by default. Under `with-without` the harness stops scoring a `tool_used: Skill` grader
+and reports it as an indicator instead. On by default would quietly stop checking that the
+skill fired at all, which is the thing this whole set of plans is about.
 
 ## What the gate compares
 
@@ -99,10 +98,10 @@ vendored reference's and not a measurement.
 - [ ] Run `docs/claude_code/eval_smoke/` through the container with `--ablation with-without`
       and keep the result document. That fixture has a skill, a `tool_used: Skill` grader and
       an over-trigger case, so it exercises every shape the arm changes
-- [ ] Record, dated and called a snapshot, in
-      [`../docs/running_evals.md`](../docs/running_evals.md): what `arms` holds, what the
-      without-arm's key is called, which graders carry `withOnly` and `scored`, and whether
-      the document carries a delta of its own or the gate computes one
+- [ ] Write into [`../docs/running_evals.md`](../docs/running_evals.md), dated: what `arms`
+      holds, what the second arm's key is called, which graders carry `withOnly` and
+      `scored`, and whether the result file carries a delta of its own or the gate works one
+      out
 - [ ] Record what the without-arm's runs carry in place of `tracePath`, which decides phase 3
 - [ ] It costs two agent runs per case. Three cases at one run each is six, and
       [`../docs/plugin_eval.md`](../docs/plugin_eval.md) counts the rest
@@ -161,7 +160,7 @@ Unit tier, over recorded documents, except phase 1's run.
 ### Phase 6: documentation
 
 - [ ] [`../docs/running_evals.md`](../docs/running_evals.md): the baseline arm stops being
-      described as an investigation run by hand and becomes an option. The gate table gains
+      described as something you do by calling the harness yourself, and becomes an option. The gate table gains
       the delta condition and the split `scored: false` condition. The trace layout gains the
       arm
 - [ ] [`../docs/cli.md`](../docs/cli.md): the two options, and that both are Docker only

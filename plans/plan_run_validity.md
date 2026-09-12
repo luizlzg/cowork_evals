@@ -8,10 +8,9 @@ pattern happens to match. Either way the number is about our config file and not
 plugin, and nothing in the output says so.
 
 It happens two ways. The tool is offered and the container refuses the call, which leaves a
-`permission_denied` record in the trace. Or the tool is not offered at all, and the model
-writes something like "There's no shell/bash execution tool available in this environment",
-which leaves no record of anything. Both are measured in
-[`../docs/running_evals.md`](../docs/running_evals.md).
+record in the trace saying so. Or the tool is not offered at all, and the model just says it
+has no such tool, which leaves no record of anything. Both are in
+[`../docs/running_evals.md`](../docs/running_evals.md), with the record's exact shape.
 
 Three things, then. Fail those evals. Stop the last line the gate prints from saying
 everything passed when it just printed failures. And write down where a run's files end up,
@@ -26,13 +25,13 @@ Branch: `feat/run-validity`.
 
 | Not in scope                                                     | Where it is instead                        |
 | ----------------------------------------------------------------- | -------------------------------------------- |
-| Merging a verdict produced outside the harness into the result document | Nowhere. Deferred by the problem report's own recommendation |
+| Merging a verdict produced outside the harness into the result file | Nowhere. Nobody has asked for it |
 | The content checker that reads the kept workspace                | Outside this package. This repository is a library: [`../docs/library.md`](../docs/library.md) |
 | The baseline arm, and anything reading a second arm               | [`plan_ablation.md`](plan_ablation.md)      |
 | The backend declaration on a case                                | [`plan_runnability.md`](plan_runnability.md) |
 | The tool grant                                                   | Already done. `eval.allow_tools` is the session mirror in [`../docs/running_evals.md`](../docs/running_evals.md) |
 
-The grant was going to be part of this plan. It was done on 2026-09-12 instead, because a
+The grant was going to be part of this plan. It was done first and separately, because a
 check for a tool the model never got would fail every eval in the suite while the grant
 itself was still wrong.
 
@@ -66,21 +65,15 @@ many were picked, and how many ran. Phase 5 writes this into
 
 ## Phases
 
-### Phase 1: measure the denial record
+### Phase 1: what the trace says when a tool is missing
 
-Done on 2026-09-12, before this plan was written. The record is real, it is reproducible, and
-its fields are recorded in [`../docs/running_evals.md`](../docs/running_evals.md) with the
-four runs that produced them. Nothing in this phase is outstanding.
+Already done, and written into
+[`../docs/running_evals.md`](../docs/running_evals.md). Read it there; it is not repeated
+here. In short: a refused call leaves one record naming the tool and why it was refused, a
+tool that was never offered leaves nothing, and the run's opening record lists every tool the
+model was given, which is what the second case is caught with.
 
-- [x] The record, from a container run granted `Bash` alone whose case asked for a `Write`
-      call:
-      `{"type":"system","subtype":"permission_denied","tool_name":"Write","tool_use_id":"...","decision_reason_type":"mode","message":"..."}`
-- [x] An ungranted tool fails in two ways, not one. It is offered and refused at the call,
-      which writes that record, or it is not offered at all, which writes nothing and leaves
-      the model to say in prose that it could not do the thing
-- [x] The second way is still detectable: the `system` record of subtype `init` carries the
-      run's whole offered tool list, so a configured grant can be held against it
-- [x] `Skill` is not what the old grant denied. A skill fired and scored under `Bash` alone
+- [x] All of it, in that file
 
 ### Phase 2: the check
 
@@ -110,14 +103,12 @@ what they found into the result file, so the gate still reads only that file.
 
 The last line the gate prints says how many cases passed, and it is wrong twice.
 
-Measured 2026-09-12. `cowork_evals run --docker plugins/smoke --allow-tools Read`, one case,
-its only grader failed. It printed `FAIL ...` and then, on the next line,
-`1 cases, 1 passed, overall score 0.00`. The count comes from `casesPassed` in the result
-file, which the harness sets for any case scoring at or above `--threshold`, and we pin that
-threshold to 0 so our own gate decides instead. So every case counts as passed there, always.
+It can print a failure and then, on the very next line, say every case passed. The count
+comes from `casesPassed` in the result file, which the harness sets for any case scoring at
+or above `--threshold`. We pin that threshold to 0 so our own gate decides instead, so every
+case counts as passed there, always.
 
-The second way is the one in the report: a sweep the cost ceiling stopped early still reads
-as if every case ran.
+The other way: a sweep the cost ceiling stopped early still reads as if every case ran.
 
 The exit code is right in both. Only the line is wrong.
 
@@ -190,5 +181,5 @@ Unit tier throughout. Nothing here needs a model.
 
 - [ ] `plugins/smoke/` on Docker, from the integration tier, passes
 - [ ] A case asking for a `Write` call under a grant without `Write`, from the integration
-      tier, fails, and the line names `Write`. Phase 1 already ran this by hand
+      tier, fails, and the line names `Write`
 - [ ] `scripts/test.sh` and `ruff` clean

@@ -112,9 +112,9 @@ Assertions, not arguments. Each box is a container run and a grep over what it p
       token. Record what was found and where, dated, in
       [`../docs/docker.md`](../docs/docker.md)
 - [ ] Run the same case with `--dry-run` and grep the output for the token
-- [ ] If `run.log` carries the token because the container printed it, say so in that
-      document as a measured limit rather than removing the feature. The container's output
-      is the container's
+- [ ] If `run.log` carries the token because the container printed it, write that down in
+      that file as a limit rather than removing the feature. What the container prints is the
+      container's
 
 ### Phase 5: tests
 
