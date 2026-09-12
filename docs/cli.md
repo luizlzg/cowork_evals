@@ -220,6 +220,28 @@ A selection matching no case at all is an operator mistake: a mistyped `--tag` m
 as a pass, and the refusal catches it before a container starts. One plugin of a sweep
 matching none is normal under `--tag` and is not a failure.
 
+### A case cannot be left out of one invocation
+
+`--case GLOB` takes one glob over the case name, with `*` and `?`. There is no negation and
+no list. `--tag T` only includes, and repeating it widens the selection. Neither can leave one
+case out: the options say which cases to keep, never which to drop. The flags behind them are
+`claude plugin eval --case` and `--tag`, in
+[claude_code/plugin_eval_reference.md](claude_code/plugin_eval_reference.md), and on the
+container backend the harness finds and picks the cases itself, so there is nothing here to
+filter after it.
+
+No option is added for it. Excluding a case would mean invoking the harness once per case,
+which writes one result document per case, and both the log layout and the pass and fail
+rules in [running_evals.md](running_evals.md) read one document per plugin.
+
+What works is a tag on the case. Put one in the case's frontmatter, name it in `--tag`, and
+the set is the cases carrying it. A case to be left out of the usual sweep carries a tag the
+usual sweep does not name. The frontmatter key is [eval_format.md](eval_format.md).
+
+What the invocation selected is printed rather than inferred. The verdict's last line carries
+how many cases the path holds, how many the filters kept, how many ran and how many passed.
+[running_evals.md](running_evals.md) says what each of the four means.
+
 The order is preflight, then validation, then the selection count, then pruning, then the
 `--dry-run` exit.
 

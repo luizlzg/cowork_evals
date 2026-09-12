@@ -203,10 +203,10 @@ to be something they can rely on.
 
 Documentation only.
 
-- [ ] [`../docs/cli.md`](../docs/cli.md) says that `--case` takes one glob over the case name
+- [x] [`../docs/cli.md`](../docs/cli.md) says that `--case` takes one glob over the case name
       and `--tag` only includes, so neither can leave a case out, and points at the harness
       reference for it
-- [ ] It gives the one thing that does work: put a tag on the case and select on tags
+- [x] It gives the one thing that does work: put a tag on the case and select on tags
 
 ### Phase 6: tests
 
