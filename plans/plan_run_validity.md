@@ -252,8 +252,8 @@ Unit tier throughout. Nothing here needs a model.
 
 ### Phase 8: run it for real
 
-- [ ] `plugins/smoke/` on Docker, from the integration tier, passes
-- [ ] A `plugins/smoke/` case asking for a `Write` call, run under a deliberately narrowed
+- [x] `plugins/smoke/` on Docker, from the integration tier, passes
+- [x] A `plugins/smoke/` case asking for a `Write` call, run under a deliberately narrowed
       `--allow-tools` that omits `Write`, from the integration tier, fails, and the line names
       `Write`. The narrowing is the test's, and the default grant is untouched
-- [ ] `scripts/test.sh` and `ruff` clean
+- [x] `scripts/test.sh` and `ruff` clean

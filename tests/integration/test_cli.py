@@ -153,6 +153,49 @@ def test_a_docker_run_writes_the_whole_log_layout_and_passes(credentialled, tmp_
     assert Path(trace_path).is_file()
 
 
+# A grant carrying nothing that can create a file. The narrowing is this test's, and the
+# default in `cowork_evals.yaml` is untouched. The option replaces the value rather than
+# adding to it, so this is the whole grant. `Bash` and `Edit` are dropped with `Write`: the
+# snapshot in ../../docs/running_evals.md measured a `Write` call going through under a grant
+# that named those two, so leaving either in would grade a run that had a way to write.
+WITHOUT_A_WRITER = ["Read", "Glob", "Grep", "Skill"]
+
+
+@pytest.mark.live
+def test_a_run_that_never_got_write_fails_instead_of_scoring(credentialled, tmp_path) -> None:
+    """The case asks for a `Write` call and the grant carries no tool that can create a file.
+
+    Whether the trace answers with a denial record or with an `init` list missing the name
+    is the harness's, and the verdict fails the run either way. What cannot be reached
+    without a real run is that one of the two is written at all.
+    """
+    root = tmp_path / "logs"
+    code = main(
+        [
+            "run",
+            "--docker",
+            str(SMOKE),
+            "--out",
+            str(root),
+            "--runs",
+            "1",
+            "--case",
+            "writes-a-file",
+            "--allow-tools",
+            *WITHOUT_A_WRITER,
+        ]
+    )
+    run = (root / logs.LATEST).resolve()
+    verdict = (run / logs.VERDICT_FILE).read_text()
+    assert code == 1, verdict
+    named = [line for line in verdict.splitlines() if line.startswith("FAIL ") and "Write" in line]
+    assert named, verdict
+
+    document = json.loads((run / "smoke" / RESULT_NAME).read_text())
+    entry = document["cases"][0]["arms"]["with"][0]
+    assert traces.DENIED in entry or traces.UNOFFERED in entry, entry
+
+
 # test.
 
 

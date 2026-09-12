@@ -235,6 +235,20 @@ The list is longer than the grant. `WebSearch` and the rest are offered without 
 so a name in the list is not a statement that the run may call it. The check below reads the
 list in one direction only: a granted name absent from it was never offered.
 
+Two narrowed grants over `plugins/smoke/evals/plugin/writes-a-file`, which asks for a file to
+be created and writes no `allowed_tools` of its own, same date and image:
+
+| The grant                             | What the run did                                                    |
+| ------------------------------------- | ------------------------------------------------------------------- |
+| Everything above but `Write`          | The `Write` call went through, the file was created and the case scored 1.00 |
+| `Read Glob Grep Skill`                | The call was refused, one `permission_denied` record with `tool_name: Write` and `decision_reason_type: mode`, and the file was not created |
+
+So dropping a name from the grant does not by itself take the tool away from a case that did
+not ask for it: the first grant still named `Bash` and `Edit`, and the run wrote the file. A
+grant that carries no tool able to create a file is what produces the denial. The `init` list
+was the full list above in both, so the offered list is not the grant and check two cannot be
+reached this way.
+
 The Docker backend exports `CLAUDE_CODE_WALNUT_SPIRE`, the early-access enablement variable,
 so no developer sets it by hand. It is a constant in `harness.py` and not a configuration key.
 See [plugin_eval.md](plugin_eval.md).
