@@ -40,7 +40,7 @@ not the system's: what is built and usable is
 | 8 | [`done/plan_ask.20260912.md`](done/plan_ask.20260912.md) | The `ask` verb over the driver, and the skill that asks a live session what it does | implemented | `feat/ask`            |
 | 9 | [`done/plan_focus.20260912.md`](done/plan_focus.20260912.md) | The consent modal, the frontmost guard and the composer clear, in the driver | implemented | `feat/focus`          |
 | - | [`done/plan_believable_results.20260912.md`](done/plan_believable_results.20260912.md) | Nothing. The measurements, the decisions, and the four plans that follow them | implemented |                       |
-| 10 | [`plan_run_validity.md`](plan_run_validity.md) | A run that never got its tool fails instead of scoring, and honest counts | not started | `feat/run-validity`   |
+| 10 | [`done/plan_run_validity.20260912.md`](done/plan_run_validity.20260912.md) | A run that never got its tool fails instead of scoring, and honest counts | implemented | `feat/run-validity`   |
 | 11 | [`plan_runnability.md`](plan_runnability.md) | The `no-cowork` tag on a case, enforced both ways, counted rather than failed | not started | `feat/runnability`    |
 | 12 | [`plan_env_passthrough.md`](plan_env_passthrough.md) | Named host variables forwarded into the run container, values never logged | not started | `feat/env-passthrough` |
 | 13 | [`plan_ablation.md`](plan_ablation.md) | The baseline arm, and a verdict that decides on the per-case delta | not started | `feat/ablation`       |
@@ -135,9 +135,9 @@ Everything else those plans measure is a `docker run` or a subprocess with a fix
 and a fixed expected output, and is asserted without a model. A fact that can be established
 deterministically never costs an agentic run.
 
-One fixture case, in the integration tier, is not a suite. It never runs in the default
-selection, and nothing here runs it on a cadence. See
-[`../tests/README.md`](../tests/README.md).
+Two fixture cases, in the integration tier, are not a suite. Neither runs in the default
+selection, and nothing here runs either on a cadence. See
+[`../tests/README.md`](../tests/README.md) and [`../plugins/README.md`](../plugins/README.md).
 
 Plan 4 is separate because CoWork is not symmetric with the other two. The driver returns one
 session document for one prompt. Reading the case tree, deciding which case the backend can

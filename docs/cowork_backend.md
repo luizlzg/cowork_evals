@@ -154,13 +154,13 @@ not verifiable from the host.
 
 ## What one suite costs, and what a grader can be told here
 
-A snapshot, captured 2026-09-09, from `tests/integration/test_cowork_backend.py` against
-`plugins/smoke/`, whose one case writes `runs: 1`.
+A snapshot, captured 2026-09-09, from `tests/integration/test_cowork_backend.py` against the
+`python-version` case of `plugins/smoke/`, which writes `runs: 1`.
 
 | Measured                                    | Value                                        |
 | ------------------------------------------- | ---------------------------------------------- |
 | Wall clock of one case                      | 6.1 s, the run's `durationSeconds`. It runs from the audit `user` record to the collection, so it excludes the deep link, the settle and the discovery |
-| Ceiling entries one suite costs             | One per run. That suite is one case at `runs: 1`, so one entry |
+| Ceiling entries one suite costs             | One per run. That selection is one case at `runs: 1`, so one entry |
 | `costUsd` of that suite                     | 0. The case carries no judged grader, and a CoWork run is not observable from the host |
 
 Two facts about the grader mapping cannot be read from a file, and both were measured

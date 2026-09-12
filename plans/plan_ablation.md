@@ -27,8 +27,9 @@ difference between the two scores rather than on the score alone.
 Off by default, because it runs every case twice and so costs twice as much.
 
 Last of the four plans, because it rewrites the pass and fail rules that
-[`plan_run_validity.md`](plan_run_validity.md) and
-[`plan_runnability.md`](plan_runnability.md) both change.
+[`plan_runnability.md`](plan_runnability.md) changes and that the run validity work already
+changed. What those rules are today is
+[`../docs/running_evals.md`](../docs/running_evals.md).
 
 Branch: `feat/ablation`.
 
@@ -89,7 +90,7 @@ two-arm run is red; too loose and a real skip goes green in the one-arm run ever
 | ------------------------------------------ | --------------------------------------------------------------------------------------------- |
 | A baseline arm on CoWork                   | Nowhere, and the section above says why                                                       |
 | `arm:` on a grader                         | Carried into the document by both backends and inert today. This plan makes it live on Docker |
-| Failing a run that never executed its tool | [`plan_run_validity.md`](plan_run_validity.md)                                                |
+| Failing a run that never executed its tool | Already built. The two conditions are in [`../docs/running_evals.md`](../docs/running_evals.md) |
 
 ## Orientation
 

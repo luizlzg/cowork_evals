@@ -100,7 +100,7 @@ Every other skip in `cowork_backend.skips` becomes a validator error or a counte
 | ------------------------------------------ | ------------------------------------------------------------------------------ |
 | An exclusion glob on the invocation        | Not built. `--case` takes one glob with no negation, and `--tag` only includes |
 | A `no-docker` counterpart                  | Nowhere. Nothing names a case key the Docker backend cannot honour             |
-| Failing a run that never executed its tool | [`plan_run_validity.md`](plan_run_validity.md)                                 |
+| Failing a run that never executed its tool | Already built. The two conditions are in [`../docs/running_evals.md`](../docs/running_evals.md) |
 | The baseline arm                           | [`plan_ablation.md`](plan_ablation.md)                                         |
 
 ## Orientation
@@ -150,9 +150,10 @@ Every other skip in `cowork_backend.skips` becomes a validator error or a counte
 - [ ] A case declared unrunnable on the backend that ran is counted, never failed
 - [ ] A case reporting `skipped` still fails, so the one run-time grader skip and every
       harness skip fail exactly as they did
-- [ ] The summary line names how many cases were declared unrunnable, beside the counts
-      [`plan_run_validity.md`](plan_run_validity.md) put there, so a counted case is visible
-      rather than silently absent
+- [ ] The summary line names how many cases were declared unrunnable, beside the four counts
+      it already carries, found, picked, ran and passed, so a counted case is visible rather
+      than silently absent. What each of the four means is
+      [`../docs/running_evals.md`](../docs/running_evals.md)
 - [ ] A declared case leaves all four numbers in `results._aggregates`, not one. It is out of
       `casesTotal`, out of `casesPassed`, and out of both means. Subtracting it from
       `casesTotal` alone would leave it counted as passed, because `casesPassed` counts a
