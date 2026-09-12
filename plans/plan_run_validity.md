@@ -1,22 +1,36 @@
-# Run validity: an eval that never got its tool fails instead of scoring
+# Run validity: do not score an eval the model could not have passed
 
-One line in our config file, `eval.allow_tools`, decides which tools the model gets.
+## The problem
 
-If a case needs `Write` and that line does not list it, the model cannot write the file. It
-says so instead. The grader reads that sentence and scores it, usually 0, sometimes 1 if the
-pattern happens to match. Either way the number is about our config file and not about the
-plugin, and nothing in the output says so.
+An eval's score is meant to tell you whether the plugin works. Sometimes it tells you
+nothing, and nothing in the output says which of the two you are looking at.
 
-It happens two ways. The tool is offered and the container refuses the call, which leaves a
-record in the trace saying so. Or the tool is not offered at all, and the model just says it
-has no such tool, which leaves no record of anything. Both are in
-[`../docs/running_evals.md`](../docs/running_evals.md), with the record's exact shape.
+If the model is never given a tool the case needs, it cannot do the task. It says so, and the
+grader scores that sentence instead. A 0 reads like the plugin failing. A 1 happens whenever
+the grader's pattern matches the apology. Neither number is about the plugin.
 
-Three things, then. Fail those evals. Stop the last line the gate prints from saying
-everything passed when it just printed failures. And write down where a run's files end up,
-because a consumer builds their own checker over them.
+The output lies a second way as well. The gate prints its failures, and then the last line
+says every case passed.
 
-Why the rule is what it is, is the decisions table in
+So a green suite is not evidence and a red one is not a diagnosis. That is what makes people
+stop reading either.
+
+## What this plan does
+
+Three things.
+
+Read each run's trace, see that the model never got the tool, and fail the eval instead of
+scoring what it wrote without it. There are two ways it happens: the tool was offered and the
+container refused the call, which leaves a record; or it was never offered, and the model
+just says it has no such tool, which leaves nothing. Both are described in
+[`../docs/running_evals.md`](../docs/running_evals.md).
+
+Make the gate's last line say what the gate decided, and say when a sweep stopped early.
+
+Write down where a run's files end up, because a consumer builds their own checker over them
+and needs a layout that does not move.
+
+Why the rule for failing a run is what it is, is the decisions table in
 [`plan_believable_results.md`](plan_believable_results.md). Do not work it out again here.
 
 Branch: `feat/run-validity`.

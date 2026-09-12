@@ -1,16 +1,23 @@
-# Environment passthrough: named host variables, forwarded into the run container
+# Environment passthrough: get a credential into the container
 
-The run container starts with exactly two environment variables, `HOME` and the enablement
-flag. A skill that needs a credential to do its work cannot be evaluated at all: there is no
-route from the developer's machine into the run.
+## The problem
 
-This plan adds one. `cowork_evals.yaml` names the variables to forward, the container backend
-forwards them, and no value ever reaches a log, the result document, a gate line or the
-dry-run output. Names do.
+A skill that needs a credential cannot be evaluated at all.
 
-It amends a rule that two files state today: nothing is read from the process environment.
-After this plan, exactly one thing is, it is named in the configuration file, and it is
-forwarded rather than read.
+Say a skill calls an API and reads its key from the environment. The container an eval runs
+in starts with two environment variables, `HOME` and an internal flag, and there is no way to
+add a third. So the skill fails in every eval, for a reason that has nothing to do with the
+skill, and there is nothing the case author can do about it.
+
+## What this plan does
+
+The config file names which variables to pass from your machine into the container. The
+backend passes them. The values never appear in a log, a result file, a gate line or the
+dry-run output; the names do.
+
+It changes a rule this repository states twice: nothing is read from the process
+environment. After this, exactly one thing is, it is named in the config file, and it is
+passed through rather than read.
 
 Branch: `feat/env-passthrough`.
 

@@ -1,17 +1,29 @@
-# Runnability: a case says which backend cannot run it, and is counted rather than failed
+# Runnability: a case that cannot run on a backend says so, and is not counted as a failure
 
-A case the CoWork backend cannot run is discovered at run time, skipped, and fails the gate.
-There is no way to read that fact off the case, and a suite holding one such case is
-permanently red for something nobody can fix.
+## The problem
 
-This plan moves the fact into the case file as a reserved tag, makes the validator enforce it
-in both directions, has the CoWork backend read it instead of deciding at run time, and makes
-the gate count such a case rather than fail it.
+Some evals cannot run on CoWork at all. A case that caps the number of turns, or picks a
+model, or stages files into the workspace, needs things a live CoWork session does not have.
 
-What the tag is, and why it is a tag rather than a frontmatter key, is the decisions table in
-[`plan_believable_results.md`](plan_believable_results.md). The measurement behind it is in
-[`../docs/eval_format.md`](../docs/eval_format.md): the harness refuses an unknown `prompt.md`
-frontmatter key at case load, and the whole suite then writes no result document.
+Today that shows up as a failure. The backend works it out while the suite is running, skips
+the case, and the gate fails the suite for the skip. Nothing can be done about it: the case
+is correct, the backend is correct, and the suite is permanently red.
+
+A suite that is permanently red for something nobody can fix is a suite people stop looking
+at. That is worse than not running it.
+
+There is also no way to tell, by looking at a case, that it cannot run there. You have to
+read this package's source.
+
+## What this plan does
+
+The case says it, in its own file, with a tag. The validator checks the tag is there when it
+should be and not there when it should not. The CoWork backend reads the tag instead of
+working it out mid-run. And the gate counts such a case rather than failing it.
+
+Why a tag and not a new frontmatter key is in the decisions table in
+[`plan_believable_results.md`](plan_believable_results.md), and the fact behind it is in
+[`../docs/eval_format.md`](../docs/eval_format.md).
 
 Branch: `feat/runnability`.
 

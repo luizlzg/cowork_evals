@@ -1,14 +1,26 @@
-# Ablation: the baseline arm, and a gate that decides on the delta
+# Ablation: check the plugin did anything, not just that the cases passed
 
-`harness.py` pins `ABLATION = "none"` and exposes nothing. A suite therefore answers "do the
-cases pass" and never answers "did the plugin change anything". Under `--ablation
-with-without` the harness runs every case twice, with the plugin loaded and with no plugin at
-all, and the score delta is the evidence.
+## The problem
 
-This plan unpins it, adds the option and the setting, collects the second arm's traces, and
-rewrites the gate to decide on the delta.
+A green suite does not mean the plugin works. It can mean the model was good enough at the
+task on its own.
 
-It is last of the four, because it rewrites the gate that
+Ask a model to write a spreadsheet and it may well write one without your spreadsheet plugin
+loaded at all. Every grader passes. The suite is green. You have learned nothing about the
+plugin, and you cannot tell that apart from a suite that is green because the plugin is
+excellent.
+
+The harness can answer this: run each case twice, once with the plugin loaded and once with
+nothing loaded, and compare. This package pins that off and offers no way to turn it on.
+
+## What this plan does
+
+Adds the option and the config key, keeps both runs' traces, and makes the gate decide on the
+difference between the two scores rather than on the score alone.
+
+Off by default, because it doubles what a suite costs.
+
+This is the last of the four plans, because it rewrites the gate that
 [`plan_run_validity.md`](plan_run_validity.md) and
 [`plan_runnability.md`](plan_runnability.md) both change.
 
