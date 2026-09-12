@@ -63,6 +63,16 @@ CONTAINER_TMPDIR = f"{CONTAINER_LOGS}/{SANDBOX_DIR}"
 EXTRA_CA_SECRET = "extra_ca"
 CONTAINER_EXTRA_CA = "/usr/local/share/ca-certificates/extra_ca.crt"
 
+# The names `docker.env_passthrough` may never carry. Each one is how Claude Code takes
+# Claude's own credential, and the container login is the one route for that. docs/docker.md.
+CREDENTIAL_NAMES = frozenset(
+    {
+        "ANTHROPIC_API_KEY",
+        "ANTHROPIC_AUTH_TOKEN",
+        "CLAUDE_CODE_OAUTH_TOKEN",
+    }
+)
+
 
 class Condition(Enum):
     """What `Docker.check` reports unmet.
@@ -75,10 +85,12 @@ class Condition(Enum):
     DAEMON = "daemon"
     IMAGE = "image"
     CREDENTIAL = "credential"
+    ENVIRONMENT = "environment"
+    ENV_CREDENTIAL = "env_credential"
 
 
 def remedy(condition: Condition) -> str:
-    """The one command that fixes each condition.
+    """The one fix for each condition.
 
     Every caller reads it here: `check` below, `preflight.py`, `scripts/login.sh` and the
     integration tier. `scripts/image.sh` reads it through the messages `check` builds. It
@@ -92,6 +104,13 @@ def remedy(condition: Condition) -> str:
             return "run cowork_evals setup --docker"
         case Condition.CREDENTIAL:
             return "run cowork_evals setup --docker"
+        case Condition.ENVIRONMENT:
+            return "set it on this host, or drop it from docker.env_passthrough"
+        case Condition.ENV_CREDENTIAL:
+            return (
+                "drop it from docker.env_passthrough: the container login is the one "
+                "credential route, and cowork_evals setup --docker makes it"
+            )
 
 
 class DockerError(Exception):
@@ -194,6 +213,8 @@ class Docker:
             if settings.extra_ca_file is not None and settings.extra_ca_file.is_file()
             else None
         )
+        self.env_passthrough = settings.env_passthrough
+        self._environment: dict[str, str | None] | None = None
 
     # The login this package owns. Both paths are mounted read-write, because the CLI
     # refreshes its token and rewrites its state file on every start.
@@ -467,6 +488,21 @@ class Docker:
         )
         return completed.returncode == 0
 
+    def environment(self) -> dict[str, str | None]:
+        """Each forwarded name and what the host holds for it, read once.
+
+        `check` reads it and `run_preamble` uses what it read, so a value is never read a
+        second time at container start. It is read here and not at construction, so a
+        `Docker` still does no work until something asks it to, and `--dry-run`, which
+        reaches neither caller, reads no value at all.
+
+        The values never leave this mapping except into the container's own environment.
+        Nothing prints one, writes one into a run directory or puts one in a message.
+        """
+        if self._environment is None:
+            self._environment = {name: os.environ.get(name) for name in self.env_passthrough}
+        return self._environment
+
     def has_credential(self) -> bool:
         """Whether the login directory holds a credential the CLI can use.
 
@@ -510,4 +546,33 @@ class Docker:
             )
         if not self.has_credential():
             unmet.append((Condition.CREDENTIAL, f"no credential: {remedy(Condition.CREDENTIAL)}"))
+        unmet += self.check_environment()
+        return unmet
+
+    def check_environment(self) -> list[tuple[Condition, str]]:
+        """One line per forwarded name that cannot be forwarded, and never a value.
+
+        A credential name is refused whatever it holds, so it is decided before the host is
+        consulted. Everything else has to be there: an absent name and an empty one are one
+        condition, because forwarding an empty string is a run that looks configured and is
+        not.
+        """
+        unmet: list[tuple[Condition, str]] = []
+        for name in self.env_passthrough:
+            if name in CREDENTIAL_NAMES:
+                unmet.append(
+                    (
+                        Condition.ENV_CREDENTIAL,
+                        f"docker.env_passthrough names {name}, which carries Claude's own "
+                        f"credential: {remedy(Condition.ENV_CREDENTIAL)}",
+                    )
+                )
+            elif not self.environment()[name]:
+                unmet.append(
+                    (
+                        Condition.ENVIRONMENT,
+                        f"docker.env_passthrough names {name}, which is unset or empty on "
+                        f"this host: {remedy(Condition.ENVIRONMENT)}",
+                    )
+                )
         return unmet

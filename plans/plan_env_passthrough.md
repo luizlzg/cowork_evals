@@ -110,15 +110,15 @@ becomes a second one.
 
 ### Phase 2: the preflight
 
-- [ ] A named variable absent from the process environment is an unmet condition, one line
+- [x] A named variable absent from the process environment is an unmet condition, one line
       per name, and `run` exits 3
-- [ ] A named variable present and empty is the same unmet condition. An empty string is not
+- [x] A named variable present and empty is the same unmet condition. An empty string is not
       a value
-- [ ] A name that would carry Claude's own credential is refused whatever its value, and the
+- [x] A name that would carry Claude's own credential is refused whatever its value, and the
       message names the container login as the route
-- [ ] `check --docker` reports the same conditions, so a developer sees them without starting
+- [x] `check --docker` reports the same conditions, so a developer sees them without starting
       a run
-- [ ] Every message names the variable and never its value
+- [x] Every message names the variable and never its value
 
 ### Phase 3: the forwarding
 
