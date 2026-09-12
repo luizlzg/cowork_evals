@@ -5,10 +5,17 @@ test image already built by `scripts/cowork_pytest.sh`, and one credential route
 precondition fails these tests and never skips one. Nothing here builds: a test that builds
 its own subject reports a build as a pass.
 
-No CoWork profile is needed. There is no live CoWork run here, for the reason in
-../../plans/plan_cli.md: everything this plan built above a backend is backend-neutral and
-is proven on `--docker` below, and the option mapping is proven with `--dry-run --cowork`
-in the unit tier.
+Every test but one needs no CoWork profile. Everything the command builds above a backend is
+backend-neutral and is proven on `--docker` below, and the option mapping is proven with
+`--dry-run --cowork` in the unit tier.
+
+The one that does is `ask`, which reaches a live session and cannot be proven any other way.
+It needs a signed-in CoWork, the desktop application running, the macOS Accessibility grant
+and `cowork_evals.yaml` naming the active profile. A missing precondition fails it and never
+skips it, and it carries `live`: it costs a VM boot, one entry against the driver's rate
+ceiling, and a permanent session in the account.
+
+Nothing here prints a path, a prompt or an identifier. Public repository rule.
 """
 
 from __future__ import annotations
@@ -21,11 +28,12 @@ from pathlib import Path
 
 import pytest
 
-from cowork_evals import logs, traces
+from cowork_evals import Config, logs, preflight, traces
 from cowork_evals.cli import main
 from cowork_evals.docker import Condition, Docker, remedy
 from cowork_evals.docker.pytest_image import BUILD_REMEDY, PytestImage
 from cowork_evals.harness import RESULT_NAME
+from cowork_evals.preflight import COWORK
 
 ROOT = Path(__file__).resolve().parents[2]
 SMOKE = ROOT / "plugins" / "smoke"
@@ -154,4 +162,47 @@ def test_the_test_verb_writes_nothing_on_the_host(images, tmp_path) -> None:
     before = sorted(ROOT.iterdir())
     completed = command("test", "--docker", str(SMOKE / "tests" / "test_passes.py"))
     assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert sorted(ROOT.iterdir()) == before
+
+
+# ask.
+
+# A prompt the session answers from itself. It calls no tool, so the run is the floor a
+# session costs and the marker is unambiguous in the printed answer.
+MARKER = "ASKED"
+ASK_PROMPT = f"Reply with the single word: {MARKER}"
+
+
+@pytest.fixture
+def cowork_ready() -> None:
+    """The CoWork preflight, asserted before a test spends a VM boot on it.
+
+    It fails the test rather than skipping it, and its lines name the fix, which is the whole
+    point of the preflight.
+    """
+    unmet = preflight.checks(COWORK, Config.load(ROOT / "cowork_evals.yaml"))
+    assert unmet == [], "\n".join(unmet)
+
+
+@pytest.mark.live
+def test_one_ask_prints_a_non_empty_answer_and_names_a_session_that_exists(
+    cowork_ready, unattended: Path, monkeypatch, capsys
+) -> None:
+    """One submission, one printed answer, and no run directory anywhere.
+
+    It calls `main` rather than the executable, so the footer is read off the two streams
+    this command wrote rather than out of a subprocess's buffers. `main` reads the
+    configuration file in the working directory, so the working directory is the one the
+    `unattended` fixture wrote its file into, exactly as a consumer runs the command from a
+    directory holding one. That file is what keeps the consent modal out of a test run.
+    """
+    monkeypatch.chdir(unattended.parent)
+    before = sorted(ROOT.iterdir())
+    assert main(["ask", "--cowork", ASK_PROMPT]) == 0
+    printed = capsys.readouterr()
+
+    assert MARKER in printed.out
+    named = [line for line in printed.err.splitlines() if line.startswith("session: ")]
+    assert len(named) == 1
+    assert Path(named[0].removeprefix("session: ")).is_dir()
     assert sorted(ROOT.iterdir()) == before

@@ -1,4 +1,4 @@
-"""The command: the parser, the seven verbs, the dispatch and the exit codes.
+"""The command: the parser, the eight verbs, the dispatch and the exit codes.
 
 The surface is docs/cli.md, and this module is the whole of it. There is no second entry point
 and no per-backend executable.
@@ -14,6 +14,7 @@ exits 2. Its design stays in docs/staged_runtime.md.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -33,6 +34,7 @@ from . import (
 )
 from .cases import CaseError, discover, plugin_name, plugin_roots
 from .config import Config, CoWorkError
+from .cowork import CoWork
 from .docker import Docker, DockerError, pytest_image
 from .docker.pytest_image import PytestImage
 from .harness import RunOptions
@@ -43,8 +45,11 @@ ALL = "all"
 
 # The exit codes. docs/cli.md. `test` is the one verb that returns a code from below
 # unchanged, and it returns pytest's.
+#
+# `FAILED` is the gate on `run` and the driver on `ask`. It is one code because it is one
+# thing to an operator: the verb reached its backend and the work did not succeed.
 OK = 0
-GATE_FAILED = 1
+FAILED = 1
 USAGE = 2
 PREFLIGHT_FAILED = 3
 INTERRUPTED = 130
@@ -99,6 +104,7 @@ def build_parser() -> argparse.ArgumentParser:
     verbs = parser.add_subparsers(dest="verb")
 
     _run_parser(verbs)
+    _ask_parser(verbs)
     _test_parser(verbs)
     _setup_parser(verbs)
     _check_parser(verbs)
@@ -159,6 +165,28 @@ def _run_parser(verbs: Any) -> None:
     )
     verb.add_argument(
         "--dry-run", action="store_true", help="print what would run, and the code it would reach"
+    )
+
+
+def _ask_parser(verbs: Any) -> None:
+    """`ask` carries a prompt or a session, and the four options in docs/cli.md.
+
+    It runs no eval, so it takes no case option: no `--runs`, no `--tag`, no `--case`, no
+    `--out` and no `--require-coverage`. `--cowork` is its only backend, exactly as
+    `--docker` is `test`'s, so a second backend is an unknown option and `argparse` exits 2.
+
+    The prompt is optional here rather than required, because `--session` is the other way
+    of naming what to print. The four combinations that make no sense are refused by the
+    verb, with a message naming what was typed, and `argparse` cannot express any of them.
+    """
+    verb = verbs.add_parser("ask", help="submit one prompt to a CoWork session and print it")
+    _backend_group(verb, COWORK)
+    verb.add_argument("prompt", nargs="?", help="the prompt. `-` reads it from standard input")
+    verb.add_argument("--session", help="print a session already on disk. Submits nothing")
+    verb.add_argument("--timeout-seconds", type=float, help="this run's timeout")
+    verb.add_argument("--json", action="store_true", help="print the session document")
+    verb.add_argument(
+        "--dry-run", action="store_true", help="print the deep link and the ceiling arithmetic"
     )
 
 
@@ -313,6 +341,8 @@ def main(argv: list[str] | None = None) -> int:
 def _dispatch(args: argparse.Namespace, config: Config) -> int:
     if args.verb == "run":
         return _run(args, config)
+    if args.verb == "ask":
+        return _ask(args, config)
     if args.verb == "test":
         return _test(args, config)
     if args.verb == "setup":
@@ -469,7 +499,7 @@ def _dry_run(
     if dead:
         return _refuse(
             ["every selected case is skipped on this backend, so the gate would fail"],
-            GATE_FAILED,
+            FAILED,
         )
     return OK
 
@@ -547,7 +577,7 @@ def _sweep(
         decided = gate.gate(directory, extra=extra)
         (directory / logs.GATE_FILE).write_text(decided.text, encoding="utf-8")
         print(decided.text, end="")
-    return OK if decided.passed else GATE_FAILED
+    return OK if decided.passed else FAILED
 
 
 def _each_plugin(
@@ -605,6 +635,149 @@ def _each_plugin(
                 for warning in traces.collect(output):
                     print(f"trace: {warning}", file=sys.stderr)
     return ()
+
+
+# ask.
+
+# The driver code that is configuration or the rate ceiling. It is the preflight class, so it
+# leaves this verb with the preflight's code. docs/cowork_driver.md.
+REFUSED_BEFORE_SUBMISSION = 2
+
+# The prompt that is read from standard input instead of from the command line.
+STDIN = "-"
+
+
+def _ask(args: argparse.Namespace, config: Config) -> int:
+    """One prompt to a CoWork session, or one session already on disk.
+
+    It is not an eval. There is no case tree, no grader, no result document, no gate and no
+    run directory, and it writes nothing on the host: the session directory in the profile is
+    the permanent record, and the run log is the driver's. `test` is the precedent.
+    docs/cli.md.
+
+    The rate ceiling is the driver's, in `CoWork._check`, and is not re-derived here. A second
+    ceiling in this verb would be a second source for one number.
+
+    `--session` skips the preflight because it reads a directory: no macOS, no profile and no
+    Accessibility grant. `--dry-run` skips it for the reason `run --dry-run` does, which is
+    that nothing behind the preflight is reached: the deep link is built from the prompt and
+    the ceiling arithmetic is read from the run log.
+
+    The keyboard is asked for once, after the preflight and before the submission, which is
+    where `_each_plugin` asks for it too. Cancel is the driver's code 2 and reaches the
+    preflight's exit code, and nothing has fired at that point. docs/cowork_driver.md.
+    """
+    refused = _ask_refusal(args)
+    if refused is not None:
+        return _usage(refused)
+
+    if args.session is not None:
+        return _ask_session(args, CoWork(config.cowork))
+
+    prompt = sys.stdin.read() if args.prompt == STDIN else args.prompt
+    overrides = {} if args.timeout_seconds is None else {"run_timeout": args.timeout_seconds}
+    try:
+        driver = CoWork(config.cowork, **overrides)
+        if args.dry_run:
+            return _ask_dry_run(driver, prompt)
+        unmet = preflight.checks(COWORK, config)
+        if unmet:
+            return _refuse(unmet, PREFLIGHT_FAILED)
+        cowork.consent(config.cowork)
+        return _ask_print(driver.run(prompt), args)
+    except CoWorkError as error:
+        return _ask_failure(args, config, prompt, error)
+
+
+def _ask_refusal(args: argparse.Namespace) -> str | None:
+    """The one line naming what was typed, or `None`. Every one of them returns 2.
+
+    `argparse` can express none of these: a prompt and `--session` are two ways of naming
+    what to print, and the two options below are only meaningful for a submission.
+    """
+    if args.prompt is None and args.session is None:
+        return "ask takes a prompt or --session: there is nothing to print"
+    if args.prompt is not None and args.session is not None:
+        return "ask takes a prompt or --session, not both: a session is either new or on disk"
+    if args.session is not None and args.timeout_seconds is not None:
+        return "--timeout-seconds is not accepted with --session: nothing waits"
+    if args.session is not None and args.dry_run:
+        return "--dry-run is not accepted with --session: nothing would be submitted"
+    return None
+
+
+def _ask_session(args: argparse.Namespace, driver: CoWork) -> int:
+    """One session already on disk. It submits nothing, costs nothing and spends no ceiling."""
+    directory = Path(args.session).expanduser()
+    if not directory.is_dir():
+        return _refuse([f"{directory}: no such session directory"], FAILED)
+    try:
+        return _ask_print(driver.collect(directory), args)
+    except CoWorkError as error:
+        return _refuse([f"{error.code}: {error}"], FAILED)
+
+
+def _ask_dry_run(driver: CoWork, prompt: str) -> int:
+    """The deep link, and the ceiling the submission would count against. It fires nothing.
+
+    The link is stdout and the arithmetic is stderr, so the link alone is what a redirect
+    captures.
+    """
+    print(driver.deep_link(prompt))
+    recent = driver.recent()
+    print(
+        f"1 submission planned, {recent} already made in the last 24 hours, "
+        f"max_runs is {driver.config.max_runs}",
+        file=sys.stderr,
+    )
+    return OK
+
+
+def _ask_failure(args: argparse.Namespace, config: Config, prompt: str, error: CoWorkError) -> int:
+    """What a raised driver code becomes.
+
+    A run timeout carries a session directory, the session keeps running in the VM, and what
+    it produced up to that point is still worth reading, so the verb collects and prints it
+    and still fails. That is what the CoWork backend does with the same code, and the code
+    itself is that backend's constant rather than a second copy here.
+    """
+    message = f"{error.code}: {error}"
+    if error.code == REFUSED_BEFORE_SUBMISSION:
+        return _refuse([message], PREFLIGHT_FAILED)
+    if error.code == cowork_backend.RUN_TIMEOUT_CODE and error.session_dir is not None:
+        print(message, file=sys.stderr)
+        try:
+            _ask_print(CoWork(config.cowork).collect(error.session_dir, prompt=prompt), args)
+        except CoWorkError as collected:
+            print(f"{collected.code}: {collected}", file=sys.stderr)
+        return FAILED
+    return _refuse([message], FAILED)
+
+
+def _ask_print(session: dict[str, Any], args: argparse.Namespace) -> int:
+    """The answer on stdout, and what produced it on stderr.
+
+    The split is so that `cowork_evals ask --cowork "..." > answer.txt` holds the answer and
+    nothing else. `--json` prints the whole session document instead, and then stdout is the
+    document and stderr is empty: a caller that asked for the document has every footer value
+    in it already. docs/cli.md.
+    """
+    if args.json:
+        print(json.dumps(session, indent=2))
+        return OK
+
+    print(session["final_text"])
+    assistant = sum(1 for turn in session["turns"] if turn["role"] == "assistant")
+    for label, value in (
+        ("session", session["session_dir"]),
+        ("assistant turns", assistant),
+        ("tools", ", ".join(session["tool_names"])),
+        ("outputs", ", ".join(session["outputs"])),
+        ("log", session["log_file"]),
+    ):
+        if value:
+            print(f"{label}: {value}", file=sys.stderr)
+    return OK
 
 
 # test.
@@ -721,18 +894,22 @@ def _docs(args: argparse.Namespace) -> int:
 
 
 def _init() -> int:
-    """Write the configuration file, the skill and the `CLAUDE.md` block, into the working
-    directory.
+    """Write the configuration file, every shipped skill and the `CLAUDE.md` block, into the
+    working directory.
+
+    The skills are whatever `src/cowork_evals/data/skills/` holds, one directory each, so
+    adding one is adding a directory and is no change here. docs/library.md.
 
     It never overwrites. A target that exists is left exactly as it is and reported, so a
     second run changes nothing and a consumer's own edits survive. Regenerating one means
     deleting it first, which is the operator's act and not this verb's. docs/cli.md.
     """
+    targets = [(resources.EXAMPLE_CONFIG, Path(resources.CONFIG_NAME)), *resources.skills()]
+    if len(targets) == 1:
+        return _refuse(["no skill in this installation"], PREFLIGHT_FAILED)
+
     written = 0
-    for source, target in (
-        (resources.EXAMPLE_CONFIG, Path(resources.CONFIG_NAME)),
-        (resources.SKILL, resources.SKILL_TARGET),
-    ):
+    for source, target in targets:
         if target.exists():
             print(f"kept {target}")
             continue

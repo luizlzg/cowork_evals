@@ -55,18 +55,18 @@ The distribution is `cowork-evals`. The command it installs is `cowork_evals`.
 Then, in the repository that owns the plugins:
 
 ```bash
-cowork_evals init    # cowork_evals.yaml, the eval-authoring skill, and a CLAUDE.md block
+cowork_evals init    # cowork_evals.yaml, the two skills, and a CLAUDE.md block
 cowork_evals docs    # where the documentation went, and every document name
 ```
 
 `init` overwrites nothing. It reports every target it kept.
 
-That means upgrading this package does not refresh what `init` already wrote. The skill is
-the one where that matters, because it carries the case format and a stale copy teaches an
-out-of-date one. After an upgrade, delete it and run `init` again:
+That means upgrading this package does not refresh what `init` already wrote. The skills are
+where that matters, because the eval-authoring one carries the case format and a stale copy
+teaches an out-of-date one. After an upgrade, delete them and run `init` again:
 
 ```bash
-rm .claude/skills/cowork-evals/SKILL.md && cowork_evals init
+rm -r .claude/skills/cowork-evals .claude/skills/cowork-ask && cowork_evals init
 ```
 
 ## What you need
@@ -103,7 +103,7 @@ example's own. The plugin is `notes`, it sits at `plugins/notes`, and it has one
 Install the package as above, then build the container backend:
 
 ```bash
-cowork_evals init             # the config, the skill, and the CLAUDE.md block
+cowork_evals init             # the config, the skills, and the CLAUDE.md block
 cowork_evals setup --docker   # two images, and one interactive login. Minutes, and once only
 cowork_evals check --docker   # exits 0 when the backend is ready
 ```
@@ -235,38 +235,46 @@ costs to run, is [`docs/approaches.md`](docs/approaches.md).
 ## The command
 
 ```bash
-cowork_evals init                    # the config, the skill, and the CLAUDE.md block
+cowork_evals init                    # the config, the skills, and the CLAUDE.md block
 cowork_evals setup --docker          # build the container images, and log in once
 cowork_evals check --all             # what each backend still needs, one line per backend
 cowork_evals run  --docker path/to/plugin          # an eval: a model, graders, a gate
 cowork_evals test --docker path/to/plugin/tests    # pytest on the CoWork runtime, no model
+cowork_evals ask  --cowork "..."     # one prompt to a live CoWork session, and its answer
 cowork_evals docs [name]             # where the documentation is, or one document's path
 cowork_evals prune --docker          # delete what setup built
 ```
 
 `run` grades what a model produced and exits non-zero when the gate fails. `test` runs no model,
 runs your own pytest suite inside the CoWork runtime, and returns pytest's exit code unchanged.
+`ask` runs no eval: it submits one prompt to a real CoWork session and prints the answer, which
+is how a question about what a live session does is answered by asking one.
 
 Every option has a default in `cowork_evals.yaml`, in the working directory. That file is the
 only configuration route: nothing is read from the process environment, and there is no `.env`.
 `cowork_evals init` writes it with every key and every default. Runs write to `logs/` under the
 working directory.
 
-## The skill
+## The skills
 
-`cowork_evals init` installs a Claude Code skill at `.claude/skills/cowork-evals/SKILL.md`, and
-a session in your repository picks it up from there. It fires on writing or fixing a case, a
-`prompt.md` or a grader, on a failing `cowork_evals` command, on the configuration file, and
-on plugin code that has to run inside a CoWork session.
+`cowork_evals init` installs two Claude Code skills under `.claude/skills/`, and a session in
+your repository picks them up from there. They fire on different questions.
 
-It carries the case tree, the two required frontmatter keys, the six grader types, three
-copy-paste grader idioms, the seven authoring traps, the exit codes and the 3.10 runtime
-constraint. It is the short form of the two documents below, and it sends a reader to
-`cowork_evals docs` for everything it does not carry.
+| Skill          | Fires on                                                                   |
+| -------------- | ---------------------------------------------------------------------------- |
+| `cowork-evals` | Writing or fixing a case, a `prompt.md` or a grader; a failing `cowork_evals` command; the configuration file; plugin code that has to run inside a session |
+| `cowork-ask`   | A question about what a live CoWork session actually does; a claim that has to be confirmed in the product; a failing `cowork_evals ask` |
 
-The file is yours once `init` writes it. Edit it, commit it, and refresh it after an upgrade
-with the two commands above. What it holds and why it is a copy is
-[`docs/library.md`](docs/library.md); where `init` puts it is [`docs/cli.md`](docs/cli.md).
+`cowork-evals` carries the case tree, the two required frontmatter keys, the six grader types,
+three copy-paste grader idioms, the seven authoring traps, the exit codes and the 3.10 runtime
+constraint. `cowork-ask` carries the verb, what one ask costs, and the rule that makes an
+answer evidence: ask the session to do the thing and read what it did, because what a session
+says about its own configuration is not evidence. Both send a reader to `cowork_evals docs`
+for everything they do not carry.
+
+The files are yours once `init` writes them. Edit them, commit them, and refresh them after an
+upgrade with the two commands above. What they hold and why they are copies is
+[`docs/library.md`](docs/library.md); where `init` puts them is [`docs/cli.md`](docs/cli.md).
 
 ## Documentation
 

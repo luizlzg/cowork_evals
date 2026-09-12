@@ -20,6 +20,7 @@ its own header. `lib.sh` is sourced, never executed.
 | `test.sh`        | Run the test suite under `.venv`                        |
 | `lint.sh`        | Lint Python and shell. `--fix` applies                  |
 | `build.sh`       | Build the distribution into `dist/`, and verify the wheel |
+| `dev_skills.sh`  | Copy the shipped skills into this repository's `.claude/skills/` |
 | `lib.sh`         | Shared `ROOT`, `VENV`, `COWORK`, `die`, `need`, `usage` |
 
 `image.sh` and `parity.sh` are the image's half of what `cowork_venv.sh` is for the mirror.
@@ -31,6 +32,11 @@ it also runs a suite in it. Run it before the integration tier for the same reas
 carries the `cowork_` prefix the other two runtime scripts carry, so it is not read as a
 sibling of `test.sh`, which runs this repository's own tests under `.venv`. See
 [`../docs/cowork_test.md`](../docs/cowork_test.md).
+
+`dev_skills.sh` is how this repository gets the skills a consumer gets from
+`cowork_evals init`. This repository is not a consumer, so `.claude/skills/` here is
+generated and git-ignored, and the shipped copy under `src/cowork_evals/data/skills/` is the
+one source. See [`../docs/library.md`](../docs/library.md).
 
 The three eval backends, the gate and the case validator are not here. They are library
 code, they are reached through the `cowork_evals` command, and a row is never added below
