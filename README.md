@@ -181,7 +181,7 @@ The exit code is the verdict's:
 | Exit | Means                                                            |
 | ---- | ---------------------------------------------------------------- |
 | 0    | the run passed                                                  |
-| 1    | a structural grader failed, a case or grader was skipped, or a run never had a tool it was granted |
+| 1    | a structural grader failed, a case or grader was skipped, a run never had a tool it was granted, or a case's delta was below the threshold |
 | 2    | usage error                                                      |
 | 3    | the preflight failed. Nothing ran, and the message names the fix |
 
@@ -207,7 +207,8 @@ Then widen it:
 | -------------------------------------- | ------------------------------------------------------------------- |
 | Run the plugin's whole suite           | point at `plugins/notes/evals`                                      |
 | Select one skill across a sweep        | `--tag summarize`                                                   |
-| Give the agent more than `Bash`        | `--allow-tools`, which replaces the grant and so names `Bash` again |
+| Change what the agent may do           | `--allow-tools`, which replaces the grant rather than adding to it  |
+| Ask whether the plugin did anything    | `--ablation with-without`, which runs a no-plugin baseline arm and decides each case on the delta |
 | Run the same cases on the real product | `--cowork`, after `cowork.profile` is set in `cowork_evals.yaml`    |
 
 ### 3. Tests

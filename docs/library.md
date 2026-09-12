@@ -89,7 +89,8 @@ mirrors an old VM. See [runtime.md](runtime.md).
 | `src/cowork_evals/cowork_backend.py`      | yes   | The CoWork backend: what it cannot run, `plan` and `run`           |
 | `src/cowork_evals/validate.py`            | yes   | The case validator, and the skill coverage report                  |
 | `src/cowork_evals/logs.py`                | yes   | The run directory, `env.txt`, `latest`, pruning and the tee        |
-| `src/cowork_evals/verdict.py`                | yes   | Pass and fail over `aggregate-result.json`                              |
+| `src/cowork_evals/traces.py`              | yes   | What one run left behind, lifted into the log directory            |
+| `src/cowork_evals/verdict.py`             | yes   | Pass and fail over `aggregate-result.json`                         |
 | `src/cowork_evals/preflight.py`           | yes   | Each backend's unmet conditions, for `check` and for `run`         |
 | `src/cowork_evals/resources.py`           | yes   | Where the shipped documentation and data are, in either layout     |
 | `src/cowork_evals/cli.py`                 | yes   | The parser, the eight verbs, the dispatch and the exit codes       |

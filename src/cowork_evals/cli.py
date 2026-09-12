@@ -268,8 +268,8 @@ def _prune_parser(verbs: Any) -> None:
 
 
 def _init_parser(verbs: Any) -> None:
-    """`init` takes no backend and no option. It writes three targets and overwrites none."""
-    verbs.add_parser("init", help="write the config, the skill and a CLAUDE.md block")
+    """`init` takes no backend and no option. It writes four targets and overwrites none."""
+    verbs.add_parser("init", help="write the config, the skills and a CLAUDE.md block")
 
 
 def _docs_parser(verbs: Any) -> None:
