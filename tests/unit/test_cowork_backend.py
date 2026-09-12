@@ -352,11 +352,11 @@ def test_a_suite_of_declared_cases_writes_a_document_and_submits_nothing(tmp_pat
     assert document["suite"]["root"] == str(root.resolve())
     assert document["suite"]["judgeModel"] == "haiku"
     assert document["aggregates"] == {
-        "casesTotal": 1,
+        "casesTotal": 0,
         "casesPassed": 0,
         "overallScore": 0.0,
         "overallPassRate": 0.0,
-    }
+    }, "a declared case is out of all four"
     entry = document["cases"][0]
     assert entry["declaredUnrunnable"] is True
     assert entry["declaredReason"] == "no-cowork: model: the session decides its model"

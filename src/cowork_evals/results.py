@@ -7,7 +7,7 @@ additive-only, and an optional field absent rather than null.
 Additive-only is what permits the three fields this backend adds and the one it widens:
 `declaredUnrunnable` and `declaredReason` on a case, `skipped` and `skipReason` on a grader
 result, `cowork` on a run, and `scored`, which is `not skipped` here rather than
-`not withOnly`. Every one of them, and the one behavioural departure in `casesPassed`, is
+`not withOnly`. Every one of them, and the one behavioural departure in the aggregates, is
 recorded in docs/cowork_backend.md.
 """
 
@@ -288,18 +288,21 @@ def version() -> str:
 
 
 def _aggregates(cases: list[CaseResult]) -> dict[str, Any]:
-    """The suite's four numbers. A mean over nothing is 0, never a division by zero.
+    """The suite's four numbers, over the cases this backend ran. A mean over nothing is 0.
 
-    `casesPassed` is the reference's rule, a case scoring at or above `threshold`, minus
-    every declared case. `threshold` is 0 here, so without that subtraction a case this
-    backend never ran would count as passed.
+    A declared case is out of all four. `casesPassed` is the reference's rule, a case scoring
+    at or above `threshold`, and `threshold` is 0 here, so a declared case left in
+    `casesTotal` alone would count as passed and its 0.0 would drag `overallScore` down for a
+    case that never ran. A suite of nothing but declared cases reports the same four numbers
+    as a suite of no cases at all. docs/running_evals.md.
     """
-    total = len(cases)
+    ran = [case for case in cases if not case.declared]
+    total = len(ran)
     return {
         "casesTotal": total,
-        "casesPassed": sum(1 for case in cases if not case.declared),
-        "overallScore": (sum(case.score for case in cases) / total) if total else 0.0,
-        "overallPassRate": (sum(case.pass_rate for case in cases) / total) if total else 0.0,
+        "casesPassed": total,
+        "overallScore": (sum(case.score for case in ran) / total) if total else 0.0,
+        "overallPassRate": (sum(case.pass_rate for case in ran) / total) if total else 0.0,
     }
 
 

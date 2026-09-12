@@ -6,7 +6,9 @@ docs/running_evals.md.
 
 Structural graders decide the verdict. Judged graders are printed and decide nothing, because
 a judged grader over a non-deterministic agent is a flaky verdict. A skip fails the run, so a
-backend cannot go green by honouring nothing.
+backend cannot go green by honouring nothing. A case that declared the backend cannot run it
+is counted instead, and the summary line says how many, because that is a fact about the case
+and not a backend honouring nothing.
 
 Nothing here writes a file or prints. The caller writes `lines` to `verdict.txt` and prints
 them, and turns `passed` into an exit code. [cli.py](cli.py).
@@ -21,6 +23,7 @@ from typing import Any
 
 from .cases import JUDGED
 from .harness import RESULT_NAME
+from .results import DECLARED_UNRUNNABLE
 from .traces import DENIED, UNOFFERED
 
 # The one schema this module reads. The contract is additive-only, so an unknown field is
@@ -126,9 +129,15 @@ def _judge_case(
     `aggregates.casesPassed` is the harness's count under `--threshold 0`, which is every
     case always, so reading it back would print a pass beside a failure line.
     docs/running_evals.md.
+
+    A case the backend declared unrunnable is counted and neither passes nor fails. It is out
+    of the backend's own `casesTotal` as well, so it is on the summary line and nowhere else.
     """
     before = len(failures)
     where = f"{plugin}/{case.get('name')}"
+    if case.get(DECLARED_UNRUNNABLE):
+        totals.declare_one()
+        return
     if case.get("skipped"):
         failures.append(f"{FAIL} {where}: the case was skipped: {case.get('skipReason')}")
         return
@@ -248,14 +257,18 @@ def _display(directory: Path) -> str:
 
 
 class _Totals:
-    """The four counts on the last line, and the mean of each document's score.
+    """The five counts on the last line, and the mean of each document's score.
 
-    | Count    | Is                                          | Counted by       |
-    | -------- | ------------------------------------------- | ---------------- |
-    | `found`  | The cases under the path, before any filter | the caller       |
-    | `picked` | The cases `--tag` and `--case` kept         | the caller       |
-    | `ran`    | The cases a backend reported running        | `casesTotal`     |
-    | `passed` | The cases that produced no failure line     | this module      |
+    | Count      | Is                                              | Counted by       |
+    | ---------- | ----------------------------------------------- | ---------------- |
+    | `found`    | The cases under the path, before any filter     | the caller       |
+    | `picked`   | The cases `--tag` and `--case` kept             | the caller       |
+    | `ran`      | The cases a backend reported running            | `casesTotal`     |
+    | `passed`   | The cases that produced no failure line         | this module      |
+    | `declared` | The cases a backend was told it cannot run      | this module      |
+
+    A declared case is why `ran` can be below `picked` on a suite where nothing went wrong,
+    which is what putting it on the line rather than leaving it absent says.
 
     Picked and ran are two counts of two things, the second of which is the harness's. They
     differ when a plugin failed to run, when the sweep stopped early, or when the harness
@@ -271,6 +284,7 @@ class _Totals:
         self.picked = picked
         self.ran = 0
         self.passed = 0
+        self.declared = 0
         self.scores: list[float] = []
         self.reasons: list[str] = []
 
@@ -281,6 +295,9 @@ class _Totals:
 
     def pass_one(self) -> None:
         self.passed += 1
+
+    def declare_one(self) -> None:
+        self.declared += 1
 
     def stopped(self, reason: Any) -> None:
         """Why a document says the sweep stopped early, once per distinct reason."""
@@ -293,7 +310,8 @@ class _Totals:
         mean = sum(self.scores) / len(self.scores) if self.scores else 0.0
         line = (
             f"{self.found} found, {self.picked} picked, {self.ran} ran, "
-            f"{self.passed} passed, overall score {mean:.2f}"
+            f"{self.passed} passed, {self.declared} declared unrunnable, "
+            f"overall score {mean:.2f}"
         )
         if self.reasons:
             line += f", stopped early: {'; '.join(self.reasons)}"

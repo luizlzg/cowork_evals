@@ -147,19 +147,19 @@ Every other skip in `cowork_backend.skips` becomes a validator error or a counte
 
 ### Phase 3: a declared case is counted
 
-- [ ] A case declared unrunnable on the backend that ran is counted, never failed
-- [ ] A case reporting `skipped` still fails, so the one run-time grader skip and every
+- [x] A case declared unrunnable on the backend that ran is counted, never failed
+- [x] A case reporting `skipped` still fails, so the one run-time grader skip and every
       harness skip fail exactly as they did
-- [ ] The summary line names how many cases were declared unrunnable, beside the four counts
+- [x] The summary line names how many cases were declared unrunnable, beside the four counts
       it already carries, found, picked, ran and passed, so a counted case is visible rather
       than silently absent. What each of the four means is
       [`../docs/running_evals.md`](../docs/running_evals.md)
-- [ ] A declared case leaves all four numbers in `results._aggregates`, not one. It is out of
+- [x] A declared case leaves all four numbers in `results._aggregates`, not one. It is out of
       `casesTotal`, out of `casesPassed`, and out of both means. Subtracting it from
       `casesTotal` alone would leave it counted as passed, because `casesPassed` counts a
       case that is not `skipped` and a declared case is not skipped, and would leave its 0.0
       dragging `overallScore` down for a case that never ran
-- [ ] A suite whose every case is declared reports zero cases and a score of 0.0, which is
+- [x] A suite whose every case is declared reports zero cases and a score of 0.0, which is
       the same shape `_aggregates` already produces for a suite of no cases at all
 
 ### Phase 4: tests

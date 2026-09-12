@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.265",
+  "startedAt": "2026-09-12T10:00:00+00:00",
+  "durationSeconds": 0.1,
+  "costUsd": 0.0,
+  "partial": false,
+  "suite": {
+    "root": "/plugin",
+    "ablation": "none",
+    "threshold": 0,
+    "judgeModel": "haiku",
+    "plugins": [{"name": "smoke", "path": "/plugin"}]
+  },
+  "cases": [
+    {
+      "name": "capped-turns",
+      "dir": "evals/plugin/capped-turns",
+      "source": "prose",
+      "promptMarkdown": "Reply with the single word PONG and nothing else.",
+      "maxTurns": 5,
+      "graders": [{"name": "answers-pong", "type": "regex", "weight": 1, "config": {}}],
+      "arms": {"with": []},
+      "aggregates": {"score": 0.0, "passRate": 0.0},
+      "declaredUnrunnable": true,
+      "declaredReason": "no-cowork: max_turns: no turn cap reaches a CoWork session"
+    }
+  ],
+  "aggregates": {"casesTotal": 0, "casesPassed": 0, "overallScore": 0.0, "overallPassRate": 0.0}
+}
