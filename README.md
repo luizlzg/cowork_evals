@@ -180,7 +180,7 @@ The exit code is the verdict's:
 | Exit | Means                                                            |
 | ---- | ---------------------------------------------------------------- |
 | 0    | the run passed                                                  |
-| 1    | a structural grader failed, or a case or grader was skipped      |
+| 1    | a structural grader failed, a case or grader was skipped, or a run never had a tool it was granted |
 | 2    | usage error                                                      |
 | 3    | the preflight failed. Nothing ran, and the message names the fix |
 
