@@ -204,11 +204,11 @@ Work in order. Tick a box when it is verified, then commit. Do not batch ticks.
 
 ### Phase 1: the guard and the clear
 
-- [ ] `cowork.frontmost()`: the process name `osascript` reports, or a `CoWorkError` code 3
-- [ ] `CoWork._guard()`: code 9 when the frontmost process is not CoWork, naming what was
-- [ ] `CoWork._clear()`: activate, guard, select all, delete
-- [ ] `_fire_and_attribute` runs the clear before the deep link and guards before the Return
-- [ ] Code 9 is in `CoWorkError`'s taxonomy and nothing collapses it into code 3
+- [x] `cowork.frontmost()`: the process name `osascript` reports, or a `CoWorkError` code 3
+- [x] `CoWork._guard()`: code 9 when the frontmost process is not CoWork, naming what was
+- [x] `CoWork._clear()`: activate, guard, select all, delete
+- [x] `_fire_and_attribute` runs the clear before the deep link and guards before the Return
+- [x] Code 9 is in `CoWorkError`'s taxonomy and nothing collapses it into code 3
 
 ### Phase 2: consent
 

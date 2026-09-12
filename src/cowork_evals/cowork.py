@@ -39,14 +39,45 @@ CEILING_WINDOW = timedelta(hours=24)
 LOGGER = logging.getLogger("cowork_evals")
 LOG_STEM = "cowork_evals"
 
-# The deep link route and the keystroke. docs/cowork_desktop.md.
+# The deep link route and the keystrokes. docs/cowork_desktop.md.
 DEEP_LINK = "claude://claude.ai/new"
-OSASCRIPT = (
+
+# What `System Events` calls the CoWork process. Measured, not guessed, and the value is
+# beside the bundle id in docs/cowork_desktop.md.
+COWORK_PROCESS = "Claude"
+
+# Step 2b. The delay is what lets the activation land before the guard reads the frontmost
+# process, which is otherwise still whatever the developer was working in.
+ACTIVATE = (
     "osascript",
     "-e",
     'tell application "Claude" to activate',
     "-e",
     "delay 0.8",
+)
+
+# The guard's probe. Its own command, because this is the one osascript call whose standard
+# output is read.
+FRONTMOST = (
+    "osascript",
+    "-e",
+    'tell application "System Events" to get name of first process whose frontmost is true',
+)
+
+# Step 2c. Key code 51 is Delete. It runs behind the guard, so the worst field it can reach
+# is a CoWork field that is not the composer.
+CLEAR = (
+    "osascript",
+    "-e",
+    'tell application "System Events" to keystroke "a" using command down',
+    "-e",
+    'tell application "System Events" to key code 51',
+)
+
+# Step 5. Key code 36 is Return. It carries no activation of its own: step 2b activated and
+# step 4a checked, and re-activating here would open a gap after the last check.
+RETURN = (
+    "osascript",
     "-e",
     'tell application "System Events" to key code 36',
 )
@@ -162,17 +193,49 @@ class CoWork:
         baseline = set(self.sessions(root))
         link = self.deep_link(prompt)
 
+        self._clear()
         LOGGER.info("firing the deep link: %s", link)
         self._fire(["open", link])
         time.sleep(self._config.settle_seconds)
+        self._guard()
         LOGGER.info("sending the synthetic Return")
-        self._fire(list(OSASCRIPT))
+        self._fire(list(RETURN))
 
         session_dir = self._discover(root, baseline)
         LOGGER.info("discovered the session: %s", session_dir)
         self._attribute(session_dir, prompt)
         LOGGER.info("attributed the session to this submission")
         return session_dir
+
+    def _clear(self) -> None:
+        """Steps 2b and 2c: activate, guard, then select all and delete.
+
+        It runs before the deep link, not after: the deep link is what puts the prompt in
+        the composer, so a clear after it deletes the prompt.
+
+        It does not read what it cleared and does not report it. Reading the composer means
+        reading the screen, which docs/cowork_desktop.md rules out.
+        """
+        LOGGER.info("activating CoWork")
+        self._fire(list(ACTIVATE))
+        self._guard()
+        LOGGER.info("clearing the composer")
+        self._fire(list(CLEAR))
+
+    def _guard(self) -> None:
+        """Code 9 when CoWork is not frontmost. Nothing is typed.
+
+        It narrows the window between the check and the keystroke and does not close it:
+        focus can change in between. Attribution stays the backstop, so a keystroke that
+        lands elsewhere is still caught as code 6 rather than graded. There is no retry:
+        retrying blind is how a keystroke reaches an editor.
+        """
+        name = frontmost()
+        if name != COWORK_PROCESS:
+            raise CoWorkError(
+                9,
+                f"{name} is frontmost, not {COWORK_PROCESS}: nothing was typed",
+            )
 
     def _fire(self, argv: list[str]) -> None:
         """Run one command. A non-zero return is code 3.
@@ -352,6 +415,25 @@ class CoWork:
                 LOGGER.removeHandler(handler)
                 handler.close()
                 LOGGER.setLevel(level)
+
+
+# The machine. This reads the desktop, not a session, so it takes no configuration and
+# stands beside the class rather than on it.
+
+
+def frontmost() -> str:
+    """The name of the frontmost process, as `System Events` reports it.
+
+    A non-zero `osascript` is code 3, which is what every other `osascript` failure is. A
+    refusal to type is code 9 and is raised by the guard above, so a grading layer tells
+    "the driver refused to type into something that was not CoWork" apart from "osascript
+    is broken".
+    """
+    completed = subprocess.run(list(FRONTMOST), capture_output=True, text=True, check=False)
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or f"osascript returned {completed.returncode}"
+        raise CoWorkError(3, f"the frontmost process could not be read: {detail}")
+    return completed.stdout.strip()
 
 
 # Readers. Each takes what it reads, so a test drives it over a fixture directory.
