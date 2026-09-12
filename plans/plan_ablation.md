@@ -156,8 +156,9 @@ what the reference says, the constant changes and nothing else does.
       be read as two transcripts rather than one
 - [ ] The layout keeps one directory per run and adds the arm to the path. The name is fixed
       here and stated in [`../docs/running_evals.md`](../docs/running_evals.md)
-- [ ] A one-arm run's layout is unchanged, byte for byte, so every existing trace path still
-      resolves
+- [ ] A one-arm run's layout is unchanged, byte for byte. One arm is the default, so this is
+      the layout almost every run produces, and `tracePath` and the `[artifacts: ...]` suffix
+      both keep naming it
 - [ ] `tracePath` is rewritten for both arms, so the `[artifacts: ...]` suffix names
       the right directory on a line about either
 

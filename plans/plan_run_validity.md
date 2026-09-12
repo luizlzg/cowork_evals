@@ -219,8 +219,9 @@ Unit tier throughout. Nothing here needs a model.
 - [ ] A trace with neither problem yields neither, and the result file is unchanged
 - [ ] A result file carrying either field fails, and the line names the tools and the
       directory holding the trace
-- [ ] A result file with neither passes, so a file written before this existed reads as it
-      did
+- [ ] A result file carrying neither field passes. That is not a courtesy to old documents:
+      the CoWork backend never writes either field, so every `--cowork` document is this
+      shape and one set of rules still covers both backends
 - [ ] The last line carries the four counts, and says so when a sweep stopped early
 - [ ] Every `verdict.py` test that already exists still passes, or its change goes in the
       same commit with the reason in the message
