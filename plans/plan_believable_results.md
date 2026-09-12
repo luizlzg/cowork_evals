@@ -1,31 +1,23 @@
-# Believable results: what to measure, what to decide, and the four plans that follow
+# Believable results: what was measured, what follows from it, and the four plans
 
 This plan writes no code. It holds the state of a design conversation that ran on
-2026-09-12, so that a cleared context resumes from here. Its product is four plan files,
-written after the measurements in phase 1 and the decisions in phase 2.
+2026-09-12, so that a cleared context resumes from here. Its product is four plan files.
 
-Work it after plan 8 is implemented and merged. Phase 1 uses the `ask` verb that plan built,
+Work it after plan 8 is implemented and merged. Phase 1 used the `ask` verb that plan built,
 and the row for it is in [`README.md`](README.md).
 
-## Decisions the developer still owns
+## The principle every decision here follows from
 
-These are first because they are not settled. No plan below is written until the ones it
-depends on are closed.
+Claude Code in a container is simulating a CoWork session so that an eval can be run cheaply
+and repeatedly. CoWork is the expensive backend that checks the real thing. Every question
+below was answered by applying that sentence, and none of them was a judgement call.
 
-| # | Decision                                                        | Closed by                     | Recommendation |
-| - | ---------------------------------------------------------------- | ----------------------------- | -------------- |
-| 2 | Which trace evidence makes a run invalid                         | The developer                 | Any `permission_denied` with `decision_reason_type: mode` |
-| 3 | How the baseline arm is reached on CoWork, or whether it is      | Phase 1 measurement, then the developer | Split it into a fifth plan if the measurement is not clean |
-| 4 | Whether the baseline arm defaults on                             | The developer                 | None. It doubles cost per case and the developer owns that |
-| 5 | What the gate compares once there are two arms                   | The developer                 | Per case, with-arm minus without-arm, above a configured threshold defaulting to 0 |
+Where the two differ and the difference is not a deliberate, stated property of the
+simulation, the simulation is wrong and is changed. That is the whole rule.
 
-Decisions 2, 4 and 5 are judgement, not measurement. Phase 2 is where they are asked, each
-with its options written out. Decision 3 is asked there too, because phase 1 measured it and
-the measurement is not clean.
+## Decisions
 
-## Decisions already made
-
-Do not reopen these. Each was argued and settled.
+Do not reopen these. Each is argued, and each states what it follows from.
 
 | Decision                                                                 | Reason                                                                 |
 | -------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
@@ -41,6 +33,10 @@ Do not reopen these. Each was argued and settled.
 | The artifact content checker is built outside this package                | The report established that no harness change is needed. This repository is a library |
 | The container's tool grant mirrors a session, and is not a judgement | The Docker backend exists to run the same case the same way a session does. A session grants nothing and acts, so a container run denied a tool a session has measures this package's configuration rather than the plugin. Closed on 2026-09-12 and implemented the same day, so `plan_run_validity` inherits a grant that is already right: `docs/running_evals.md` |
 | The real gap under report item 5 is selection, and it is an exclusion glob on the invocation | `--case` takes one glob and `--tag` only includes, so there is no way to say `everything except X` without moving the directory. A glob typed on one invocation is visible in that invocation and silences nothing tomorrow. It rides in `plan_run_validity`, which is already making the selection counts honest |
+| A `permission_denied` carrying `decision_reason_type: mode` invalidates the run, whatever tool it names. A denial from a plugin's own hook does not | A session has no permission mode and is never refused a tool by one, so a mode denial is the simulation being wrong and nothing else. A hook denial is the plugin's own behaviour, which a session has too, and for a hook-gate case it is the correct behaviour under test. Narrowing the rule to tools a grader names would miss every denial that broke a run through a tool no grader mentions |
+| There is no baseline arm on CoWork, and no plan builds one | The arm is a statistical control, and a control belongs on the cheap backend. On CoWork a plugin's presence is a property of the profile and the application chooses the profile, so a second arm means a second profile and an application restart between arms. Measured in section 5 of `docs/cowork_desktop.md` |
+| The baseline arm is off by default | Under `with-without` the harness stops scoring a `tool_used: Skill` grader and reports it as an indicator. On by default would silently stop gating skill activation, which is report item 1 |
+| The gate compares per case, with-arm minus without-arm, against a threshold defaulting to 0 | A suite-level average hides a case the plugin made worse. `--threshold` is already pinned to 0 so that this gate owns the number, so the number lives here |
 
 ## What the problem report said
 
@@ -140,18 +136,20 @@ If a measurement is inconclusive, the plan that depends on it is written to the 
 option: the tag rather than the key, and the CoWork baseline arm split into its own plan
 rather than folded in.
 
-### Phase 2: close decisions 2, 4 and 5
+### Phase 2: settle what the measurements left
 
-- [x] Decision 1 is closed and implemented, not deferred into a plan. The grant is the
-      session mirror, in `docs/running_evals.md`. The row is in the table above
-- [ ] Put decision 2 to the developer, with the three options: any mode denial, only tools the
-      case's graders name, or any denial at all. Record that a hook-gate case is a case whose
-      correct behaviour is a denied call, which is why the reason type is read
-- [ ] Put decision 4 to the developer, with the cost: the baseline arm doubles agent runs per
-      case against `eval.max_cost_usd`, `eval.max_cost_total_usd` and `cowork.max_runs`
-- [ ] Put decision 5 to the developer, with the three options: a per-case delta above a
-      configured threshold, a per-case delta above zero with no setting, or a suite-level delta
-- [ ] Write each answer into this file before writing the plan that depends on it
+Every one of these follows from the principle above. None was put to the developer, and a
+later plan does not reopen one.
+
+- [x] The tool grant. Closed and implemented the same day rather than deferred into a plan:
+      `eval.allow_tools` is the session mirror, stated in `docs/running_evals.md`
+- [x] What makes a run invalid. A `mode` denial, whatever tool it names. A hook denial does
+      not, because a hook-gate case is a case whose correct behaviour is a denied call
+- [x] The baseline arm on CoWork. Not built, and no fifth plan. The row says why
+- [x] Whether the baseline arm defaults on. Off
+- [x] What the gate compares. Per case, against a threshold defaulting to 0
+- [x] Every one of them written into the decisions table above, before the plan that
+      depends on it is written
 
 ### Phase 3: write the four plans
 
