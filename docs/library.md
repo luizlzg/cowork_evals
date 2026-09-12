@@ -296,6 +296,16 @@ the two conditions and what a forwarded value reaches are [docker.md](docker.md)
 | `cowork_evals.yaml`   | the default     | a consumer's standing settings |
 | The built-in default  | nothing         | a machine that sets nothing    |
 
+A check belongs to the setting, so the rung a value arrived on decides which value wins and
+nothing else. `--delta-threshold 5` is refused exactly as `eval.delta_threshold: 5` is, and
+one converter raises both, so the two cannot drift. What the message names is the one
+difference: the option an operator typed, or the `<section>.<key>` a file carries, because
+that is what the reader has to change. Without this an option is the way around every check
+the file gets. The exit code is [cli.md](cli.md).
+
+`--runs` is the one option whose ceiling is not a setting. It replaces each case's own `runs`,
+so it takes that key's cap from the case format instead: [eval_format.md](eval_format.md).
+
 The file holds three sections, and a section is named for the thing that reads it. A new
 setting goes in the section of whatever reads it, which is the rule the file is kept to.
 
@@ -319,6 +329,7 @@ docker:
 | A missing file, a missing section and a missing key each fall back to the built-in default           |
 | An unknown key inside a known section is an error, so a typo is never a silent default               |
 | A value of the wrong type is an error, wherever the `Config` was built from                          |
+| A check belongs to the setting and not to the rung, so an option's value is checked as the file's is |
 | An unknown top level section is ignored, so a later backend adds its own without touching the loader |
 | `~` in a path is expanded, and a relative path resolves against the working directory                |
 

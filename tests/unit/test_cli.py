@@ -18,7 +18,7 @@ import pytest
 from cowork_evals import cli, logs, preflight, results
 from cowork_evals.cases import plugin_name, plugin_roots
 from cowork_evals.cli import FAILED, OK, PREFLIGHT_FAILED, USAGE, main, parse_args
-from cowork_evals.config import Config, CoWorkError, EvalSection
+from cowork_evals.config import Config, CoWorkError, EvalSection, checked
 from cowork_evals.docker import Docker
 from cowork_evals.docker.pytest_image import PytestImage
 from cowork_evals.harness import RESULT_NAME
@@ -353,6 +353,65 @@ def test_either_form_of_the_traces_option_is_accepted_on_both_backends(form) -> 
     for backend in ("--docker", "--cowork"):
         typed = parse("run", backend, "plugin/evals", form).keep_traces
         assert typed is (form == "--keep-traces")
+
+
+# One ladder, so an option is checked as the file is. docs/library.md.
+
+
+@pytest.mark.parametrize(
+    ("option", "value", "says"),
+    [
+        ("--delta-threshold", "5", "expected a number from 0 to 1"),
+        ("--delta-threshold", "-1", "expected a number at or above zero"),
+        ("--max-cost-usd", "-5", "expected a number at or above zero"),
+        ("--runs", "-3", "expected an integer at or above zero"),
+        ("--runs", "99", "expected an integer at or below 50"),
+    ],
+)
+def test_a_value_the_file_would_refuse_is_refused_on_the_command_line(
+    option, value, says, capsys
+) -> None:
+    """The option is otherwise the way around every check the file gets."""
+    assert main(["run", "--docker", "plugin/evals", option, value]) == USAGE
+    printed = capsys.readouterr().err
+    assert printed.startswith(f"{option}: ")
+    assert says in printed
+
+
+def test_the_option_and_the_file_refuse_the_same_value_for_the_same_reason() -> None:
+    """Both rungs run one converter, so neither can drift from the other."""
+    with pytest.raises(CoWorkError) as from_file:
+        EvalSection(delta_threshold=5)
+    with pytest.raises(CoWorkError) as from_option:
+        checked(EvalSection, "delta_threshold", 5, name="--delta-threshold")
+    assert str(from_file.value) == "eval.delta_threshold: expected a number from 0 to 1, got 5"
+    assert str(from_option.value) == "--delta-threshold: expected a number from 0 to 1, got 5"
+    assert from_file.value.code == from_option.value.code == USAGE
+
+
+@pytest.mark.parametrize(
+    ("option", "value"),
+    [
+        ("--delta-threshold", "0.4"),
+        ("--max-cost-usd", "3"),
+        ("--runs", "50"),
+        ("--judge-model", "haiku"),
+    ],
+)
+def test_a_value_the_file_accepts_is_accepted_on_the_command_line(option, value) -> None:
+    assert cli.bad_value(parse("run", "--docker", "plugin/evals", option, value)) is None
+
+
+def test_the_cowork_timeout_is_checked_as_its_setting_is(capsys) -> None:
+    """`--timeout-seconds` is `cowork.run_timeout`, so it takes that key's check."""
+    assert main(["run", "--cowork", "plugin/evals", "--timeout-seconds", "-5"]) == USAGE
+    assert "--timeout-seconds: expected a number at or above zero" in capsys.readouterr().err
+
+
+def test_an_untyped_option_is_not_checked() -> None:
+    """Nothing was typed, so the file decides and there is no value to refuse."""
+    assert cli.bad_value(parse("run", "--docker", "plugin/evals")) is None
+    assert cli.bad_value(parse("check", "--docker")) is None
 
 
 @pytest.mark.parametrize("backend", ["--docker", "--cowork", "--all"])

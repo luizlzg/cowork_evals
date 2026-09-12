@@ -167,6 +167,17 @@ def _convert(section: Any) -> None:
         object.__setattr__(section, key, convert(f"{section._NAME}.{key}", getattr(section, key)))
 
 
+def checked(section: type[Any], key: str, value: Any, *, name: str) -> Any:
+    """One value through the converter its setting uses, refused under `name`.
+
+    A command-line option and a line in the file are two rungs of one ladder, so a value is
+    checked the same way whichever rung supplied it. `name` is what the reader has to change,
+    which is the option an operator typed rather than the `<section>.<key>` a file carries.
+    docs/library.md.
+    """
+    return section._FIELDS[key](name, value)
+
+
 @dataclass(frozen=True, slots=True)
 class CoWorkSection:
     """What the CoWork driver reads. docs/cowork_driver.md."""

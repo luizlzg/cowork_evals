@@ -159,6 +159,11 @@ mistake, so it is a usage error. A *case* that needs a field the backend cannot 
 with a tag, is not submitted there and is counted. The two are different and are never
 conflated. The tag is [eval_format.md](eval_format.md).
 
+An option whose value its setting refuses is a usage error too, and it is refused before the
+configuration file is read, so `--delta-threshold 5` exits 2 whatever the file says. The check
+is the setting's, not the option's, which is why the two rungs cannot disagree:
+[library.md](library.md). The message names the option rather than the key.
+
 `--dry-run` exits 0 without running anything and without creating a run directory. What it
 prints differs per backend, because only one of them builds a command line.
 
@@ -594,7 +599,7 @@ ignore list. See [library.md](library.md).
 | ---- | --------------------------------------------------------------------------- |
 | 0    | the run passed, or the verb succeeded                                      |
 | 1    | the run failed, or the driver raised on `ask`. The conditions are in [running_evals.md](running_evals.md) |
-| 2    | usage error: unknown option, an option the backend refuses, or no path      |
+| 2    | usage error: unknown option, an option the backend refuses, a value its setting refuses, or no path |
 | 3    | preflight failed. Nothing ran and nothing was written                       |
 | 130  | interrupted                                                                 |
 

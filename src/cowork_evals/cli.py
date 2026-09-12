@@ -33,7 +33,7 @@ from . import (
     verdict,
 )
 from .cases import CaseError, discover, plugin_name, plugin_roots
-from .config import ABLATION_CHOICES, Config, CoWorkError
+from .config import ABLATION_CHOICES, Config, CoWorkError, CoWorkSection, EvalSection, checked
 from .cowork import CoWork
 from .docker import Docker, DockerError, pytest_image
 from .docker.pytest_image import PytestImage
@@ -73,6 +73,22 @@ OPTION_ATTRIBUTES = {
 # `None`. `_given` reads it, so a three-state option whose false value is `False` is not
 # mistaken for one that was never typed.
 UNTYPED = {"--build-missing": False}
+
+# Each option that carries a value, and the setting whose check it takes. An option and the
+# file are two rungs of one ladder, so the value is checked the same way whichever rung
+# supplied it, and the message names the option because that is what the operator typed.
+# `--runs` is not here: its ceiling is the case format's, and `bad_value` reads it there.
+# docs/library.md.
+OPTION_SETTINGS: dict[str, tuple[type[Any], str]] = {
+    "--model": (EvalSection, "model"),
+    "--judge-model": (EvalSection, "judge_model"),
+    "--ablation": (EvalSection, "ablation"),
+    "--delta-threshold": (EvalSection, "delta_threshold"),
+    "--allow-tools": (EvalSection, "allow_tools"),
+    "--max-cost-usd": (EvalSection, "max_cost_usd"),
+    "--keep-traces": (EvalSection, "keep_traces"),
+    "--timeout-seconds": (CoWorkSection, "run_timeout"),
+}
 
 # What each backend cannot honour. An option here is an operator mistake, so it is a usage
 # error. A *case* that needs a field the backend cannot honour declares it with a tag and is
@@ -309,6 +325,34 @@ def refusal(args: argparse.Namespace) -> str | None:
     return None
 
 
+def bad_value(args: argparse.Namespace) -> str | None:
+    """The one line naming an option whose value its setting refuses, or `None`.
+
+    An option and the file are two rungs of one ladder, so a value is checked the same way
+    whichever rung supplied it: `--delta-threshold 5` is refused exactly as
+    `eval.delta_threshold: 5` is. Without this the option is the way around every check the
+    file gets. The ladder is docs/library.md.
+
+    `--runs` is the one option whose ceiling is not a setting. It replaces each case's own
+    `runs`, so it takes that key's cap from the case format. docs/eval_format.md.
+    """
+    for option, (section, key) in OPTION_SETTINGS.items():
+        if not _given(args, option):
+            continue
+        try:
+            checked(section, key, getattr(args, OPTION_ATTRIBUTES[option]), name=option)
+        except CoWorkError as error:
+            return str(error)
+    if _given(args, "--runs"):
+        try:
+            runs = checked(CoWorkSection, "max_runs", args.runs, name="--runs")
+        except CoWorkError as error:
+            return str(error)
+        if runs > validate.CAPS["runs"]:
+            return f"--runs: expected an integer at or below {validate.CAPS['runs']}, got {runs}"
+    return None
+
+
 # The entry points.
 
 
@@ -347,6 +391,11 @@ def main(argv: list[str] | None = None) -> int:
     refused = refusal(args)
     if refused is not None:
         print(refused, file=sys.stderr)
+        return USAGE
+
+    bad = bad_value(args)
+    if bad is not None:
+        print(bad, file=sys.stderr)
         return USAGE
 
     try:
