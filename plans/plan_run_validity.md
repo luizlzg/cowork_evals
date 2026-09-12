@@ -128,7 +128,7 @@ Check two compares two lists of tool names, and nothing here has read the second
 the grant that ships. The first box measures it, and the two boxes after it are written
 against what it records.
 
-- [ ] Run `plugins/smoke/` on Docker under the default `eval.allow_tools` and record, dated,
+- [x] Run `plugins/smoke/` on Docker under the default `eval.allow_tools` and record, dated,
       in [`../docs/running_evals.md`](../docs/running_evals.md): the exact strings the `init`
       record's tool list carries for all eight granted names. The snapshot already there
       measured two narrowed grants and not this one

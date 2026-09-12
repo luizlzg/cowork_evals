@@ -215,6 +215,26 @@ skill fired and scored, so a denied `Skill` call in a consumer's trace came from
 other than this default. `Write`, `Edit` and `WebFetch` are what it denied, and they are the
 tools a session uses most.
 
+### What the shipping grant offers
+
+Snapshot, 2026-09-12, CLI 2.1.265, image `cowork-evals:57f48ba2adac`, one container run of
+`plugins/smoke/` under the default `eval.allow_tools`. The `init` record's `tools` list read:
+
+```
+Task Bash CronCreate CronDelete CronList Edit Glob Grep ListAgents NotebookEdit Read
+RemoteTrigger ReportFindings ScheduleWakeup SendMessage Skill TaskOutput TaskStop ToolSearch
+WebFetch WebSearch Workflow Write
+```
+
+All eight granted names are in it, each as the bare name the grant wrote: `Bash`, `Read`,
+`Glob`, `Grep`, `Write`, `Edit`, `WebFetch`, `Skill`. None arrives in a `Tool(pattern)` shape.
+The path scoping the harness applies to a bare `Read`, `Glob` or `Grep` is in the child's
+permission rules and not in this list.
+
+The list is longer than the grant. `WebSearch` and the rest are offered without being granted,
+so a name in the list is not a statement that the run may call it. The check below reads the
+list in one direction only: a granted name absent from it was never offered.
+
 The Docker backend exports `CLAUDE_CODE_WALNUT_SPIRE`, the early-access enablement variable,
 so no developer sets it by hand. It is a constant in `harness.py` and not a configuration key.
 See [plugin_eval.md](plugin_eval.md).
