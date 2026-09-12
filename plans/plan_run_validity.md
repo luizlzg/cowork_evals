@@ -1,19 +1,24 @@
 # Run validity: an eval that never got its tool fails instead of scoring
 
-An eval sends a prompt to a model and grades the answer. If the model never got a tool it
-needed, that answer says something about this repository's configuration and nothing about
-the plugin. It is scored anyway.
+One line in our config file, `eval.allow_tools`, decides which tools the model gets.
 
-Two ways that happens, both measured on 2026-09-12 and recorded in
-[`../docs/running_evals.md`](../docs/running_evals.md). A `Write` call the permission mode
-refused left a record in the trace, and the eval scored. A shell tool that was never offered
-left no record at all, and the eval scored.
+If a case needs `Write` and that line does not list it, the model cannot write the file. It
+says so instead. The grader reads that sentence and scores it, usually 0, sometimes 1 if the
+pattern happens to match. Either way the number is about our config file and not about the
+plugin, and nothing in the output says so.
 
-This plan fails those evals, stops the summary line contradicting the failures printed above
-it, and states the kept artefact layout as a contract a consumer's content checker reads.
+It happens two ways. The tool is offered and the container refuses the call, which leaves a
+`permission_denied` record in the trace. Or the tool is not offered at all, and the model
+writes something like "There's no shell/bash execution tool available in this environment",
+which leaves no record of anything. Both are measured in
+[`../docs/running_evals.md`](../docs/running_evals.md).
 
-The rule it implements, and what it follows from, is the decisions table in
-[`plan_believable_results.md`](plan_believable_results.md). Do not re-derive it here.
+Three things, then. Fail those evals. Stop the last line the gate prints from saying
+everything passed when it just printed failures. And write down where a run's files end up,
+because a consumer builds their own checker over them.
+
+Why the rule is what it is, is the decisions table in
+[`plan_believable_results.md`](plan_believable_results.md). Do not work it out again here.
 
 Branch: `feat/run-validity`.
 
