@@ -15,7 +15,7 @@ its own header. `lib.sh` is sourced, never executed.
 | `cowork_run.sh`  | Run one command under the mirror                        |
 | `image.sh`       | Build or verify the container image                     |
 | `cowork_pytest.sh` | Build or verify the test image, and run a pytest suite in it |
-| `login.sh`       | Log in once in a container, for the login this package owns |
+| `login.sh`       | `cowork_evals login --docker`, wrapped                   |
 | `parity.sh`      | Probe the image and compare it against the inventory    |
 | `test.sh`        | Run the test suite under `.venv`                        |
 | `lint.sh`        | Lint Python and shell. `--fix` applies                  |
@@ -26,6 +26,11 @@ its own header. `lib.sh` is sourced, never executed.
 `image.sh` and `parity.sh` are the image's half of what `cowork_venv.sh` is for the mirror.
 Run `image.sh` and then `login.sh` before the integration tier: those tests need the image
 and the login, and create neither. See [`../docs/docker.md`](../docs/docker.md).
+
+`login.sh` holds no logic. It checks its one argument and execs
+`cowork_evals login --docker`, which owns the conditions, the messages and the exit codes. A
+development task that duplicates a verb's decision in shell would be a second place for that
+decision to be made. See [`../docs/cli.md`](../docs/cli.md).
 
 `cowork_pytest.sh` is the test image's half of what `image.sh` is for the eval image, and
 it also runs a suite in it. Run it before the integration tier for the same reason. It

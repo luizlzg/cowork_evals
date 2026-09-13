@@ -27,7 +27,8 @@ file is the authority for anything below.
 
 ```bash
 cowork_evals check --all                       # what each backend still needs
-cowork_evals setup --docker                    # build the images, and log in once
+cowork_evals setup --docker                    # build the images
+cowork_evals login --docker                    # log in once, in a container
 cowork_evals run  --docker <path>              # an eval: a model, graders, a verdict
 cowork_evals test --docker <path>/tests        # pytest on the CoWork runtime, no model
 cowork_evals ask  --cowork "<prompt>"          # one prompt to a live session, and its answer

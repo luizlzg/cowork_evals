@@ -27,10 +27,12 @@ around it is [running_evals.md](running_evals.md) and the command that reaches i
 [cli.md](cli.md).
 
 What of this is built is the status table in [running_evals.md](running_evals.md).
-`cowork_evals setup --docker` builds the image and `cowork_evals run --docker` runs through
-it. `scripts/image.sh` and `scripts/login.sh` stay as development tasks for this repository.
-A failed check names the command a consumer runs, which is `cowork_evals setup --docker` for
-both an absent image and an absent login, and never a script under `scripts/`.
+`cowork_evals setup --docker` builds the image, `cowork_evals login --docker` makes the
+login, and `cowork_evals run --docker` runs through both. `scripts/image.sh` and
+`scripts/login.sh` stay as development tasks for this repository, and each is a wrapper over
+the verb that does the work. A failed check names the command a consumer runs, which is
+`cowork_evals setup --docker` for an absent image and `cowork_evals login --docker` for an
+absent login, and never a script under `scripts/`.
 
 ## Configuration
 
@@ -49,14 +51,16 @@ The `docker:` section of `cowork_evals.yaml`. The file, and the ladder over it, 
 
 ```bash
 cowork_evals setup --docker                                   # build for docker.platform
+cowork_evals login --docker                                   # log in once, in a container
+cowork_evals login --docker --check                           # a login is present, no writes
 cowork_evals check --docker                                   # daemon, image digest, credential
 cowork_evals run --docker path/to/plugin/evals/<skill>        # one skill, in the container
 cowork_evals run --docker path/to/repo                        # every plugin, in the container
 
 scripts/image.sh                                              # development: build for docker.platform
 scripts/image.sh --check                                      # development: the digest is present, no writes
-scripts/login.sh                                              # development: log in once, in a container
-scripts/login.sh --check                                      # development: a login is present, no writes
+scripts/login.sh                                              # development: the login verb, wrapped
+scripts/login.sh --check                                      # development: the same, reporting only
 scripts/parity.sh                                             # development: probe the image, compare
 ```
 
@@ -269,8 +273,10 @@ One route: a login this package owns, mounted. There is no API key route, by the
 developer's decision of 2026-09-08. A host with no interactive terminal logs in on a host
 that has one and carries the two paths below.
 
-The login happens once, in an interactive container that `setup --docker` starts when the
-login is absent, and it writes a configuration directory this package owns:
+The login happens once, in an interactive container that `login --docker` starts, and it
+writes a configuration directory this package owns. `setup --docker` builds images and never
+starts it: an image is a build product and a credential is not, which is the distinction
+`prune --docker` already makes when it leaves the login alone.
 
 | Host path, under `docker.login_dir` | Holds                                                      |
 | ----------------------------------- | ------------------------------------------------------------ |
@@ -289,7 +295,9 @@ A credential file is not a credential either. An OAuth flow that is started and 
 finished leaves `.credentials.json` behind carrying `scopes` and `subscriptionType` with
 `accessToken` and `refreshToken` both empty. `Docker.has_credential()` therefore reads the
 tokens rather than testing that the file is there, and the two callers that check it, the
-`CREDENTIAL` condition and `scripts/login.sh`, report no login. An expired access token is
+`CREDENTIAL` condition and `login --docker`, report no login. `login --docker` therefore
+starts a flow over such a file with no flag: `--force` is for the other case, a file whose
+tokens are there and no longer work. An expired access token is
 still a credential, because the CLI refreshes it: only the absence of both tokens is no
 login. Measured 2026-09-09, where presence alone reported a login and every container run
 then exited 1 with `Not logged in`.
