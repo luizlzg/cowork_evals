@@ -242,10 +242,10 @@ class CoWork:
     def _consented(self) -> None:
         """Step 2a. Ask for the keyboard, and code 2 on Cancel.
 
-        It asks rather than reads a flag a caller was supposed to set. Every route to a
-        submission passes through here, and a route that forgot to ask took the keyboard
-        with no warning. `consent` is still once per process, so a caller that asked before
-        a sweep reaches a no-op here and the developer is asked once, not once per case.
+        It asks rather than reading a flag a caller was supposed to set. Every route to a
+        submission passes through here, so a route that does not ask cannot take the
+        keyboard with no warning. `consent` is once per process, so a caller that asked
+        before a sweep reaches a no-op here and the developer is asked once, not per case.
         """
         consent(self._config)
 
@@ -472,7 +472,7 @@ def consent(section: CoWorkSection) -> None:
     configuration file.
 
     `consent: none` shows nothing and sets nothing, which is the documented route for an
-    unattended run, and after it the only route that fires without a warning. It is a
+    unattended run, and the only route that fires without a warning. It is a
     configuration value and not a test seam: a test sets it in a file exactly as a consumer
     would, and no parameter exists to inject an answer.
 
