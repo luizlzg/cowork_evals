@@ -6,9 +6,10 @@ An eval can be run two ways, and they answer different questions. The Docker bac
 `claude plugin eval` harness inside a container that reproduces the CoWork image: it is
 headless, it costs a container start, and it runs the plugin files in your checkout. The
 CoWork backend drives the real desktop application: it is the deployed stack end to end, it
-costs a VM boot and the keyboard, and it has no headless route. One case format serves both,
-so the backend changes and the case does not. This file says what each backend proves, what
-each costs, and which part of the case format each honours.
+costs a VM boot per case, and it takes the keyboard and the frontmost window, so the machine
+is unusable for the length of the run and there is no headless route. One case format serves
+both, so the backend changes and the case does not. This file says what each backend proves,
+what each costs, and which part of the case format each honours.
 
 Which of the two is built is the status table in [running_evals.md](running_evals.md). A third
 backend, Claude Code against a 3.10 mirror on the host, is designed and not built. See
@@ -83,7 +84,7 @@ That is `--ablation with-without` on the Docker backend, which is off by default
 `eval.ablation`. Everywhere else the flag is `none`, one arm runs, that arm is the with-arm,
 and `arm:` satisfies itself whichever value it carries.
 
-There is no baseline arm on CoWork, and no plan builds one. A session gets its skills from the
+There is no baseline arm on CoWork, and none is designed. A session gets its skills from the
 profile the desktop application is running, and that tree is the application's to manage, so a
 plugin is absent only in a profile it was never installed into and nothing here chooses which
 profile is active. `--ablation` and `--delta-threshold` are therefore a usage error on
@@ -103,18 +104,19 @@ writes no `runs` key runs once rather than declaring anything; the exact rule is
 [running_evals.md](running_evals.md). A command-line option a backend cannot honour is a usage
 error instead, and the difference is stated in [cli.md](cli.md).
 
-## What each one costs
+## Pros and cons
 
-The table above says what each backend proves. This one says what it costs to run. None of the
-CoWork costs is reduced by better engineering: each is a property of driving a desktop
+Use Docker for everything except the one question it cannot answer: does this work in the
+product that ships. Answering that costs the machine for the length of the run. None of the
+CoWork costs is reduced by better engineering. Each is a property of driving a desktop
 application that exposes no scriptable entry point.
 
 | | Docker | CoWork |
 | ------------------------- | ------------------------------------ | ------------------------------------ |
-| Runs the code             | the plugin files in your checkout    | the plugin set already deployed to the signed in account. A local edit is invisible until it is deployed |
+| Runs the code             | the plugin files in your checkout, so an edit is testable before it is deployed | the plugin set already deployed to the signed in account. A local edit is invisible until it is deployed |
 | Per case                  | a container start plus the agent run | a VM boot plus the agent run, so minutes |
-| Headless                  | yes                                  | no. The submit step is a synthetic keystroke behind a macOS Accessibility grant, so there is no CI route at all. See [cowork_desktop.md](cowork_desktop.md) |
-| The machine while it runs | free. A container is not the desktop | yours only between cases. Each submission activates the application and sends Return to the frontmost window, and nothing may steal focus while it does. See [cowork_driver.md](cowork_driver.md) |
+| Headless                  | yes, so it runs unattended and in CI | no. The submit step is a synthetic keystroke behind a macOS Accessibility grant, so there is no CI route at all. See [cowork_desktop.md](cowork_desktop.md) |
+| Your machine while it runs | yours. A container is not the desktop | not yours. Each submission activates the application and sends Return to the frontmost window, so a keystroke or a click of yours lands in the session or takes the focus the driver needs. Leave the machine alone until the suite ends. See [cowork_driver.md](cowork_driver.md) |
 | The account               | a container login this package owns  | a live account. A case can reach real mail, and every run leaves a permanent session in that account's history. See [cowork_driver.md](cowork_driver.md) |
 | What bounds the spend     | `eval.max_cost_usd` over one plugin's suite, and `eval.max_cost_total_usd` over the whole invocation | nothing the host can observe. The driver's `max_runs` ceiling bounds submissions instead |
 | Several plugins at once   | yes                                  | a usage error. See [cli.md](cli.md)  |
