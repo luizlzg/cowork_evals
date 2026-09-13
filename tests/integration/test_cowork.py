@@ -16,6 +16,7 @@ import pytest
 
 from cowork_evals import Config, CoWork, CoWorkError, CoWorkSection
 from cowork_evals import cowork as driver_module
+from cowork_evals.config import CONSENT_DIALOG
 
 # A process that is on every macOS machine and is deterministically not CoWork. Activating
 # it is how the guard is put in the state it exists to refuse.
@@ -140,14 +141,25 @@ def test_focus_a_primed_composer_is_cleared_before_the_prompt(attended: Path) ->
 @pytest.mark.live
 @pytest.mark.timeout(1800)
 def test_a_live_run_returns_the_marker(attended: Path, session_document_keys: set[str]) -> None:
+    """It also proves the driver asks for the keyboard rather than refusing.
+
+    `attended` carries `consent: dialog` and this test calls `run` directly, with no caller
+    above it to ask first, so the submission succeeding is the assertion. A dialog cannot be
+    asserted without a person, and this is its effect.
+
+    It asserts the flag is set afterwards and not that it was clear before: the autouse
+    `keyboard` fixture has already asked by then, which is what that fixture is for.
+    """
     real_profile()
     driver = CoWork.from_file(attended)
+    assert driver.config.consent == CONSENT_DIALOG
     marker = f"MARKER-{uuid.uuid4().hex[:12].upper()}"
     before = len(driver.sessions())
     before_log = len(driver.history())
 
     document = driver.run(f"Reply with exactly: {marker}")
 
+    assert driver_module._CONSENTED is True, "the driver asked, and the ask set the flag"
     assert marker in document["final_text"]
     assert document["lifecycle"][-1] == "completed"
     assert set(document) == session_document_keys
