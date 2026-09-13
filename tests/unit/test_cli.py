@@ -590,9 +590,15 @@ def test_the_docker_dry_run_prints_the_container_argument_list(tmp_path, capsys)
     assert cli._dry_run(args, config, root, [(FIRST, FIRST / "evals")], ()) == 0
     printed = capsys.readouterr().out.splitlines()
     assert printed[0] == "# shared"
+    # The directory name carries the second it was composed in, so read the printed one back
+    # rather than compose a second name. The two differ whenever the test straddles a second.
+    logs_dir = next(Path(arg.split(":", 1)[0]) for arg in printed if arg.endswith(":/work/logs:rw"))
+    assert logs_dir.name == "shared"
+    assert logs_dir.parent.parent == root
+    assert logs_dir.parent.name.endswith("-shared")
     assert printed[1:] == Docker(config).run_argv(
         FIRST / "evals",
-        root / logs.run_dir_name("shared") / "shared",
+        logs_dir,
         cli._options(args, config, ()),
     )
 
