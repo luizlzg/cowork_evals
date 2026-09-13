@@ -9,20 +9,41 @@ grader's does, so a failed check fails the case.
 ### The problem it solves
 
 An eval case is scored by graders. A grader is a Markdown file under the case's `graders/`
-directory, and it is one of six types the `claude plugin eval` harness defines: a regular
-expression over text, a tool was called, two tool calls happened in that order, a file was
-created, a judge model read some text, or two trajectories were compared. That list is
-[eval_format.md](eval_format.md). It is closed: the harness is a Claude Code command this
-repository does not own and cannot extend.
+directory, and its `type:` is one of these six, which is every type the `claude plugin eval`
+harness defines:
 
-So an assertion outside those six cannot be written at all. The common case is a skill that
-produces a document. A skill that builds a spreadsheet can be asserted to have created
-`totals.xlsx`, and nothing more. The same case passes when the file holds the wrong numbers,
-and passes again when the file is corrupt and no application can open it. The eval is green
-and it checked nothing.
+| Type          | Asserts                                                     |
+| ------------- | ----------------------------------------------------------- |
+| `regex`       | a pattern matches the answer text, the trace or a file      |
+| `tool_used`   | a named tool was called, so many times                      |
+| `tool_order`  | one tool call came before another                           |
+| `file_exists` | the agent created a file matching a glob                    |
+| `llm`         | a judge model read some text and voted on a rubric          |
+| `baseline`    | a judge model compared this trajectory against a recorded one |
 
-A check is how that assertion gets written. The author opens the workbook and asserts the
-total, in Python, in their own repository.
+The fields each one takes are [eval_format.md](eval_format.md). What matters here is that the
+list is closed. The harness is a Claude Code command this repository does not own and cannot
+extend, and it rejects a grader whose `type:` is not one of the six.
+
+So an assertion that is not one of those six cannot be written at all. The one that comes up
+most is an assertion about a file the agent produced, and the three types that can look at one
+each stop short of it:
+
+| To assert something about `totals.xlsx`   | And what happens                                                |
+| ----------------------------------------- | ----------------------------------------------------------------- |
+| `file_exists`                             | reports that the file is there, and nothing about what is in it  |
+| `regex` with `target: {source: file, ...}` | reads the file as UTF-8 text. A `.xlsx` is a ZIP, so the grader fails on the read |
+| `llm` with `focus: {source: file, ...}`   | shows the judge the same text, so a binary is a failed grader or a skipped one |
+
+Even on a file that is text, a regular expression cannot compute. It cannot open a workbook,
+sum a column, evaluate a formula, or compare a number against 4200.
+
+A skill that builds a spreadsheet can therefore be asserted to have created `totals.xlsx`, and
+nothing more: the case passes when the numbers in it are wrong, and passes again when the file
+is corrupt and no application can open it. The eval is green and it checked nothing.
+
+A check is how that assertion gets written. The author opens the workbook in Python, in their
+own repository, and asserts the total.
 
 ### How it works
 
