@@ -117,25 +117,25 @@ Work one box, verify it, tick it, commit. Do not batch ticks.
 
 ### Phase 1: the check layer
 
-- [ ] `src/cowork_evals/checks.py`, with `Run`, `Result` and the `@check` decorator.
-- [ ] `Run` carries `workspace`, `last_message`, `trace`, `case_dir`, `run_dir`, `scratch`
+- [x] `src/cowork_evals/checks.py`, with `Run`, `Result` and the `@check` decorator.
+- [x] `Run` carries `workspace`, `last_message`, `trace`, `case_dir`, `run_dir`, `scratch`
       and `index`, and the method `file(name)`. There is no `files`, for the reason in D15.
-- [ ] `Result` carries `passed` and `explanation`, and nothing else. `explanation` is what
+- [x] `Result` carries `passed` and `explanation`, and nothing else. `explanation` is what
       the run's grader entry and the `FAIL` line both print.
-- [ ] Discovery: every `checks/*.py` of a case, in path order, and every decorated function
+- [x] Discovery: every `checks/*.py` of a case, in path order, and every decorated function
       in it in definition order. The name is `<file stem>.<function name>`.
-- [ ] A file is loaded under a module name unique to its case, so two cases each holding
+- [x] A file is loaded under a module name unique to its case, so two cases each holding
       `checks/assertions.py` do not collide in `sys.modules`.
-- [ ] The case's `checks/` directory is on `sys.path` while its files are loaded, so a check
+- [x] The case's `checks/` directory is on `sys.path` while its files are loaded, so a check
       may import a sibling in the same directory, and is off it again afterwards.
-- [ ] `run.file(name)` resolves under `run.workspace`. A name that resolves to nothing is a
+- [x] `run.file(name)` resolves under `run.workspace`. A name that resolves to nothing is a
       failed check naming it, and a name that leaves the workspace is a failed check too.
-- [ ] Execution: `None` or `True` passes, `False` fails, a returned `Result` decides, and any
+- [x] Execution: `None` or `True` passes, `False` fails, a returned `Result` decides, and any
       exception is a failed check carrying its message and its traceback. Nothing raises out
       of the module.
-- [ ] `run.scratch` is created before the first check of a run and is shared by every check of
+- [x] `run.scratch` is created before the first check of a run and is shared by every check of
       that run.
-- [ ] `tests/unit/test_checks.py`, over hand-written run directories under
+- [x] `tests/unit/test_checks.py`, over hand-written run directories under
       `tests/data/checks/`. No model, and no judge.
 
 ### Phase 2: the judge over paths
