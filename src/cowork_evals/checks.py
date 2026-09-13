@@ -1,6 +1,6 @@
 """The check layer: an author's own Python, run over what a run produced, deciding the run.
 
-The harness's five grader types are a closed vocabulary, so an assertion outside it cannot be
+The harness's six grader types are a closed vocabulary, so an assertion outside it cannot be
 made and the case runs green having checked nothing. A check is that assertion, written as a
 function in the consumer's own repository, and its verdict joins the harness's own in the same
 result document.

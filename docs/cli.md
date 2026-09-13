@@ -257,6 +257,11 @@ created and before anything is deleted, so exit 2 and exit 3 leave the log root 
 blocks a single-case run. There is no option to skip validation. The rules are
 [eval_format.md](eval_format.md).
 
+The validation imports every `checks/*.py` of every selected root, because a check file is
+Python and the only way to know it imports is to import it. So the preflight runs the author's
+own module-level code, on the laptop, before anything else happens. A file that will not
+import exits 3 and spends nothing. See [checks.md](checks.md).
+
 A skill under `skills/` with no directory of that name under `evals/` is always reported.
 `--require-coverage` turns that report into a preflight failure. Coverage is not a rule of the
 format, which is why it is a flag and not a violation.

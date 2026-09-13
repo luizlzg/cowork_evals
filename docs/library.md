@@ -230,9 +230,11 @@ positional only from 3.13, so `cli.parse_args` splits the tail itself, on every 
 
 ## Where the restrictions are
 
-Two kinds of code, and one of them is unconstrained. This package runs on a laptop and
-controls CoWork. The code under test runs inside the CoWork VM, on that VM's interpreter and
-that VM's wheels. A rule for one is never applied to the other.
+Where the code runs is what decides what binds it, and nothing else. This package runs on a
+laptop and controls CoWork. The code under test runs inside the CoWork VM, on that VM's
+interpreter and that VM's wheels. A rule for one is never applied to the other, and a file's
+place in the tree decides neither: a case's `checks/*.py` sits under the eval path and runs on
+the laptop.
 
 Every row is 3.10, so the interpreter is no longer what separates them. The wheel set is: this
 package may import anything it declares, and the code under test may import only what the

@@ -18,7 +18,7 @@ the harness's own graders.
 - **A run that kept no artefacts produces one skipped check per check**, and a skip fails the
   run.
 
-The five grader types the format defines are fixed by a tool this repository does not own, so
+The six grader types the format defines are fixed by a tool this repository does not own, so
 an assertion outside them cannot be made: a `file_exists` grader says the spreadsheet appeared
 and never what is in it. A check is that assertion. The grader types are
 [eval_format.md](eval_format.md), pass and fail is
