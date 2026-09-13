@@ -71,8 +71,10 @@ and reads what the session wrote, so it honours a subset of the format.
 | `arm:` on a grader                                      | live under `--ablation with-without`, inert otherwise | read, but inert |
 | `no-cowork` in `tags:`                                  | one more tag     | the case is not submitted, and is counted |
 
-A check runs on both because it runs on neither: it is host code over the collected run
-directory, which both backends normalise to the same three names. See [checks.md](checks.md).
+A `checks/` directory is honoured on both backends, because a check runs on neither of them.
+It is Python on the host, and it runs after the backend has finished and the run's files have
+been collected. Both backends collect the same three files under the same three names, so one
+check reads a Docker run and a CoWork run the same way. See [checks.md](checks.md).
 
 A case that needs any of the four rows this backend answers `no` to says so itself, with the
 `no-cowork` tag in its own `tags:`. The tag is [eval_format.md](eval_format.md), and the

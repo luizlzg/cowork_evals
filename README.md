@@ -170,9 +170,10 @@ match: not_contains
 Both are structural, so both decide the exit code. A grader file without the `---` delimiters
 is read as a note and is silently ignored.
 
-A grader type cannot say what is inside a file the run wrote. A check can. It is your own
-Python under `checks/`, run on your machine after the run is graded, and its verdict decides
-the exit code beside the graders:
+A grader can say that the agent created `totals.xlsx`. No grader type can say what is inside
+it, so the case passes on a spreadsheet holding the wrong numbers. A check is how you assert
+the rest: a Python function under the case's `checks/` directory, run on your machine once the
+eval has finished, which fails the case the same way a grader does.
 
 ```python
 # plugins/notes/evals/summarize/one-paragraph/checks/assertions.py
@@ -316,7 +317,7 @@ reads the same files without this repository checked out.
 | ------------------------------------------------ | ---------------------------------------------------- |
 | [`docs/cli.md`](docs/cli.md)                     | The whole command surface: verbs, options, exit codes |
 | [`docs/eval_format.md`](docs/eval_format.md)     | How to write a case: tree, frontmatter, graders    |
-| [`docs/checks.md`](docs/checks.md)               | An assertion you write as code, over what a run produced |
+| [`docs/checks.md`](docs/checks.md)               | Assertions you write as Python, over the files a run produced |
 | [`docs/approaches.md`](docs/approaches.md)       | The two backends, and what each one proves         |
 | [`docs/running_evals.md`](docs/running_evals.md) | The run: what is built today, pass and fail, logs, cost |
 | [`docs/cowork_test.md`](docs/cowork_test.md)     | `test`, and the runtime your suite gets            |

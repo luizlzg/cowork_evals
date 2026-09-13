@@ -1,24 +1,31 @@
-"""The check layer: an author's own Python, run over what a run produced, deciding the run.
+"""The check layer: a consumer's own Python, over the files one eval run produced.
 
-The harness's six grader types are a closed vocabulary, so an assertion outside it cannot be
-made and the case runs green having checked nothing. A check is that assertion, written as a
-function in the consumer's own repository, and its verdict joins the harness's own in the same
-result document.
+An eval case is scored by graders, and a grader is one of the six types `claude plugin eval`
+defines. That list is closed: the harness is a command this repository does not own. So an
+assertion outside the six cannot be written, and the common one that does not fit is an
+assertion about the contents of a file the run produced. A `file_exists` grader says
+`totals.xlsx` was created and says nothing about the numbers in it.
+
+A check is that assertion, written as a Python function under the case's `checks/` directory.
+This module discovers those functions, runs each of them once per run over the files that run
+left on the host, and appends each verdict to the same `aggregate-result.json` the graders
+wrote into, as a grader result of type `check`. `verdict.py` needs no rule for it: it asks
+whether a grader type is judged, `check` is not, so a failed check fails the run exactly as a
+failed `regex` grader does.
 
 A check runs on the host, in this package's process, after the run is graded and after
-`traces.collect` has put the run's artefacts under the run directory. It never enters the
-container and never enters the CoWork VM, so nothing about the session binds it: not the
-interpreter, not the wheel set, not the image. A check file is the first row of the three kinds
-of code in `CLAUDE.md` although it sits under the eval path, and its own imports are the
-consumer's dependency. docs/checks.md.
+`traces.collect` has put the run's files under the run directory. It never enters the container
+and never enters the CoWork VM, so nothing about the session binds it: not the interpreter, not
+the wheel set, not the image. A check file is the first row of the three kinds of code in
+`CLAUDE.md` although it sits under the eval path, and what it imports is the consumer's own
+dependency. docs/checks.md.
 
-One check is one decorated function. It asserts, it transforms and it asks a judge, because all
-three are things a Python function does, and a transformation that decides nothing needs no
-mechanism of its own.
+One check is one decorated function, and it asserts, converts and asks a judge, because all
+three are things a Python function does. A conversion that decides nothing needs no mechanism
+of its own.
 
 Nothing here raises. A file that will not import, an assertion that fails, an exception out of
-a check and a run with no collected artefacts are each a check result carrying the reason, and
-a failed check fails the run exactly as a failed structural grader does.
+a check and a run with no collected files are each a check result carrying the reason.
 """
 
 from __future__ import annotations

@@ -36,7 +36,7 @@ build; the last three are external material and one deferred design.
 | [`cowork_backend.md`](cowork_backend.md)   | The layer over it: grading a session document, the judge, the result document |
 | [`environments.md`](environments.md)       | The two Python environments and how to build them               |
 | [`panel.md`](panel.md)                     | The history of what each case did, and the panel over it        |
-| [`checks.md`](checks.md)                   | An assertion an author writes as code, over what a run produced |
+| [`checks.md`](checks.md)                   | Assertions written as Python, over the files an eval run produced |
 | [`runtime.md`](runtime.md)                 | What a CoWork session provides and what is on the image         |
 | [`cowork_desktop.md`](cowork_desktop.md)   | Desktop application internals: deep links, session filesystem   |
 | [`plugin_eval.md`](plugin_eval.md)         | `claude plugin eval`: availability, flags, harness limits, cost |
@@ -57,8 +57,9 @@ A mechanism file holds how one thing works and everything measured about it.
 [`docker.md`](docker.md) is the container, [`cowork_driver.md`](cowork_driver.md) the desktop
 driver, [`environments.md`](environments.md) the two Python environments,
 [`panel.md`](panel.md) the history of what each case did and
-[`checks.md`](checks.md) the layer that runs an author's own code over what a run produced. A
-fact measured during a run belongs with the mechanism it binds and not with the run.
+[`checks.md`](checks.md) the layer that runs a consumer's own Python over the files an eval
+run produced. A fact measured during a run belongs with the mechanism it binds and not with
+the run.
 
 [`cowork_backend.md`](cowork_backend.md) is the layer over the driver, and the two files split
 on one question: does the statement need to know what a case is? Yes, and it is in the

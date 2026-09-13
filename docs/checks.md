@@ -2,34 +2,68 @@
 
 ## Summary
 
-An assertion an author writes as code, run over what a run produced, deciding the run beside
-the harness's own graders.
+A check is a Python function you write beside an eval case. It receives the files one
+execution of that case produced, and it passes or fails. Its verdict counts exactly as a
+grader's does, so a failed check fails the case.
 
-- **A check is one decorated function** in `checks/<name>.py` beside the case, in the
-  consumer's own repository. Nothing in this package and nothing in the harness changes when
-  one is added.
-- **It runs on the host**, in this package's process, after the run is graded and after the
-  artefacts are collected. It never enters the container and never enters the CoWork VM.
-- **It asserts, it transforms and it asks a judge.** One mechanism, because all three are
-  things a Python function does.
-- **Its result is a grader result of type `check`** in the same `aggregate-result.json`, so a
-  failed check fails the run under the condition that already fails a structural grader.
-- **Its own imports are the consumer's dependency.** The CoWork wheel set does not bind it.
-- **A run that kept no artefacts produces one skipped check per check**, and a skip fails the
-  run.
-- **A worked example is below**: a case in this repository, its three files, the command, and
-  what that command printed.
+### The problem it solves
 
-The six grader types the format defines are fixed by a tool this repository does not own, so
-an assertion outside them cannot be made: a `file_exists` grader says the spreadsheet appeared
-and never what is in it. A check is that assertion. The grader types are
-[eval_format.md](eval_format.md), pass and fail is
-[running_evals.md](running_evals.md), and the boundary a check file sits on is
-[library.md](library.md).
+An eval case is scored by graders. A grader is a Markdown file under the case's `graders/`
+directory, and it is one of six types the `claude plugin eval` harness defines: a regular
+expression over text, a tool was called, two tool calls happened in that order, a file was
+created, a judge model read some text, or two trajectories were compared. That list is
+[eval_format.md](eval_format.md). It is closed: the harness is a Claude Code command this
+repository does not own and cannot extend.
+
+So an assertion outside those six cannot be written at all. The common case is a skill that
+produces a document. A skill that builds a spreadsheet can be asserted to have created
+`totals.xlsx`, and nothing more. The same case passes when the file holds the wrong numbers,
+and passes again when the file is corrupt and no application can open it. The eval is green
+and it checked nothing.
+
+A check is how that assertion gets written. The author opens the workbook and asserts the
+total, in Python, in their own repository.
+
+### How it works
+
+One execution of a case is a *run*. Each run leaves three things on the host: its transcript,
+its final assistant message, and the working directory the agent wrote into. That happens on
+both backends, under the same three names, and it happens after the harness has finished
+grading. See [running_evals.md](running_evals.md).
+
+A check reads those. `cowork_evals run` grades a case as it always did, collects the run's
+files, and then imports the case's `checks/*.py` and calls each decorated function once per
+run, handing it an object that names the workspace, the final message and the transcript. The
+function asserts whatever it likes. Its verdict is appended to the same
+`aggregate-result.json` the graders wrote into, as a grader result of type `check`, and pass
+and fail read it there. Nothing else in the pipeline changes.
+
+### What follows from that
+
+- **A check runs on your laptop, not in the session.** The run is over and already graded
+  before a check starts. So a check may import anything your own project declares, and shell
+  out to anything your machine has: `openpyxl`, `pypdf`, `soffice`. The CoWork wheel set
+  binds the code under test and does not bind a check. See [library.md](library.md).
+- **One mechanism, not three.** Asserting, converting a file to something readable, and asking
+  a model about it are all things a Python function does, so all three are one decorated
+  function. There is no separate transform step and no separate judge step.
+- **A check can ask a model, and it is shown files rather than text.** `run.judge` grants the
+  judge `Read`, `Glob` and `Grep` and names the paths, so a PDF, an image and a spreadsheet
+  are all judgeable. The `llm` grader cannot do that, and is untouched.
+- **A failed check fails the run** under the condition that already fails a `regex` grader.
+  The verdict gained no rule for it.
+- **Checks need the collected files, so `--no-keep-traces` gives them up.** With nothing
+  collected each check is a skip, and a skip fails the run. A suite cannot go green by
+  asserting nothing.
+- **A check is added to a case, never in place of its graders.** The harness refuses a case
+  carrying no grader at all.
+
+A worked example is below: a case in this repository, its three files, the command that runs
+it, and what that command printed.
 
 ## The tree
 
-A case gains one directory, beside the one it already has.
+A case that has checks carries one more directory, beside the `graders/` it already has.
 
 ```
 <plugin>/evals/<skill>/<case>/prompt.md
@@ -146,7 +180,9 @@ What that case is the fixture for is `plugins/README.md`.
 
 ## The function
 
-An assertion over a produced file, which is the case a check exists for:
+A check is a function marked with the `@check` decorator. It takes one argument, a `Run`
+object describing the execution it is judging, and it returns nothing when it passes. This is
+the shape a check usually has, an assertion about a file the run produced:
 
 ```python
 import openpyxl
@@ -184,8 +220,8 @@ explanation and its traceback into `checks.jsonl`.
 
 ### Discovery
 
-Every `checks/*.py` of the case, in path order, and every decorated function in each, in
-definition order.
+Discovery imports every `checks/*.py` of the case, in path order, and collects every decorated
+function in each file, in the order the file defines them.
 
 | Rule                                                                     | Because                                                                 |
 | -------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
@@ -198,9 +234,12 @@ definition order.
 The path is off `sys.path` again once the files are loaded, so a check that imports a sibling
 lazily, inside the function body, does not resolve. Import at the top of the file.
 
-## Run
+## The Run object
 
-One collected run, as a check reads it.
+Each check is called with one `Run`. It describes one execution of the case: where that
+execution's files are on this host, what the agent said last, and which of the case's runs
+this is. Every field is something `traces.collect` left under the run directory, so the same
+fields are there whichever backend produced the run.
 
 | Field          | Is                                                                    |
 | -------------- | ----------------------------------------------------------------------- |
@@ -227,6 +266,10 @@ The two transcript formats are [running_evals.md](running_evals.md). A check tha
 `run.trace` reads whichever format the backend that produced the run wrote.
 
 ## The judge
+
+A check may ask a model. Some things are not decidable in code: whether a slide is clipped,
+whether a chart is readable, whether prose answers the question. `run.judge` asks `claude -p`
+about files and returns a verdict a check returns directly.
 
 ```python
 import subprocess
@@ -329,6 +372,9 @@ refused. See [cli.md](cli.md).
 
 ## What reaches the result document
 
+The layer rewrites the plugin's `aggregate-result.json` after the backend wrote it. The
+changes are these, and nothing else in the document moves.
+
 | Where                        | What                                                                |
 | ---------------------------- | ---------------------------------------------------------------------- |
 | the case's `graders[]`       | one definition per check, `{name, type: check, weight: 1, config: {}}` |
@@ -398,6 +444,8 @@ check costs nine. That spend reaches the run's `judgeCostUsd` and the document's
 [running_evals.md](running_evals.md).
 
 ## What is not built
+
+Each of these was considered and rejected. None of them is pending.
 
 | Not built                                            | Because                                                                  |
 | ---------------------------------------------------- | ---------------------------------------------------------------------------- |
