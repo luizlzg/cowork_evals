@@ -296,26 +296,26 @@ is the only record of where the work stopped if the context is lost. `CLAUDE.md`
 
 ## Test steps
 
-- [ ] `unit/test_config.py`: `panel.root` read from a file and resolved to an absolute path
-- [ ] `unit/test_panel.py`: the path for an ordinary case, one directly under `evals/`, one
+- [x] `unit/test_config.py`: `panel.root` read from a file and resolved to an absolute path
+- [x] `unit/test_panel.py`: the path for an ordinary case, one directly under `evals/`, one
       nested deeper than a single skill directory, and one whose names need slugging
-- [ ] `unit/test_panel.py`: three cases in one append land in three files, parents created
-- [ ] `unit/test_panel.py`: an unparsable last line reported, the records before it returned
-- [ ] `unit/test_panel.py`: the digest moves when `prompt.md`, `case.yaml` or a grader changes,
+- [x] `unit/test_panel.py`: three cases in one append land in three files, parents created
+- [x] `unit/test_panel.py`: an unparsable last line reported, the records before it returned
+- [x] `unit/test_panel.py`: the digest moves when `prompt.md`, `case.yaml` or a grader changes,
       and not when any other file in the case directory does
-- [ ] `unit/test_panel.py`: prune drops records by age, deletes an emptied file, then an
+- [x] `unit/test_panel.py`: prune drops records by age, deletes an emptied file, then an
       emptied directory
-- [ ] `unit/test_verdict.py`: the outcome for a passing, failing, declared and two-arm
+- [x] `unit/test_verdict.py`: the outcome for a passing, failing, declared and two-arm
       document, each agreeing with the lines printed beside it
-- [ ] `unit/test_panel.py`: every field of a record, from a hand-written result document and
+- [x] `unit/test_panel.py`: every field of a record, from a hand-written result document and
       its outcomes, including a two-arm one
-- [ ] `unit/test_panel.py`: rows over `plugins/smoke` with no history: every case never run,
+- [x] `unit/test_panel.py`: rows over `plugins/smoke` with no history: every case never run,
       and `capped-turns` reading `declared` in the cowork column from its tag alone
-- [ ] `unit/test_panel.py`: two backends for one case, the newest of each selected
-- [ ] `unit/test_panel.py`: a stale row, and a row whose trace directory is gone
-- [ ] `unit/test_panel.py`: a removed case hidden by default, shown with `--removed`
-- [ ] `unit/test_panel.py`: the JSON snapshot carries one entry per row, with the row's values
-- [ ] `unit/test_cli.py`: the verb and `prune --history` parse, a path selecting no case exits
+- [x] `unit/test_panel.py`: two backends for one case, the newest of each selected
+- [x] `unit/test_panel.py`: a stale row, and a row whose trace directory is gone
+- [x] `unit/test_panel.py`: a removed case hidden by default, shown with `--removed`
+- [x] `unit/test_panel.py`: the JSON snapshot carries one entry per row, with the row's values
+- [x] `unit/test_cli.py`: the verb and `prune --history` parse, a path selecting no case exits
       2, and an unparsable history line leaves the exit code at 0
 - [ ] `integration/test_cli.py`: one `run --docker plugins/smoke` with `panel.root` in a
       temporary directory, then `panel` showing that run

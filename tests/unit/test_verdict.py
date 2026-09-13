@@ -464,3 +464,66 @@ def test_picked_and_ran_differing_is_not_a_failure(tmp_path: Path) -> None:
     assert result.lines[-1] == (
         "4 found, 4 picked, 1 ran, 1 passed, 0 declared unrunnable, overall score 1.00"
     )
+
+
+# The outcome, beside the lines printed for the same document.
+
+
+def outcomes(result: Verdict) -> list[tuple[str, str]]:
+    """Each case's name and what this module concluded about it."""
+    return [(one.name, one.outcome) for one in result.outcomes]
+
+
+def test_a_passing_case_is_recorded_as_a_pass(tmp_path: Path) -> None:
+    result = judge(run_directory(tmp_path, smoke="pass"))
+    assert outcomes(result) == [("python-version", "pass")]
+    assert failures(result) == []
+
+
+def test_a_failing_case_is_recorded_as_a_fail_beside_its_lines(tmp_path: Path) -> None:
+    result = judge(run_directory(tmp_path, smoke="structural_failures"))
+    assert outcomes(result) == [("every-structural", "fail")]
+    assert failures(result)
+
+
+def test_a_declared_case_is_recorded_as_declared(tmp_path: Path) -> None:
+    """It neither passes nor fails, and the word is the one the summary line counts."""
+    result = judge(run_directory(tmp_path, smoke="declared_case"))
+    assert outcomes(result) == [("capped-turns", "declared")]
+    assert failures(result) == []
+
+
+def test_a_judged_failure_alone_is_still_a_pass(tmp_path: Path) -> None:
+    """Judged graders decide nothing, so the outcome agrees with the exit code."""
+    result = judge(run_directory(tmp_path, smoke="judged_failure"))
+    assert outcomes(result) == [("judged", "pass")]
+    assert notes(result)
+
+
+def test_a_two_arm_document_records_one_outcome_per_case(tmp_path: Path) -> None:
+    result = judge(run_directory(tmp_path, smoke="two_arm"), found=2, picked=2)
+    assert outcomes(result) == [("fires-and-answers", "pass"), ("quiet-case", "pass")]
+
+
+def test_a_two_arm_case_below_the_threshold_is_recorded_as_a_fail(tmp_path: Path) -> None:
+    result = judge(
+        run_directory(tmp_path, smoke="two_arm_below_threshold"),
+        found=1,
+        picked=1,
+        delta_threshold=0.5,
+    )
+    assert outcomes(result) == [("writes-a-file", "fail")]
+    assert failures(result)
+
+
+def test_an_outcome_carries_the_pair_that_identifies_the_case(tmp_path: Path) -> None:
+    """The run directory's child name and the case's `dir`: neither alone is unique."""
+    one = judge(run_directory(tmp_path, smoke="pass")).outcomes[0]
+    assert one.plugin == "smoke"
+    assert one.dir == "evals/plugin/python-version"
+
+
+def test_a_document_that_cannot_be_read_records_no_outcome(tmp_path: Path) -> None:
+    result = judge(run_directory(tmp_path, smoke=None))
+    assert result.outcomes == ()
+    assert failures(result)

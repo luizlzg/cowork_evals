@@ -10,12 +10,12 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
 
-from cowork_evals import cli, logs, preflight, results
+from cowork_evals import cli, logs, panel, preflight, results
 from cowork_evals.cases import plugin_name, plugin_roots
 from cowork_evals.cli import FAILED, OK, PREFLIGHT_FAILED, USAGE, main, parse_args
 from cowork_evals.config import Config, CoWorkError, EvalSection, checked
@@ -453,6 +453,7 @@ VALIDATE = Path(__file__).resolve().parent.parent / "data" / "validate"
 FIRST = MARKETPLACE / "first"
 SECOND = MARKETPLACE / "second"
 SMOKE = Path(__file__).resolve().parent.parent.parent / "plugins" / "smoke"
+HISTORY = Path(__file__).resolve().parent.parent / "data" / "history"
 
 
 def settings(tmp_path: Path, text: str = "") -> Config:
@@ -814,9 +815,104 @@ def test_a_named_backend_keeps_its_unmet_lines_on_stderr(tmp_path, capsys) -> No
     assert printed.out == ""
 
 
+# panel.
+
+
+def test_panel_takes_a_path_and_its_three_options() -> None:
+    args = parse("panel", "plugin/evals", "--markdown", "p.md", "--json", "p.json", "--removed")
+    assert args.verb == "panel"
+    assert args.path == "plugin/evals"
+    assert args.markdown == "p.md"
+    assert args.json == "p.json"
+    assert args.removed
+
+
+def test_panel_takes_no_backend() -> None:
+    """It renders both columns and reaches neither, so a backend flag is unknown."""
+    with pytest.raises(SystemExit) as raised:
+        parse("panel", "--docker", "plugin/evals")
+    assert raised.value.code == USAGE
+
+
+def test_panel_prints_one_row_per_case_under_the_path(tmp_path, capsys) -> None:
+    config = settings(tmp_path, f"panel:\n  root: {tmp_path / 'history'}\n")
+    assert cli._panel(parse("panel", str(SMOKE)), config) == OK
+    printed = capsys.readouterr()
+    lines = printed.out.splitlines()
+    assert lines[0].split() == list(panel.COLUMNS)
+    assert len(lines) == 4
+    assert printed.err == ""
+
+
+def test_panel_writes_the_two_files_it_is_given(tmp_path, capsys) -> None:
+    config = settings(tmp_path, f"panel:\n  root: {tmp_path / 'history'}\n")
+    markdown = tmp_path / "panel.md"
+    snapshot = tmp_path / "panel.json"
+    args = parse("panel", str(SMOKE), "--markdown", str(markdown), "--json", str(snapshot))
+    assert cli._panel(args, config) == OK
+    capsys.readouterr()
+    assert markdown.read_text().count("| smoke |") == 3
+    assert len(json.loads(snapshot.read_text())["rows"]) == 3
+
+
+def test_a_panel_path_selecting_no_case_returns_two(tmp_path, capsys) -> None:
+    """The same refusal `run` makes, so a mistyped path never reads as an empty repository."""
+    config = settings(tmp_path, f"panel:\n  root: {tmp_path / 'history'}\n")
+    assert cli._panel(parse("panel", str(MARKETPLACE / "library")), config) == USAGE
+    assert "selects no case" in capsys.readouterr().err
+
+
+def test_an_unparsable_history_line_warns_and_leaves_the_exit_code_at_zero(
+    tmp_path, capsys
+) -> None:
+    """A record is one line, so one truncated line loses one measurement and no row."""
+    history = tmp_path / "history"
+    file = panel.path(history, "smoke", "evals/plugin/python-version")
+    file.parent.mkdir(parents=True)
+    file.write_bytes((HISTORY / "truncated.jsonl").read_bytes())
+    config = settings(tmp_path, f"panel:\n  root: {history}\n")
+    assert cli._panel(parse("panel", str(SMOKE)), config) == OK
+    printed = capsys.readouterr()
+    assert printed.err.startswith("panel: ")
+    assert "pass" in printed.out
+
+
+# prune.
+
+
 def test_prune_with_no_selection_flag_returns_two(capsys) -> None:
     assert main(["prune"]) == USAGE
-    assert "prune takes --docker, --logs, or both" in capsys.readouterr().err
+    assert "prune takes --docker, --logs, --history" in capsys.readouterr().err
+
+
+def test_prune_takes_history_beside_the_other_two(tmp_path: Path) -> None:
+    args = parse("prune", "--logs", "--history", "--docker", "--older-than", "7")
+    assert args.logs and args.history and args.docker
+    assert args.older_than == 7
+
+
+def test_prune_history_deletes_a_record_under_the_panel_root(tmp_path, capsys) -> None:
+    """`--out` names the log root, and the history root is `panel.root`. docs/panel.md."""
+    history = tmp_path / "history"
+    old = (datetime.now(timezone.utc) - timedelta(days=40)).isoformat()
+    panel.append(
+        history,
+        [
+            {
+                "schemaVersion": 1,
+                "plugin": "smoke",
+                "dir": "evals/plugin/one",
+                "backend": "docker",
+                "startedAt": old,
+                "outcome": "pass",
+            }
+        ],
+    )
+    config = settings(tmp_path, f"panel:\n  root: {history}\n")
+    args = parse("prune", "--history", "--out", str(tmp_path / "elsewhere"))
+    assert cli._prune(args, config) == 0
+    assert "pruned " in capsys.readouterr().out
+    assert not (history / "smoke").exists()
 
 
 def test_prune_logs_deletes_under_the_resolved_root(tmp_path, capsys) -> None:
