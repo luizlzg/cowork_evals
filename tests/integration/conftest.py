@@ -19,13 +19,7 @@ import pytest
 import yaml
 
 from cowork_evals import cowork as driver_module
-from cowork_evals.config import (
-    CONFIG_FILENAME,
-    CONSENT_DIALOG,
-    CONSENT_NONE,
-    Config,
-    CoWorkSection,
-)
+from cowork_evals.config import CONFIG_FILENAME, CONSENT_DIALOG, Config, CoWorkSection
 
 HERE = Path(__file__).parent
 REPOSITORY = HERE.parent.parent
@@ -67,12 +61,16 @@ def keyboard() -> None:
 
 
 @pytest.fixture
-def unattended(tmp_path: Path) -> Path:
-    """This machine's configuration with `cowork.consent` set to `none`, in a new file.
+def attended(tmp_path: Path) -> Path:
+    """This machine's configuration with `cowork.consent` set to `dialog`, in a new file.
 
-    `consent: none` is what an unattended run sets, and it is why no modal appears in a
-    test run. It is a configuration value and not a seam: this writes a file exactly as a
-    consumer would, and no parameter injects an answer.
+    `dialog` is forced rather than copied, so a developer whose own file carries `none` is
+    still warned. The `keyboard` fixture above has already asked by the time a test runs, so
+    the driver's ask inside the submission shows nothing and the value proves the driver
+    asks rather than refuses.
+
+    It is a configuration value and not a seam: this writes a file exactly as a consumer
+    would, and no parameter injects an answer.
 
     Every other key is copied from this machine's own `cowork_evals.yaml`, so a developer
     who raised a timeout there still gets it here. Nothing prints the file or the profile
@@ -82,7 +80,7 @@ def unattended(tmp_path: Path) -> Path:
     assert source.is_file(), f"{CONFIG_FILENAME} is not in the repository root"
     document = yaml.safe_load(source.read_text(encoding="utf-8")) or {}
     assert document.get("cowork", {}).get("profile"), f"{CONFIG_FILENAME} names no profile"
-    document["cowork"]["consent"] = CONSENT_NONE
+    document["cowork"]["consent"] = CONSENT_DIALOG
 
     path = tmp_path / CONFIG_FILENAME
     path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")

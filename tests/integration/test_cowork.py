@@ -98,7 +98,7 @@ def test_focus_the_guard_refuses_with_code_9_when_cowork_is_not_frontmost() -> N
 @pytest.mark.integration
 @pytest.mark.live
 @pytest.mark.timeout(1800)
-def test_focus_a_primed_composer_is_cleared_before_the_prompt(unattended: Path) -> None:
+def test_focus_a_primed_composer_is_cleared_before_the_prompt(attended: Path) -> None:
     """The composer contamination, reproduced and then not reproduced.
 
     The composer is primed by typing into it, which is what a developer working in another
@@ -106,7 +106,7 @@ def test_focus_a_primed_composer_is_cleared_before_the_prompt(unattended: Path) 
     has to be the submitted prompt and nothing else.
     """
     real_profile()
-    driver = CoWork.from_file(unattended)
+    driver = CoWork.from_file(attended)
 
     activate(driver_module.COWORK_PROCESS)
     assert driver_module.frontmost() == driver_module.COWORK_PROCESS
@@ -139,9 +139,9 @@ def test_focus_a_primed_composer_is_cleared_before_the_prompt(unattended: Path) 
 @pytest.mark.integration
 @pytest.mark.live
 @pytest.mark.timeout(1800)
-def test_a_live_run_returns_the_marker(unattended: Path, session_document_keys: set[str]) -> None:
+def test_a_live_run_returns_the_marker(attended: Path, session_document_keys: set[str]) -> None:
     real_profile()
-    driver = CoWork.from_file(unattended)
+    driver = CoWork.from_file(attended)
     marker = f"MARKER-{uuid.uuid4().hex[:12].upper()}"
     before = len(driver.sessions())
     before_log = len(driver.history())
