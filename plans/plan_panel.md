@@ -317,7 +317,7 @@ is the only record of where the work stopped if the context is lost. `CLAUDE.md`
 - [x] `unit/test_panel.py`: the JSON snapshot carries one entry per row, with the row's values
 - [x] `unit/test_cli.py`: the verb and `prune --history` parse, a path selecting no case exits
       2, and an unparsable history line leaves the exit code at 0
-- [ ] `integration/test_cli.py`: one `run --docker plugins/smoke` with `panel.root` in a
+- [x] `integration/test_cli.py`: one `run --docker plugins/smoke` with `panel.root` in a
       temporary directory, then `panel` showing that run
 
 ## Verification steps

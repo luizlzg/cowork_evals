@@ -2,17 +2,18 @@
 
 ## Summary
 
-The command. One executable, eight verbs, two backends. It is the whole surface a consumer
+The command. One executable, nine verbs, two backends. It is the whole surface a consumer
 repository sees; the boundary behind it is [library.md](library.md).
 
-- **The backend is required on every verb but `prune`, `docs` and `init`** and has no
+- **The backend is required on every verb but `prune`, `panel`, `docs` and `init`** and has no
   default. Which backend proves what is [approaches.md](approaches.md).
 - **The path is the scope.** One path argument decides whether a case, a skill, a plugin or a
   whole tree runs. There is no separate sweep command.
 - **A verb names its object only when that object is not an eval.** `run` runs evals, which
   is what this command is. `test` runs pytest and `ask` submits one prompt, so both say so.
-  `setup`, `check` and `prune` act on a backend and carry no object at all. `docs` and `init`
-  act on neither: they read what the package ships and write into the working directory.
+  `setup`, `check` and `prune` act on a backend and carry no object at all. `panel` renders
+  both backend columns and reaches neither. `docs` and `init` act on neither: they read what
+  the package ships and write into the working directory.
 - **Options are named.** Nothing is forwarded raw to `claude plugin eval`. `test` is the one
   verb that takes a raw tail, because pytest is the only thing behind it.
 - **`run` verifies and never builds.** A failed preflight exits 3 and names the command that
@@ -36,7 +37,8 @@ cowork_evals ask   --cowork --session <dir> [--json]
 cowork_evals test  --docker <path> [--build-missing] [--dry-run] [-- PYTEST_ARGS]
 cowork_evals setup --docker
 cowork_evals check (--docker | --cowork | --all)
-cowork_evals prune [--docker] [--logs] [--older-than DAYS] [--out DIR]
+cowork_evals prune [--docker] [--logs] [--history] [--older-than DAYS] [--out DIR]
+cowork_evals panel <path> [--markdown FILE] [--json FILE] [--removed]
 cowork_evals docs  [<name>]
 cowork_evals init
 cowork_evals --version
@@ -48,9 +50,10 @@ no `setup --all`.
 `ask` takes `--cowork` alone, exactly as `test` takes `--docker` alone. It reaches a live
 session, and the container has none.
 
-`prune`, `docs` and `init` are the three verbs that take no backend. `prune` requires at
-least one selection flag, and none is a usage error. `docs` and `init` take no backend
-because neither reaches one: `docs` reads the shipped tree, and `init` writes files.
+`prune`, `panel`, `docs` and `init` are the four verbs that take no backend. `prune` requires
+at least one selection flag, and none is a usage error. `panel` renders a column for each
+backend and reaches neither. `docs` and `init` take no backend because neither reaches one:
+`docs` reads the shipped tree, and `init` writes files.
 
 ## The path is the scope
 
@@ -490,8 +493,12 @@ Deletes artefacts this CLI created and nothing else.
 | ------------------- | ------------------------------------------------------------------------------------- |
 | `--docker`          | images tagged `cowork-evals:*` and `cowork-evals-test:*`, except the current digest of each |
 | `--logs`            | run directories under the resolved log root                                         |
+| `--history`         | records under `panel.root`, and a file and a directory each leaves empty             |
 | `--older-than DAYS` | restricts every selection above. Default 30                                         |
 | `--out DIR`         | the log root `--logs` resolves, replacing `<cwd>/logs/evals`                        |
+
+`--out` does not reach `--history`. That option names the log root, and the history root is
+`panel.root`, which `--out` does not move. See [panel.md](panel.md).
 
 At least one selection flag is required. `prune` with none is a usage error. The two are not
 exclusive: pruning images and logs in one invocation is ordinary.
@@ -502,6 +509,41 @@ by a modification time, which a later read moves.
 `run` prunes log directories older than 30 days on its own, so `prune --logs` is for
 reclaiming space on purpose. `prune --docker` leaves the container login alone: it is a
 credential, not a build product, and deleting it forces an interactive login.
+
+## panel
+
+`panel` prints what state the evals under a path are in, from records earlier runs left. It
+reaches no backend, spends nothing and writes nothing under the history root.
+
+```
+cowork_evals panel plugins/mail                 # every case, and its latest result
+cowork_evals panel plugins/mail --markdown p.md # the same rows, as a Markdown table
+```
+
+| Option            | Is                                                                     |
+| ----------------- | ------------------------------------------------------------------------ |
+| `<path>`          | the scope, resolved exactly as `run` resolves it                       |
+| `--markdown FILE` | write the same rows as a Markdown table                                |
+| `--json FILE`     | write the same rows as a JSON snapshot                                 |
+| `--removed`       | add a row for history whose case is no longer in the tree              |
+
+Both file options may be given at once, and both carry the rows the table carries.
+
+There is no `--tag` and no `--case`. The path is the only selector, because the verb exists to
+show what has never run and a filter hides exactly those rows.
+
+There is no backend flag: the output carries a column for each backend and reaches neither.
+There is no exit code that means the panel is red either. `run` already exits on the verdict,
+and a second code deciding the same thing from older data would disagree with it.
+
+| Condition                                | Exit |
+| ---------------------------------------- | ---- |
+| rows printed                             | 0    |
+| a history line that does not parse       | 0, and the line named on stderr |
+| a path selecting no case                 | 2    |
+| a path with no plugin root at or above it | 2   |
+
+The history, the record, the digest and the columns are [panel.md](panel.md).
 
 ## docs
 

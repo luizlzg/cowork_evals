@@ -40,6 +40,7 @@ not restate any of them here.
 | Pass and fail                                 | yes      | this file                                    |
 | The baseline arm, and the verdict over its delta | yes   | this file                                    |
 | The case validator                            | yes      | [eval_format.md](eval_format.md)             |
+| The case history, and the `panel` verb over it | yes      | [panel.md](panel.md)                         |
 | The 3.10 and import check over code under test | no      | nowhere. Not designed, and no plan builds it |
 | The container backend and its Dockerfile      | yes      | [docker.md](docker.md)                       |
 | `scripts/parity.sh` and `tests/unit/test_parity.py` | yes | [docker.md](docker.md)                     |
@@ -690,6 +691,10 @@ reclaims space.
 
 `run.log` is captured at the file descriptor level, so a child process inherits it and the
 harness's own output and the container's reach the file.
+
+A run directory is not the record of what a case did. It is deleted at the retention above,
+and what outlives it is one line per case under `logs/evals/history/`, which `cowork_evals
+panel` reads. See [panel.md](panel.md).
 
 `traces/` is written by both backends, with the same three names in it, and the rule above
 says what goes in each. `<n>` is 1-based and is the same number printed as `run N`. Nothing
