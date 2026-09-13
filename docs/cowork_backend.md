@@ -2,12 +2,12 @@
 
 ## Summary
 
-The layer that turns the CoWork driver into an eval backend. It reads the same case tree the
-container backend reads, submits each case's prompt body through the driver, grades the
-session document that comes back, and writes the same `aggregate-result.json` v1 document
-into the same log directory. It is reached as `cowork_evals run --cowork <path>`. It never
-calls `claude plugin eval`: that harness has to load a plugin, and only Claude Code knows
-how. The case format is shared with the harness; the execution is not.
+`cowork_evals run --cowork <path>` runs an eval suite using the CoWork desktop application,
+and this file is the code that does it. It reads the same case tree the container backend
+reads, sends each case's prompt to a real CoWork session through the driver, grades what the
+session wrote, and writes the same `aggregate-result.json` v1 document into the same log
+directory. It never calls `claude plugin eval`: that harness has to load a plugin, and only
+Claude Code knows how. The case format is shared with the harness. The execution is not.
 
 The split from the driver is one question: does the statement need to know what a case is?
 Yes, and it is here. No, and it is in [cowork_driver.md](cowork_driver.md), which holds the

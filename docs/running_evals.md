@@ -10,7 +10,8 @@ conditions that fail an invocation, and what a suite may cost.
 
 - **This file carries the build status of the whole system.** No other file carries one; they
   link here.
-- **Flags are pinned, not defaulted.** Every flag in the pinned list would bite at its default.
+- **Flags are pinned, not defaulted.** Every flag in the pinned list has a harness default
+  this repository cannot accept.
 - **This package decides pass and fail, not the harness.** It reads the result document, so one
   verdict covers both backends. Structural graders decide; judged graders are printed.
 - **A skip fails the run**, so a backend cannot go green by honouring nothing. A case the

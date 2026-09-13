@@ -2,12 +2,12 @@
 
 ## Summary
 
-An eval suite is expensive to run and is not run often, so the useful question between runs is
-what state each case is in: what it last scored, on which backend, how long ago, and whether the
-case has been edited since. A run directory answers that for one invocation and is then pruned.
-So `run` also appends one small record per case to a history tree that outlives it, and
-`cowork_evals panel` joins that history to the case tree and prints one row per case. The panel
-reaches no backend and spends nothing.
+`cowork_evals panel` prints one row per case: what it last scored, on which backend, how long
+ago, and whether the case has been edited since. It answers what state a case tree is in
+between runs, which is the question that matters because a suite is expensive and is not run
+often. A run directory answers it for one invocation and is then pruned, so `run` also appends
+one small record per case to a history tree that outlives it, and the panel joins that history
+to the case tree. The panel reaches no backend and spends nothing.
 
 - **`run` writes one record per case, once, after the verdict.** No backend changes, and nothing
   writes a record during a run.

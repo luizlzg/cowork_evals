@@ -2,11 +2,12 @@
 
 ## Summary
 
-CoWork exposes no scriptable entry point. The driver drives the desktop application instead:
-it fires one prompt through the `claude://` URL scheme, presses Return with a synthetic
-keystroke, waits for the session to finish, and reads what that session wrote to the host
-filesystem. One prompt in, one session document out. It is a library with no command of its
-own, and it knows nothing about cases, graders or pass and fail.
+The driver is the code that makes the CoWork desktop application run one prompt and hand
+back what the session produced. CoWork has no scriptable entry point, so the driver opens a
+`claude://` deep link, presses Return with a synthetic keystroke, waits for the session to
+finish, and reads the files that session wrote to the host filesystem. One prompt in, one
+session document out. It is a library with no command of its own, and it knows nothing about
+cases, graders or pass and fail.
 
 The split from the layer above is one question: does the statement need to know what a case
 is? Yes, and it is in [cowork_backend.md](cowork_backend.md). No, and it is here.

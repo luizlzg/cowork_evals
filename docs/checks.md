@@ -2,15 +2,15 @@
 
 ## Summary
 
-An eval case is scored by graders, and `claude plugin eval` defines six grader types. That
-list is closed, so an assertion outside it cannot be written as a grader at all. The one that
-comes up most is an assertion about what is inside a file the run produced. Take a case whose
-prompt asks for a spreadsheet: `file_exists` reports that the file was created and says
-nothing about the numbers in it, while `regex` and `llm` read a produced file as text, which a
-workbook is not. A check is that missing assertion, written as a Python function under the
-case's `checks/` directory. It runs on the host after the harness has graded the run, over the
-files that run left, and its verdict is appended to the result document as a grader result, so
-a failed check fails the case.
+A check is a Python function you write that asserts something about the files an eval run
+produced. You need one when no grader can make the assertion. `claude plugin eval` defines six
+grader types and that list is closed, so an assertion outside it has nowhere to go. The case
+that comes up most is a produced file whose contents matter. Take a case whose prompt asks for
+a spreadsheet: `file_exists` reports that the file was created and says nothing about the
+numbers in it, while `regex` and `llm` read a produced file as text, which a workbook is not. A
+check goes in the case's `checks/` directory. It runs on the host after the harness has graded
+the run, over the files that run left, and its verdict is appended to the result document as a
+grader result, so a failed check fails the case.
 
 ## Writing one
 

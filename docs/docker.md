@@ -2,11 +2,12 @@
 
 ## Summary
 
-An eval that only reproduces Python and its wheels does not reproduce a CoWork session. A
-skill calls LibreOffice, ImageMagick, pandoc and tesseract, and those come from the OS. This
-file is the container that reproduces the CoWork image itself: the OS, the architecture, the
-document and media tooling, the CLI utilities, the font stack and the full pin set. An eval
-run against it exercises the same versions a session does. The inventory it has to match is
+This file is the Docker container that stands in for a CoWork session, and the container
+backend runs every eval inside it. Reproducing Python and its wheels is not enough: a skill
+calls LibreOffice, ImageMagick, pandoc and tesseract, and those come from the OS. So the
+container reproduces the CoWork image itself: the OS, the architecture, the document and media
+tooling, the CLI utilities, the font stack and the full pin set. An eval run against it
+exercises the same versions a session does. The inventory it has to match is
 [runtime.md](runtime.md).
 
 - **Jammy is the base**, and almost every recorded version is the version jammy ships. Four

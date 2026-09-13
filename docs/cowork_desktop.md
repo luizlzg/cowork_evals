@@ -2,11 +2,11 @@
 
 ## Summary
 
-The CoWork desktop application is not built here and promises no interface. This file is what
-a script needs in order to drive it anyway: how a session is started, where a session writes,
-what the records it writes look like, and what a machine has to be granted first. Every
-statement is measured by direct probe on macOS, and the conditions it holds under are stated
-with it. Any release can change all of it, so the coupling list at the end is the checklist to
+This file records how the CoWork desktop application behaves, so that a script can drive it:
+how a session is started, where a session writes, what the records it writes look like, and
+what a machine has to be granted first. The application is not built here and promises no
+interface, so every statement is measured by direct probe on macOS and carries the conditions
+it holds under. Any release can change all of it, so the coupling list at the end is the checklist to
 re-probe after an application update. What the driver does with these facts is
 [cowork_driver.md](cowork_driver.md), which cites this file and never restates it.
 

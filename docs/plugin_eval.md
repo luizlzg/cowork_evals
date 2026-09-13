@@ -15,8 +15,8 @@ and cannot be fixed by editing a case.
   plugins, no personal MCP servers.
 - **Tools need an explicit grant.** `Bash`, `Write`, `Edit`, `WebFetch`, `WebSearch` and
   `mcp__*` are outside the read-only set.
-- **Its defaults would bite**, which is why [running_evals.md](running_evals.md) pins a flag
-  list rather than accepting them.
+- **Its defaults are wrong for this repository**, which is why
+  [running_evals.md](running_evals.md) pins a flag list rather than accepting them.
 
 What a case file contains is [eval_format.md](eval_format.md), the authoring contract for both
 backends. A limit a case author can work around is there; the ones here cannot be worked around.
