@@ -68,10 +68,11 @@ and fail read it there. Nothing else in the pipeline changes.
 
 ### What follows from that
 
-- **A check runs on your laptop, not in the session.** The run is over and already graded
-  before a check starts. So a check may import anything your own project declares, and shell
-  out to anything your machine has: `openpyxl`, `pypdf`, `soffice`. The CoWork wheel set
-  binds the code under test and does not bind a check. See [library.md](library.md).
+- **A check runs on the host, not in the session.** The host is whatever machine you ran
+  `cowork_evals` on. The run is over and already graded before a check starts, so a check may
+  import anything your own project declares and shell out to anything that machine has:
+  `openpyxl`, `pypdf`, `soffice`. The CoWork wheel set binds the code under test and does not
+  bind a check. See [library.md](library.md).
 - **One mechanism, not three.** Asserting, converting a file to something readable, and asking
   a model about it are all things a Python function does, so all three are one decorated
   function. There is no separate transform step and no separate judge step.
@@ -315,8 +316,8 @@ def deck_is_readable(run: Run) -> Result:
     return run.judge("Every slide carries a title, and no text is clipped.", run.scratch)
 ```
 
-`soffice` is the laptop's, like `openpyxl` above. A check is host code, so it may shell out to
-anything the developer's machine has.
+`soffice` is the host's, like `openpyxl` above. A check is host code, so it may shell out to
+anything the machine running `cowork_evals` has.
 
 `run.judge(prompt, *paths)` is `claude -p`, three votes, a majority of two, and it returns a
 `Result` a check returns directly.
@@ -362,9 +363,19 @@ read by the same function every other vote goes through. The CLI's own default b
 ## Where it runs
 
 A check runs on the host, in this package's process, and never inside the container or the
-CoWork VM. The run has already finished and has already been graded, so nothing about the
-session binds a check file: not the interpreter, not the wheel set, not the image. A check
-file is under the eval path and is not code under test.
+CoWork VM. The host is the machine `cowork_evals` was run on: a laptop, a desktop, or a
+server, and nothing about a check prefers one over another.
+
+A check adds no requirement to that machine beyond Python 3.10, which the package already
+needs, and whatever the check itself imports. What does constrain the machine is the backend,
+and it constrains it the same way with checks as without: `--docker` needs a reachable Docker
+daemon and runs headless, so a build server is fine, and `--cowork` needs macOS, the desktop
+application and the keyboard, so it has no headless route at all. See
+[approaches.md](approaches.md).
+
+The run has already finished and has already been graded, so nothing about the session binds a
+check file: not the interpreter, not the wheel set, not the image. A check file sits under the
+eval path and is not code under test.
 
 A check's own imports are the consumer's dependency, declared in the consumer's project. This
 package depends on nothing a check might want. An author asserting over a spreadsheet adds

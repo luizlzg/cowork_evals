@@ -178,8 +178,8 @@ max: 0
 ## Checks
 
 A grader type cannot say what is inside the file the run wrote. A check can: it is your own
-Python, in the case's `checks/` directory, run on your machine after the run is graded, on
-either backend. Its verdict is a grader result in the same document, so a failed check fails
+Python, in the case's `checks/` directory, run on the host after the run is graded, on either
+backend. Its verdict is a grader result in the same document, so a failed check fails
 the run like a failed `regex` grader.
 
 ```python
@@ -210,8 +210,8 @@ carrying its message. The name is `<file stem>.<function name>`. `run` carries `
 `last_message`, `trace`, `case_dir`, `run_dir`, `scratch` and `index`, plus `file(name)` and
 `judge(prompt, *paths)`. Write into `run.scratch`, never into `run.workspace`.
 
-A check runs on your laptop, not in the session, so it imports whatever your own repository
-declares. `cowork_evals docs checks` has the rest.
+A check runs on the machine you ran `cowork_evals` on, not in the session, so it imports
+whatever your own repository declares. `cowork_evals docs checks` has the rest.
 
 ## Traps
 

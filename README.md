@@ -188,8 +188,9 @@ def totals_add_up(run: Run) -> None:
     assert book.active["D10"].value == 4200
 ```
 
-`openpyxl` is your dependency, not this package's: a check runs on your laptop, never in the
-session. A worked example, end to end, is in [`docs/checks.md`](docs/checks.md).
+`openpyxl` is your dependency, not this package's: a check runs on the machine you ran
+`cowork_evals` on, never in the session. A worked example, end to end, is in
+[`docs/checks.md`](docs/checks.md).
 
 Run it:
 
