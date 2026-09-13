@@ -17,6 +17,8 @@ the harness's own graders.
 - **Its own imports are the consumer's dependency.** The CoWork wheel set does not bind it.
 - **A run that kept no artefacts produces one skipped check per check**, and a skip fails the
   run.
+- **A worked example is below**: a case in this repository, its three files, the command, and
+  what that command printed.
 
 The six grader types the format defines are fixed by a tool this repository does not own, so
 an assertion outside them cannot be made: a `file_exists` grader says the spreadsheet appeared
@@ -45,10 +47,111 @@ assertion directory is `checks/` fails to load with `invalid case.yaml: graders:
 the suite writes no result document, and the command exits 1. The case never runs, so the
 check never runs either.
 
-## The function
+## A worked example
+
+`plugins/smoke/evals/plugin/checked-file` is a case with checks, in this repository, and it
+runs. Every block below is that case's own file or that run's own output, verbatim. The
+failure line is wrapped to fit; it is one line.
+
+```
+plugins/smoke/evals/plugin/checked-file/prompt.md
+plugins/smoke/evals/plugin/checked-file/graders/writes-written-txt.md
+plugins/smoke/evals/plugin/checked-file/checks/assertions.py
+```
+
+`prompt.md` asks for a file:
+
+```markdown
+---
+name: checked-file
+description: A check reads the file the run wrote, and decides on what is inside it.
+tags: [plugin]
+plugins: ["../../.."]
+runs: 1
+---
+
+Write the single word WRITTEN into a file named `written.txt` in the working directory. Reply
+with the word WRITTEN and nothing else.
+```
+
+`graders/writes-written-txt.md` says the file appeared, which is all a grader type can say:
+
+```markdown
+---
+type: file_exists
+path: written.txt
+---
+```
+
+`checks/assertions.py` says what is inside it. One check passes and one fails, so the case
+shows both:
 
 ```python
 from cowork_evals.checks import Result, Run, check
+
+
+@check
+def the_file_says_written(run: Run) -> None:
+    assert run.file("written.txt").read_text(encoding="utf-8").strip() == "WRITTEN"
+
+
+@check
+def the_file_is_a_workbook(run: Run) -> Result:
+    return Result(passed=False, explanation="written.txt is not a workbook")
+```
+
+Run it:
+
+```sh
+cowork_evals run --docker plugins/smoke --case checked-file --runs 1
+```
+
+The harness grades the case and reports it green, because its own grader passed. The layer
+then runs the two checks, and the verdict is this package's:
+
+```
+CASE          SCORE PASS% RUNS COST    NOTES
+checked-file  1.00  100%  1    $0.06
+
+1 case(s) · 7s · $0.06
+Report: /work/logs/report.html
+FAIL smoke/checked-file: run 1: assertions.the_file_is_a_workbook: the check grader failed:
+  written.txt is not a workbook [artifacts: logs/evals/20260913-131331-smoke/smoke/traces/checked-file/run-1]
+4 found, 1 picked, 1 ran, 0 passed, 0 declared unrunnable, overall score 0.67
+```
+
+The exit code is 1. The harness's own table and the verdict under it disagree because they are
+two things: the first is the harness reporting what it graded, and the second is this package
+deciding the run over everything that graded it. `Report: /work/logs/report.html` is the
+harness's report, named by the path it had inside the container; the file is beside
+`aggregate-result.json` on the host. The `[artifacts: ...]` directory holds what the run left and what
+the checks left:
+
+```
+traces/checked-file/run-1/trace.jsonl
+traces/checked-file/run-1/last_message.txt
+traces/checked-file/run-1/workspace/
+traces/checked-file/run-1/scratch/
+traces/checked-file/run-1/checks.jsonl
+```
+
+`checks.jsonl`, verbatim:
+
+```json
+{"name": "assertions.the_file_says_written", "passed": true, "explanation": "the check raised nothing", "durationSeconds": 0.0014283749987953342}
+{"name": "assertions.the_file_is_a_workbook", "passed": false, "explanation": "written.txt is not a workbook", "durationSeconds": 4.334004188422114e-06}
+```
+
+What that case is the fixture for is `plugins/README.md`.
+
+## The function
+
+An assertion over a produced file, which is the case a check exists for:
+
+```python
+import openpyxl
+
+from cowork_evals.checks import Run, check
 
 
 @check
@@ -56,6 +159,9 @@ def totals_add_up(run: Run) -> None:
     book = openpyxl.load_workbook(run.file("totals.xlsx"))
     assert book.active["D10"].value == 4200
 ```
+
+`openpyxl` is the consumer's own dependency, declared in the consumer's project. This package
+does not depend on it.
 
 `@check` takes no arguments. A check's name is `<file stem>.<function name>`, so the function
 above is `assertions.totals_add_up` in every place a name appears: the result document, the
@@ -123,11 +229,23 @@ The two transcript formats are [running_evals.md](running_evals.md). A check tha
 ## The judge
 
 ```python
+import subprocess
+
+from cowork_evals.checks import Result, Run, check
+
+
 @check
 def deck_is_readable(run: Run) -> Result:
-    subprocess.run(["soffice", "--convert-to", "png", run.file("deck.pptx")], cwd=run.scratch)
+    subprocess.run(
+        ["soffice", "--headless", "--convert-to", "png", run.file("deck.pptx")],
+        cwd=run.scratch,
+        check=True,
+    )
     return run.judge("Every slide carries a title, and no text is clipped.", run.scratch)
 ```
+
+`soffice` is the laptop's, like `openpyxl` above. A check is host code, so it may shell out to
+anything the developer's machine has.
 
 `run.judge(prompt, *paths)` is `claude -p`, three votes, a majority of two, and it returns a
 `Result` a check returns directly.

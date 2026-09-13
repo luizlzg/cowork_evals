@@ -170,6 +170,26 @@ match: not_contains
 Both are structural, so both decide the exit code. A grader file without the `---` delimiters
 is read as a note and is silently ignored.
 
+A grader type cannot say what is inside a file the run wrote. A check can. It is your own
+Python under `checks/`, run on your machine after the run is graded, and its verdict decides
+the exit code beside the graders:
+
+```python
+# plugins/notes/evals/summarize/one-paragraph/checks/assertions.py
+import openpyxl
+
+from cowork_evals.checks import Run, check
+
+
+@check
+def totals_add_up(run: Run) -> None:
+    book = openpyxl.load_workbook(run.file("totals.xlsx"))
+    assert book.active["D10"].value == 4200
+```
+
+`openpyxl` is your dependency, not this package's: a check runs on your laptop, never in the
+session. A worked example, end to end, is in [`docs/checks.md`](docs/checks.md).
+
 Run it:
 
 ```bash
