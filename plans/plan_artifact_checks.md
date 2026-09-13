@@ -209,15 +209,15 @@ Work one box, verify it, tick it, commit. Do not batch ticks.
 
 ### Phase 5: the fixture and the integration tier
 
-- [ ] `plugins/smoke/evals/plugin/checked-file/`, a case that writes a file and asserts its
+- [x] `plugins/smoke/evals/plugin/checked-file/`, a case that writes a file and asserts its
       content with a check. It carries no `no-cowork` tag, because a check needs nothing a
       session cannot do.
-- [ ] `plugins/README.md` gains the case and says what it is the fixture for.
-- [ ] `tests/README.md` gains the `unit/test_checks.py` row and the new integration tests.
-- [ ] `tests/integration/test_cli.py` gains one `live` test: the fixture case through
+- [x] `plugins/README.md` gains the case and says what it is the fixture for.
+- [x] `tests/README.md` gains the `unit/test_checks.py` row and the new integration tests.
+- [x] `tests/integration/test_cli.py` gains one `live` test: the fixture case through
       `cowork_evals run --docker`, asserting the `FAIL` line, the appended grader result,
       `checks.jsonl` and `scratch/`.
-- [ ] `scripts/test.sh` is green, and `scripts/lint.sh` is clean.
+- [x] `scripts/test.sh` is green, and `scripts/lint.sh` is clean.
 - [ ] `scripts/test.sh -m integration` is green.
 
 ### Phase 6: the documentation

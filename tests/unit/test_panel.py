@@ -24,9 +24,9 @@ HISTORY = DATA / "history"
 DOCUMENTS = DATA / "results"
 SMOKE = Path(__file__).resolve().parents[2] / "plugins" / "smoke"
 
-# The three cases `plugins/smoke` holds, and the one of them that carries `no-cowork`.
+# The four cases `plugins/smoke` holds, and the one of them that carries `no-cowork`.
 # ../../plugins/README.md.
-CASES = ("capped-turns", "python-version", "writes-a-file")
+CASES = ("capped-turns", "checked-file", "python-version", "writes-a-file")
 DECLARED_CASE = "capped-turns"
 CASE_DIR = "evals/plugin/python-version"
 

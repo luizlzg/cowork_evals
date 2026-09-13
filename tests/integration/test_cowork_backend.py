@@ -159,10 +159,10 @@ def test_the_declared_case_is_counted_and_submits_nothing(tmp_path: Path) -> Non
     assert case["arms"]["with"] == []
     assert document["aggregates"]["casesTotal"] == 0
 
-    decided = decide(tmp_path, found=3, picked=1)
+    decided = decide(tmp_path, found=4, picked=1)
     assert decided.passed, decided.text
     assert decided.lines == (
-        "3 found, 1 picked, 0 ran, 0 passed, 1 declared unrunnable, overall score 0.00",
+        "4 found, 1 picked, 0 ran, 0 passed, 1 declared unrunnable, overall score 0.00",
     )
 
 

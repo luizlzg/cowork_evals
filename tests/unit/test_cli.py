@@ -867,7 +867,7 @@ def test_panel_prints_one_row_per_case_under_the_path(tmp_path, capsys) -> None:
     printed = capsys.readouterr()
     lines = printed.out.splitlines()
     assert lines[0].split() == list(panel.COLUMNS)
-    assert len(lines) == 4
+    assert len(lines) == 5
     assert printed.err == ""
 
 
@@ -878,8 +878,8 @@ def test_panel_writes_the_two_files_it_is_given(tmp_path, capsys) -> None:
     args = parse("panel", str(SMOKE), "--markdown", str(markdown), "--json", str(snapshot))
     assert cli._panel(args, config) == OK
     capsys.readouterr()
-    assert markdown.read_text().count("| smoke |") == 3
-    assert len(json.loads(snapshot.read_text())["rows"]) == 3
+    assert markdown.read_text().count("| smoke |") == 4
+    assert len(json.loads(snapshot.read_text())["rows"]) == 4
 
 
 def test_a_panel_path_selecting_no_case_returns_two(tmp_path, capsys) -> None:
