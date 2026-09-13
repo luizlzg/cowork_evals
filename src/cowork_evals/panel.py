@@ -23,7 +23,7 @@ import hashlib
 import json
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -780,7 +780,12 @@ def _lines(file: Path) -> list[str]:
 
 
 def _older(line: str, now: datetime, days: int) -> bool:
-    """Whether one line is a record older than `days`. Anything undatable is kept."""
+    """Whether one line is a record older than `days`. Anything undatable is kept.
+
+    The arithmetic is `logs.prune`'s, because `--older-than DAYS` is one flag over both
+    trees: an exact cutoff at `days` before now, not a floor on whole days. A floor keeps a
+    record for a day longer than the run directory it names.
+    """
     try:
         record = json.loads(line)
     except ValueError:
@@ -791,7 +796,7 @@ def _older(line: str, now: datetime, days: int) -> bool:
     if when is None:
         return False
     moment_now = datetime.now(when.tzinfo) if when.tzinfo is not None else now
-    return (moment_now - when).days > days
+    return when < moment_now - timedelta(days=days)
 
 
 def _empty(directory: Path, root: Path) -> None:

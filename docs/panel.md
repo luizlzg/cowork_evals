@@ -183,6 +183,10 @@ that time, and a case nobody has looked at is not younger than one somebody has.
 no stamp, and a line that did not parse, are both kept: neither can be dated, and dropping
 what cannot be dated is a deletion on the age of nothing.
 
+`DAYS` is read here as `logs.prune` reads it, at one exact moment `DAYS` before now, because
+it is one flag over both trees. A floor on whole days would keep a record for a day longer
+than the run directory it names.
+
 There is no automatic retention. A keep-N or keep-days rule applied on its own would delete
 the newest record of a case that runs twice a year, which is the row the panel most needs.
 Deleting a record is the operator's act.

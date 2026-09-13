@@ -288,7 +288,7 @@ is the only record of where the work stopped if the context is lost. `CLAUDE.md`
 - [x] `panel.py`: `prune`
 - [x] `CaseOutcome` and `Verdict.outcomes` in `verdict.py`, no condition moved or copied
 - [x] `panel.records`, from an invocation's result documents and outcomes
-- [ ] The call from `cli._sweep` after the verdict, a failed append a stderr warning
+- [x] The call from `cli._sweep` after the verdict, a failed append a stderr warning
 - [x] `panel.rows`, joining the case tree to the newest record per backend
 - [x] `panel.table`, `panel.markdown` and `panel.snapshot`
 - [x] The `panel` verb in the parser, and `cli._panel` in the dispatch

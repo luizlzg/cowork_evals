@@ -12,7 +12,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from cowork_evals import panel
+from cowork_evals import logs, panel
 from cowork_evals.cases import discover
 from cowork_evals.cases import read as read_case
 from cowork_evals.harness import RESULT_NAME
@@ -225,6 +225,27 @@ def test_prune_deletes_an_emptied_file_and_then_an_emptied_directory(tmp_path: P
     panel.prune(tmp_path, 30)
     assert not (tmp_path / "smoke" / "plugin").exists()
     assert (tmp_path / "smoke" / "other" / "two.jsonl").is_file()
+
+
+def test_prune_reads_the_retention_the_way_the_log_prune_does(tmp_path: Path) -> None:
+    """`--older-than DAYS` is one flag over both trees, so it cuts at one moment in both.
+
+    An hour-old record at `--older-than 0` goes, exactly as `logs.prune` deletes an hour-old
+    run directory at the same retention. A floor on whole days would keep it for a day longer
+    than the run directory it names.
+    """
+    hour = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    entry = aged("plugin/one", 0)
+    entry["startedAt"] = hour
+    panel.append(tmp_path, [entry])
+    file = panel.path(tmp_path, "smoke", "evals/plugin/one")
+
+    directory = tmp_path / "runs" / f"{datetime.now() - timedelta(hours=1):%Y%m%d-%H%M%S}-smoke"
+    directory.mkdir(parents=True)
+
+    assert logs.prune(directory.parent, 0) == [directory]
+    assert panel.prune(tmp_path, 0) == [file]
+    assert not file.exists()
 
 
 def test_prune_keeps_a_record_with_no_stamp(tmp_path: Path) -> None:
