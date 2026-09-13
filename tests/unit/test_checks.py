@@ -561,3 +561,24 @@ def test_a_judged_check_keeps_the_whole_exchange_in_its_line() -> None:
         {"prompt": "the whole prompt", "replies": ["PASS", "FAIL", "PASS"], "costUsd": 0.01}
     ]
     assert line["costUsd"] == 0.01
+
+
+def test_the_suite_means_are_recomputed_over_the_case_aggregates(tmp_path: Path) -> None:
+    _, document = layer(tmp_path, "failing")
+    assert document["aggregates"]["overallScore"] == 1 / 8
+    assert document["aggregates"]["overallPassRate"] == 0.0
+    # `--threshold` is 0, so every case counts as passed there whatever a check said.
+    assert document["aggregates"]["casesTotal"] == 1
+    assert document["aggregates"]["casesPassed"] == 1
+
+
+def test_a_suite_with_no_check_anywhere_is_left_exactly_as_the_backend_wrote_it(
+    tmp_path: Path,
+) -> None:
+    directory = tmp_path / "smoke"
+    directory.mkdir(parents=True)
+    runs = collected_runs(directory, "noted", 1)
+    suite(tmp_path, [case_entry("noted", "evals/plugin/noted", runs)])
+    before = (directory / RESULT_NAME).read_bytes()
+    assert checks.run(directory, PLUGIN, judge_model="haiku") == []
+    assert (directory / RESULT_NAME).read_bytes() == before

@@ -219,6 +219,13 @@ refused. See [cli.md](cli.md).
 | the case's `aggregates`      | `score` and `passRate` recomputed over the runs                     |
 | the run's `judgeCostUsd`     | plus what a check judge spent                                       |
 | the document's `costUsd`     | the same, so the panel and `eval.max_cost_total_usd` both see it    |
+| the document's `aggregates`  | `overallScore` and `overallPassRate` recomputed over the cases      |
+
+`casesTotal` and `casesPassed` are untouched. `--threshold` is pinned to 0, so every case
+counts as passed there whatever a check said, and this package decides pass and fail.
+
+A suite with no check anywhere leaves the document exactly as the backend wrote it. Nothing is
+rewritten to say that nothing happened.
 
 `verdict.py` needs no condition of its own. It joins a result to its definition by name and
 asks whether the type is judged; `check` is not, so a failed check fails the run exactly as a
@@ -226,8 +233,8 @@ failed `regex` grader does, and the line reads `the check grader failed: <explan
 
 Only the `with` arm is walked. The baseline arm runs without the plugin under test, so an
 assertion about what the plugin produced has nothing to read there. A two-arm document's
-`aggregates.delta` is the harness's own and is not recomputed: a failed check fails the case
-through its own grader result, not through the delta.
+`aggregates.delta` and its `meanDelta` are the harness's own and are not recomputed: a failed
+check fails the case through its own grader result, not through the delta.
 
 A case carrying `declaredUnrunnable` has no run and produces no check result. It is counted,
 exactly as it is today.

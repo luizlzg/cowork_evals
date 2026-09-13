@@ -35,6 +35,7 @@ from pathlib import Path
 from typing import Any
 
 from . import judge as judging
+from . import results
 from .cases import CHECKS_DIR, Grader, check_files
 from .harness import RESULT_NAME
 from .results import ARM_WITH, DECLARED_UNRUNNABLE
@@ -569,6 +570,7 @@ def run(output_dir: Path | str, root: Path | str, *, judge_model: str) -> list[s
     plugin = Path(root)
     warnings: list[str] = []
     spent = 0.0
+    checked = False
     for case in document.get("cases") or []:
         if not isinstance(case, dict):
             continue
@@ -578,13 +580,43 @@ def run(output_dir: Path | str, root: Path | str, *, judge_model: str) -> list[s
         checks = discover(plugin / str(case.get("dir") or ""))
         if not checks:
             continue
+        checked = True
         spent += _each_case(case, checks, plugin, judge_model, warnings)
+    if not checked:
+        # A suite with no check anywhere leaves the document exactly as the backend wrote it.
+        return warnings
     add_spend(document, spent, SUITE_SPEND)
+    _recount(document)
     try:
-        path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+        results.write(directory, document)
     except OSError as error:
         return [*warnings, f"{path}: the check results could not be written: {error}"]
     return warnings
+
+
+def _recount(document: dict[str, Any]) -> None:
+    """The suite's two means, over the case aggregates the checks just moved.
+
+    `overallScore` is the mean case score and `overallPassRate` the mean case pass rate,
+    which is the reference's rule and `results._aggregates`'s. `casesTotal` and `casesPassed`
+    are untouched: `--threshold` is pinned to 0, so every case counts as passed there whatever
+    a check said, and this package decides pass and fail. `meanDelta` is untouched for the
+    same reason the delta is: a check runs on the with-arm alone. docs/checks.md.
+    """
+    counted = [
+        case
+        for case in document.get("cases") or []
+        if isinstance(case, dict) and not case.get(DECLARED_UNRUNNABLE)
+    ]
+    if not counted:
+        return
+    aggregates = document.get("aggregates")
+    if not isinstance(aggregates, dict):
+        return
+    scores = [_number((case.get("aggregates") or {}).get("score")) for case in counted]
+    rates = [_number((case.get("aggregates") or {}).get("passRate")) for case in counted]
+    aggregates["overallScore"] = sum(scores) / len(counted)
+    aggregates["overallPassRate"] = sum(rates) / len(counted)
 
 
 def _each_case(
@@ -632,9 +664,9 @@ def _each_run(
             outcomes.append(execute(one, build_run(directory, case_dir, index, judge_model)))
         warnings += _write(directory, outcomes)
 
-    results = entry.setdefault("graders", [])
-    if isinstance(results, list):
-        results += [grader_result(outcome) for outcome in outcomes]
+    graded = entry.setdefault("graders", [])
+    if isinstance(graded, list):
+        graded += [grader_result(outcome) for outcome in outcomes]
     entry["score"] = score(entry)
     entry["passed"] = entry["score"] == 1.0
 
