@@ -96,10 +96,10 @@ class Condition(Enum):
 def remedy(condition: Condition) -> str:
     """The one fix for each condition.
 
-    Every caller reads it here: `check` below, `preflight.py`, `scripts/login.sh` and the
-    integration tier. `scripts/image.sh` reads it through the messages `check` builds. It
-    names what a consumer runs, and never a development script under `scripts/`, which a
-    consumer never sees. docs/cli.md.
+    Every caller reads it here: `check` below, `preflight.py`, `cli._login` and the
+    integration tier. `scripts/image.sh` and `scripts/login.sh` read it through the verbs
+    they wrap. It names what a consumer runs, and never a development script under
+    `scripts/`, which a consumer never sees. docs/cli.md.
     """
     match condition:
         case Condition.DAEMON:
@@ -107,13 +107,13 @@ def remedy(condition: Condition) -> str:
         case Condition.IMAGE:
             return "run cowork_evals setup --docker"
         case Condition.CREDENTIAL:
-            return "run cowork_evals setup --docker"
+            return "run cowork_evals login --docker"
         case Condition.ENVIRONMENT:
             return "set it on this host, or drop it from docker.env_passthrough"
         case Condition.ENV_CREDENTIAL:
             return (
                 "drop it from docker.env_passthrough: the container login is the one "
-                "credential route, and cowork_evals setup --docker makes it"
+                "credential route, and cowork_evals login --docker makes it"
             )
 
 

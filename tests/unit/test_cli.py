@@ -19,7 +19,7 @@ from cowork_evals import cli, logs, preflight, results
 from cowork_evals.cases import plugin_name, plugin_roots
 from cowork_evals.cli import FAILED, OK, PREFLIGHT_FAILED, USAGE, main, parse_args
 from cowork_evals.config import Config, CoWorkError, EvalSection, checked
-from cowork_evals.docker import Docker
+from cowork_evals.docker import Condition, Docker, remedy
 from cowork_evals.docker.pytest_image import PytestImage
 from cowork_evals.harness import RESULT_NAME
 
@@ -165,6 +165,32 @@ def test_ask_with_no_backend_is_a_usage_error() -> None:
 
 def test_setup_takes_docker_alone() -> None:
     assert parse("setup", "--docker").backend == "docker"
+
+
+def test_login_takes_docker_alone_and_its_two_reports_are_exclusive() -> None:
+    """`--check` reports and `--force` writes, so asking for both says nothing coherent."""
+    assert parse("login", "--docker").backend == "docker"
+    assert parse("login", "--docker", "--check").check
+    assert parse("login", "--docker", "--force").force
+    for argv in (
+        ("login",),
+        ("login", "--cowork"),
+        ("login", "--docker", "--check", "--force"),
+    ):
+        with pytest.raises(SystemExit) as raised:
+            parse(*argv)
+        assert raised.value.code == USAGE
+
+
+def test_login_is_the_verb_a_missing_credential_names() -> None:
+    """The preflight sends an operator to the verb that makes a credential, not to `setup`.
+
+    `setup --docker` on a machine holding two current images prints `current` twice and
+    returns 0, so a line naming it would be a fix that changes nothing.
+    """
+    assert remedy(Condition.CREDENTIAL) == "run cowork_evals login --docker"
+    assert "login" in remedy(Condition.CREDENTIAL)
+    assert "setup" not in remedy(Condition.CREDENTIAL)
 
 
 def test_check_takes_both_backends_and_all() -> None:

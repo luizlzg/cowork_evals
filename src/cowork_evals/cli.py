@@ -1,4 +1,4 @@
-"""The command: the parser, the eight verbs, the dispatch and the exit codes.
+"""The command: the parser, the nine verbs, the dispatch and the exit codes.
 
 The surface is docs/cli.md, and this module is the whole of it. There is no second entry point
 and no per-backend executable.
@@ -35,7 +35,7 @@ from . import (
 from .cases import CaseError, discover, plugin_name, plugin_roots
 from .config import ABLATION_CHOICES, Config, CoWorkError, CoWorkSection, EvalSection, checked
 from .cowork import CoWork
-from .docker import Docker, DockerError, pytest_image
+from .docker import Condition, Docker, DockerError, pytest_image, remedy
 from .docker.pytest_image import PytestImage
 from .harness import RunOptions
 from .preflight import COWORK, DOCKER, TEST
@@ -137,6 +137,7 @@ def build_parser() -> argparse.ArgumentParser:
     _ask_parser(verbs)
     _test_parser(verbs)
     _setup_parser(verbs)
+    _login_parser(verbs)
     _check_parser(verbs)
     _prune_parser(verbs)
     _docs_parser(verbs)
@@ -260,6 +261,33 @@ def _test_parser(verbs: Any) -> None:
 def _setup_parser(verbs: Any) -> None:
     verb = verbs.add_parser("setup", help="build what a backend needs")
     _backend_group(verb, DOCKER)
+
+
+def _login_parser(verbs: Any) -> None:
+    """`login` makes the one credential a run needs, and builds nothing.
+
+    It is a verb and not a side effect of `setup`, because an image is a build product and a
+    credential is not: `_prune_images` already keeps the two apart, and one command that
+    makes both cannot be run again for either one alone.
+
+    `--check` reports and writes nothing. `--force` logs in again over a login this package
+    already accepts, which is tokens that are present and no longer work, or the wrong
+    account. A credentials file carrying no token is not a login, and needs no flag.
+    docs/cli.md.
+    """
+    verb = verbs.add_parser("login", help="log in to Claude Code once, in a container")
+    _backend_group(verb, DOCKER)
+    group = verb.add_mutually_exclusive_group()
+    group.add_argument(
+        "--check",
+        action="store_true",
+        help="report whether a login is present, and write nothing",
+    )
+    group.add_argument(
+        "--force",
+        action="store_true",
+        help="log in again over a login that is already there",
+    )
 
 
 def _check_parser(verbs: Any) -> None:
@@ -420,6 +448,8 @@ def _dispatch(args: argparse.Namespace, config: Config) -> int:
         return _test(args, config)
     if args.verb == "setup":
         return _setup(config)
+    if args.verb == "login":
+        return _login(args, config)
     if args.verb == "check":
         return _check(args, config)
     if args.verb == "docs":
@@ -924,11 +954,16 @@ def _test(args: argparse.Namespace, config: Config) -> int:
     return image.run(args.path, pytest_args=tail)
 
 
-# setup, check and prune.
+# setup, login, check and prune.
 
 
 def _setup(config: Config) -> int:
-    """Build the two images, then log in. An image already at its digest is `current`."""
+    """Build the two images. An image already at its digest is `current`.
+
+    It does not log in. Building an image and obtaining a credential are two things, and
+    `login` is the verb that does the second: a machine whose login was revoked needs that
+    one act and not a second pass over two images that are already current. docs/cli.md.
+    """
     image = Docker(config)
     test_image = PytestImage(config)
     for artefact in (image, test_image):
@@ -936,10 +971,52 @@ def _setup(config: Config) -> int:
             print(f"{artefact.tag}: current")
         else:
             artefact.build()
-    if image.has_credential():
+    return OK
+
+
+def _login(args: argparse.Namespace, config: Config) -> int:
+    """Make the container login, report it, or replace it. It builds nothing.
+
+    The daemon and the image are the two conditions the login container itself needs, and
+    they are the two this reads from `Docker.check`: the credential is what it is about to
+    make, and `docker.env_passthrough` reaches a run and not this container.
+
+    There is no headless login. The CLI opens a browser and reads a code back in its own
+    prompt, so a stdin that is not a terminal is refused here rather than left to `docker
+    run -it`, whose message says nothing about what the operator has to do.
+    """
+    image = Docker(config)
+    if args.check:
+        if image.has_credential():
+            print(f"{image.credentials_file}: current")
+            return OK
+        return _refuse([f"no credential: {remedy(Condition.CREDENTIAL)}"], PREFLIGHT_FAILED)
+
+    if image.has_credential() and not args.force:
         print(f"{image.credentials_file}: current")
         return OK
-    image.login()
+
+    blocking = [
+        message
+        for condition, message in image.check()
+        if condition in (Condition.DAEMON, Condition.IMAGE)
+    ]
+    if blocking:
+        return _refuse(blocking, PREFLIGHT_FAILED)
+    if not sys.stdin.isatty():
+        return _refuse(
+            [
+                "no terminal: the login opens a browser and reads a code back, so run "
+                "cowork_evals login --docker from a shell, not from a pipe or an agent"
+            ],
+            PREFLIGHT_FAILED,
+        )
+
+    try:
+        image.login()
+    except DockerError as error:
+        return _refuse([str(error)], FAILED)
+    print(f"{image.credentials_file}: logged in")
     return OK
 
 
