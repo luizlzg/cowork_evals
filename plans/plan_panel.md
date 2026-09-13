@@ -342,22 +342,45 @@ is the only record of where the work stopped if the context is lost. `CLAUDE.md`
 
 ## Where this stopped
 
-2026-09-13. One box is unticked, and steps 5 to 7 above are not passed.
+2026-09-13, second pass. Every box is ticked. What is left is the part of the verification
+that needs the container login, and one live test that hit the account's submission ceiling.
 
-The unticked box is `The call from cli._sweep after the verdict`. Its code is written and
-committed: `cli._record` in `cli.py`, called from `_sweep` inside the tee after the verdict is
-printed, with an `OSError` becoming a `panel: <reason>` warning on stderr. The box is unticked
-because the only thing that verifies it end to end is
-`integration/test_cli.py::test_a_run_writes_a_record_the_panel_then_shows`, which did not run.
-Do not rewrite the code. Run the test.
+`The call from cli._sweep after the verdict` was ticked on a real invocation rather than on
+the integration test, which still cannot run. `run --cowork plugins/smoke --case capped-turns`
+from a directory holding a `cowork_evals.yaml` that names a history root appends one record
+after the verdict, and the same run with that root under a mode-000 directory prints
+`panel: [Errno 13] Permission denied: ...` and exits on the verdict. Both halves of the box,
+through `cli._sweep`, with no mock and nothing spent: the case carries `no-cowork`, so the
+backend declares it and submits nothing. The code is unchanged.
 
-What blocks it is the container login, not this plan: `docker.has_credential()` is false and a
-run returns `401 OAuth access token has been revoked`, so every `credentialled` test in the
-integration tier errors at its fixture. `cowork_evals setup --docker` fixes it and is
-interactive, so it is the developer's to run.
+Step 6 and step 7 were run the same way, on the CoWork column instead of the Docker one:
+three rows over `plugins/smoke`, `declared 0d` on `capped-turns` and `never run` elsewhere,
+`stale` on the row after a grader was edited and gone again after it was restored, a
+`--removed` row from a history file with no case in the tree, `prune --history` deleting the
+files and then the directories they emptied, and the Markdown and JSON renders carrying the
+same three rows as the table. The Docker column of those steps needs the login.
 
-Steps 1 to 4 passed. Step 4 was run as `pytest tests/integration -m "integration and not live"`
-and all 33 selected tests passed.
+That by-hand run found one defect, fixed in `a06ed57`: `panel.prune` floored the age of a
+record to whole days while `logs.prune` cuts at an exact moment, so one `--older-than` meant
+two things. Both now read it the same way.
+
+Step 1 to step 3 passed. Step 4: the image is present, `-m "integration and not live"` is 30
+passed, 1 failed and 2 errors, and all three are the absent container login and nothing else.
+
+Step 5 was run as far as it goes without the login. `integration/test_judge.py` (2 live),
+`integration/test_cowork.py` and `integration/test_cowork_backend.py` (4 live) all pass. The
+seventh, `test_cli.py::test_one_ask_prints_a_non_empty_answer_and_names_a_session_that_exists`,
+failed on `rate ceiling reached: 50 submissions in the last 24 hours, max_runs is 50`. That is
+the account's ceiling and not this plan: the oldest submission in the window is
+2026-09-12T14:06Z, so the ceiling frees from 2026-09-13T14:06Z. The remaining five live tests
+read the container credential.
+
+Blocked on the developer, both of them the same thing: `cowork_evals setup --docker` is an
+interactive browser login. After it, run `scripts/test.sh -m integration`, and step 6 and
+step 7 on `run --docker plugins/smoke`. The credential file at
+`~/.cache/cowork_evals/claude/.claude/.credentials.json` is present with both tokens empty,
+which is a revoked login, and `docs/docker.md` rules out every other route: never the
+developer's own `~/.claude`, and never an API key.
 
 Note before running any integration selection: two tests in `integration/test_cowork.py` take
 the keyboard even without the `live` marker. `plans/plan_consent.md` is the plan that fixes
