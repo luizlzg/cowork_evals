@@ -10,6 +10,13 @@ docs/running_evals.md, so nothing here raises. A file the judge cannot be shown 
 grader naming it, except an image, which is a grader skip: the harness shows the judge the
 image, and one text call cannot.
 
+The check judge is the second caller, and it is this package's own rather than the harness's.
+It has its own argument list and its own material rule: it is granted `Read`, `Glob` and
+`Grep`, it runs in the run directory, and it is shown paths rather than text. Everything below
+those two is shared, the three votes and the majority included. The `llm` grader is untouched
+by any of it, because that grader matches the harness exactly and a check matches nothing
+outside this package. docs/checks.md.
+
 `CLAUDE_CODE_WALNUT_SPIRE` is not exported here. It enables `claude plugin eval`, and this is
 `claude -p`.
 """
@@ -49,6 +56,15 @@ INSTRUCTION = f"Answer with exactly one word: {PASS_WORD} or {FAIL_WORD}."
 # A baseline grader shows the judge two trajectories, and says which is which.
 BASELINE_HEADING = "BASELINE TRAJECTORY:"
 NEW_HEADING = "NEW TRAJECTORY:"
+
+# The check judge's grant, and what it is shown. It reads files and never writes one, so the
+# three read-only tools are the whole grant. docs/checks.md.
+CHECK_TOOLS = ("Read", "Glob", "Grep")
+FILES_OPEN = "--- FILES ---"
+FILES_CLOSE = "--- END FILES ---"
+CHECK_INSTRUCTION = (
+    f"Read each file named above, then answer with exactly one word: {PASS_WORD} or {FAIL_WORD}."
+)
 
 # Image magic, from the file's bytes and never from its name, as the harness detects it.
 IMAGE_MAGIC = (b"\x89PNG\r\n\x1a\n", b"\xff\xd8\xff", b"GIF87a", b"GIF89a")
@@ -113,6 +129,32 @@ def judge_argv(model: str) -> list[str]:
         model,
         "--strict-mcp-config",
     ]
+
+
+def check_argv(model: str, add_dirs: tuple[str, ...] = ()) -> list[str]:
+    """The check judge's command line: the judge's own, plus a grant and the paths it needs.
+
+    `--allowedTools Read,Glob,Grep` alone lets a non-interactive judge read a file: on CLI
+    2.1.270 a `claude -p` granted exactly these three read a file in its working directory and
+    answered on what it said, with no permission mode and no cap. So neither is written here:
+    a cap is a restriction nobody asked for, and the CLI's own default binds the loop.
+
+    `--add-dir` carries each path outside the working directory, which is the run directory.
+    A path under it needs none. docs/checks.md.
+    """
+    argv = [*judge_argv(model), "--allowedTools", ",".join(CHECK_TOOLS)]
+    for directory in add_dirs:
+        argv += ["--add-dir", directory]
+    return argv
+
+
+def compose_paths(prompt: str, names: tuple[str, ...]) -> str:
+    """The one text a check judge's vote is sent: the prompt, the paths, the instruction.
+
+    The material is never inlined. A PDF, an image and a spreadsheet cannot be shown as text,
+    and reading a file is what the judge's `Read` tool is for.
+    """
+    return "\n".join([prompt.strip(), "", FILES_OPEN, *names, FILES_CLOSE, "", CHECK_INSTRUCTION])
 
 
 def criteria(grader: Grader) -> str:
@@ -281,10 +323,24 @@ def grade(grader: Grader, document: dict[str, Any], case_dir: Path | str, *, mod
 
 
 def _vote(model: str, text: str) -> Reply:
-    """One `claude -p` call. A process that will not run is a lost vote, never a raise."""
+    return ask(judge_argv(model), text)
+
+
+def ask(argv: list[str], text: str, cwd: Path | str | None = None) -> Reply:
+    """One `claude -p` call. A process that will not run is a lost vote, never a raise.
+
+    Public because the check judge casts its votes through it, with an argument list and a
+    working directory of its own. A tool-using judge answers with the bare word, measured on
+    CLI 2.1.270, so `read_reply` reads a check judge's reply exactly as it reads a grader's.
+    """
     try:
         completed = subprocess.run(
-            judge_argv(model), input=text, capture_output=True, text=True, check=False
+            argv,
+            input=text,
+            capture_output=True,
+            text=True,
+            check=False,
+            cwd=None if cwd is None else str(cwd),
         )
     except OSError as error:
         return Reply(error=f"claude could not be run: {error}")

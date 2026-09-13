@@ -27,7 +27,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from .cases import CASE_YAML, EVAL_DIR, GRADERS_DIR, PROMPT_FILE, Case, plugin_name
+from .cases import CASE_YAML, EVAL_DIR, GRADERS_DIR, PROMPT_FILE, Case, check_files, plugin_name
 from .harness import RESULT_NAME
 from .logs import distribution_version, slug
 from .preflight import BACKENDS, COWORK
@@ -206,10 +206,13 @@ def read(file: Path | str) -> tuple[list[dict[str, Any]], list[str]]:
 def digest(case_dir: Path | str) -> str:
     """`sha256` over the files that define one case, as bytes.
 
-    That is `prompt.md`, `case.yaml` when the case has one, and each `graders/*.md` in path
-    order, which is every file the harness reads to decide what the case asks and how it is
-    graded. Nothing else in the case directory counts: a note beside the graders changes no
-    measurement.
+    That is `prompt.md`, `case.yaml` when the case has one, each `graders/*.md` in path order
+    and then each `checks/*.py`, which is every file that decides what the case asks and how
+    it is graded. Nothing else in the case directory counts: a note beside the graders changes
+    no measurement.
+
+    A check file counts because editing an assertion would otherwise leave the `stale` column
+    green, and the panel would claim a result is current when what it asserted has changed.
 
     Bytes, so a whitespace edit moves the digest. Each file's name is hashed before its
     content, so a renamed grader moves it too and two files cannot run together into one.
@@ -230,6 +233,7 @@ def _defining(directory: Path) -> list[Path]:
     graders = directory / GRADERS_DIR
     if graders.is_dir():
         files += sorted(graders.glob("*.md"))
+    files += check_files(directory)
     return [file for file in files if file.is_file()]
 
 

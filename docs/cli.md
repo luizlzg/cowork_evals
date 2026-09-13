@@ -146,6 +146,11 @@ of the kept trace, so with no trace neither is found and neither fails. The suit
 run that could not have passed and says nothing about it. Both conditions are
 [running_evals.md](running_evals.md).
 
+It does the opposite to a case carrying checks. A check reads the collected run directory, so
+with nothing collected every check of that case is a skip, and a skip fails the run. A suite
+holding one such case is red under `--no-keep-traces` and says why, per check. See
+[checks.md](checks.md).
+
 `--out DIR` replaces the whole `logs/evals` root, so the run directory is
 `<out>/<stamp>-<scope>`. It is accepted on `prune` too, which otherwise resolves
 `<cwd>/logs/evals`. `--older-than DAYS` is a `prune` flag only: `run` prunes at a fixed 30
@@ -251,6 +256,11 @@ created and before anything is deleted, so exit 2 and exit 3 leave the log root 
 `run` validates every selected plugin root, not only the target, so a malformed sibling case
 blocks a single-case run. There is no option to skip validation. The rules are
 [eval_format.md](eval_format.md).
+
+The validation imports every `checks/*.py` of every selected root, because a check file is
+Python and the only way to know it imports is to import it. So the preflight runs the author's
+own module-level code, on the host, before anything else happens. A file that will not
+import exits 3 and spends nothing. See [checks.md](checks.md).
 
 A skill under `skills/` with no directory of that name under `evals/` is always reported.
 `--require-coverage` turns that report into a preflight failure. Coverage is not a rule of the

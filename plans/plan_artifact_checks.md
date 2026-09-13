@@ -62,10 +62,12 @@ all three are things a Python function does.
 ```python
 from cowork_evals.checks import check, Run
 
+
 @check
 def totals_add_up(run: Run) -> None:
     book = openpyxl.load_workbook(run.file("totals.xlsx"))
     assert book.active["D10"].value == 4200
+
 
 @check
 def deck_is_readable(run: Run):
@@ -117,39 +119,39 @@ Work one box, verify it, tick it, commit. Do not batch ticks.
 
 ### Phase 1: the check layer
 
-- [ ] `src/cowork_evals/checks.py`, with `Run`, `Result` and the `@check` decorator.
-- [ ] `Run` carries `workspace`, `last_message`, `trace`, `case_dir`, `run_dir`, `scratch`
+- [x] `src/cowork_evals/checks.py`, with `Run`, `Result` and the `@check` decorator.
+- [x] `Run` carries `workspace`, `last_message`, `trace`, `case_dir`, `run_dir`, `scratch`
       and `index`, and the method `file(name)`. There is no `files`, for the reason in D15.
-- [ ] `Result` carries `passed` and `explanation`, and nothing else. `explanation` is what
+- [x] `Result` carries `passed` and `explanation`, and nothing else. `explanation` is what
       the run's grader entry and the `FAIL` line both print.
-- [ ] Discovery: every `checks/*.py` of a case, in path order, and every decorated function
+- [x] Discovery: every `checks/*.py` of a case, in path order, and every decorated function
       in it in definition order. The name is `<file stem>.<function name>`.
-- [ ] A file is loaded under a module name unique to its case, so two cases each holding
+- [x] A file is loaded under a module name unique to its case, so two cases each holding
       `checks/assertions.py` do not collide in `sys.modules`.
-- [ ] The case's `checks/` directory is on `sys.path` while its files are loaded, so a check
+- [x] The case's `checks/` directory is on `sys.path` while its files are loaded, so a check
       may import a sibling in the same directory, and is off it again afterwards.
-- [ ] `run.file(name)` resolves under `run.workspace`. A name that resolves to nothing is a
+- [x] `run.file(name)` resolves under `run.workspace`. A name that resolves to nothing is a
       failed check naming it, and a name that leaves the workspace is a failed check too.
-- [ ] Execution: `None` or `True` passes, `False` fails, a returned `Result` decides, and any
+- [x] Execution: `None` or `True` passes, `False` fails, a returned `Result` decides, and any
       exception is a failed check carrying its message and its traceback. Nothing raises out
       of the module.
-- [ ] `run.scratch` is created before the first check of a run and is shared by every check of
+- [x] `run.scratch` is created before the first check of a run and is shared by every check of
       that run.
-- [ ] `tests/unit/test_checks.py`, over hand-written run directories under
+- [x] `tests/unit/test_checks.py`, over hand-written run directories under
       `tests/data/checks/`. No model, and no judge.
 
 ### Phase 2: the judge over paths
 
-- [ ] `run.judge(prompt, *paths)` in `checks.py`, over `judge.py`.
-- [ ] `judge.py` gains the check judge's argument list: `claude -p --output-format json
+- [x] `run.judge(prompt, *paths)` in `checks.py`, over `judge.py`.
+- [x] `judge.py` gains the check judge's argument list: `claude -p --output-format json
       --model <eval.judge_model> --strict-mcp-config`, with `Read`, `Glob` and `Grep`
       granted, the run directory as the working directory, and `--add-dir` for each path
       outside it. `judge_argv` is untouched.
-- [ ] The prompt names each path, relative to the working directory where it is under one.
-- [ ] Three votes and a majority of two, through the existing `read_reply` and `tally`.
+- [x] The prompt names each path, relative to the working directory where it is under one.
+- [x] Three votes and a majority of two, through the existing `read_reply` and `tally`.
       `run.judge` returns a `Result`, so a check returns it directly.
-- [ ] A call naming no path is a failed check saying so. There is no default of everything.
-- [ ] Phase 2 measures two facts about a tool-using `claude -p`, and each has a fallback that
+- [x] A call naming no path is a failed check saying so. There is no default of everything.
+- [x] Phase 2 measures two facts about a tool-using `claude -p`, and each has a fallback that
       ships if the measurement fails.
 
       | Fact                                                                      | If it does not hold                                                          |
@@ -158,95 +160,95 @@ Work one box, verify it, tick it, commit. Do not batch ticks.
       | A tool-using judge answers with the bare word, so `read_reply` reads it       | The check judge reads the last word of `result`. `read_reply` stays exact, per D6 |
 
       Both go into `docs/checks.md` as measured behaviour, with the CLI version they hold for.
-- [ ] `tests/unit/test_judge.py` gains the check judge's argument list and its prompt.
-- [ ] `tests/integration/test_judge.py` gains one `live` test: a real `claude -p` judging a
+- [x] `tests/unit/test_judge.py` gains the check judge's argument list and its prompt.
+- [x] `tests/integration/test_judge.py` gains one `live` test: a real `claude -p` judging a
       real PNG and a real PDF written by the test.
 
 ### Phase 3: into the result and into the run directory
 
-- [ ] Each check result is appended to that run's `graders[]`, and each definition to the
+- [x] Each check result is appended to that run's `graders[]`, and each definition to the
       case's `graders[]` with `type: check`.
-- [ ] The run's `score` and `passed`, and the case's `aggregates.score` and
+- [x] The run's `score` and `passed`, and the case's `aggregates.score` and
       `aggregates.passRate`, are recomputed after the append.
-- [ ] A check judge's spend is added to that run's `judgeCostUsd` and to the document's
+- [x] A check judge's spend is added to that run's `judgeCostUsd` and to the document's
       `costUsd`, so the panel and `eval.max_cost_total_usd` both see it.
-- [ ] `checks.jsonl` is written into `traces/<case>/run-N/`: one line per check, carrying the
+- [x] `checks.jsonl` is written into `traces/<case>/run-N/`: one line per check, carrying the
       name, the verdict, the explanation, the duration, and for a judge call the whole prompt,
       the three replies and the cost.
-- [ ] Only the `with` arm is walked. A `--ablation with-without` run leaves the baseline arm
+- [x] Only the `with` arm is walked. A `--ablation with-without` run leaves the baseline arm
       alone, for the reason in the out of scope table.
-- [ ] A case carrying `declaredUnrunnable` has no run and produces no check result. It is
+- [x] A case carrying `declaredUnrunnable` has no run and produces no check result. It is
       counted, not skipped, exactly as it is today.
-- [ ] `cli._each_plugin` calls the layer after `traces.collect`, once per plugin.
-- [ ] A case with checks and no collected artefacts produces one skipped check result per
+- [x] `cli._each_plugin` calls the layer after `traces.collect`, once per plugin.
+- [x] A case with checks and no collected artefacts produces one skipped check result per
       check, which fails the run.
-- [ ] `tests/unit/test_checks.py` covers the document it writes, field by field, and the
+- [x] `tests/unit/test_checks.py` covers the document it writes, field by field, and the
       recomputation.
-- [ ] A failed check produces a `FAIL` line from `verdict.decide` with no change to
+- [x] A failed check produces a `FAIL` line from `verdict.decide` with no change to
       `verdict.py`. Asserted in `tests/unit/test_verdict.py`.
-- [ ] That line's `[artifacts: ...]` suffix names the directory holding `scratch/` and
+- [x] That line's `[artifacts: ...]` suffix names the directory holding `scratch/` and
       `checks.jsonl`, because `verdict.artifacts` names the parent of `tracePath` and both sit
       beside it. Asserted rather than assumed.
-- [ ] `verdict.artifacts`'s docstring stops saying the directory is the session's transcript
+- [x] `verdict.artifacts`'s docstring stops saying the directory is the session's transcript
       directory on CoWork. `traces._one_run` rewrites `tracePath` to the collected copy on
       both backends, so the suffix names `traces/<case>/run-N` either way.
 
 ### Phase 4: the validator and the panel
 
-- [ ] The validator imports every `checks/*.py` of every selected plugin root before anything
+- [x] The validator imports every `checks/*.py` of every selected plugin root before anything
       runs. An import failure is a violation and exits 3.
-- [ ] A duplicate check name within one case is a violation.
-- [ ] A `checks/` directory holding no check at all is a violation. A single file holding
+- [x] A duplicate check name within one case is a violation.
+- [x] A `checks/` directory holding no check at all is a violation. A single file holding
       none is not, because a helper beside a check is a file like any other.
-- [ ] `context.add_dirs` naming `checks/` is a violation, exactly as naming `graders/` is.
+- [x] `context.add_dirs` naming `checks/` is a violation, exactly as naming `graders/` is.
       The harness refuses `graders/` itself and would grant `checks/` as a fixture directory,
       so this rule is this repository's and is not redundant. See
       `docs/claude_code/plugin_eval_reference.md`.
-- [ ] `panel._defining` hashes each `checks/*.py` in path order, after the graders.
-- [ ] `tests/unit/test_validate.py` and `tests/unit/test_panel.py` cover all four.
+- [x] `panel._defining` hashes each `checks/*.py` in path order, after the graders.
+- [x] `tests/unit/test_validate.py` and `tests/unit/test_panel.py` cover all four.
 
 ### Phase 5: the fixture and the integration tier
 
-- [ ] `plugins/smoke/evals/plugin/checked-file/`, a case that writes a file and asserts its
+- [x] `plugins/smoke/evals/plugin/checked-file/`, a case that writes a file and asserts its
       content with a check. It carries no `no-cowork` tag, because a check needs nothing a
       session cannot do.
-- [ ] `plugins/README.md` gains the case and says what it is the fixture for.
-- [ ] `tests/README.md` gains the `unit/test_checks.py` row and the new integration tests.
-- [ ] `tests/integration/test_cli.py` gains one `live` test: the fixture case through
+- [x] `plugins/README.md` gains the case and says what it is the fixture for.
+- [x] `tests/README.md` gains the `unit/test_checks.py` row and the new integration tests.
+- [x] `tests/integration/test_cli.py` gains one `live` test: the fixture case through
       `cowork_evals run --docker`, asserting the `FAIL` line, the appended grader result,
       `checks.jsonl` and `scratch/`.
-- [ ] `scripts/test.sh` is green, and `scripts/lint.sh` is clean.
+- [x] `scripts/test.sh` is green, and `scripts/lint.sh` is clean.
 - [ ] `scripts/test.sh -m integration` is green.
 
 ### Phase 6: the documentation
 
-- [ ] `docs/checks.md`, new: what a check is, that it runs on the host after the run is
+- [x] `docs/checks.md`, new: what a check is, that it runs on the host after the run is
       graded, `Run`, the judge, the run directory, and how a result reaches the document. It
       is a mechanism file.
-- [ ] `docs/README.md` gains its row, among the mechanism files.
-- [ ] `docs/eval_format.md` gains the `checks/` layer of the tree, the `add_dirs` refusal, the
+- [x] `docs/README.md` gains its row, among the mechanism files.
+- [x] `docs/eval_format.md` gains the `checks/` layer of the tree, the `add_dirs` refusal, the
       validator rules, the traps, and the statement that a check file is host code and is not
       bound by the image wheel set. The traps are that a check reads only a collected run,
       that a `checks/` file with no decorated function asserts nothing, and that each run of a
       case runs every check again, so `runs: 3` costs three of every judge call.
-- [ ] `docs/running_evals.md` gains the status row, the skip under `--no-keep-traces`, and
+- [x] `docs/running_evals.md` gains the status row, the skip under `--no-keep-traces`, and
       what a check judge costs.
-- [ ] `docs/approaches.md` gains the row saying both backends honour a check.
-- [ ] `docs/panel.md` says the digest covers the check files.
-- [ ] `docs/cli.md` says what `--no-keep-traces` does to a case that has checks.
-- [ ] `docs/library.md` gains `checks.py` in the ships table, and its "Where the
+- [x] `docs/approaches.md` gains the row saying both backends honour a check.
+- [x] `docs/panel.md` says the digest covers the check files.
+- [x] `docs/cli.md` says what `--no-keep-traces` does to a case that has checks.
+- [x] `docs/library.md` gains `checks.py` in the ships table, and its "Where the
       restrictions are" section gains the row for a check and the exception to the sentence
       that reads every file under the path as code under test. A `checks/*.py` is under that
       path and is not code under test.
-- [ ] `docs/runtime.md` says in "Rules for code that runs in a session" that a check is not
+- [x] `docs/runtime.md` says in "Rules for code that runs in a session" that a check is not
       one, beside the sentence that already excludes this package.
-- [ ] `CLAUDE.md`'s three kinds of code table carries the same exception, because it names
+- [x] `CLAUDE.md`'s three kinds of code table carries the same exception, because it names
       every file under the eval path and then enumerates skill, command, agent and hook. The
       enumeration is right and the leading phrase is not.
-- [ ] `README.md` names the third kind of assertion where it names the other two.
-- [ ] `src/cowork_evals/data/skills/cowork-evals/SKILL.md` carries the `checks/` directory,
+- [x] `README.md` names the third kind of assertion where it names the other two.
+- [x] `src/cowork_evals/data/skills/cowork-evals/SKILL.md` carries the `checks/` directory,
       one copy-paste check and one copy-paste judge call.
-- [ ] `tests/unit/test_resources.py` is green against the changed skill.
+- [x] `tests/unit/test_resources.py` is green against the changed skill.
 - [ ] `plans/README.md` row 16 moves to `implemented`, and this file moves to
       `done/plan_artifact_checks.<YYYYMMDD>.md` on the merge.
 

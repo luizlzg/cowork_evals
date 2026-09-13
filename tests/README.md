@@ -9,12 +9,18 @@ the CoWork grader and the panel over the case history. The table below lists the
 These are not evals. An eval needs a model in the loop. If a failure can be caught by
 pytest, it is not an eval.
 
-A hand-written case tree under `tests/data/cases/`, `tests/data/validate/` and
-`tests/data/cli/`, a hand-written session document under `tests/data/documents/`, a
-hand-written result document under `tests/data/results/`, a hand-written history file under
-`tests/data/history/` and a recorded judge reply under
+A hand-written case tree under `tests/data/cases/`, `tests/data/validate/`,
+`tests/data/checks/` and `tests/data/cli/`, a hand-written session document under
+`tests/data/documents/`, a hand-written result document under `tests/data/results/`, a
+hand-written history file under `tests/data/history/` and a recorded judge reply under
 `tests/data/judge/` are input on disk, not stand-ins. The reader, the graders, the validator,
 the verdict, the panel and the vote counting that parse them are the real ones.
+
+A check file under `tests/data/checks/` is input on disk too, and it is the one fixture that
+is executed rather than parsed: the loader that imports it is the real one, and the file is
+the author's code a consumer would write. The collected run directory beside it is copied into
+`tmp_path` before anything runs, because a check writes `scratch/` and the layer writes
+`checks.jsonl` beside the three collected names.
 
 A harness sandbox is written by the test rather than kept under `tests/data/`, because a
 sandbox is a directory tree with modes on it and a checkout does not carry a mode-000
@@ -65,6 +71,7 @@ A skipped test reports as a pass and hides the thing it was written to catch.
 | `unit/test_validate.py`           | The case validator and the coverage report over hand-written trees | yes |
 | `unit/test_logs.py`               | The run directory, `env.txt`, `latest`, pruning and the tee | yes    |
 | `unit/test_traces.py`             | What is kept out of a run on either backend, and the two validity checks over the kept trace, over sandboxes and session directories written by the test | yes |
+| `unit/test_checks.py`             | The check layer: discovery, the loader, execution, and what it appends to the document, over hand-written case trees and run directories | yes |
 | `unit/test_verdict.py`               | Pass and fail over hand-written result documents                | yes    |
 | `unit/test_panel.py`              | The history store, the record, the join to the case tree, and the renders | yes |
 | `unit/test_preflight.py`          | Each backend's unmet conditions, and the rate ceiling      | yes    |
@@ -73,7 +80,7 @@ A skipped test reports as a pass and hides the thing it was written to catch.
 | `unit/test_resources.py`          | The shipped documentation and data, the two reference rules, and the skill against the documents it condenses | yes |
 | `integration/test_cowork.py`      | The same driver against a real profile and a real run      | yes    |
 | `integration/test_docker.py`      | The built image, its mounts, its sandbox and one real eval run | yes |
-| `integration/test_judge.py`       | The judge against the real `claude -p`                     | yes    |
+| `integration/test_judge.py`       | The judge against the real `claude -p`, and the check judge over a real PNG and a real PDF | yes |
 | `integration/test_cowork_backend.py` | The backend against a real profile, and one real suite   | yes    |
 | `integration/test_pytest_image.py` | The built test image, its exit codes, and what it writes | yes    |
 | `integration/test_cli.py`         | The command against the real backends, through the executable, `panel` over the history a real run left, and `ask` against a live session | yes |
@@ -148,7 +155,9 @@ proven with `--dry-run --cowork` in the unit tier. Nothing there builds an image
 Its first `live` test fires `plugins/smoke/` through `cowork_evals run --docker` and asserts
 the whole log layout over that same run, `run.log` and the run's collected trace included. That log line is the
 descriptor-level tee proven against a real child process, and it cannot be reached without
-one. Its two `test` verb tests cost a container and no model call, so neither is `live`.
+one. One more fires the `checked-file` case and reads what the check layer left: the `FAIL`
+line, the appended grader result, `checks.jsonl` and `scratch/`. Its two `test` verb tests
+cost a container and no model call, so neither is `live`.
 
 One `live` test fires one case and then reads the record that run left, through
 `cowork_evals panel`. It writes a `cowork_evals.yaml` naming a history root under `tmp_path`,
@@ -175,17 +184,17 @@ it starts no CoWork session and costs no ceiling entry.
 
 ### The live marker
 
-Ten integration tests submit a real run. The four CoWork ones each cost a VM boot, count
+Sixteen integration tests submit a real run. The five CoWork ones each cost a VM boot, count
 against the driver's rate ceiling and leave a permanent session in the signed-in account.
-The four container ones cost the model calls their case makes, and the two judge ones cost
-short `claude -p` calls. All ten carry `live` as well as `integration`. An integration run
+The eight container ones cost the model calls their case makes, and the three judge ones cost
+short `claude -p` calls. All sixteen carry `live` as well as `integration`. An integration run
 that must not spend selects `-m "integration and not live"`.
 
 The CoWork ones need the macOS Accessibility grant, a signed-in CoWork, the desktop
 application already running, and `cowork_evals.yaml` naming the active profile. They fail,
 and do not skip, when no profile is configured. Nothing steals focus while one runs. See
-[../docs/cowork_desktop.md](../docs/cowork_desktop.md) for the authorizations. Three of them
-are in the two CoWork files and the fourth is `ask`, in `integration/test_cli.py`. The four
+[../docs/cowork_desktop.md](../docs/cowork_desktop.md) for the authorizations. Four of them
+are in the two CoWork files and the fifth is `ask`, in `integration/test_cli.py`. The eight
 container ones need a credential route, and fail without one.
 
 The integration tier asks for the keyboard once before any of its tests run, through the

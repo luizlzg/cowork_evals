@@ -30,7 +30,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from cowork_evals import Config, logs, panel, preflight, traces, verdict
+from cowork_evals import Config, checks, logs, panel, preflight, traces, verdict
 from cowork_evals.cli import main
 from cowork_evals.config import CONFIG_FILENAME
 from cowork_evals.docker import Condition, Docker, remedy
@@ -229,6 +229,63 @@ def test_a_run_that_never_got_write_fails_instead_of_scoring(credentialled, tmp_
     assert traces.DENIED in entry or traces.UNOFFERED in entry, entry
 
 
+@pytest.mark.live
+def test_a_check_decides_the_run_beside_the_harness_graders(credentialled, tmp_path) -> None:
+    """One real run of the case that carries two checks, one of which fails on purpose.
+
+    What cannot be reached without a real run is that the layer finds the collected run
+    directory the container backend produced, that an author's own Python decides a case the
+    harness had already graded, and that the `FAIL` line names where its artefacts are. See
+    ../../plugins/README.md and ../../docs/checks.md.
+    """
+    root = tmp_path / "logs"
+    code = main(
+        [
+            "run",
+            "--docker",
+            str(SMOKE),
+            "--out",
+            str(root),
+            "--runs",
+            "1",
+            "--case",
+            "checked-file",
+        ]
+    )
+    run = (root / logs.LATEST).resolve()
+    decided = (run / logs.VERDICT_FILE).read_text()
+    assert code == 1, decided
+
+    kept = traces.run_dir(run / "smoke", "checked-file", 1)
+    assert [line for line in decided.splitlines() if line.startswith("FAIL ")] == [
+        f"FAIL smoke/checked-file: run 1: assertions.the_file_is_a_workbook: "
+        f"the check grader failed: written.txt is not a workbook [artifacts: {kept}]"
+    ]
+
+    document = json.loads((run / "smoke" / RESULT_NAME).read_text())
+    case = document["cases"][0]
+    assert [grader["type"] for grader in case["graders"]] == ["file_exists", "check", "check"]
+    entry = case["arms"]["with"][0]
+    assert [(result["name"], result["passed"]) for result in entry["graders"]] == [
+        ("writes-written-txt", True),
+        ("assertions.the_file_says_written", True),
+        ("assertions.the_file_is_a_workbook", False),
+    ]
+    assert entry["score"] == 2 / 3
+    assert entry["passed"] is False
+    assert case["aggregates"] == {"score": 2 / 3, "passRate": 0.0}
+
+    lines = [json.loads(line) for line in (kept / checks.CHECKS_FILE).read_text().splitlines()]
+    assert [line["name"] for line in lines] == [
+        "assertions.the_file_says_written",
+        "assertions.the_file_is_a_workbook",
+    ]
+    assert lines[0]["passed"] is True
+    assert lines[1]["explanation"] == "written.txt is not a workbook"
+    assert (kept / checks.SCRATCH_DIR).is_dir()
+    assert (kept / traces.WORKSPACE_NAME / "written.txt").is_file()
+
+
 # test.
 
 
@@ -332,8 +389,9 @@ def test_a_run_writes_a_record_the_panel_then_shows(credentialled, tmp_path, mon
     assert "pass 0d" in row
     assert "never run" in row
     assert verdict.display(Path(entry["tracePath"]).parent) in row
-    # The two cases this run did not select have no record and say so.
-    assert sum(1 for line in printed.out.splitlines() if "never run" in line) == 3
+    # The three cases this run did not select have no record and say so. `python-version`
+    # has a record on Docker and none on CoWork, so it carries one `never run` of its own.
+    assert sum(1 for line in printed.out.splitlines() if "never run" in line) == 4
 
 
 # ask.
@@ -397,18 +455,33 @@ def forwarding(tmp_path: Path) -> Path:
 def test_a_forwarded_variable_reaches_a_run_and_its_value_reaches_no_artefact(
     credentialled, tmp_path, monkeypatch
 ) -> None:
-    """`plugins/smoke/` whole, with one variable forwarded, and the token grepped for after.
+    """One case, with one variable forwarded, and the token grepped for after.
 
     The grep is over every file the run left, not the named artefacts alone, so a kept trace
     or a report is covered by the same assertion. What the container prints reaches `run.log`
-    and these cases print nothing of it; that limit is in ../../docs/docker.md.
+    and this case prints nothing of it; that limit is in ../../docs/docker.md.
+
+    One case by name, as every test here that fires one: `checked-file` always exits 1, and
+    this test is about what the forwarded value did not reach. See ../../plugins/README.md.
     """
     token = uuid.uuid4().hex
     monkeypatch.setenv(PROBE, token)
     monkeypatch.chdir(forwarding(tmp_path))
     root = tmp_path / "logs"
 
-    code = main(["run", "--docker", str(SMOKE), "--out", str(root)])
+    code = main(
+        [
+            "run",
+            "--docker",
+            str(SMOKE),
+            "--out",
+            str(root),
+            "--runs",
+            "1",
+            "--case",
+            "writes-a-file",
+        ]
+    )
     assert code == 0, (root / logs.LATEST / logs.VERDICT_FILE).read_text()
 
     run = (root / logs.LATEST).resolve()

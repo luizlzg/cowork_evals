@@ -527,3 +527,30 @@ def test_a_document_that_cannot_be_read_records_no_outcome(tmp_path: Path) -> No
     result = judge(run_directory(tmp_path, smoke=None))
     assert result.outcomes == ()
     assert failures(result)
+
+
+# A check. It is this package's own grader type, and the verdict needs no condition for it.
+
+
+def test_a_failed_check_fails_the_run_like_a_structural_grader(tmp_path: Path) -> None:
+    result = judge(run_directory(tmp_path, smoke="check_failure"))
+    assert result.passed is False
+    assert failures(result) == [
+        "FAIL smoke/checked-file: run 1: assertions.the_file_says_written: "
+        "the check grader failed: AssertionError: written.txt says NOTHING"
+    ]
+    assert notes(result) == []
+
+
+def test_a_failed_check_names_the_directory_holding_its_scratch(tmp_path: Path) -> None:
+    """`verdict.artifacts` names the parent of `tracePath`, and both sit beside it."""
+    directory = run_directory(tmp_path, smoke="check_failure")
+    trace = collected(directory / "smoke", case="checked-file")
+    (trace.parent / "scratch").mkdir()
+    (trace.parent / "checks.jsonl").write_text("{}\n", encoding="utf-8")
+    with_trace(directory / "smoke", trace)
+
+    line = failures(judge(directory))[0]
+    assert line.endswith(f"[artifacts: {trace.parent}]")
+    assert (trace.parent / "scratch").is_dir()
+    assert (trace.parent / "checks.jsonl").is_file()

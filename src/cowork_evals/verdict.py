@@ -405,9 +405,9 @@ def artifacts(run: dict[str, Any]) -> str:
     """What one run left on the host, as the suffix a failure line carries.
 
     `tracePath` is where the trace is, and every other artefact of that run sits beside it,
-    so naming its directory names all of them. It is the container backend's collected
-    directory once `traces.collect` has rewritten it, and the session's transcript
-    directory on CoWork.
+    so naming its directory names all of them: the final message, the workspace, and the
+    `scratch/` and `checks.jsonl` a check leaves. `traces._one_run` rewrites the field to the
+    collected copy on both backends, so the directory is `traces/<case>/run-N` either way.
 
     Empty when there is no such directory, which is a run whose trace was not collected and
     a document written before this was built. It never names a path that is not there.

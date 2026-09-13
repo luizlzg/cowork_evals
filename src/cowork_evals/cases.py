@@ -26,6 +26,10 @@ PROMPT_FILE = "prompt.md"
 CASE_YAML = "case.yaml"
 GRADERS_DIR = "graders"
 
+# The case's other assertion directory. It holds this package's own checks, which are Python
+# and not Markdown, and the harness neither reads it nor knows it is there. docs/checks.md.
+CHECKS_DIR = "checks"
+
 # What makes a directory a plugin root. docs/eval_format.md.
 PLUGIN_MANIFEST = Path(".claude-plugin") / "plugin.json"
 
@@ -86,6 +90,10 @@ class Case:
     `directory` is that directory and `path` is the `prompt.md` inside it. `name` defaults
     to the directory name, which is the harness's rule for a case with no `case.yaml`.
 
+    `checks` is every file under `checks/`, as paths. They are paths and never loaded
+    functions: reading a case tree must not execute the author's code, and a `--dry-run`
+    reads the same tree. [checks.py](checks.py) is what imports them, when a run is graded.
+
     `frontmatter_keys` and `case_yaml_keys` are what each file wrote out, mapped to the
     value as authored. They are the keys, not the merged defaults: a backend honours a key
     the case asked for and ignores one it left alone, and the case validator reports a key
@@ -99,6 +107,7 @@ class Case:
     graders: tuple[Grader, ...]
     tags: tuple[str, ...]
     source: str
+    checks: tuple[Path, ...] = ()
     frontmatter_keys: dict[str, Any] = field(default_factory=dict)
     case_yaml_keys: dict[str, Any] = field(default_factory=dict)
     path: Path = Path(PROMPT_FILE)
@@ -199,6 +208,7 @@ def read(directory: Path | str) -> Case:
         graders=_graders(case_dir / GRADERS_DIR),
         tags=tuple(str(tag) for tag in tags) if isinstance(tags, list) else (),
         source=PROSE if document is None else MIXED,
+        checks=check_files(case_dir),
         frontmatter_keys=written,
         case_yaml_keys=yaml_written,
         path=prompt_path,
@@ -216,6 +226,18 @@ def _case_directories(base: Path) -> list[Path]:
         if child.is_dir() and child.name not in PRUNED:
             found += _case_directories(child)
     return found
+
+
+def check_files(case_dir: Path | str) -> tuple[Path, ...]:
+    """Every `checks/*.py` of one case directory, in path order.
+
+    Public because [validate.py](validate.py), [checks.py](checks.py) and
+    [panel.py](panel.py) each walk the same list, and one glob is one rule.
+    """
+    directory = Path(case_dir) / CHECKS_DIR
+    if not directory.is_dir():
+        return ()
+    return tuple(sorted(directory.glob("*.py")))
 
 
 def _graders(directory: Path) -> tuple[Grader, ...]:

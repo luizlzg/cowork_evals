@@ -7,10 +7,12 @@ authoring traps. This is the authoring contract for every eval in this repositor
 backends.
 
 - **A case is a directory**: a `prompt.md` with frontmatter and a prompt body, a `graders/`
-  directory, and an optional `case.yaml`.
+  directory, an optional `case.yaml`, and an optional `checks/` directory.
 - **Two addressability keys are required**, `tags` and `plugins`, and both are checked.
 - **Graders come in two classes.** Structural graders are deterministic and carry the verdict;
   judged graders call a model and are printed. Prefer a structural one.
+- **A `checks/` directory holds assertions written as Python**, run on the host after the run
+  is graded. It is added to a case, never in place of its graders.
 - **Only two grader types choose what they look at, and they use different keys.** `regex`
   uses `target`, `llm` uses `focus`.
 - **A case a CoWork session cannot run says so, with the `no-cowork` tag.** The validator
@@ -24,9 +26,10 @@ field is [approaches.md](approaches.md). The full field-by-field reference is ve
 [claude_code/plugin_eval_reference.md](claude_code/plugin_eval_reference.md), and it is the
 authority where this file is silent.
 
-Three rules here are this repository's own and not the harness's: the `<skill>` layer under
-`evals/`, the two addressability keys below, and the reserved tag. Everything else is the
-harness. `docs/claude_code/eval_smoke/` is deliberately outside all of it; see
+Four rules here are this repository's own and not the harness's: the `<skill>` layer under
+`evals/`, the two addressability keys below, the reserved tag, and the `checks/` directory,
+which the harness neither reads nor knows is there. Everything else is the harness.
+`docs/claude_code/eval_smoke/` is deliberately outside all of it; see
 [claude_code/eval_smoke/README.md](claude_code/eval_smoke/README.md).
 
 ## The tree
@@ -37,6 +40,7 @@ One eval directory per skill, inside the plugin, in the repository that owns the
 <plugin>/.claude-plugin/plugin.json               # what makes <plugin> a plugin root
 <plugin>/evals/<skill>/<case>/prompt.md
 <plugin>/evals/<skill>/<case>/graders/<name>.md
+<plugin>/evals/<skill>/<case>/checks/<name>.py    # optional, this package's own
 <plugin>/evals/<skill>/<case>/case.yaml           # optional, context.* only
 <plugin>/evals/plugin/<case>/                     # cross-skill composition
 <plugin>/evals/mocks/<server>/<tool>.md           # shared MCP stand-ins
@@ -56,7 +60,7 @@ that is not a case, so the layer costs nothing and one directory per skill is wh
 `--tag` selection match the tree.
 
 Fixtures live inside the case that uses them. `context.add_dirs` refuses any entry outside
-the case directory.
+the case directory, and any entry inside its `checks/`.
 
 ## Addressability
 
@@ -212,6 +216,37 @@ tool: Skill
 input_match: '"skill"\s*:\s*"(?:[\w-]+:)?<skill>"'
 ```
 
+## checks/
+
+Optional. One file per assertion an author writes as Python, run on the host after the run is
+graded, on either backend. It is [checks.md](checks.md), and this section is the part of it
+that binds a case file.
+
+```python
+from cowork_evals.checks import Result, Run, check
+
+
+@check
+def totals_add_up(run: Run) -> None:
+    book = openpyxl.load_workbook(run.file("totals.xlsx"))
+    assert book.active["D10"].value == 4200
+```
+
+| Fact                                                             | Is                                                   |
+| ------------------------------------------------------------------ | ---------------------------------------------------- |
+| A check's name                                                   | `<file stem>.<function name>`                        |
+| A check's weight                                                 | 1, always. `@check` takes no arguments               |
+| The result                                                       | a grader result of `type: check`, in the same document |
+| A failed check                                                   | fails the run, as a failed structural grader does    |
+| A file under `checks/` carrying no `@check`                      | a helper, and no violation                           |
+| A `checks/` directory carrying no `@check` at all                | a violation                                          |
+
+**A check file is host code and is not bound by the image wheel set.** It sits under the path
+passed to `cowork_evals run`, and everything else under that path is code under test, which
+imports only what the CoWork image carries. A check is not: the run is over and graded before
+a check starts, and a check reads what that run left on the host. Its own imports are the
+consumer's own dependency. See [runtime.md](runtime.md) and [library.md](library.md).
+
 ## What the validator enforces
 
 `cowork_evals run` validates every selected plugin root before it runs anything, and a
@@ -232,6 +267,10 @@ sibling case blocks a single-case run. There is no option to skip it. See
 | Every `context.add_dirs` entry resolves inside its own case directory       |
 | Every grader has a `type` the table above lists, and a `weight` above 0     |
 | Every file under `graders/` carries a `---` block                           |
+| Every file under `checks/` imports                                          |
+| A `checks/` directory carries at least one function decorated with `@check` |
+| No two checks of one case share a name                                      |
+| No `context.add_dirs` entry resolves under the case's own `checks/`         |
 | A case a CoWork session cannot run carries `no-cowork`                      |
 | A case carrying `no-cowork` is one a CoWork session cannot run              |
 
@@ -261,6 +300,14 @@ Each of these has a silent failure mode, and each is fixed by editing the case.
   repository's to refuse.
 - **A `target` on an `llm` grader is ignored.** That key is `focus`, and the grader judges
   `last_message` while looking as if it judges a file.
+- **A case carrying `checks/` and no grader does not load.** The harness refuses a case with
+  no grader at all, so `checks/` is added to a case and never replaces its `graders/`.
+- **A check reads a collected run, so `--no-keep-traces` gives up every check.** With nothing
+  collected each check is a skip, and a skip fails the run.
+- **A `checks/` file with no decorated function asserts nothing.** A helper is a file like any
+  other, so only a `checks/` directory with no check anywhere in it is reported.
+- **Each run of a case runs every check again.** A case at `runs: 3` carrying one judged check
+  costs three of every judge call it makes.
 
 The traps that a case cannot fix, because they are the harness rather than the file, are in
 [plugin_eval.md](plugin_eval.md).

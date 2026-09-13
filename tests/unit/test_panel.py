@@ -24,9 +24,9 @@ HISTORY = DATA / "history"
 DOCUMENTS = DATA / "results"
 SMOKE = Path(__file__).resolve().parents[2] / "plugins" / "smoke"
 
-# The three cases `plugins/smoke` holds, and the one of them that carries `no-cowork`.
+# The four cases `plugins/smoke` holds, and the one of them that carries `no-cowork`.
 # ../../plugins/README.md.
-CASES = ("capped-turns", "python-version", "writes-a-file")
+CASES = ("capped-turns", "checked-file", "python-version", "writes-a-file")
 DECLARED_CASE = "capped-turns"
 CASE_DIR = "evals/plugin/python-version"
 
@@ -554,3 +554,29 @@ def test_the_text_table_cuts_a_description_the_markdown_carries_whole(tmp_path: 
     longest = max((row.description for row in built), key=len)
     assert longest in panel.markdown(built)
     assert longest not in panel.table(built)
+
+
+def test_the_digest_covers_every_check_file(tmp_path: Path) -> None:
+    """Editing an assertion has to move the digest, or `stale` stays green over it."""
+    case = tmp_path / "hello"
+    (case / "checks").mkdir(parents=True)
+    (case / "prompt.md").write_text("---\nname: hello\n---\n\nSay hello.\n", encoding="utf-8")
+    before = panel.digest(case)
+
+    path = case / "checks" / "assertions.py"
+    path.write_text("from cowork_evals.checks import check\n", encoding="utf-8")
+    with_check = panel.digest(case)
+    assert with_check != before
+
+    path.write_text("from cowork_evals.checks import check  # edited\n", encoding="utf-8")
+    assert panel.digest(case) != with_check
+
+
+def test_the_digest_hashes_the_checks_after_the_graders(tmp_path: Path) -> None:
+    case = tmp_path / "hello"
+    (case / "graders").mkdir(parents=True)
+    (case / "checks").mkdir()
+    (case / "prompt.md").write_text("---\nname: hello\n---\n\nSay hello.\n", encoding="utf-8")
+    (case / "graders" / "a.md").write_text("---\ntype: regex\n---\n", encoding="utf-8")
+    (case / "checks" / "b.py").write_text("x = 1\n", encoding="utf-8")
+    assert [path.name for path in panel._defining(case)] == ["prompt.md", "a.md", "b.py"]

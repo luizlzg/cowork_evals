@@ -41,6 +41,7 @@ not restate any of them here.
 | The baseline arm, and the verdict over its delta | yes   | this file                                    |
 | The case validator                            | yes      | [eval_format.md](eval_format.md)             |
 | The case history, and the `panel` verb over it | yes      | [panel.md](panel.md)                         |
+| The check layer, over what a run produced     | yes      | [checks.md](checks.md)                       |
 | The 3.10 and import check over code under test | no      | nowhere. Not designed, and no plan builds it |
 | The container backend and its Dockerfile      | yes      | [docker.md](docker.md)                       |
 | `scripts/parity.sh` and `tests/unit/test_parity.py` | yes | [docker.md](docker.md)                     |
@@ -343,6 +344,9 @@ passed or failed:
 | `last_message.txt` | The final assistant message, which is what a `last_message` grader read |
 | `workspace/`       | The agent's working directory                                      |
 
+A case carrying checks leaves two more, `scratch/` and `checks.jsonl`, written by the layer
+that runs them. Both are [checks.md](checks.md).
+
 One layout, so a case is read the same way whichever backend produced it, and a run on one
 can be held against a run on the other. A passing run is what a failing one is read against,
 so keeping less for one than for the other would drop half of every comparison: which of three
@@ -378,6 +382,8 @@ One directory per run:
   trace.jsonl
   last_message.txt
   workspace/
+  scratch/          # only where the case carries checks
+  checks.jsonl      # the same
 ```
 
 `<n>` is 1-based and is the number the verdict line prints as `run N`. A second case of the
@@ -398,9 +404,9 @@ the same three names, and each arm's `tracePath` is rewritten to its own collect
 a failing delta is read as two transcripts and a line about either arm names the right
 directory.
 
-Nothing in this package writes into a run directory after collection. The three names are
-written once, by `traces.collect`, before the verdict is reached. The one field it changes
-afterwards is in the result document, not here.
+Only the check layer writes into a run directory after collection, and it writes `scratch/`
+and `checks.jsonl` and nothing else. The three collected names are written once, by
+`traces.collect`, before either. Both happen before the verdict is reached.
 
 A kept sandbox is not the place to read. `--keep-temp` leaves the sandbox read-only, with the
 `home/` and `tmp/` trees the plugin under test wrote at mode 000 under `sealed/`, which is
@@ -410,8 +416,9 @@ root is removed once collection is done. A checker reads the collected `workspac
 which is that same working directory under the run directory, at the modes the agent left.
 
 A checker's verdict stays outside. It does not reach `aggregate-result.json` and it fails
-nothing: `cowork_evals run` exits on the conditions in the table below and on no other. There
-is no route for a script to add one, and none is built until somebody asks for it.
+nothing: `cowork_evals run` exits on the conditions in the table below and on no other. A
+script that does need to decide the run is a check, in the case's own `checks/` directory,
+and its verdict reaches the document like any other grader's. See [checks.md](checks.md).
 
 ### The two transcript formats
 
@@ -462,6 +469,10 @@ command line beats the file, as it does for every other option: [library.md](lib
 Off, nothing is created and nothing is collected, and the harness deletes each sandbox as it
 always did.
 
+Off also gives up every check. A check reads the collected run directory, so with nothing
+collected each check of that case is a skip, and a skip fails the run. See
+[checks.md](checks.md).
+
 A measured cost for the smoke case on the container backend: 12 KB per run, and 60 KB for a whole two-run suite including `run.log`, `report.html`, `debug.txt` and
 both workspaces. A CoWork run's cost is the size of its `outputs/`, which is whatever the case
 made the session produce. The `⚠ kept ...` notice the harness prints per sandbox goes to
@@ -474,7 +485,7 @@ covers both backends, and it always runs in the `cowork_evals` process on the ho
 
 | Condition                                                            | Result       |
 | -------------------------------------------------------------------- | ------------ |
-| Any `regex`, `tool_used`, `tool_order` or `file_exists` grader failed | exit 1       |
+| Any `regex`, `tool_used`, `tool_order`, `file_exists` or `check` grader failed | exit 1 |
 | Any case or grader reported skipped                                  | exit 1       |
 | A grader reported `scored: false`, on one arm                        | exit 1       |
 | A grader reported `scored: false`, on two arms                       | printed only, when it did not fire |
@@ -494,6 +505,11 @@ covers both backends, and it always runs in the `cowork_evals` process on the ho
 
 Structural graders decide because a judged grader over a non-deterministic agent is a flaky
 verdict. A skip fails the run so that a backend cannot go green by honouring nothing.
+
+A `check` grader is this package's own, not the harness's, and it decides for the same reason
+a structural one does: it is an author's Python over what the run produced, and it is
+deterministic unless the author made it otherwise. The verdict needs no condition for it. See
+[checks.md](checks.md).
 
 `scored: false` splits on the arm, and getting it wrong in either direction is the whole risk
 in the baseline arm. Too strict and every two-arm run is red; too loose and a real skip goes
@@ -748,6 +764,11 @@ ceilings on what they may cost.
 | ------------------------- | ------- | -------------------- | --------------------- |
 | `eval.max_cost_usd`       | 5       | one plugin's suite   | `--max-cost-usd`      |
 | `eval.max_cost_total_usd` | 25      | the whole invocation | the key only, no flag |
+
+`eval.max_cost_usd` is a harness flag, so a check judge's spend is outside it: the harness has
+already finished when a check runs. That spend is added to the document's `costUsd`, so
+`eval.max_cost_total_usd` binds it at the next plugin of a sweep. What a check costs is
+[checks.md](checks.md).
 
 The total binds first: five plugins at 5 USD each is 25. A sweep sums `costUsd` from each
 plugin's result document and checks the total before every plugin, the first included, so a

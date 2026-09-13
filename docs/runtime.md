@@ -26,8 +26,9 @@ because every environment and cache is re-created and left behind.
 ## Rules for code that runs in a session
 
 These bind every file a consumer points `cowork_evals run` at: each skill, command, agent
-and hook in the plugin. They do not bind `cowork_evals` itself, which runs on a laptop. See
-[library.md](library.md).
+and hook in the plugin. They do not bind `cowork_evals` itself, which runs on a laptop, and
+they do not bind a case's `checks/*.py`, which is host code under the eval path and runs after
+the run is graded. See [library.md](library.md) and [checks.md](checks.md).
 
 - **Python 3.10 syntax only.** The session interpreter is 3.10.12. Match statements are
   fine; `X | Y` in an annotation needs `from __future__ import annotations`, and anything
