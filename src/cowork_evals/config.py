@@ -278,8 +278,8 @@ class EvalSection:
     # `claude plugin eval` argument list: `cli.py` checks the spend so far before each
     # plugin, and a stop becomes a failed run. docs/running_evals.md.
     max_cost_total_usd: int | float = 25
-    # On, so a failing case can be diagnosed without running the suite again. It is the one
-    # `eval:` key the CoWork backend does not read. docs/running_evals.md.
+    # On, so a failing case can be diagnosed without running the suite again. Both backends
+    # honour it: `cli.py` gates the collection on it either way. docs/running_evals.md.
     keep_traces: bool = True
 
     _FIELDS: ClassVar[dict[str, Callable[[str, Any], Any]]] = {

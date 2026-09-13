@@ -219,17 +219,19 @@ Each has a silent failure mode.
 
 - A grader file without `---` delimiters is read as a note and ignored. The case then runs
   with fewer graders than it appears to have.
+- A prompt that names the skill it is testing measures the name. A CoWork session that does
+  not have the skill refuses the name and produces nothing, so ask for the outcome instead.
 - `max: 0` alone can never pass, because `min` stays 1. A must-not-call assertion is
   `min: 0, max: 0`.
-- `file_exists` sees only files created during the run. Not scaffold output, and not files
-  that were modified.
+- `file_exists` sees only files created during the run. A file the agent modified rather
+  than created is invisible to it. Grade the contents, or assert a `tool_used` on `Edit`.
 - `target` on an `llm` grader is ignored. That key is `focus`, and the grader judges
   `last_message` while looking as if it judges a file.
 - `llm` graders refuse binaries. A `.pptx` is a ZIP. Render to an image, or write text.
 - `context.add_dirs` refuses any entry outside its own case directory, the eval directory,
   a sibling case, the plugin root and the case's own `graders/` included.
-- Scaffolds run in an empty working directory, with no credentials and a 2-minute cap.
-  Reference resources as `$(dirname "$0")/...`.
+- `target: trace` is not portable between backends. Each renders the transcript its own
+  way, so a `regex` over it can pass on one and fail on the other.
 - A case carrying `checks/` and no grader does not load. The harness refuses a case with no
   grader at all, so `checks/` is added to a case and never replaces its `graders/`.
 - A check reads a collected run, so `--no-keep-traces` gives up every check. Each one is then
