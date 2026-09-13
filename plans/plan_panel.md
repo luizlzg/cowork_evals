@@ -339,3 +339,26 @@ is the only record of where the work stopped if the context is lost. `CLAUDE.md`
    confirm that row reads stale, and restore the file.
 7. `cowork_evals panel plugins/smoke --markdown /tmp/panel.md --json /tmp/panel.json`, and
    confirm both hold the same rows as the table.
+
+## Where this stopped
+
+2026-09-13. One box is unticked, and steps 5 to 7 above are not passed.
+
+The unticked box is `The call from cli._sweep after the verdict`. Its code is written and
+committed: `cli._record` in `cli.py`, called from `_sweep` inside the tee after the verdict is
+printed, with an `OSError` becoming a `panel: <reason>` warning on stderr. The box is unticked
+because the only thing that verifies it end to end is
+`integration/test_cli.py::test_a_run_writes_a_record_the_panel_then_shows`, which did not run.
+Do not rewrite the code. Run the test.
+
+What blocks it is the container login, not this plan: `docker.has_credential()` is false and a
+run returns `401 OAuth access token has been revoked`, so every `credentialled` test in the
+integration tier errors at its fixture. `cowork_evals setup --docker` fixes it and is
+interactive, so it is the developer's to run.
+
+Steps 1 to 4 passed. Step 4 was run as `pytest tests/integration -m "integration and not live"`
+and all 33 selected tests passed.
+
+Note before running any integration selection: two tests in `integration/test_cowork.py` take
+the keyboard even without the `live` marker. `plans/plan_consent.md` is the plan that fixes
+that, and it is not implemented. Tell the developer before running any integration selection.
