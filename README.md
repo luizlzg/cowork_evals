@@ -74,7 +74,7 @@ rm -r .claude/skills/cowork-evals .claude/skills/cowork-ask && cowork_evals init
 
 | Backend                    | You need                                                       |
 | -------------------------- | ---------------------------------------------------------------- |
-| The container, `--docker`  | Docker or Rancher Desktop running, the images, and the one-time login. `setup --docker` makes all three |
+| The container, `--docker`  | Docker or Rancher Desktop running, the images from `setup --docker`, and the one-time login from `login --docker` |
 | CoWork, `--cowork`         | macOS, `claude` on `PATH`, CoWork signed in, the profile named in `cowork_evals.yaml`, and the macOS Accessibility grant |
 
 `cowork_evals check --all` reports what each backend is still missing, and names the command
@@ -105,7 +105,8 @@ Install the package as above, then build the container backend:
 
 ```bash
 cowork_evals init             # the config, the skills, and the CLAUDE.md block
-cowork_evals setup --docker   # two images, and one interactive login. Minutes, and once only
+cowork_evals setup --docker   # two images. Minutes, and once only
+cowork_evals login --docker   # one interactive login. Needs a terminal and a browser
 cowork_evals check --docker   # exits 0 when the backend is ready
 ```
 
@@ -238,7 +239,8 @@ costs to run, is [`docs/approaches.md`](docs/approaches.md).
 
 ```bash
 cowork_evals init                    # the config, the skills, and the CLAUDE.md block
-cowork_evals setup --docker          # build the container images, and log in once
+cowork_evals setup --docker          # build the container images
+cowork_evals login --docker          # log in once, in a container
 cowork_evals check --all             # what each backend still needs, one line per backend
 cowork_evals run  --docker path/to/plugin          # an eval: a model, graders, a verdict
 cowork_evals test --docker path/to/plugin/tests    # pytest on the CoWork runtime, no model

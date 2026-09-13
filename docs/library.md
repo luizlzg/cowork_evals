@@ -94,7 +94,7 @@ mirrors an old VM. See [runtime.md](runtime.md).
 | `src/cowork_evals/panel.py`               | yes   | The history of what each case did, and the panel over it           |
 | `src/cowork_evals/preflight.py`           | yes   | Each backend's unmet conditions, for `check` and for `run`         |
 | `src/cowork_evals/resources.py`           | yes   | Where the shipped documentation and data are, in either layout     |
-| `src/cowork_evals/cli.py`                 | yes   | The parser, the nine verbs, the dispatch and the exit codes        |
+| `src/cowork_evals/cli.py`                 | yes   | The parser, the ten verbs, the dispatch and the exit codes         |
 | `src/cowork_evals/docker/`                | yes   | The container backend: the digest, the argument lists, build, check and run |
 | `src/cowork_evals/docker/Dockerfile`      | yes   | What `setup --docker` builds                                       |
 | `src/cowork_evals/docker/Dockerfile.pytest` | yes | One layer over it, carrying pytest                                 |
@@ -350,7 +350,7 @@ root, because `cowork_evals init` writes it on a machine with no checkout. See
 | --------------- | ----------------------------------------- | ---------------- |
 | Container image | tag `cowork-evals:<digest>`               | `setup --docker` |
 | Test image      | tag `cowork-evals-test:<digest>`          | `setup --docker` |
-| Container login | `docker.login_dir`                        | `setup --docker` |
+| Container login | `docker.login_dir`                        | `login --docker` |
 | Run logs        | `./logs/evals/<yyyymmdd-hhmmss>-<scope>/` | `run`            |
 | Case history    | `panel.root`, `./logs/evals/history/`     | `run`            |
 

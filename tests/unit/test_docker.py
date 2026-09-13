@@ -443,7 +443,7 @@ def test_a_credential_name_is_refused_whatever_it_holds(monkeypatch):
         unmet = backend(env_passthrough=[name]).check_environment()
         assert [condition for condition, _ in unmet] == [Condition.ENV_CREDENTIAL], name
         assert name in unmet[0][1]
-        assert "cowork_evals setup --docker" in unmet[0][1]
+        assert "cowork_evals login --docker" in unmet[0][1]
 
 
 def test_a_credential_name_is_refused_when_the_host_does_not_set_it_either(monkeypatch):
@@ -553,9 +553,14 @@ def test_the_remedy_for_a_missing_image_is_the_setup_verb():
     assert remedy(Condition.IMAGE) == "run cowork_evals setup --docker"
 
 
-def test_the_remedy_for_a_missing_login_is_the_same_verb():
-    """`setup --docker` builds the image and then logs in, so one command fixes both."""
-    assert remedy(Condition.CREDENTIAL) == "run cowork_evals setup --docker"
+def test_the_remedy_for_a_missing_login_is_the_login_verb_and_not_the_setup_verb():
+    """An image is a build product and a credential is not, so one command does not fix both.
+
+    A machine whose login was revoked holds two current images, and `setup --docker` there
+    prints `current` twice and returns 0 without making the one thing that is missing.
+    """
+    assert remedy(Condition.CREDENTIAL) == "run cowork_evals login --docker"
+    assert remedy(Condition.CREDENTIAL) != remedy(Condition.IMAGE)
 
 
 def test_the_remedy_for_an_unreachable_daemon_names_no_command_of_this_package():

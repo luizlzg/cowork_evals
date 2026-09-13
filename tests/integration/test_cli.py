@@ -93,6 +93,36 @@ def test_check_docker_returns_zero_on_a_ready_machine(images, capsys) -> None:
     assert printed.out.strip() == "ready"
 
 
+# login.
+
+
+def test_login_check_reports_the_credential_this_machine_holds(credentialled, capsys) -> None:
+    """It reads the real credential, starts no container and writes nothing.
+
+    The interactive half cannot be asserted without a person at a browser, so what is
+    asserted here is the half that is decidable: the report, against the real login the rest
+    of this tier needs anyway.
+    """
+    code = main(["login", "--docker", "--check"])
+    printed = capsys.readouterr()
+    assert code == 0, printed.err
+    assert printed.out.strip() == f"{credentialled.credentials_file}: current"
+
+
+def test_setup_docker_does_not_touch_the_credential(images, capsys) -> None:
+    """It builds, and building is all it does. Both images here are already current.
+
+    A `setup` that also logged in would start an interactive container from this test.
+    """
+    code = main(["setup", "--docker"])
+    printed = capsys.readouterr()
+    assert code == 0, printed.err
+    assert printed.out.splitlines() == [
+        f"{images.docker.tag}: current",
+        f"{images.tag}: current",
+    ]
+
+
 # run.
 
 

@@ -2,7 +2,7 @@
 
 ## Summary
 
-The command. One executable, nine verbs, two backends. It is the whole surface a consumer
+The command. One executable, ten verbs, two backends. It is the whole surface a consumer
 repository sees; the boundary behind it is [library.md](library.md).
 
 - **The backend is required on every verb but `prune`, `panel`, `docs` and `init`** and has no
@@ -11,9 +11,9 @@ repository sees; the boundary behind it is [library.md](library.md).
   whole tree runs. There is no separate sweep command.
 - **A verb names its object only when that object is not an eval.** `run` runs evals, which
   is what this command is. `test` runs pytest and `ask` submits one prompt, so both say so.
-  `setup`, `check` and `prune` act on a backend and carry no object at all. `panel` renders
-  both backend columns and reaches neither. `docs` and `init` act on neither: they read what
-  the package ships and write into the working directory.
+  `setup`, `login`, `check` and `prune` act on a backend and carry no object at all. `panel`
+  renders both backend columns and reaches neither. `docs` and `init` act on neither: they
+  read what the package ships and write into the working directory.
 - **Options are named.** Nothing is forwarded raw to `claude plugin eval`. `test` is the one
   verb that takes a raw tail, because pytest is the only thing behind it.
 - **`run` verifies and never builds.** A failed preflight exits 3 and names the command that
@@ -36,6 +36,7 @@ cowork_evals ask   --cowork <prompt> [--timeout-seconds N] [--json] [--dry-run]
 cowork_evals ask   --cowork --session <dir> [--json]
 cowork_evals test  --docker <path> [--build-missing] [--dry-run] [-- PYTEST_ARGS]
 cowork_evals setup --docker
+cowork_evals login --docker [--check | --force]
 cowork_evals check (--docker | --cowork | --all)
 cowork_evals prune [--docker] [--logs] [--history] [--older-than DAYS] [--out DIR]
 cowork_evals panel <path> [--markdown FILE] [--json FILE] [--removed]
@@ -45,7 +46,9 @@ cowork_evals --version
 ```
 
 `setup` takes `--docker` alone. It is the only backend with anything to build, and there is
-no `setup --all`.
+no `setup --all`. `login` takes `--docker` alone for the same reason: the CoWork backend
+reaches a desktop application that is already signed in, so there is nothing there to log
+into.
 
 `ask` takes `--cowork` alone, exactly as `test` takes `--docker` alone. It reaches a live
 session, and the container has none.
@@ -436,17 +439,55 @@ printing, so there is nothing for a preflight to guard.
 
 | Command          | Builds                                                                                                     | Idempotent                   |
 | ---------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------- |
-| `setup --docker` | `cowork-evals:<digest>`, then `cowork-evals-test:<digest>` over it, then the container login if one is needed | prints `current` and exits 0 |
+| `setup --docker` | `cowork-evals:<digest>`, then `cowork-evals-test:<digest>` over it | prints `current` and exits 0 |
 
-`setup --docker` builds two images. Each run gets a fresh container from one of them, so there
-is no long-lived container to create. When no container login exists, it then starts one
-interactive container to log in. That step needs a terminal and a browser. See
-[docker.md](docker.md) and [cowork_test.md](cowork_test.md).
+`setup --docker` builds two images and nothing else. Each run gets a fresh container from one
+of them, so there is no long-lived container to create. See [docker.md](docker.md) and
+[cowork_test.md](cowork_test.md).
+
+It does not log in. An image is a build product and a credential is not, which is the same
+distinction `prune --docker` makes when it leaves the login alone. A machine whose login was
+revoked needs one act, and it is `login --docker`, not a second pass over two images that are
+already current.
 
 There is no `setup --cowork`. The desktop application and the Accessibility grant are
 installed and granted by hand, and `check --cowork` reports what is missing.
 
 Where each artefact lives, and how the digest is computed, is [library.md](library.md).
+
+## login
+
+`login --docker` makes the container login this package owns, and builds nothing.
+
+```
+cowork_evals login --docker           # log in, or report the login already there
+cowork_evals login --docker --check   # report it, and write nothing
+cowork_evals login --docker --force   # log in again over a login that is already there
+```
+
+| Condition                         | Does                                               | Exits |
+| --------------------------------- | ---------------------------------------------------- | ----- |
+| a login is present                | prints the credentials file as `current`           | 0     |
+| no login                          | starts one interactive container and logs in       | 0     |
+| `--check` and a login is present  | prints it, writes nothing                          | 0     |
+| `--check` and no login            | names this verb on stderr                          | 3     |
+| the daemon is down, or the image is absent | names the command that fixes it           | 3     |
+| stdin is not a terminal           | says so, and starts no container                   | 3     |
+| the login itself failed           | the reason on stderr                               | 1     |
+
+It reads two of the conditions `check --docker` reports, the daemon and the image, because
+those are what the login container itself needs. The credential is what it is about to make,
+and `docker.env_passthrough` reaches a run and not this container.
+
+There is no headless login and no API key route. The CLI opens a browser and reads a code
+back in its own prompt, so stdin that is not a terminal is refused here rather than left to
+`docker run -it`, whose message says nothing about what the operator has to do. See
+[docker.md](docker.md).
+
+`--force` is for a login this package already accepts and the operator does not: tokens that
+are present and no longer work, or an account that is the wrong one. A credentials file
+carrying no token is not a login here, so `login --docker` starts a flow over one of those
+with no flag. See [docker.md](docker.md).
 
 ## check
 
