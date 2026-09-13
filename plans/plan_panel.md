@@ -282,8 +282,8 @@ history, so a test left on the default would append to the developer's own histo
 Tick a box once it is verified, and tick it then rather than in a batch at the end: this file
 is the only record of where the work stopped if the context is lost. `CLAUDE.md`.
 
-- [ ] `PanelSection` in `config.py`, on `_Sections`, on `Config` and in `Config.load`
-- [ ] `PanelSection` in `__init__.__all__`, and the key in `data/cowork_evals.example.yaml`
+- [x] `PanelSection` in `config.py`, on `_Sections`, on `Config` and in `Config.load`
+- [x] `PanelSection` in `__init__.__all__`, and the key in `data/cowork_evals.example.yaml`
 - [ ] `panel.py`: `path`, `append`, `read` and `digest`
 - [ ] `panel.py`: `prune`
 - [ ] `CaseOutcome` and `Verdict.outcomes` in `verdict.py`, no condition moved or copied

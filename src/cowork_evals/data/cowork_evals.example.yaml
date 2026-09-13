@@ -3,7 +3,7 @@
 # docker.extra_ca_file, which has no default and shows the shape of a value. A copy with the
 # rest commented out behaves as no file at all.
 #
-# The three sections, the ladder over them and the rules the loader applies are in
+# The four sections, the ladder over them and the rules the loader applies are in
 # docs/library.md. Each section links to the file that owns its keys.
 #
 # cowork_evals.yaml is git-ignored. It names a profile, which is an identifier, and the
@@ -59,3 +59,10 @@ docker:
   # preflight, and a name that would carry Claude's own credential is refused.
   # docs/docker.md.
   # env_passthrough: []
+
+# The eval panel. docs/panel.md.
+panel:
+  # Where a record of what each case did outlives the run directory it was produced in.
+  # `--out` does not move it: that option relocates what one invocation produced, and a
+  # record is read after that invocation's directory has been pruned.
+  # root: logs/evals/history

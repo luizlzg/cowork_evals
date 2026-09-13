@@ -15,7 +15,14 @@ consumer imports rather than reaching through the command. The driver's behaviou
 docs/cowork_driver.md and the application internals it couples to are docs/cowork_desktop.md.
 """
 
-from .config import Config, CoWorkError, CoWorkSection, DockerSection, EvalSection
+from .config import (
+    Config,
+    CoWorkError,
+    CoWorkSection,
+    DockerSection,
+    EvalSection,
+    PanelSection,
+)
 from .cowork import CoWork
 
 __all__ = [
@@ -25,4 +32,5 @@ __all__ = [
     "Config",
     "DockerSection",
     "EvalSection",
+    "PanelSection",
 ]
