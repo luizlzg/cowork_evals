@@ -25,25 +25,32 @@ The fields each one takes are [eval_format.md](eval_format.md). What matters her
 list is closed. The harness is a Claude Code command this repository does not own and cannot
 extend, and it rejects a grader whose `type:` is not one of the six.
 
-So an assertion that is not one of those six cannot be written at all. The one that comes up
-most is an assertion about a file the agent produced, and the three types that can look at one
-each stop short of it:
+So an assertion that is not one of those six cannot be written at all. The assertion that
+comes up most often, and does not fit, is one about the contents of a file the agent produced.
 
-| To assert something about `totals.xlsx`   | And what happens                                                |
-| ----------------------------------------- | ----------------------------------------------------------------- |
-| `file_exists`                             | reports that the file is there, and nothing about what is in it  |
-| `regex` with `target: {source: file, ...}` | reads the file as UTF-8 text. A `.xlsx` is a ZIP, so the grader fails on the read |
-| `llm` with `focus: {source: file, ...}`   | shows the judge the same text, so a binary is a failed grader or a skipped one |
+Take an example. A plugin has a skill that builds spreadsheets, and the author writes an eval
+case for it. The prompt asks the agent to produce a file named `totals.xlsx`, and what the
+author wants to assert is that the total in cell D10 came out as 4200. Three of the six types
+can look at a produced file, and each of the three stops short of that:
 
-Even on a file that is text, a regular expression cannot compute. It cannot open a workbook,
-sum a column, evaluate a formula, or compare a number against 4200.
+| The grader                                 | What it does with `totals.xlsx`                                  |
+| ------------------------------------------ | ------------------------------------------------------------------- |
+| `file_exists`                              | reports that the file is there, and nothing about what is inside it |
+| `regex` with `target: {source: file, ...}` | reads the file as UTF-8 text. A `.xlsx` is a ZIP archive, so it is not text and the grader fails on the read |
+| `llm` with `focus: {source: file, ...}`    | shows a judge model that same text, so a binary is a failed grader or a skipped one |
 
-A skill that builds a spreadsheet can therefore be asserted to have created `totals.xlsx`, and
-nothing more: the case passes when the numbers in it are wrong, and passes again when the file
-is corrupt and no application can open it. The eval is green and it checked nothing.
+The limit is not only that the file is binary. Even on a file that is plain text, a regular
+expression cannot compute: it cannot open a workbook, sum a column, evaluate a formula, or
+compare the result against 4200.
 
-A check is how that assertion gets written. The author opens the workbook in Python, in their
-own repository, and asserts the total.
+So the case can assert that `totals.xlsx` was created, and nothing else about it. It passes
+when D10 holds the wrong number. It passes again when the file is corrupt and no application
+can open it. The eval is green and it checked nothing.
+
+A check is how the author writes the assertion they wanted. They open the workbook in Python,
+in their own repository, and assert the total. That exact check is under
+[The function](#the-function) below, and a whole case with checks is under
+[A worked example](#a-worked-example).
 
 ### How it works
 
