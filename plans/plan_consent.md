@@ -121,7 +121,7 @@ Never mock and never skip, per `CLAUDE.md` and `tests/README.md`. Neither needs 
 Tick a box when it is verified, then commit. Do not batch ticks. `CLAUDE.md`.
 
 - [x] `_consented` calls `cowork.consent`, the `CONSENT_DIALOG` import goes, docstring says why
-- [ ] `tests/integration/conftest.py`: a session-scoped autouse fixture asks once
+- [x] `tests/integration/conftest.py`: a session-scoped autouse fixture asks once
 - [ ] Delete `test_a_submission_with_no_consent_raises_code_2_and_fires_nothing`
 - [ ] The `unattended` fixture forces `consent: dialog`, is renamed `attended`, and the five
       tests that take it follow
