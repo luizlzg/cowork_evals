@@ -4,7 +4,8 @@
 #
 # The image carries the CLI. This starts one interactive container with the two login
 # paths mounted, and the CLI opens a browser and takes the code in its own prompt. It is
-# the one credential route: there is no API key route. See docs/docker.md.
+# the `login` route, and there is no API key route. A host on `docker.credential: bedrock`
+# needs no login and this script has nothing to do there. See docs/docker.md.
 #
 #   (no args)     log in, or report the login already there
 #   --check       report whether a login is present, no writes

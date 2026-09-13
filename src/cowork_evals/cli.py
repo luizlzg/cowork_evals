@@ -664,6 +664,7 @@ def _sweep(
             directory,
             args.backend,
             image=None if image is None else image.tag,
+            credential=None if image is None else image.credential,
             env_passthrough=() if image is None else image.env_passthrough,
         )
         extra = _each_plugin(args, config, directory, targets, tags, image)
@@ -928,7 +929,12 @@ def _test(args: argparse.Namespace, config: Config) -> int:
 
 
 def _setup(config: Config) -> int:
-    """Build the two images, then log in. An image already at its digest is `current`."""
+    """Build the two images, then log in. An image already at its digest is `current`.
+
+    There is no login under `docker.credential: bedrock`: that route reads Claude's own
+    credential from the host, and `check --docker` is what reports a name it is missing.
+    docs/docker.md.
+    """
     image = Docker(config)
     test_image = PytestImage(config)
     for artefact in (image, test_image):
@@ -936,6 +942,9 @@ def _setup(config: Config) -> int:
             print(f"{artefact.tag}: current")
         else:
             artefact.build()
+    if not image.uses_login:
+        print(f"docker.credential: {image.credential}, so no login is made")
+        return OK
     if image.has_credential():
         print(f"{image.credentials_file}: current")
         return OK

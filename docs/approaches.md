@@ -116,7 +116,7 @@ application that exposes no scriptable entry point.
 | Per case                  | a container start plus the agent run | a VM boot plus the agent run, so minutes |
 | Headless                  | yes                                  | no. The submit step is a synthetic keystroke behind a macOS Accessibility grant, so there is no CI route at all. See [cowork_desktop.md](cowork_desktop.md) |
 | The machine while it runs | free. A container is not the desktop | yours only between cases. Each submission activates the application and sends Return to the frontmost window, and nothing may steal focus while it does. See [cowork_driver.md](cowork_driver.md) |
-| The account               | a container login this package owns  | a live account. A case can reach real mail, and every run leaves a permanent session in that account's history. See [cowork_driver.md](cowork_driver.md) |
+| The account               | what `docker.credential` names: a container login this package owns, or the host's Bedrock credential | a live account. A case can reach real mail, and every run leaves a permanent session in that account's history. See [cowork_driver.md](cowork_driver.md) |
 | What bounds the spend     | `--max-cost-usd`, per run            | nothing the host can observe. The driver's `max_runs` ceiling bounds submissions instead |
 | Several plugins at once   | yes                                  | a usage error. See [cli.md](cli.md)  |
 | The case format           | all of it                            | the subset above                     |

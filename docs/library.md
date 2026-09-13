@@ -131,17 +131,18 @@ name, so the two cannot drift, and adding a skill is adding a directory: nothing
 names one.
 
 There are two, and the rule that separates them is which question fires them. `cowork-evals`
-fires on a case tree and on the command. `cowork-ask` fires on what a live session does. A
-question about a file this repository ships is the first; a question that only a running
-session can settle is the second.
+fires on a case tree and on the command, which includes which cases the tree should hold.
+`cowork-ask` fires on what a live session does. A question about a file this repository ships is
+the first; a question that only a running session can settle is the second.
 
 | Skill          | Fires on                                                   | Holds                                                                     |
 | -------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `cowork-evals` | Writing or fixing a case, a `prompt.md` or a grader, a failing command, the configuration file, plugin code that runs in a session | The case tree, the two addressability keys, the six grader types, the three grader idioms, the seven authoring traps, the exit codes and the runtime constraint |
+| `cowork-evals` | Which cases a skill needs, writing or fixing a case, a `prompt.md` or a grader, a failing command, the configuration file, plugin code that runs in a session | The interview and the coverage dimensions, the case tree, the two addressability keys, the six grader types, the three grader idioms, the seven authoring traps, the exit codes and the runtime constraint |
 | `cowork-ask`   | A question about what a live CoWork session does, a claim that has to be confirmed in the product, a failing `cowork_evals ask` | The verb, what one ask costs, and the rule that ask the session to do the thing and read what it did |
 
-The first is a condensed [eval_format.md](eval_format.md) and [cli.md](cli.md). The second is
-a condensed [cli.md](cli.md), [cowork_driver.md](cowork_driver.md) and
+The first is a condensed [eval_design.md](eval_design.md), [eval_format.md](eval_format.md) and
+[cli.md](cli.md). The second is a condensed [cli.md](cli.md),
+[cowork_driver.md](cowork_driver.md) and
 [cowork_desktop.md](cowork_desktop.md). Both are condensed on purpose: a skill is read into a
 context window every time it fires, and the full documents are one `cowork_evals docs` away
 for anything neither carries.
@@ -160,7 +161,8 @@ committed second copy would be a duplicate with no rule.
 ## Why the documentation ships
 
 A consumer writes cases, writes plugin code and runs the command. The authoring contract is
-[eval_format.md](eval_format.md), the option surface is [cli.md](cli.md), and the wheel set
+[eval_format.md](eval_format.md), which cases to write is [eval_design.md](eval_design.md),
+the option surface is [cli.md](cli.md), and the wheel set
 the code under test may import is [runtime.md](runtime.md). None of that is derivable from
 the module source, so a consumer without this tree is reading a command with no reference.
 
@@ -284,7 +286,7 @@ still says which names a run carried, and a name that is not there carries nothi
 | Rule                                                        | Holds because                                                                        |
 | ----------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | A named variable absent or empty on the host fails the preflight | A missing precondition fails. An empty string is not a value                     |
-| A name that would carry Claude's own credential is refused  | The container login is the one route for that, whatever the variable holds            |
+| A name that would carry Claude's own credential is refused  | `docker.credential` is the one route for that, whatever the variable holds            |
 
 It exists so a skill whose whole job is calling an API can be evaluated at all. Without it
 such a skill fails every eval for a reason that has nothing to do with the skill. The setting,

@@ -10,8 +10,9 @@ stack, not only the Python interpreter and its wheels.
   components come from upstream instead, each with one source.
 - **One image, one tag.** `cowork-evals:<digest>`, where the digest covers every build input.
   There is no `latest`.
-- **One credential route**: a login this package owns, mounted read-write. Never the
-  developer's own `~/.claude`, and never an API key.
+- **Two credential routes**, and `docker.credential` chooses: a login this package owns,
+  mounted read-write, or Bedrock, forwarded from the host. Never the developer's own
+  `~/.claude`, and never an API key.
 - **Named host variables are forwarded**, and their values reach the container's environment
   and no artefact.
 - **Read-only everywhere except the log directory** and the two credential paths.
@@ -41,7 +42,8 @@ The `docker:` section of `cowork_evals.yaml`. The file, and the ladder over it, 
 | ---------------------- | ------------------------------ | ---------------------------------------------------- |
 | `platform`             | `linux/arm64`                  | The build and run platform. In the image digest      |
 | `claude_code_version`  | `2.1.265`                      | The npm version of the CLI installed. In the digest  |
-| `login_dir`            | `~/.cache/cowork_evals/claude` | Where the login this package owns is kept            |
+| `credential`           | `login`                        | How Claude Code in the container authenticates: `login` or `bedrock` |
+| `login_dir`            | `~/.cache/cowork_evals/claude` | Where the login this package owns is kept. Read under `login` only |
 | `extra_ca_file`        | none                           | An extra root CA for a host whose network inspects TLS |
 | `env_passthrough`      | empty                          | Host variable names forwarded into the run container |
 
@@ -265,9 +267,28 @@ image. The one consequence for a consumer: a skill that shells out to `bubblewra
 
 ## Credentials
 
-One route: a login this package owns, mounted. There is no API key route, by the
-developer's decision of 2026-09-08. A host with no interactive terminal logs in on a host
-that has one and carries the two paths below.
+Two routes, and `docker.credential` chooses between them. One question decides which one a
+host uses: **how does Claude Code already authenticate on this host?** Through claude.ai, and
+it is `login`. Through Bedrock, and it is `bedrock`. There is no API key route, by the
+developer's decision of 2026-09-08.
+
+| `docker.credential` | The container gets                          | The host needs                                     |
+| ------------------- | -------------------------------------------- | -------------------------------------------------- |
+| `login`, default    | the two paths below, mounted read-write     | an interactive terminal, once                       |
+| `bedrock`           | four `--env` values and no mount            | the four variables set and non-empty at run time    |
+
+Exactly one route is checked, never both. A host on `bedrock` is never asked for a login, and
+a host on `login` is never asked for the four variables. Either way an unmet condition is a
+failed preflight, so it exits 3 and names the fix. See [cli.md](cli.md).
+
+Neither route puts Claude's own credential in `docker.env_passthrough`. That list is for a
+credential the skill under test reads, and it refuses every name either route owns.
+
+`CLAUDE_CODE_WALNUT_SPIRE` is neither route's and is passed in with `--env` on both, because
+the process inside the container is `claude plugin eval` itself with no wrapper in the way. A
+shell opened in the container by hand must export it. See [plugin_eval.md](plugin_eval.md).
+
+### The login route
 
 The login happens once, in an interactive container that `setup --docker` starts when the
 login is absent, and it writes a configuration directory this package owns:
@@ -314,9 +335,37 @@ seeds no state file beside it.
 No login is a failed preflight, so it exits 3 and names the command that fixes it. See
 [cli.md](cli.md).
 
-`CLAUDE_CODE_WALNUT_SPIRE` is passed in with `--env`, because the process inside the
-container is `claude plugin eval` itself with no wrapper in the way. A shell opened in the
-container by hand must export it. See [plugin_eval.md](plugin_eval.md).
+### The Bedrock route
+
+`docker.credential: bedrock` forwards four host variables into the run container and mounts
+neither login path:
+
+| Variable                     |
+| ---------------------------- |
+| `CLAUDE_CODE_USE_BEDROCK`    |
+| `AWS_BEARER_TOKEN_BEDROCK`   |
+| `ANTHROPIC_BEDROCK_BASE_URL` |
+| `AWS_REGION`                 |
+
+They are Claude Code's own, and the CLI reads them itself: the process in the container is
+`claude plugin eval` with no wrapper, so `--env` is what puts them in front of it, exactly as
+[plugin_eval.md](plugin_eval.md) records for the enablement variable.
+
+Each one has to be set and non-empty. An absent or empty name is one unmet condition per name,
+reported by `check --docker` and refused by `run` before anything is created, on the same
+ground as a forwarded name that is not set: an empty string is not a value.
+
+`setup --docker` builds the images and makes no login under this route, and says so.
+`cowork_evals login` does not exist, and `Docker.login()` raises rather than opening a browser
+for a credential this route never reads.
+
+Two things follow from the route and are the developer's to set, not this package's to guard.
+
+- `eval.model` and `eval.judge_model` are names the CLI resolves against Bedrock, so an alias
+  such as `sonnet` may have to be an inference profile id. Nothing here has measured which
+  aliases resolve, and no check refuses one.
+- The host's own credential lifetime is the host's. This package reads the four variables at
+  preflight and forwards what it read, and refreshes nothing.
 
 ## Environment passthrough
 
@@ -341,7 +390,7 @@ on them before anything is created:
 | Condition                                          | Because                                                                     |
 | -------------------------------------------------- | ----------------------------------------------------------------------------- |
 | A named variable is unset or empty on the host     | A missing precondition fails. An empty string is not a value, and a run that forwarded one would look configured and would not be |
-| A named variable is `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` or `CLAUDE_CODE_OAUTH_TOKEN` | The container login above is the one route for Claude's own credential, whatever the variable holds |
+| A named variable is one either credential route owns: `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN` or one of the four Bedrock names above | `docker.credential` is the one route for Claude's own credential, whatever the variable holds |
 
 Each line names the variable and never its value. A value is read once, where the preflight
 reads it, and is not read a second time at container start.
@@ -363,6 +412,12 @@ reads it, and is not read a second time at container start.
 `--dry-run` prints `NAME=<not shown>` and reads no value at all, so the list it prints is
 safe to paste into a message and carries every configured name whether or not the host has
 that name set.
+
+The table holds for the four names the Bedrock route forwards, with one difference in the
+first two rows: those names are configured nowhere, so `cowork_evals.yaml` carries
+`credential: bedrock` and `env.txt` carries `credential: bedrock`, and neither carries a
+Bedrock name. The route says which credential the run used, and the names the route owns are
+the four above.
 
 `run.log` is the one artefact this package cannot fully control. It is captured at the file
 descriptor level, so whatever the container prints reaches it, and a case whose prompt makes

@@ -185,13 +185,17 @@ a run that silently spends ten more building an image is not readable in a log.
 
 | Backend    | Requires                                                             | Fails when                                                  |
 | ---------- | -------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `--docker` | a Docker or Rancher daemon, the image at the current digest, the container login, and every name in `docker.env_passthrough` set on the host | the daemon is down, the image is absent or stale, there is no login, a forwarded name is unset or empty, or one of them would carry Claude's own credential |
+| `--docker` | a Docker or Rancher daemon, the image at the current digest, what `docker.credential` names, and every name in `docker.env_passthrough` set on the host | the daemon is down, the image is absent or stale, the credential route's condition is unmet, a forwarded name is unset or empty, or one of them would carry Claude's own credential |
 | `--cowork` | macOS, `claude` on `PATH`, a `cowork_evals.yaml` naming a profile, a readable sessions root under it, an Accessibility grant, and the suite inside the driver's `max_runs` | the grant is missing, so there is no headless route and no CI, or `claude` is absent, or no profile is configured, or the suite would exceed the ceiling |
 | `test`     | a Docker or Rancher daemon, the eval image, and the test image over it        | the daemon is down, or either image is absent or stale |
 
+The credential condition is the route's. Under `docker.credential: login` it is the container
+login, and no login is one unmet condition. Under `bedrock` it is the four Bedrock variables,
+and each one unset or empty on the host is one. Exactly one route is checked.
+
 A forwarded name that is unset or empty on the host is an unmet condition, one line per
 name, because an empty string is not a value. A name that would carry Claude's own credential
-is refused whatever it holds, and the line names the container login as the one route. Every
+is refused whatever it holds, and the line names `docker.credential` as the one route. Every
 line names the variable and never its value. See [docker.md](docker.md).
 
 The desktop application itself is not probed. What the backend reads is the profile directory
@@ -437,8 +441,10 @@ printing, so there is nothing for a preflight to guard.
 
 `setup --docker` builds two images. Each run gets a fresh container from one of them, so there
 is no long-lived container to create. When no container login exists, it then starts one
-interactive container to log in. That step needs a terminal and a browser. See
-[docker.md](docker.md) and [cowork_test.md](cowork_test.md).
+interactive container to log in. That step needs a terminal and a browser. Under
+`docker.credential: bedrock` there is no login to make, so it builds the two images, says which
+route the configuration names, and stops. See [docker.md](docker.md) and
+[cowork_test.md](cowork_test.md).
 
 There is no `setup --cowork`. The desktop application and the Accessibility grant are
 installed and granted by hand, and `check --cowork` reports what is missing.
@@ -451,8 +457,10 @@ Where each artefact lives, and how the digest is computed, is [library.md](libra
 builds. It exits 0 when every named backend is ready and 3 otherwise, listing each unmet
 condition and its fix. The backend is required, so `check` with none is a usage error.
 
-`check --docker` reports both images and the container login. The login is unmet for `run` and
-is not read by `test`'s preflight, and `check` reports the condition either way.
+`check --docker` reports both images and the credential the configured route needs. Under
+`login` that is the container login, which is unmet for `run` and is not read by `test`'s
+preflight, and `check` reports the condition either way. Under `bedrock` it is the four host
+variables, one condition each.
 
 `check --all` covers `--docker` and `--cowork`, so it reports the Accessibility grant on a
 machine that has no CoWork installed rather than failing the whole invocation. It returns 0 on
@@ -545,7 +553,7 @@ directory. It takes no backend and no option.
 | Target                                  | Is                                                          |
 | --------------------------------------- | ----------------------------------------------------------- |
 | `cowork_evals.yaml`                     | Every key and every default, and a placeholder for `cowork.profile` |
-| `.claude/skills/cowork-evals/SKILL.md`  | The eval-authoring skill: the tree, the keys, the graders, the traps |
+| `.claude/skills/cowork-evals/SKILL.md`  | The eval-authoring skill: which cases to write, the tree, the keys, the graders, the traps |
 | `.claude/skills/cowork-ask/SKILL.md`    | The ask skill: when to ask a live session, what it costs, what counts as evidence |
 | `CLAUDE.md`                             | A block naming the command, the `docs` verb and the runtime constraint |
 

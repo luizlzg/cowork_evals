@@ -18,7 +18,7 @@ you are about to change, and link to it rather than restating it.
   reference that leaves this tree is named rather than linked. Both rules are in
   [`library.md`](library.md).
 
-The table below is in reading order. The first six files are the system; the next four are
+The table below is in reading order. The first seven files are the system; the next four are
 the mechanisms under it; the next two are measurements of things this repository does not
 build; the last three are external material and one deferred design.
 
@@ -28,6 +28,7 @@ build; the last three are external material and one deferred design.
 | [`cli.md`](cli.md)                         | The `cowork_evals` command: verbs, backends, scope, exit codes  |
 | [`approaches.md`](approaches.md)           | The two backends, what each proves, and what each costs to run  |
 | [`eval_format.md`](eval_format.md)         | What a case file contains: tree, frontmatter, graders, traps    |
+| [`eval_design.md`](eval_design.md)         | Which cases a skill needs, which grader answers what, and the interview that decides |
 | [`running_evals.md`](running_evals.md)     | The run: status, pinned flags, pass and fail, logs, cadence, cost    |
 | [`cowork_test.md`](cowork_test.md)         | The other thing this repository runs: a consumer's pytest suite, on the CoWork runtime |
 | [`docker.md`](docker.md)                   | The container that reproduces the CoWork image                  |
@@ -58,6 +59,11 @@ during a run belongs with the mechanism it binds and not with the run.
 [`cowork_backend.md`](cowork_backend.md) is the layer over the driver, and the two files split
 on one question: does the statement need to know what a case is? Yes, and it is in the
 backend. No, and it is in the driver.
+
+[`eval_format.md`](eval_format.md) and [`eval_design.md`](eval_design.md) split the same way,
+on one question: does the statement depend on what the skill under test does? No, and it is the
+format. Yes, and it is the design. The format is checked by the validator, and the design is
+checked by nothing, which is why it is written down.
 
 [`runtime.md`](runtime.md) and [`cowork_desktop.md`](cowork_desktop.md) measure what this
 repository does not build, the session image and the desktop application. A mechanism file

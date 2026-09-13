@@ -10,7 +10,8 @@ backends.
   directory, and an optional `case.yaml`.
 - **Two addressability keys are required**, `tags` and `plugins`, and both are checked.
 - **Graders come in two classes.** Structural graders are deterministic and carry the verdict;
-  judged graders call a model and are printed. Prefer a structural one.
+  judged graders call a model and are printed. Which one answers which question is
+  [eval_design.md](eval_design.md).
 - **Only two grader types choose what they look at, and they use different keys.** `regex`
   uses `target`, `llm` uses `focus`.
 - **A case a CoWork session cannot run says so, with the `no-cowork` tag.** The validator
@@ -201,9 +202,6 @@ under `--ablation with-without`, which is off by default and is the container ba
 alone, so a case that never asks for the baseline arm sets it only to stay portable. See
 [running_evals.md](running_evals.md).
 
-Prefer a deterministic grader over a judged one for anything long. Judges are noisy on long
-inputs.
-
 The skill-fired idiom:
 
 ```yaml
@@ -237,7 +235,8 @@ sibling case blocks a single-case run. There is no option to skip it. See
 
 A skill under `<plugin>/skills/` with no directory of that name under `evals/` is reported and
 is not a violation. Coverage is not a rule of this format, so it fails nothing on its own.
-`cowork_evals run --require-coverage` is what turns a report into a preflight failure.
+`cowork_evals run --require-coverage` is what turns a report into a preflight failure. What a
+covered skill needs beyond one directory is [eval_design.md](eval_design.md).
 
 ## Authoring traps
 

@@ -16,8 +16,8 @@ while the work happens.
 
 ## Plans
 
-Fifteen plans. Thirteen build something and are numbered in build order, and one of those
-thirteen is skipped. `plan_fix` builds nothing, so it carries no number: it corrects what the
+Sixteen plans. Fourteen build something and are numbered in build order, and one of those
+fourteen is skipped. `plan_fix` builds nothing, so it carries no number: it corrects what the
 others wrote, and it ran before `plan_cowork_backend.md` because it changes what that plan and
 `plan_cli.md` both read. `plan_believable_results` carries no number for the same reason:
 it holds measurements and decisions, and its product is the four plans numbered 10 to 13. The order is the
@@ -44,6 +44,7 @@ not the system's: what is built and usable is
 | 11 | [`done/plan_runnability.20260912.md`](done/plan_runnability.20260912.md) | The `no-cowork` tag on a case, enforced both ways, counted rather than failed | implemented | `feat/runnability`    |
 | 12 | [`done/plan_env_passthrough.20260912.md`](done/plan_env_passthrough.20260912.md) | Named host variables forwarded into the run container, values never logged | implemented | `feat/env-passthrough` |
 | 13 | [`done/plan_ablation.20260912.md`](done/plan_ablation.20260912.md) | The baseline arm, and a verdict that decides on the per-case delta | implemented | `feat/ablation`       |
+| 14 | [`plan_eval_design.md`](plan_eval_design.md) | The document that owns which cases to write, the interview the skill runs, and a second credential route | written | `feat/eval-enhancement` |
 
 | Status        | Means                                                                     |
 | ------------- | --------------------------------------------------------------------------- |
@@ -102,6 +103,15 @@ whether the cases passed. They were implemented in that order. `plan_ablation` w
 because it rewrites the pass and fail rules that `plan_run_validity` and `plan_runnability`
 both change, and `plan_env_passthrough` is independent of all three. What those rules are now
 is [`../docs/running_evals.md`](../docs/running_evals.md).
+
+Plan 14 builds no part of a run. A session pointed at a consumer repository invented its eval
+cases and graders, because no file said which cases a skill needs: the format contract covers
+the file and nothing covers the suite. It adds one shipped document, one section to one shipped
+skill, and the rule that separates the two documents. The boundary it moves is
+[`../docs/library.md`](../docs/library.md), and what it now says about coverage is
+[`../docs/eval_design.md`](../docs/eval_design.md). Its last phase is unrelated to the rest and
+is there because the same developer could run nothing without it: the container backend accepted
+one credential, and a host that authenticates Claude Code through Bedrock failed the preflight.
 
 Plans 2 and 3 each build one backend whole. Running an eval on those two backends is
 `claude plugin eval`, which discovers the cases, runs them, grades them and writes
