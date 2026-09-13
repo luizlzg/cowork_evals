@@ -1,4 +1,4 @@
-"""The command: the parser, the eight verbs, the dispatch and the exit codes.
+"""The command: the parser, the nine verbs, the dispatch and the exit codes.
 
 The surface is docs/cli.md, and this module is the whole of it. There is no second entry point
 and no per-backend executable.
@@ -25,6 +25,7 @@ from . import (
     cowork_backend,
     docker,
     logs,
+    panel,
     preflight,
     resources,
     results,
@@ -139,6 +140,7 @@ def build_parser() -> argparse.ArgumentParser:
     _setup_parser(verbs)
     _check_parser(verbs)
     _prune_parser(verbs)
+    _panel_parser(verbs)
     _docs_parser(verbs)
     _init_parser(verbs)
     return parser
@@ -267,16 +269,43 @@ def _check_parser(verbs: Any) -> None:
     _backend_group(verb, DOCKER, COWORK, ALL)
 
 
+def _panel_parser(verbs: Any) -> None:
+    """`panel` takes a path and three options, and no backend.
+
+    It renders both backend columns and reaches neither, so there is nothing for a backend
+    flag to select. There is no `--tag` and no `--case` either: the verb exists to show what
+    has never run, and a filter hides exactly those rows. The path is the only selector, and
+    it is the one `run` uses.
+    """
+    verb = verbs.add_parser(
+        "panel", help="print every case under a path with its latest result on each backend"
+    )
+    verb.add_argument("path", help="a case, a skill, an evals/ tree, a plugin root or a sweep")
+    verb.add_argument("--markdown", help="write the same rows as a Markdown table to this file")
+    verb.add_argument("--json", help="write the same rows as a JSON snapshot to this file")
+    verb.add_argument(
+        "--removed",
+        action="store_true",
+        help="add a row for history whose case is no longer in the tree",
+    )
+
+
 def _prune_parser(verbs: Any) -> None:
     """`prune` takes any combination of its selection flags, and requires at least one.
 
     They are not a mutually exclusive group: pruning images and logs in one invocation is
     ordinary. `argparse` cannot express `at least one`, so the refusal is the verb's and
     returns 2.
+
+    `--out` does not reach `--history`. That option names the log root, and the history root
+    is `panel.root`. docs/panel.md.
     """
     verb = verbs.add_parser("prune", help="delete artefacts this command created")
     verb.add_argument("--docker", action="store_true", help="images this command built")
     verb.add_argument("--logs", action="store_true", help="run directories under the log root")
+    verb.add_argument(
+        "--history", action="store_true", help="records under the panel's history root"
+    )
     verb.add_argument(
         "--older-than", type=int, default=logs.RUN_PRUNE_DAYS, help="restrict every selection"
     )
@@ -422,6 +451,8 @@ def _dispatch(args: argparse.Namespace, config: Config) -> int:
         return _setup(config)
     if args.verb == "check":
         return _check(args, config)
+    if args.verb == "panel":
+        return _panel(args, config)
     if args.verb == "docs":
         return _docs(args)
     if args.verb == "init":
@@ -676,7 +707,38 @@ def _sweep(
         )
         (directory / logs.VERDICT_FILE).write_text(decided.text, encoding="utf-8")
         print(decided.text, end="")
+        _record(args, config, directory, decided, image)
     return OK if decided.passed else FAILED
+
+
+def _record(
+    args: argparse.Namespace,
+    config: Config,
+    directory: Path,
+    decided: verdict.Verdict,
+    image: Docker | None,
+) -> None:
+    """Append one record per case to the history, from the documents this invocation wrote.
+
+    It runs after the verdict, once, and the outcome it records is the one the verdict
+    reached. A `--dry-run` and every refusal return before the sweep, so neither appends.
+
+    A failure to write is a warning on stderr and leaves the exit code alone. Recording a
+    result is not deciding one, and an unwritable history root must not turn a passing run
+    red. docs/panel.md.
+    """
+    try:
+        panel.append(
+            config.panel.root,
+            panel.records(
+                directory,
+                decided.outcomes,
+                args.backend,
+                image=None if image is None else image.tag,
+            ),
+        )
+    except OSError as error:
+        print(f"panel: {error}", file=sys.stderr)
 
 
 def _each_plugin(
@@ -924,7 +986,7 @@ def _test(args: argparse.Namespace, config: Config) -> int:
     return image.run(args.path, pytest_args=tail)
 
 
-# setup, check and prune.
+# setup, check, prune and panel.
 
 
 def _setup(config: Config) -> int:
@@ -998,6 +1060,39 @@ def _docs(args: argparse.Namespace) -> int:
     return OK
 
 
+def _panel(args: argparse.Namespace, config: Config) -> int:
+    """Every case under the path, joined to what each backend last said about it.
+
+    The path is resolved exactly as `run` resolves it, so the same argument shows what would
+    run and what running it last produced. It reaches no backend, spends nothing and writes
+    nothing under the history root.
+
+    A path selecting no case is exit 2, as on `run`. A history line that does not parse is a
+    warning on stderr and leaves the exit code at 0: the row is rendered from the records
+    that did parse, which is how a failed append behaves on `run`.
+    """
+    try:
+        roots = plugin_roots(args.path)
+    except CaseError as error:
+        return _usage(str(error))
+
+    discovered = [(plugin, discover(target)) for plugin, target in _targets(args.path, roots)]
+    if not sum(len(cases) for _, cases in discovered):
+        return _usage(f"{args.path} selects no case")
+
+    built, warnings = panel.rows(config.panel.root, discovered, removed=args.removed)
+    for warning in warnings:
+        print(f"panel: {warning}", file=sys.stderr)
+    print(panel.table(built), end="")
+
+    for option, render in (("markdown", panel.markdown), ("json", panel.snapshot)):
+        named = getattr(args, option)
+        if named is not None:
+            Path(named).write_text(render(built), encoding="utf-8")
+            print(f"wrote {named}")
+    return OK
+
+
 def _init() -> int:
     """Write the configuration file, every shipped skill and the `CLAUDE.md` block, into the
     working directory.
@@ -1053,12 +1148,19 @@ def _init_memory() -> int:
 
 
 def _prune(args: argparse.Namespace, config: Config) -> int:
-    """Delete what this command created, and nothing else."""
-    if not args.docker and not args.logs:
-        return _usage("prune takes --docker, --logs, or both")
+    """Delete what this command created, and nothing else.
+
+    `--history` reads `panel.root` and ignores `--out`: that option names the log root, and a
+    record outlives the run directory it was made in. docs/panel.md.
+    """
+    if not args.docker and not args.logs and not args.history:
+        return _usage("prune takes --docker, --logs, --history, or any combination of them")
     if args.logs:
         for deleted in logs.prune(logs.log_root(args.out), args.older_than):
             print(f"removed {deleted}")
+    if args.history:
+        for pruned in panel.prune(config.panel.root, args.older_than):
+            print(f"pruned {pruned}")
     if args.docker:
         _prune_images(config, args.older_than)
     return OK

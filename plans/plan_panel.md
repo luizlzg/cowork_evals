@@ -284,15 +284,15 @@ is the only record of where the work stopped if the context is lost. `CLAUDE.md`
 
 - [x] `PanelSection` in `config.py`, on `_Sections`, on `Config` and in `Config.load`
 - [x] `PanelSection` in `__init__.__all__`, and the key in `data/cowork_evals.example.yaml`
-- [ ] `panel.py`: `path`, `append`, `read` and `digest`
-- [ ] `panel.py`: `prune`
-- [ ] `CaseOutcome` and `Verdict.outcomes` in `verdict.py`, no condition moved or copied
-- [ ] `panel.records`, from an invocation's result documents and outcomes
+- [x] `panel.py`: `path`, `append`, `read` and `digest`
+- [x] `panel.py`: `prune`
+- [x] `CaseOutcome` and `Verdict.outcomes` in `verdict.py`, no condition moved or copied
+- [x] `panel.records`, from an invocation's result documents and outcomes
 - [ ] The call from `cli._sweep` after the verdict, a failed append a stderr warning
-- [ ] `panel.rows`, joining the case tree to the newest record per backend
-- [ ] `panel.table`, `panel.markdown` and `panel.snapshot`
-- [ ] The `panel` verb in the parser, and `cli._panel` in the dispatch
-- [ ] `--history` on `cli._prune`
+- [x] `panel.rows`, joining the case tree to the newest record per backend
+- [x] `panel.table`, `panel.markdown` and `panel.snapshot`
+- [x] The `panel` verb in the parser, and `cli._panel` in the dispatch
+- [x] `--history` on `cli._prune`
 
 ## Test steps
 
