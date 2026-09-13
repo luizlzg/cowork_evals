@@ -45,7 +45,7 @@ not the system's: what is built and usable is
 | 12 | [`done/plan_env_passthrough.20260912.md`](done/plan_env_passthrough.20260912.md) | Named host variables forwarded into the run container, values never logged | implemented | `feat/env-passthrough` |
 | 13 | [`done/plan_ablation.20260912.md`](done/plan_ablation.20260912.md) | The baseline arm, and a verdict that decides on the per-case delta | implemented | `feat/ablation`       |
 | 14 | [`done/plan_panel.20260913.md`](done/plan_panel.20260913.md) | The per-case run history, the `panel` verb, and `prune --history` | implemented | `feat/panel` |
-| 15 | [`plan_consent.md`](plan_consent.md) | The keyboard consent dialog, shown by the driver rather than by a caller | written | `fix/consent` |
+| 15 | [`done/plan_consent.20260913.md`](done/plan_consent.20260913.md) | The keyboard consent dialog, shown by the driver rather than by a caller | implemented | `fix/consent` |
 
 | Status        | Means                                                                     |
 | ------------- | --------------------------------------------------------------------------- |

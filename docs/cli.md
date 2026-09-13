@@ -213,11 +213,12 @@ checked inside it. `ask --session` verifies nothing: it reads a directory alread
 
 ### Taking the keyboard
 
-A CoWork submission types into the frontmost application, so `run --cowork` and
-`ask --cowork` each ask for the keyboard once per invocation, in a modal that forces itself
-in front of whatever you are working in. `run` asks once before the first plugin, whatever
-the suite holds, and `ask` asks once before its one submission. Cancel refuses, and nothing
-has fired at that point: the sweep fails the run and exits 1, and `ask` exits 3.
+A CoWork submission types into the frontmost application, so anything that reaches a session
+asks for the keyboard once per invocation, in a modal that forces itself in front of whatever
+you are working in. `run --cowork` asks once before the first plugin, whatever the suite
+holds, and `ask --cowork` asks once before its one submission. Anything else asks at its first
+submission, because the driver itself asks. Cancel refuses, and nothing has fired at that
+point: the sweep fails the run and exits 1, and `ask` exits 3.
 
 `--dry-run` never asks, because nothing would be submitted, and neither does `ask --session`,
 which reads a directory.

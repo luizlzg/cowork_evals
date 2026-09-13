@@ -120,13 +120,13 @@ Never mock and never skip, per `CLAUDE.md` and `tests/README.md`. Neither needs 
 
 Tick a box when it is verified, then commit. Do not batch ticks. `CLAUDE.md`.
 
-- [ ] `_consented` calls `cowork.consent`, the `CONSENT_DIALOG` import goes, docstring says why
-- [ ] `tests/integration/conftest.py`: a session-scoped autouse fixture asks once
-- [ ] Delete `test_a_submission_with_no_consent_raises_code_2_and_fires_nothing`
-- [ ] The `unattended` fixture forces `consent: dialog`, is renamed `attended`, and the five
+- [x] `_consented` calls `cowork.consent`, the `CONSENT_DIALOG` import goes, docstring says why
+- [x] `tests/integration/conftest.py`: a session-scoped autouse fixture asks once
+- [x] Delete `test_a_submission_with_no_consent_raises_code_2_and_fires_nothing`
+- [x] The `unattended` fixture forces `consent: dialog`, is renamed `attended`, and the five
       tests that take it follow
-- [ ] `test_a_live_run_returns_the_marker` asserts `consent: dialog` and the flag set afterwards
-- [ ] The four documentation updates above
+- [x] `test_a_live_run_returns_the_marker` asserts `consent: dialog` and the flag set afterwards
+- [x] The four documentation updates above
 
 ## Verification steps
 
@@ -140,3 +140,13 @@ Tick a box when it is verified, then commit. Do not batch ticks. `CLAUDE.md`.
 5. By hand. Start that run, switch to a text editor and type. The dialog must arrive in front of
    the editor before anything activates another application. Cancel it and confirm every
    integration test errors with code 2, and that nothing was typed into the editor.
+
+Steps 1 and 2 pass: lint is clean, and the unit tier is 766 passed in under ten seconds.
+`-m integration --collect-only` and `--setup-plan` also pass, which is as far as the tier can
+be exercised without taking the keyboard: they show `keyboard` set up once for the session and
+`attended` resolved by the five tests that take it.
+
+Steps 3, 4 and 5 wait for the developer at the machine. Each one shows a modal that someone has
+to see and click, and step 5 is a judgement about where that modal appeared. The plan forbids
+running any integration selection without telling the developer first, and two of those tests
+take the keyboard with no `live` marker.

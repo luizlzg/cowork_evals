@@ -86,6 +86,10 @@ tiers share. No test in the default selection starts a live eval run, a containe
 CoWork session: it asserts over recorded output, and `--dry-run` is how the command line is
 asserted over without spending money.
 
+The driver asks for the keyboard inside a submission, so a unit test may call `_consented`
+under `cowork.consent: none` and may never call `run` or `submit` without it. Either one
+opens a real modal and then activates the application.
+
 A CoWork session fixture is written by hand, never copied from a profile. A copied session
 directory carries an account identifier, a profile identifier, a session identifier and the
 prompts of a real account, and the public repository rule in [../README.md](../README.md)
@@ -184,12 +188,22 @@ and do not skip, when no profile is configured. Nothing steals focus while one r
 are in the two CoWork files and the fourth is `ask`, in `integration/test_cli.py`. The four
 container ones need a credential route, and fail without one.
 
-Every CoWork test that fires reads the `unattended` fixture in
-`integration/conftest.py`. It copies this machine's `cowork_evals.yaml` and sets
-`cowork.consent: none`, which is what an unattended run sets and what keeps a modal out of a
-test run. It is a configuration value, not a seam: the fixture writes a file exactly as a
-consumer would, and no parameter injects an answer. The driver's own consent is module
-state, so a test that granted it would leak into every test after it in the same process.
+The integration tier asks for the keyboard once before any of its tests run, through the
+session-scoped autouse `keyboard` fixture in `integration/conftest.py`. It asks on every
+integration run, including a Docker-only one that takes no keyboard, because a marker is what
+a new test omits. It needs no CoWork profile. Cancel raises code 2 and every integration test
+then errors.
+
+`-m "integration and not live"` takes the keyboard too: two focus tests in
+`integration/test_cowork.py` activate Finder, and `live` does not select them.
+
+Every CoWork test that fires reads the `attended` fixture in `integration/conftest.py`. It
+copies this machine's `cowork_evals.yaml` and forces `cowork.consent: dialog`, so a developer
+whose own file carries `none` is still warned by a test run. The modal does not appear a
+second time, because `keyboard` already asked and consent is once per process. It is a
+configuration value, not a seam: the fixture writes a file exactly as a consumer would, and
+no parameter injects an answer. The driver's own consent is module state, which is what makes
+one ask cover a whole run.
 
 Everything in this repository is 3.10, tests included, and ruff targets `py310`, so a file
 here parses on the runtime as well. What still belongs to the code a consumer points the
