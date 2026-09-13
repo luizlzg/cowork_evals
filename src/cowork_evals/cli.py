@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -701,6 +702,20 @@ def _delta_threshold(args: argparse.Namespace, config: Config) -> float:
     return float(config.eval.delta_threshold)
 
 
+@dataclass(frozen=True)
+class Swept:
+    """What one sweep leaves the verdict and the history.
+
+    `roots` maps a run directory's child name to the plugin root on this host. The result
+    document cannot supply it: on the container backend `suite.root` is the path the plugin
+    was mounted at inside the container, `/work/plugin`, and the case files a digest covers
+    are on the host.
+    """
+
+    warnings: tuple[str, ...] = ()
+    roots: dict[str, Path] = field(default_factory=dict)
+
+
 def _sweep(
     args: argparse.Namespace,
     config: Config,
@@ -727,17 +742,17 @@ def _sweep(
             image=None if image is None else image.tag,
             env_passthrough=() if image is None else image.env_passthrough,
         )
-        extra = _each_plugin(args, config, directory, targets, tags, image)
+        swept = _each_plugin(args, config, directory, targets, tags, image)
         decided = verdict.decide(
             directory,
             found=found,
             picked=picked,
-            extra=extra,
+            extra=swept.warnings,
             delta_threshold=_delta_threshold(args, config),
         )
         (directory / logs.VERDICT_FILE).write_text(decided.text, encoding="utf-8")
         print(decided.text, end="")
-        _record(args, config, directory, decided, image)
+        _record(args, config, directory, decided, image, swept.roots)
     return OK if decided.passed else FAILED
 
 
@@ -747,6 +762,7 @@ def _record(
     directory: Path,
     decided: verdict.Verdict,
     image: Docker | None,
+    roots: dict[str, Path],
 ) -> None:
     """Append one record per case to the history, from the documents this invocation wrote.
 
@@ -765,6 +781,7 @@ def _record(
                 decided.outcomes,
                 args.backend,
                 image=None if image is None else image.tag,
+                roots=roots,
             ),
         )
     except OSError as error:
@@ -778,7 +795,7 @@ def _each_plugin(
     targets: list[tuple[Path, Path]],
     tags: tuple,
     image: Docker | None,
-) -> tuple[str, ...]:
+) -> Swept:
     """Run each plugin, stopping on the total cost ceiling.
 
     The check runs before the first plugin, so a ceiling of 0 stops the invocation before
@@ -790,7 +807,7 @@ def _each_plugin(
         try:
             cowork.consent(config.cowork)
         except CoWorkError as error:
-            return (str(error),)
+            return Swept((str(error),))
 
     # Built once: it does not vary by plugin, and the grant in it is what the validity
     # checks hold each run's offered tool list against. The CoWork backend builds no
@@ -798,14 +815,22 @@ def _each_plugin(
     options = _options(args, config, tags) if image is not None else None
 
     ceiling = config.eval.max_cost_total_usd
+    roots: dict[str, Path] = {}
     for plugin, target in targets:
         spent = results.spend(directory)
         if spent >= ceiling:
-            return (
-                f"the total cost ceiling stopped the sweep at {plugin}: "
-                f"{spent} spent, eval.max_cost_total_usd is {ceiling}",
+            return Swept(
+                (
+                    f"the total cost ceiling stopped the sweep at {plugin}: "
+                    f"{spent} spent, eval.max_cost_total_usd is {ceiling}",
+                ),
+                roots,
             )
         output = logs.plugin_dir(directory, plugin_name(plugin))
+        # The run directory's child name against the plugin root on this host. `plugin_dir`
+        # owns the name, including the `-2` suffix two plugins of one name get, so it is
+        # read back here rather than derived a second time.
+        roots[output.name] = Path(plugin)
         try:
             if image is not None and options is not None:
                 image.run(target, output, options)
@@ -831,7 +856,7 @@ def _each_plugin(
                 granted = () if options is None else options.allow_tools
                 for warning in traces.collect(output, granted=granted):
                     print(f"trace: {warning}", file=sys.stderr)
-    return ()
+    return Swept((), roots)
 
 
 # ask.

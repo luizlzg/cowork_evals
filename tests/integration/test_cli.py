@@ -30,7 +30,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from cowork_evals import Config, logs, panel, preflight, traces
+from cowork_evals import Config, logs, panel, preflight, traces, verdict
 from cowork_evals.cli import main
 from cowork_evals.config import CONFIG_FILENAME
 from cowork_evals.docker import Condition, Docker, remedy
@@ -331,7 +331,7 @@ def test_a_run_writes_a_record_the_panel_then_shows(credentialled, tmp_path, mon
     row = next(line for line in printed.out.splitlines() if "python-version" in line)
     assert "pass 0d" in row
     assert "never run" in row
-    assert str(Path(entry["tracePath"]).parent) in row
+    assert verdict.display(Path(entry["tracePath"]).parent) in row
     # The two cases this run did not select have no record and say so.
     assert sum(1 for line in printed.out.splitlines() if "never run" in line) == 3
 

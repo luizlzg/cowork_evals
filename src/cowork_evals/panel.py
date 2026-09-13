@@ -21,7 +21,7 @@ from __future__ import annotations
 import fcntl
 import hashlib
 import json
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -241,6 +241,7 @@ def records(
     outcomes: Sequence[CaseOutcome],
     backend: str,
     image: str | None = None,
+    roots: Mapping[str, Path] | None = None,
 ) -> list[dict[str, Any]]:
     """One record per case of one invocation, from the documents that invocation wrote.
 
@@ -249,6 +250,12 @@ def records(
     walk. It applies no pass or fail rule: `outcome` is what `verdict.decide` decided, joined
     back by the pair that identifies a case, the run directory's child name and the case's
     `dir`.
+
+    `roots` maps a run directory's child name to the plugin root on this host, and it is
+    where the case files a digest covers are read from. The document's own `suite.root` is
+    not: on the container backend it is the path the plugin was mounted at inside the
+    container, `/work/plugin`, which is nothing on the host. A child the caller named no
+    root for keeps the document's, which is the CoWork backend's own host path.
 
     A document that is missing or unreadable produces nothing. The verdict has already failed
     the invocation for it, and a record of a case whose document could not be read would say
@@ -263,7 +270,7 @@ def records(
             continue
         suite = document.get("suite") or {}
         plugins = suite.get("plugins") or [{}]
-        root = Path(str(suite.get("root") or child))
+        root = Path((roots or {}).get(child.name) or str(suite.get("root") or child))
         for case in document.get("cases") or []:
             outcome = decided.get((child.name, str(case.get("dir") or "")))
             if outcome is None:
@@ -322,7 +329,6 @@ def _record(
         "plugin": str(plugin.get("name") or fallback),
         "case": str(case.get("name") or ""),
         "dir": where,
-        "caseDigest": digest(root / where),
         "outcome": outcome,
         "score": _number(aggregates.get("score")),
         "passRate": _number(aggregates.get("passRate")),
@@ -330,6 +336,11 @@ def _record(
         "durationSeconds": sum(_number(run.get("durationSeconds")) or 0.0 for run in runs),
         "costUsd": sum(_number(run.get("judgeCostUsd")) or 0.0 for run in runs),
     }
+    # Absent rather than the digest of nothing. A directory holding no file that defines a
+    # case is not the case's directory, and a digest over it would read as a real one and
+    # then differ from the tree at render time, which is a row that says `stale` about files
+    # nobody edited.
+    _put(record, "caseDigest", _case_digest(root / where))
     _put(record, "startedAt", document.get("startedAt"))
     _put(record, "claudeVersion", document.get("claudeVersion"))
     _put(record, "image", image)
@@ -342,6 +353,16 @@ def _record(
     _put(record, UNOFFERED, _union(runs, UNOFFERED))
     _put(record, "tracePath", _trace(runs))
     return record
+
+
+def _case_digest(case_dir: Path) -> str | None:
+    """The digest of a case directory, or `None` when that directory defines no case."""
+    try:
+        if not _defining(case_dir):
+            return None
+        return digest(case_dir)
+    except OSError:
+        return None
 
 
 def _put(record: dict[str, Any], key: str, value: Any) -> None:

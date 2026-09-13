@@ -269,6 +269,46 @@ def written_document(tmp_path: Path, name: str, root: Path) -> Path:
     return run
 
 
+CONTAINER_ROOT = "/work/plugin"
+
+
+def test_the_digest_is_read_from_this_hosts_tree_and_not_from_the_documents_root(
+    tmp_path: Path,
+) -> None:
+    """A container document names a path that is nothing on this host.
+
+    `claude plugin eval` runs inside the container and writes `suite.root` as the path the
+    plugin was mounted at, `/work/plugin`. The case files the digest covers never move, so
+    the sweep hands `records` the root it ran, and the digest is the tree's own.
+    """
+    run = written_document(tmp_path, "pass", SMOKE)
+    document = json.loads((run / "smoke" / RESULT_NAME).read_text())
+    document["suite"]["root"] = CONTAINER_ROOT
+    document["suite"]["plugins"] = [{"name": "smoke", "path": CONTAINER_ROOT, "version": "0.1.0"}]
+    (run / "smoke" / RESULT_NAME).write_text(json.dumps(document))
+    decided = decide(run, found=3, picked=1)
+
+    built = panel.records(run, decided.outcomes, DOCKER, roots={"smoke": SMOKE})
+    assert built[0]["caseDigest"] == panel.digest(SMOKE / "evals" / "plugin" / "python-version")
+
+
+def test_a_record_carries_no_digest_rather_than_the_digest_of_nothing(tmp_path: Path) -> None:
+    """A root naming no case directory produces an absent field, never a hash of no bytes.
+
+    `sha256` over nothing is a valid-looking digest that differs from every real one, so a
+    record carrying it would read `stale` forever over files nobody edited.
+    """
+    run = written_document(tmp_path, "pass", SMOKE)
+    document = json.loads((run / "smoke" / RESULT_NAME).read_text())
+    document["suite"]["root"] = CONTAINER_ROOT
+    (run / "smoke" / RESULT_NAME).write_text(json.dumps(document))
+    decided = decide(run, found=3, picked=1)
+
+    built = panel.records(run, decided.outcomes, DOCKER)
+    assert "caseDigest" not in built[0]
+    assert panel.digest(Path(CONTAINER_ROOT)) == panel.digest(tmp_path / "nothing-here")
+
+
 def test_every_field_of_a_record_comes_from_the_document_it_was_built_from(
     tmp_path: Path,
 ) -> None:

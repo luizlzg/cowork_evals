@@ -74,7 +74,7 @@ additive-only: a reader ignores a field it does not know, and a line of another
 | `plugin`, `pluginVersion`       | the manifest name and version, not the run directory's name |
 | `skill`                         | the first component under `evals/`, absent for a case outside a skill |
 | `case`, `dir`                   | the case's name, and its directory relative to the plugin root |
-| `caseDigest`                    | `sha256` over the files that define the case                |
+| `caseDigest`                    | `sha256` over the files that define the case, on this host, absent when that directory defines none |
 | `outcome`                       | `pass`, `fail` or `declared`                                |
 | `score`, `passRate`             | the case's aggregates                                       |
 | `delta`                         | the case's delta, on a two-arm run                          |
@@ -103,6 +103,15 @@ It hashes bytes, so a whitespace edit moves it, and it hashes each file's name b
 content, so a renamed grader moves it too. It is computed when the record is written and
 recomputed when the row is rendered, and a row whose two differ reads `stale`: the result is
 green over files that are not the files there now.
+
+Both readings are of the tree on this host. The container backend's result document names
+`/work/plugin` as `suite.root`, which is where the plugin was mounted inside the container
+and is nothing here, so `run` hands the record the plugin root it was pointed at rather than
+the one the document carries.
+
+A case directory holding no file that defines a case has no digest, and the record then
+carries none. `sha256` over no bytes is a valid-looking digest that matches no real one, so
+recording it would make every later row read `stale` over files nobody edited.
 
 The plugin's git revision is deliberately not recorded. It needs a subprocess against a tool
 that may be absent, in a tree that may not be a repository, and it moves on every unrelated
@@ -141,7 +150,7 @@ from a record: a second copy of what a case is would drift from the case.
 | `duration`    | how long that run took                                               |
 | `flake`       | how often that backend's records of this case passed, and how many they are |
 | `stale`       | whether the case files have changed since                            |
-| `artefacts`   | where that result's artefacts are, marked `gone` when the directory is not there |
+| `artefacts`   | where that result's artefacts are, relative to the working directory when they are under it, marked `gone` when the directory is not there |
 
 The five columns after the backends come from the row's latest record, whichever backend
 produced it: the panel answers what is known about the case now, and that is its most recent

@@ -704,13 +704,14 @@ def test_a_ceiling_of_zero_stops_the_sweep_before_the_first_plugin(tmp_path, cap
     config = settings(tmp_path, "eval:\n  max_cost_total_usd: 0\ncowork:\n  consent: none\n")
     args = parse("run", "--cowork", str(MARKETPLACE))
     directory = logs.run_dir(tmp_path / "logs", "all")
-    extra = cli._each_plugin(
+    swept = cli._each_plugin(
         args, config, directory, [(FIRST, FIRST), (SECOND, SECOND)], (), image=None
     )
     capsys.readouterr()
-    assert len(extra) == 1
-    assert "the total cost ceiling stopped the sweep" in extra[0]
-    assert "eval.max_cost_total_usd is 0" in extra[0]
+    assert len(swept.warnings) == 1
+    assert "the total cost ceiling stopped the sweep" in swept.warnings[0]
+    assert "eval.max_cost_total_usd is 0" in swept.warnings[0]
+    assert swept.roots == {}
     assert not list(directory.iterdir())
 
 
