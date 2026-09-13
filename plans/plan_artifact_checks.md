@@ -222,33 +222,33 @@ Work one box, verify it, tick it, commit. Do not batch ticks.
 
 ### Phase 6: the documentation
 
-- [ ] `docs/checks.md`, new: what a check is, that it runs on the host after the run is
+- [x] `docs/checks.md`, new: what a check is, that it runs on the host after the run is
       graded, `Run`, the judge, the run directory, and how a result reaches the document. It
       is a mechanism file.
-- [ ] `docs/README.md` gains its row, among the mechanism files.
-- [ ] `docs/eval_format.md` gains the `checks/` layer of the tree, the `add_dirs` refusal, the
+- [x] `docs/README.md` gains its row, among the mechanism files.
+- [x] `docs/eval_format.md` gains the `checks/` layer of the tree, the `add_dirs` refusal, the
       validator rules, the traps, and the statement that a check file is host code and is not
       bound by the image wheel set. The traps are that a check reads only a collected run,
       that a `checks/` file with no decorated function asserts nothing, and that each run of a
       case runs every check again, so `runs: 3` costs three of every judge call.
-- [ ] `docs/running_evals.md` gains the status row, the skip under `--no-keep-traces`, and
+- [x] `docs/running_evals.md` gains the status row, the skip under `--no-keep-traces`, and
       what a check judge costs.
-- [ ] `docs/approaches.md` gains the row saying both backends honour a check.
-- [ ] `docs/panel.md` says the digest covers the check files.
-- [ ] `docs/cli.md` says what `--no-keep-traces` does to a case that has checks.
-- [ ] `docs/library.md` gains `checks.py` in the ships table, and its "Where the
+- [x] `docs/approaches.md` gains the row saying both backends honour a check.
+- [x] `docs/panel.md` says the digest covers the check files.
+- [x] `docs/cli.md` says what `--no-keep-traces` does to a case that has checks.
+- [x] `docs/library.md` gains `checks.py` in the ships table, and its "Where the
       restrictions are" section gains the row for a check and the exception to the sentence
       that reads every file under the path as code under test. A `checks/*.py` is under that
       path and is not code under test.
-- [ ] `docs/runtime.md` says in "Rules for code that runs in a session" that a check is not
+- [x] `docs/runtime.md` says in "Rules for code that runs in a session" that a check is not
       one, beside the sentence that already excludes this package.
-- [ ] `CLAUDE.md`'s three kinds of code table carries the same exception, because it names
+- [x] `CLAUDE.md`'s three kinds of code table carries the same exception, because it names
       every file under the eval path and then enumerates skill, command, agent and hook. The
       enumeration is right and the leading phrase is not.
-- [ ] `README.md` names the third kind of assertion where it names the other two.
-- [ ] `src/cowork_evals/data/skills/cowork-evals/SKILL.md` carries the `checks/` directory,
+- [x] `README.md` names the third kind of assertion where it names the other two.
+- [x] `src/cowork_evals/data/skills/cowork-evals/SKILL.md` carries the `checks/` directory,
       one copy-paste check and one copy-paste judge call.
-- [ ] `tests/unit/test_resources.py` is green against the changed skill.
+- [x] `tests/unit/test_resources.py` is green against the changed skill.
 - [ ] `plans/README.md` row 16 moves to `implemented`, and this file moves to
       `done/plan_artifact_checks.<YYYYMMDD>.md` on the merge.
 

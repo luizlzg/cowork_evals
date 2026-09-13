@@ -90,6 +90,7 @@ mirrors an old VM. See [runtime.md](runtime.md).
 | `src/cowork_evals/validate.py`            | yes   | The case validator, and the skill coverage report                  |
 | `src/cowork_evals/logs.py`                | yes   | The run directory, `env.txt`, `latest`, pruning and the tee        |
 | `src/cowork_evals/traces.py`              | yes   | What one run left behind, lifted into the log directory            |
+| `src/cowork_evals/checks.py`              | yes   | The check layer: an author's own Python over what a run produced   |
 | `src/cowork_evals/verdict.py`             | yes   | Pass and fail over `aggregate-result.json`                         |
 | `src/cowork_evals/panel.py`               | yes   | The history of what each case did, and the panel over it           |
 | `src/cowork_evals/preflight.py`           | yes   | Each backend's unmet conditions, for `check` and for `run`         |
@@ -243,10 +244,17 @@ image carries.
 | The CoWork wheel set, and nothing outside it | The code under test                | [runtime.md](runtime.md)           |
 | Any dependency, at any version               | This package, `scripts/`, `tests/` | [environments.md](environments.md) |
 | Python 3.10, and pytest beside the wheel set | A consumer's own `tests/`          | [cowork_test.md](cowork_test.md)   |
+| Any dependency the consumer declares         | A case's `checks/*.py`             | [checks.md](checks.md)             |
 
 The code under test is every file under the path a consumer passes to `cowork_evals run`,
 meaning each skill, command, agent and hook in the plugin. It runs on the session interpreter
 and imports only what the image carries.
+
+A case's `checks/*.py` is the one exception to that sentence. It is under the same path and is
+not code under test: the run is over and graded before a check starts, and a check reads what
+that run left on the host, in this package's process. Nothing about the session binds it, and
+what it imports is the consumer's own dependency, declared in the consumer's project. This
+package depends on nothing a check might want.
 
 Nothing in this package runs in a session. It drives CoWork from outside, so no CoWork fact
 reaches it: not the interpreter version, not the wheel set, not the image.

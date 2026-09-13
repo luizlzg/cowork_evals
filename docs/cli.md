@@ -146,6 +146,11 @@ of the kept trace, so with no trace neither is found and neither fails. The suit
 run that could not have passed and says nothing about it. Both conditions are
 [running_evals.md](running_evals.md).
 
+It does the opposite to a case carrying checks. A check reads the collected run directory, so
+with nothing collected every check of that case is a skip, and a skip fails the run. A suite
+holding one such case is red under `--no-keep-traces` and says why, per check. See
+[checks.md](checks.md).
+
 `--out DIR` replaces the whole `logs/evals` root, so the run directory is
 `<out>/<stamp>-<scope>`. It is accepted on `prune` too, which otherwise resolves
 `<cwd>/logs/evals`. `--older-than DAYS` is a `prune` flag only: `run` prunes at a fixed 30

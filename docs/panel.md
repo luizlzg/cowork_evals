@@ -95,9 +95,13 @@ leaves behind.
 
 ### The digest
 
-`caseDigest` covers `prompt.md`, `case.yaml` when the case has one, and each `graders/*.md` in
-path order: every file that decides what the case asks and how it is graded. Nothing else in
-the case directory counts, so a note beside the graders moves no digest.
+`caseDigest` covers `prompt.md`, `case.yaml` when the case has one, each `graders/*.md` in
+path order and then each `checks/*.py`: every file that decides what the case asks and how it
+is graded. Nothing else in the case directory counts, so a note beside the graders moves no
+digest.
+
+A check file counts because editing an assertion would otherwise leave this column green over
+a result that asserted something else. See [checks.md](checks.md).
 
 It hashes bytes, so a whitespace edit moves it, and it hashes each file's name before its
 content, so a renamed grader moves it too. It is computed when the record is written and

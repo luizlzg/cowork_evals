@@ -48,11 +48,13 @@ before changing anything under it. Never restate one of these in another file; l
   | A consumer's `tests/`                    | the test image        | 3.10   | the image wheel set, and pytest        |
 
   Every row is 3.10, so the interpreter never separates them. The dependency column does.
-  The second row is the hard one: every file under the path passed to `cowork_evals run`,
-  meaning each skill, command, agent and hook, imports only what the image carries. See
-  `docs/runtime.md`. The first row is constrained by nothing about CoWork, and its 3.10 is a
-  floor a consumer must clear, not a runtime fact; the rules that apply to it are in
-  `docs/library.md`. The third row is never loaded in a session, so the wheel set does not
+  The second row is the hard one: each skill, command, agent and hook under the path passed
+  to `cowork_evals run` imports only what the image carries. See `docs/runtime.md`. The one
+  other thing under that path is a case's `checks/*.py`, which is the first row and not the
+  second: it runs on the laptop after the run is graded, and its imports are the consumer's
+  own. See `docs/checks.md`. The first row is constrained by nothing about CoWork, and its
+  3.10 is a floor a consumer must clear, not a runtime fact; the rules that apply to it are
+  in `docs/library.md`. The third row is never loaded in a session, so the wheel set does not
   bind it; see `docs/cowork_test.md`.
 - **Never mock, and never skip.** No mock, fake, stub, patch or injected seam appears in a
   test, and no library that supplies one is a dependency. No test is skipped, and no `if`

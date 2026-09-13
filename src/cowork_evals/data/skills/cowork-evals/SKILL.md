@@ -1,6 +1,6 @@
 ---
 name: cowork-evals
-description: Write and run evals for Claude CoWork skills and plugins with the cowork_evals command, and run a plugin's own pytest suite on the CoWork runtime. TRIGGER when writing or fixing an eval case, a prompt.md or a grader under an evals/ directory, when a cowork_evals command fails, when configuring cowork_evals.yaml, or when writing plugin code that has to run inside a CoWork session.
+description: Write and run evals for Claude CoWork skills and plugins with the cowork_evals command, and run a plugin's own pytest suite on the CoWork runtime. TRIGGER when writing or fixing an eval case, a prompt.md, a grader or a check under an evals/ directory, when a cowork_evals command fails, when configuring cowork_evals.yaml, or when writing plugin code that has to run inside a CoWork session.
 ---
 
 # cowork_evals
@@ -21,6 +21,7 @@ file is the authority for anything below.
 | Pass and fail, the logs, what a run costs    | `docs running_evals`     |
 | The runtime a plugin's code gets        | `docs runtime`           |
 | `test`, and the runtime a suite gets    | `docs cowork_test`       |
+| An assertion no grader type can express | `docs checks`            |
 | Every grader field the format is silent on | `docs claude_code/plugin_eval_reference` |
 | What `panel` shows, and the records behind it | `docs panel`           |
 
@@ -63,6 +64,7 @@ session does, and the `cowork-ask` skill covers it.
 <plugin>/skills/<skill>/SKILL.md
 <plugin>/evals/<skill>/<case>/prompt.md
 <plugin>/evals/<skill>/<case>/graders/<name>.md
+<plugin>/evals/<skill>/<case>/checks/<name>.py  # optional, assertions as Python
 <plugin>/evals/<skill>/<case>/case.yaml   # optional, context.* only
 <plugin>/evals/plugin/<case>/             # a case that crosses skills
 <plugin>/evals/mocks/<server>/<tool>.md   # shared MCP stand-ins
@@ -173,6 +175,44 @@ max: 0
 ---
 ```
 
+## Checks
+
+A grader type cannot say what is inside the file the run wrote. A check can: it is your own
+Python, in the case's `checks/` directory, run on your machine after the run is graded, on
+either backend. Its verdict is a grader result in the same document, so a failed check fails
+the run like a failed `regex` grader.
+
+```python
+# evals/<skill>/<case>/checks/assertions.py
+import openpyxl
+
+from cowork_evals.checks import Result, Run, check
+
+
+@check
+def totals_add_up(run: Run) -> None:
+    book = openpyxl.load_workbook(run.file("totals.xlsx"))
+    assert book.active["D10"].value == 4200
+```
+
+A check that needs a model reads files rather than text, so a PDF, an image and a spreadsheet
+are all judgeable:
+
+```python
+@check
+def the_deck_is_readable(run: Run) -> Result:
+    subprocess.run(["soffice", "--convert-to", "png", run.file("deck.pptx")], cwd=run.scratch)
+    return run.judge("Every slide carries a title, and no text is clipped.", run.scratch)
+```
+
+`None` or `True` passes, `False` fails, a `Result` decides, and any exception fails the check
+carrying its message. The name is `<file stem>.<function name>`. `run` carries `workspace`,
+`last_message`, `trace`, `case_dir`, `run_dir`, `scratch` and `index`, plus `file(name)` and
+`judge(prompt, *paths)`. Write into `run.scratch`, never into `run.workspace`.
+
+A check runs on your laptop, not in the session, so it imports whatever your own repository
+declares. `cowork_evals docs checks` has the rest.
+
 ## Traps
 
 Each has a silent failure mode.
@@ -190,18 +230,28 @@ Each has a silent failure mode.
   a sibling case, the plugin root and the case's own `graders/` included.
 - Scaffolds run in an empty working directory, with no credentials and a 2-minute cap.
   Reference resources as `$(dirname "$0")/...`.
+- A case carrying `checks/` and no grader does not load. The harness refuses a case with no
+  grader at all, so `checks/` is added to a case and never replaces its `graders/`.
+- A check reads a collected run, so `--no-keep-traces` gives up every check. Each one is then
+  a skip, and a skip fails the run.
+- A file under `checks/` with no `@check` in it asserts nothing. A helper is a file like any
+  other, so only a `checks/` directory with no check anywhere in it is reported.
+- Each run of a case runs every check again. A case at `runs: 3` carrying one judged check
+  costs three of every judge call it makes.
 
 ## The exit codes
 
 | Exit | Means                                                            |
 | ---- | ---------------------------------------------------------------- |
 | 0    | the run passed                                                  |
-| 1    | a structural grader failed, a case or grader was skipped, a run never had a tool it was granted, or a case's delta was below the threshold |
+| 1    | a structural grader or a check failed, a case or grader was skipped, a run never had a tool it was granted, or a case's delta was below the threshold |
 | 2    | usage error                                                      |
 | 3    | the preflight failed. Nothing ran, and the message names the fix |
 
 `run` validates every selected plugin root before it runs anything, so a malformed sibling
-case blocks a single-case run. There is no option to skip validation.
+case blocks a single-case run. There is no option to skip validation. It imports every
+`checks/*.py` while it does, so a check file that will not import exits 3 before anything
+spends.
 
 `test` is the exception: it returns pytest's exit code unchanged.
 
@@ -242,6 +292,8 @@ FAIL smoke/one-paragraph: run 2: is-one-paragraph: the regex grader failed: patt
 | `last_message.txt` | The final assistant message, which is what a `last_message` grader read |
 | `trace.jsonl`      | Every turn and every tool call, one JSON object per line              |
 | `workspace/`       | The agent's working directory                                         |
+| `scratch/`         | What a check wrote, where the case has checks                        |
+| `checks.jsonl`     | One line per check: the verdict, the traceback, the whole judge exchange |
 
 The three names are the same on `--docker` and `--cowork`. `trace.jsonl` is whatever format
 the backend that produced it wrote, and the two are close but not identical: a harness trace

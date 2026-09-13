@@ -17,7 +17,10 @@ about each.
 
 A case asserts what a unit test cannot reach: the answer text, which tools ran and in what
 order, which files the agent created, and a rubric a judge model votes on. The four structural
-graders are deterministic and carry the verdict. The two judged ones are printed.
+graders are deterministic and carry the verdict. The two judged ones are printed. The third
+kind of assertion is a check: an author's own Python in the case's `checks/` directory, run on
+the host over what the run produced, which is how a case says what is inside the file rather
+than only that it appeared. See [`docs/checks.md`](docs/checks.md).
 
 The CoWork backend honours a subset of the format, because it drives a live session rather
 than the harness. [`docs/approaches.md`](docs/approaches.md) says which subset, what each
@@ -269,12 +272,12 @@ your repository picks them up from there. They fire on different questions.
 
 | Skill          | Fires on                                                                   |
 | -------------- | ---------------------------------------------------------------------------- |
-| `cowork-evals` | Writing or fixing a case, a `prompt.md` or a grader; a failing `cowork_evals` command; the configuration file; plugin code that has to run inside a session |
+| `cowork-evals` | Writing or fixing a case, a `prompt.md`, a grader or a check; a failing `cowork_evals` command; the configuration file; plugin code that has to run inside a session |
 | `cowork-ask`   | A question about what a live CoWork session actually does; a claim that has to be confirmed in the product; a failing `cowork_evals ask` |
 
 `cowork-evals` carries the case tree, the two required frontmatter keys, the six grader types,
-three copy-paste grader idioms, the seven authoring traps, the exit codes and the 3.10 runtime
-constraint. `cowork-ask` carries the verb, what one ask costs, and the rule that makes an
+three copy-paste grader idioms, two copy-paste checks, the eleven authoring traps, the exit
+codes and the 3.10 runtime constraint. `cowork-ask` carries the verb, what one ask costs, and the rule that makes an
 answer evidence: ask the session to do the thing and read what it did, because what a session
 says about its own configuration is not evidence. Both send a reader to `cowork_evals docs`
 for everything they do not carry.
@@ -293,6 +296,7 @@ reads the same files without this repository checked out.
 | ------------------------------------------------ | ---------------------------------------------------- |
 | [`docs/cli.md`](docs/cli.md)                     | The whole command surface: verbs, options, exit codes |
 | [`docs/eval_format.md`](docs/eval_format.md)     | How to write a case: tree, frontmatter, graders    |
+| [`docs/checks.md`](docs/checks.md)               | An assertion you write as code, over what a run produced |
 | [`docs/approaches.md`](docs/approaches.md)       | The two backends, and what each one proves         |
 | [`docs/running_evals.md`](docs/running_evals.md) | The run: what is built today, pass and fail, logs, cost |
 | [`docs/cowork_test.md`](docs/cowork_test.md)     | `test`, and the runtime your suite gets            |
