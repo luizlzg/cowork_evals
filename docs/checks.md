@@ -66,49 +66,79 @@ function asserts whatever it likes. Its verdict is appended to the same
 `aggregate-result.json` the graders wrote into, as a grader result of type `check`, and pass
 and fail read it there. Nothing else in the pipeline changes.
 
-### What follows from that
+### What this means in practice
 
 - **A check runs on the host, not in the session.** The host is whatever machine you ran
-  `cowork_evals` on. The run is over and already graded before a check starts, so a check may
+  `cowork_evals` on. The eval is over and already graded before a check starts, so a check may
   import anything your own project declares and shell out to anything that machine has:
-  `openpyxl`, `pypdf`, `soffice`. The CoWork wheel set binds the code under test and does not
-  bind a check. See [library.md](library.md).
-- **One mechanism, not three.** Asserting, converting a file to something readable, and asking
-  a model about it are all things a Python function does, so all three are one decorated
-  function. There is no separate transform step and no separate judge step.
-- **A check can ask a model, and it is shown files rather than text.** `run.judge` grants the
-  judge `Read`, `Glob` and `Grep` and names the paths, so a PDF, an image and a spreadsheet
-  are all judgeable. The `llm` grader cannot do that, and is untouched.
-- **A failed check fails the run** under the condition that already fails a `regex` grader.
-  The verdict gained no rule for it.
-- **Checks need the collected files, so `--no-keep-traces` gives them up.** With nothing
-  collected each check is a skip, and a skip fails the run. A suite cannot go green by
+  `openpyxl`, `pypdf`, `soffice`. The wheel set that binds a skill running in a CoWork session
+  does not bind a check. See [library.md](library.md).
+- **A check can ask a model, and it is shown files rather than text.** `run.judge` hands the
+  judge the paths and the `Read` tool, so a PDF, an image and a spreadsheet can all be judged.
+  The `llm` grader inlines the file as text and therefore cannot.
+- **A failed check fails the case**, and prints a `FAIL` line naming the check, the reason and
+  the directory holding the run's files.
+- **A check cannot crash the run.** An assertion that fails, an exception, a file that is not
+  there and a check file that will not import are each a failed check carrying the reason.
+- **Checks need the run's collected files**, so `--no-keep-traces` and `eval.keep_traces:
+  false` turn every check into a skip, and a skip fails the run. A suite cannot go green by
   asserting nothing.
 - **A check is added to a case, never in place of its graders.** The harness refuses a case
   carrying no grader at all.
 
-A worked example is below: a case in this repository, its three files, the command that runs
-it, and what that command printed.
+## Writing one
 
-## The tree
+Three steps. There is nothing to register and no key to add to any case file.
 
-A case that has checks carries one more directory, beside the `graders/` it already has.
+**1. Make the directory.** A case that has checks carries one more directory, beside the
+`graders/` it already has:
 
 ```
 <plugin>/evals/<skill>/<case>/prompt.md
 <plugin>/evals/<skill>/<case>/graders/<name>.md      # the harness's own, unchanged
-<plugin>/evals/<skill>/<case>/checks/<name>.py       # the author's code
+<plugin>/evals/<skill>/<case>/checks/<name>.py       # your code
 ```
 
-Checks are discovered by convention. They are declared in no file: an unknown key in
-`prompt.md` makes the harness refuse the case at load, and a key in `case.yaml` the harness
-ignores would make the format no longer the harness's own.
+Keep the `graders/` directory. The harness refuses a case that carries no grader at all, so a
+case whose only assertion directory is `checks/` never loads and never runs. `checks/` is
+added to a case, never in place of its graders.
 
-`checks/` is added to a case and never replaces its `graders/`. The harness refuses a case
-carrying no grader at all, measured on CLI 2.1.265 through the container: a case whose only
-assertion directory is `checks/` fails to load with `invalid case.yaml: graders: Required`,
-the suite writes no result document, and the command exits 1. The case never runs, so the
-check never runs either.
+**2. Write the function.** Any file name works. Import the decorator, mark a function with it,
+and take one argument:
+
+```python
+# evals/spreadsheets/monthly-totals/checks/assertions.py
+import openpyxl
+
+from cowork_evals.checks import Run, check
+
+
+@check
+def totals_add_up(run: Run) -> None:
+    book = openpyxl.load_workbook(run.file("totals.xlsx"))
+    assert book.active["D10"].value == 4200
+```
+
+`run.file("totals.xlsx")` is the file the agent produced, as a path. Assert whatever you like
+about it. If the assertion holds the check passes; if it raises the check fails and the
+message reaches the failure line.
+
+`openpyxl` is your dependency, not this package's. A check runs on the host after the eval has
+finished, so add whatever you import to your own project exactly as you would for a unit test.
+
+**3. Run the case as usual.** No new flag, no new verb:
+
+```sh
+cowork_evals run --docker <plugin>/evals/spreadsheets/monthly-totals
+```
+
+The harness grades the case, the run's files are collected, and then every `@check` in
+`checks/` runs once per run. A failed check fails the case and the command exits 1.
+
+Two things happen automatically and are worth knowing before you hit them. `cowork_evals run`
+imports every check file during its preflight, so a syntax error or a missing import stops the
+command with exit 3 before anything spends money. And a check needs the run's collected files,
+so `--no-keep-traces` turns every check into a skip, which fails the run.
 
 ## A worked example
 
@@ -207,30 +237,16 @@ traces/checked-file/run-1/checks.jsonl
 
 What that case is the fixture for is `plugins/README.md`.
 
-## The function
+## The check function
 
-A check is a function marked with the `@check` decorator. It takes one argument, a `Run`
-object describing the execution it is judging, and it returns nothing when it passes. This is
-the shape a check usually has, an assertion about a file the run produced:
+`Writing one` above is the short version. This is every rule the decorator and the function
+follow.
 
-```python
-import openpyxl
+`@check` takes no arguments. There is no name parameter and no weight parameter: a check's
+name is `<file stem>.<function name>`, so `totals_add_up` in `checks/assertions.py` is
+`assertions.totals_add_up` everywhere a name appears, and every check has weight 1.
 
-from cowork_evals.checks import Run, check
-
-
-@check
-def totals_add_up(run: Run) -> None:
-    book = openpyxl.load_workbook(run.file("totals.xlsx"))
-    assert book.active["D10"].value == 4200
-```
-
-`openpyxl` is the consumer's own dependency, declared in the consumer's project. This package
-does not depend on it.
-
-`@check` takes no arguments. A check's name is `<file stem>.<function name>`, so the function
-above is `assertions.totals_add_up` in every place a name appears: the result document, the
-failure line and `checks.jsonl`. Every check has weight 1.
+A check may return nothing, or say what it decided:
 
 | The function            | The check                                                      |
 | ----------------------- | ---------------------------------------------------------------- |
@@ -241,27 +257,51 @@ failure line and `checks.jsonl`. Every check has weight 1.
 | raises                  | fails, carrying the exception's message                        |
 | returns anything else   | fails, naming what it returned                                 |
 
-`Result` carries `passed` and `explanation`, and nothing else. `explanation` is what the run's
-grader entry and the `FAIL` line both print.
+`Result` carries two fields, `passed` and `explanation`, and nothing else. Use it when the
+reason matters to whoever reads the failure:
 
-Nothing a check does raises out of the layer. An exception carries its message into the
-explanation and its traceback into `checks.jsonl`.
+```python
+from cowork_evals.checks import Result, Run, check
 
-### Discovery
 
-Discovery imports every `checks/*.py` of the case, in path order, and collects every decorated
-function in each file, in the order the file defines them.
+@check
+def totals_add_up(run: Run) -> Result:
+    book = openpyxl.load_workbook(run.file("totals.xlsx"))
+    total = book.active["D10"].value
+    return Result(passed=total == 4200, explanation=f"D10 is {total}")
+```
 
-| Rule                                                                     | Because                                                                 |
-| -------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Each file is loaded under a module name unique to its case directory     | Two cases each holding `checks/assertions.py` would otherwise collide in `sys.modules` |
-| The case's `checks/` directory is on `sys.path` while its files load      | So a check may import a sibling beside it                                  |
-| A sibling imported that way is dropped from `sys.modules` afterwards      | So the next case's `helpers.py` is that case's own                       |
-| A decorated function is discovered in the file that defines it, and once  | A file that imports one from a sibling gets the name it already has        |
-| A file with no decorated function contributes nothing                    | A helper beside a check is a file like any other                          |
+`explanation` is what the `FAIL` line prints, what the result document records, and what
+`checks.jsonl` keeps. A check that raises instead gets the exception's message there, and its
+traceback in `checks.jsonl`.
 
-The path is off `sys.path` again once the files are loaded, so a check that imports a sibling
-lazily, inside the function body, does not resolve. Import at the top of the file.
+Nothing a check does can stop the command. Every failure mode above is a failed check carrying
+its reason, and the rest of the suite goes on.
+
+### Several files, and helpers
+
+Split checks across as many files under `checks/` as you like. Every `*.py` in the directory
+is imported, in path order, and every decorated function in each file is collected in the
+order that file defines them. That order is the order they run in and the order they appear in
+the result.
+
+A check file may import a helper module sitting beside it, because the `checks/` directory is
+on `sys.path` while the files load:
+
+```python
+from helpers import expected_total  # checks/helpers.py, beside this file
+```
+
+Import it at the top of the file. The directory comes off `sys.path` once loading is done, so
+an import inside a function body runs too late and fails.
+
+A file under `checks/` that has no `@check` in it is a helper and nothing else. It is not an
+error. What is an error is a `checks/` directory in which no file anywhere has a check: that
+directory asserts nothing while looking as if it does, and the preflight says so.
+
+Two cases may each have a `checks/assertions.py` without colliding: each file is loaded under
+a module name unique to its own case directory, and a helper one of them imported is dropped
+afterwards, so the next case's `helpers.py` is that case's own.
 
 ## The Run object
 
@@ -283,9 +323,10 @@ fields are there whichever backend produced the run.
 `run.file(name)` resolves one name under `workspace`. A name that resolves to nothing, and a
 name that leaves the workspace, each fail the check naming it.
 
-There is no created-file list. The v1 run entry carries none, so there is nothing to read one
-from on the container backend, and walking `workspace` sees more than a created-file list
-does: it sees a file the run modified, which `file_exists` never does.
+To find out what the agent produced, walk `run.workspace` yourself. There is no list of
+created files on the `Run`: the result document carries none on the container backend, so
+there would be nothing to build one from. Walking the directory also finds a file the agent
+modified rather than created, which `file_exists` never sees.
 
 **A check writes to `run.scratch`, never to `run.workspace`.** The workspace is the record of
 what the agent produced, and a transformation writing into it destroys that record. `scratch/`
@@ -296,9 +337,10 @@ The two transcript formats are [running_evals.md](running_evals.md). A check tha
 
 ## The judge
 
-A check may ask a model. Some things are not decidable in code: whether a slide is clipped,
-whether a chart is readable, whether prose answers the question. `run.judge` asks `claude -p`
-about files and returns a verdict a check returns directly.
+Some things are not decidable in code: whether a slide is clipped, whether a chart is
+readable, whether prose answers the question. `run.judge(prompt, *paths)` asks a model. It
+runs `claude -p` three times, takes the majority of the three votes, and returns a `Result`,
+so a check can return it straight back.
 
 ```python
 import subprocess
@@ -316,17 +358,13 @@ def deck_is_readable(run: Run) -> Result:
     return run.judge("Every slide carries a title, and no text is clipped.", run.scratch)
 ```
 
-`soffice` is the host's, like `openpyxl` above. A check is host code, so it may shell out to
-anything the machine running `cowork_evals` has.
+That check does two things a grader cannot: it converts the deck to images with a tool on the
+host, and then asks a model about the images. `soffice` is the host's, like `openpyxl` in
+`Writing one`. A check is ordinary Python, so it may shell out to anything that machine has.
 
-`run.judge(prompt, *paths)` is `claude -p`, three votes, a majority of two, and it returns a
-`Result` a check returns directly.
-
-It is shown paths and never inlined material. A PDF, an image and a spreadsheet cannot be
-shown as text, and reading a file is what the judge's `Read` tool is for. The `llm` grader
-keeps inlining and is untouched: that grader matches the harness exactly so a case scores the
-same on both backends, and a check is this package's own and nothing outside it defines its
-behaviour.
+The judge is never handed the file's text. It is handed the path and the tools to open it,
+which is what makes a binary judgeable at all. The `llm` grader works the other way and is
+unchanged by any of this:
 
 | | The `llm` grader | `run.judge` |
 | ------------------- | ---------------------------------- | ---------------------------------- |
@@ -409,6 +447,20 @@ is no run directory to read. Every check of that case is then a skip, and a skip
 run: a suite cannot go green by asserting nothing. No flag is forced and nothing new is
 refused. See [cli.md](cli.md).
 
+## Common mistakes
+
+Each of these is silent or confusing the first time it happens.
+
+| What you did                                              | What happens                                                       |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Put `checks/` on a case and deleted its `graders/`        | The case does not load at all. The harness refuses a case with no grader, so the suite writes no result and the command exits 1 |
+| Ran with `--no-keep-traces`                               | Every check is a skip, and a skip fails the run. There is nothing collected to check |
+| Wrote a `checks/` directory whose files have no `@check`  | The preflight refuses the tree with exit 3. A directory that asserts nothing looks like one that asserts something |
+| Imported a helper inside the function body                | `ModuleNotFoundError`. The `checks/` directory is on `sys.path` only while the files load, so import at the top |
+| Wrote into `run.workspace`                                | The workspace is the record of what the agent produced, and you have just edited it. Write to `run.scratch` |
+| Called `run.judge` on a case at `runs: 3`                 | Three judge calls per run, nine in total. Every check runs again for every run of the case |
+| Expected a check to run on the `without` arm              | It does not. `--ablation with-without` runs the baseline arm with no plugin loaded, and checks run on the with-arm only |
+
 ## What reaches the result document
 
 The layer rewrites the plugin's `aggregate-result.json` after the backend wrote it. The
@@ -484,13 +536,14 @@ check costs nine. That spend reaches the run's `judgeCostUsd` and the document's
 
 ## What is not built
 
-Each of these was considered and rejected. None of them is pending.
+If you went looking for one of these, it is not there and is not coming. Each was considered
+while the layer was designed.
 
-| Not built                                            | Because                                                                  |
+| You might expect                                     | It is not there because                                                  |
 | ---------------------------------------------------- | ---------------------------------------------------------------------------- |
-| A free-form `run.ask` returning the judge's text     | A check is host code and may call `subprocess` itself. A second route to the same CLI is a split with no rule |
-| A `@transform` decorator                             | A transformation that decides nothing is a function, and Python has functions |
-| A weight or a name on `@check`                       | Nobody asked for either. Every check weighs 1                            |
-| A configuration key of any kind                      | The judge model is `eval.judge_model`, and everything else is discovered  |
-| A check on the `without` arm                         | Nothing the plugin produced is there to read                             |
-| Any way to run a check inside the container or the VM | The run is graded before a check starts, and a check that ran inside the thing under test would be bound by the image wheel set for no gain |
+| A `@transform` decorator, to convert a file before asserting on it | Converting a file is something a Python function does, and a check is a Python function. Call `subprocess` and then assert, in the same check |
+| A `run.ask` that returns the judge's answer as text  | Same reason. A check may run `claude -p` itself if it needs something `run.judge` does not give it |
+| A `name=` or `weight=` argument on `@check`          | Nobody asked for either. The name is the file and function, and every check weighs 1 |
+| A configuration key for the layer                    | There is nothing to configure. The judge model is `eval.judge_model`, and the rest is discovered from the tree |
+| Checks on the baseline arm of `--ablation with-without` | That arm runs with no plugin loaded, so nothing the plugin produces exists there to assert on |
+| A way to run a check inside the container or the VM  | The eval is finished and graded before a check starts. Running one inside the thing under test would bind it to the CoWork wheel set and buy nothing |
