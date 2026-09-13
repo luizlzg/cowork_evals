@@ -122,7 +122,7 @@ required. Leaving it out does not, because a default is not a request. See
 
 ### What an unknown key does, in each of the two files
 
-Snapshot, 2026-09-12, CLI 2.1.265, through the container backend. One fixture case carried
+On CLI 2.1.265, through the container backend, over one fixture case carrying
 `backends: [docker]`, first in `prompt.md` and then in `case.yaml`.
 
 | Where the key was       | The harness                                                          |
@@ -181,7 +181,7 @@ and `$` therefore match the start and the end of the whole target, not of a line
 `flags` carries `m`. This differs from Python, where `$` also matches before a trailing
 newline, and it is what a grader asserting that an answer is exactly one thing rests on.
 
-Snapshot, 2026-09-09, Node 25.9.0, over the pattern `^\s*(?:blocker|major|minor)\s*$`:
+On Node 25.9.0, over the pattern `^\s*(?:blocker|major|minor)\s*$`:
 
 | Target                      | no flags | `m`   |
 | --------------------------- | -------- | ----- |

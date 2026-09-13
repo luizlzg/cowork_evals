@@ -10,10 +10,10 @@ that every eval in this repository tries to reproduce or reach.
   no virtualenv, no package that is not already there.
 - **The host gives a skill less than a laptop does**: no plugin `bin/` on `PATH`, no working
   directory at the skill, no shell state between `Bash` calls.
-- **The whole inventory below is measured**, not chosen. It is a snapshot and not a contract.
+- **The whole inventory below is measured**, not chosen. It is what one session held, not a
+  contract.
 
-Captured 2026-08-28 and 2026-09-01 by direct probe from a session. Re-capture it when the base
-image changes. What reproduces this inventory is [docker.md](docker.md); what a consumer's
+It is captured by direct probe from a session. Re-capture it when the base image changes. What reproduces this inventory is [docker.md](docker.md); what a consumer's
 package pins may not exceed is [environments.md](environments.md).
 
 ## The deployment model

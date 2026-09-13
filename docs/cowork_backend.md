@@ -180,8 +180,8 @@ not verifiable from the host.
 
 ## What one suite costs, and what a grader can be told here
 
-A snapshot, captured 2026-09-09, from `tests/integration/test_cowork_backend.py` against the
-`python-version` case of `plugins/smoke/`, which writes `runs: 1`.
+From `tests/integration/test_cowork_backend.py` against the `python-version` case of
+`plugins/smoke/`, which writes `runs: 1`.
 
 | Measured                                    | Value                                        |
 | ------------------------------------------- | ---------------------------------------------- |

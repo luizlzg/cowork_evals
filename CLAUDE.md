@@ -117,5 +117,10 @@ of it.
 - Simplified Technical English. No filler, no corporate register.
 - One idea per sentence. Tables for anything with more than two attributes.
 - State what is true of this repository, and verify before writing.
-- Record the capture date of any measured fact, and call it a snapshot.
+- **Never date a fact, and never tell the story of how it was found.** State the behaviour.
+  Documentation is not a log, and a reader who has never met the developer gets nothing from
+  a date or an incident. A version, a platform or an image tag is a condition the statement
+  depends on and stays in it. The one exception is a fact whose date changes what a reader
+  must do, and it says why. This binds `docs/`, `README.md`, code comments and docstrings.
+  A plan is the exception: it records when a decision was made, which is what it is for.
 - Sentence case headings. No emojis, no em dashes.

@@ -11,8 +11,9 @@ you are about to change, and link to it rather than restating it.
   first needs a model.
 - An eval is written once, in one case format, and runs on either backend. The backend
   changes, the case does not.
-- Every file states what is true of this repository now. A measured fact carries its capture
-  date and is called a snapshot.
+- Every file states what is true of this repository now. A measured fact states the
+  behaviour and the conditions it holds under, never the date it was taken on or the
+  incident that produced it.
 - No file here carries a build status of its own, and no file here links to a plan.
 - This tree ships inside the package. `cowork_evals docs` prints where it landed, and a
   reference that leaves this tree is named rather than linked. Both rules are in

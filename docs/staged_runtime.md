@@ -35,7 +35,7 @@ under test, the case's `context.add_dirs` entries, and the `PATH` directories in
 The home directory and its siblings are unreadable.
 
 A virtual environment is a pointer, not an installation. The mirror at `.venv_cowork` holds
-no interpreter and no standard library. Measured 2026-09-04:
+no interpreter and no standard library:
 
 | Property         | Value                                                              |
 | ---------------- | ------------------------------------------------------------------ |
@@ -80,8 +80,7 @@ Two sources build it:
 
 The wheels go into the interpreter's own `site-packages`, not a separate directory reached
 through `PYTHONPATH`. `PYTHONPATH` entries are not scanned for `.pth` files, and four pins
-ship one: `coloredlogs`, `lazr.restfulclient`, `lazr.uri` and `zope.interface`. Measured
-2026-09-04:
+ship one: `coloredlogs`, `lazr.restfulclient`, `lazr.uri` and `zope.interface`:
 
 | Marker `.pth` placed in            | Executed at interpreter start |
 | ---------------------------------- | ----------------------------- |
@@ -109,8 +108,8 @@ needs no equivalent: its system interpreter is already 3.10. See [docker.md](doc
 
 ## Measurements
 
-Snapshot 2026-09-04. macOS 26.6.2 aarch64, uv 0.11.3, interpreter
-`cpython-3.10.16-macos-aarch64-none`, CLI 2.1.260. Every test below ran the staged tree from
+On macOS 26.6.2 aarch64, uv 0.11.3, interpreter `cpython-3.10.16-macos-aarch64-none`,
+CLI 2.1.260. Every test below ran the staged tree from
 a directory outside the home, with `PATH` pointing at `.cowork-runtime/python/bin` and no
 `PYTHONPATH`.
 
@@ -131,8 +130,8 @@ library paths, and they resolve them relative to the staged tree.
 
 ## A Bash-granting run is refused on a host that runs a credential process
 
-Snapshot, 2026-09-03, CLI 2.1.260, macOS. A case granted `Bash` fails before the child
-starts, so no case body runs and the run costs nothing:
+On CLI 2.1.260 on macOS, a case granted `Bash` fails before the child starts, so no case
+body runs and the run costs nothing:
 
 ```
 a credentials file in this environment (the AWS config / shared credentials file, the GCP
@@ -158,7 +157,7 @@ Three runs of one throwaway case separate the cause:
 The `Bash` grant alone causes it. Neither the mirror nor `scripts/cowork_run.sh` is
 involved.
 
-Re-measured 2026-09-04, same CLI. Nothing lifts it on that host:
+Nothing lifts it on that host:
 
 | Attempt                                                     | Result                              |
 | ------------------------------------------------------------ | ------------------------------------- |

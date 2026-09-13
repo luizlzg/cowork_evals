@@ -405,9 +405,9 @@ throttled by the same ceiling as a working one. A refusal at step 1 has fired no
 not logged. `collect` never checks it.
 
 The line is written after the sequence returns or raises, so a process killed between the
-deep link and that write leaves a fired submission the ceiling never counts. Observed once,
-2026-09-08. Nothing inside the library closes that window, because the line cannot be
-written before the thing it records.
+deep link and that write leaves a fired submission the ceiling never counts. Nothing
+inside the library closes that window, because the line cannot be written before the thing
+it records.
 
 The window is fixed at 24 hours; only the count is configurable, and there is no way to
 skip it.

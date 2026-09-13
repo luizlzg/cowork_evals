@@ -118,8 +118,8 @@ document with none of that loss.
 A run's sandbox is created under `TMPDIR`, so where a kept sandbox lands is the caller's to
 choose. That is how the container backend gets one onto the host:
 [docker.md](docker.md). A kept sandbox is left read-only, with the two trees the plugin under
-test wrote at mode 000 under `sealed/`, and `out/trace.jsonl` readable beside them. Measured
-2026-09-10 against the CLI the image installs.
+test wrote at mode 000 under `sealed/`, and `out/trace.jsonl` readable beside them, against
+the CLI the image installs.
 
 ## Limits a case author has to know
 
@@ -132,10 +132,9 @@ The ones that can are in [eval_format.md](eval_format.md).
   `allowed_tools`
   intersected with the read-only set, unioned with the operator's `--allow-tools`. `Bash`,
   `Write`, `Edit`, `WebFetch`, `WebSearch` and `mcp__*` need an explicit grant. A plugin's own
-  MCP tools are named `mcp__plugin_<plugin>_<server>__<tool>`. Measured 2026-09-12 on CLI
-  2.1.265, a case writing no `allowed_tools` still had `Skill`, and its skill fired and
-  scored under an operator grant of `Bash` alone, so the intersection does not empty the
-  read-only set. What was measured tool by tool is
+  MCP tools are named `mcp__plugin_<plugin>_<server>__<tool>`. On CLI 2.1.265 a case writing
+  no `allowed_tools` still has `Skill`, and its skill fires and scores under an operator
+  grant of `Bash` alone, so the intersection does not empty the read-only set. What was measured tool by tool is
   [running_evals.md](running_evals.md).
 - **An ungranted tool fails in two ways.** It is offered and refused at the call, which
   writes a `system` record of subtype `permission_denied` carrying `decision_reason_type`,
@@ -164,7 +163,7 @@ A 10-case suite at `runs: 3` with the baseline arm on is 60 agent runs before a 
 call. That is why `eval.ablation` is `none` in this repository and `with-without` is asked
 for one sweep at a time. This table is what a reader is pointed at for what the arm costs.
 
-Measured, snapshot 2026-09-12: `docs/claude_code/eval_smoke/`, three cases at `runs: 1`, one
-`llm` grader, under `--ablation with-without`. Six agent runs, 34 s and 0.35 USD. The one-arm
+Measured over `docs/claude_code/eval_smoke/`, three cases at `runs: 1`, one `llm` grader,
+under `--ablation with-without`. Six agent runs, 34 s and 0.35 USD. The one-arm
 number for the same tree is half the agent runs. The option is
 [running_evals.md](running_evals.md).
