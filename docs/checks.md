@@ -31,7 +31,7 @@ A case gains one directory, beside the one it already has.
 
 ```
 <plugin>/evals/<skill>/<case>/prompt.md
-<plugin>/evals/<skill>/<case>/graders/<name>.md      # the harness's five types, unchanged
+<plugin>/evals/<skill>/<case>/graders/<name>.md      # the harness's own, unchanged
 <plugin>/evals/<skill>/<case>/checks/<name>.py       # the author's code
 ```
 
