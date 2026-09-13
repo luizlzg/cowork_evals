@@ -154,8 +154,8 @@ The clear is 2c and not a step after the deep link. The deep link is what puts t
 the composer, so clearing after it deletes the prompt.
 
 Step 2a refuses on Cancel, and a refusal has fired nothing, so it leaves no run log line and
-does not count against the ceiling. That is the rule step 1 already follows, and code 2 is the one
-taxonomy code that carries it.
+does not count against the ceiling. That is the rule step 1 already follows, and code 2 is
+the one taxonomy code that carries it.
 
 Step 6 identifies a session by structure, not by name: a directory holding an `audit.jsonl`
 three levels below the sessions root. New sessions are the set difference against the
@@ -257,7 +257,7 @@ The developer approves once for a whole invocation. A 20-case suite asks once, n
 
 The driver knows submissions and nothing above them, and `cowork_backend` builds a new
 `CoWork` per case, so the answer cannot live on an instance and `CoWorkSection` is frozen
-besides. It is module state in `cowork.py`, set by `cowork.consent` and read at step 2a.
+besides. It is module state in `cowork.py`, set by `cowork.consent`, which step 2a calls.
 
 | Caller                        | Calls                                                |
 | ----------------------------- | ------------------------------------------------------ |
