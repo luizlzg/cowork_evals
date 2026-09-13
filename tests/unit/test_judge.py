@@ -15,14 +15,20 @@ import pytest
 
 from cowork_evals.cases import Grader
 from cowork_evals.judge import (
+    CHECK_INSTRUCTION,
+    CHECK_TOOLS,
     EVIDENCE_LIMIT,
+    FILES_CLOSE,
+    FILES_OPEN,
     INSTRUCTION,
     MATERIAL_CLOSE,
     MATERIAL_LIMIT,
     MATERIAL_OPEN,
     VOTES,
     Reply,
+    check_argv,
     compose,
+    compose_paths,
     criteria,
     judge_argv,
     material,
@@ -76,6 +82,48 @@ def test_judge_argv_is_claude_p_with_the_model_and_strict_mcp_config() -> None:
         "haiku",
         "--strict-mcp-config",
     ]
+
+
+def test_the_check_judge_argv_adds_the_grant_to_the_judge_argv() -> None:
+    assert check_argv("haiku") == [*judge_argv("haiku"), "--allowedTools", "Read,Glob,Grep"]
+    assert CHECK_TOOLS == ("Read", "Glob", "Grep")
+
+
+def test_the_check_judge_argv_carries_one_add_dir_per_path_outside() -> None:
+    assert check_argv("haiku", ("/a", "/b")) == [
+        *judge_argv("haiku"),
+        "--allowedTools",
+        "Read,Glob,Grep",
+        "--add-dir",
+        "/a",
+        "--add-dir",
+        "/b",
+    ]
+
+
+def test_the_check_judge_argv_writes_no_turn_cap_and_no_permission_mode() -> None:
+    """A cap is a restriction nobody asked for, and the grant alone lets the judge read."""
+    argv = " ".join(check_argv("haiku", ("/a",)))
+    assert "--max-turns" not in argv
+    assert "--permission-mode" not in argv
+
+
+def test_judge_argv_is_untouched_by_the_check_judge() -> None:
+    assert "--allowedTools" not in judge_argv("haiku")
+    assert "--add-dir" not in judge_argv("haiku")
+
+
+def test_the_check_judge_is_shown_the_paths_and_never_the_material() -> None:
+    assert compose_paths("Every slide carries a title.", ("scratch/deck.png", "/tmp/x.pdf")) == (
+        "Every slide carries a title.\n\n"
+        f"{FILES_OPEN}\nscratch/deck.png\n/tmp/x.pdf\n{FILES_CLOSE}\n\n{CHECK_INSTRUCTION}"
+    )
+
+
+def test_the_check_instruction_asks_for_a_read_and_then_one_word() -> None:
+    assert CHECK_INSTRUCTION == (
+        "Read each file named above, then answer with exactly one word: PASS or FAIL."
+    )
 
 
 def test_the_enablement_variable_is_not_exported() -> None:

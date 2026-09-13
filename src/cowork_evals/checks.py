@@ -34,7 +34,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .cases import CHECKS_DIR, check_files
+from . import judge as judging
+from .cases import CHECKS_DIR, Grader, check_files
 from .harness import RESULT_NAME
 from .results import ARM_WITH
 from .traces import LAST_MESSAGE_NAME, TRACE_NAME, WORKSPACE_NAME
@@ -59,6 +60,14 @@ NO_ARTEFACTS = (
     "the run kept no artefacts, so there is nothing to check. "
     "--no-keep-traces and eval.keep_traces: false both give up every check"
 )
+
+# What `run.judge` says when it was given no path. There is no default of everything: a judge
+# shown the whole run directory is judging the transcript as well as the artefact.
+NO_PATHS = "run.judge was called with no path, and it has no default of everything"
+
+# The name `judge.tally` sees. It never leaves `run.judge`, which reads the verdict and the
+# spend off the result and carries the check's own name into the outcome.
+JUDGE_GRADER = "run.judge"
 
 
 class CheckError(Exception):
@@ -142,6 +151,53 @@ class Run:
             raise CheckError(f"{name} is not in the workspace")
         return named
 
+    def judge(self, prompt: str, *paths: Path | str) -> Result:
+        """Ask a judge model about files, in the words of the prompt. Three votes, majority.
+
+        The judge is `claude -p` granted `Read`, `Glob` and `Grep`, running in `run_dir`, and
+        it is shown the paths rather than the material: a PDF, an image and a spreadsheet
+        cannot be shown as text, and reading a file is what its `Read` tool is for. A path
+        outside `run_dir` reaches it as `--add-dir`.
+
+        The whole exchange goes to `checks.jsonl`, because the document's `evidence` is
+        capped at 2000 characters and a person reading a failed judged check needs all of it.
+
+        A call naming no path, and a path that is not there, are each a failed check saying
+        so. The model is `judge.resolve_model`, so `--judge-model` beats `eval.judge_model`.
+        """
+        if not paths:
+            return Result(passed=False, explanation=NO_PATHS)
+        names: list[str] = []
+        add_dirs: list[str] = []
+        root = self.run_dir.resolve()
+        for path in paths:
+            named = Path(path)
+            resolved = (named if named.is_absolute() else root / named).resolve()
+            if not resolved.exists():
+                return Result(
+                    passed=False, explanation=f"{path} is not there, so it cannot be judged"
+                )
+            if resolved.is_relative_to(root):
+                names.append(resolved.relative_to(root).as_posix())
+                continue
+            names.append(str(resolved))
+            outside = str(resolved if resolved.is_dir() else resolved.parent)
+            if outside not in add_dirs:
+                add_dirs.append(outside)
+
+        text = judging.compose_paths(prompt, tuple(names))
+        argv = judging.check_argv(self.judge_model, tuple(add_dirs))
+        replies = [judging.ask(argv, text, cwd=root) for _ in range(judging.VOTES)]
+        judged = judging.tally(_judge_grader(prompt), replies, "\n".join(names))
+        self.calls.append(
+            JudgeCall(
+                prompt=text,
+                replies=tuple(reply.word for reply in replies),
+                cost_usd=judged.cost_usd,
+            )
+        )
+        return Result(passed=judged.result.passed, explanation=judged.result.explanation)
+
 
 @dataclass(frozen=True, slots=True)
 class Check:
@@ -190,6 +246,18 @@ class Outcome:
         if self.cost_usd:
             entry["costUsd"] = self.cost_usd
         return entry
+
+
+def _judge_grader(prompt: str) -> Grader:
+    """The `Grader` `judge.tally` counts votes against. It is never written to a document."""
+    return Grader(
+        name=JUDGE_GRADER,
+        type=CHECK_TYPE,
+        weight=WEIGHT,
+        config={},
+        markdown=prompt,
+        path=Path(CHECKS_DIR),
+    )
 
 
 def check(function: Callable[[Run], Any]) -> Callable[[Run], Any]:

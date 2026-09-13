@@ -140,16 +140,16 @@ Work one box, verify it, tick it, commit. Do not batch ticks.
 
 ### Phase 2: the judge over paths
 
-- [ ] `run.judge(prompt, *paths)` in `checks.py`, over `judge.py`.
-- [ ] `judge.py` gains the check judge's argument list: `claude -p --output-format json
+- [x] `run.judge(prompt, *paths)` in `checks.py`, over `judge.py`.
+- [x] `judge.py` gains the check judge's argument list: `claude -p --output-format json
       --model <eval.judge_model> --strict-mcp-config`, with `Read`, `Glob` and `Grep`
       granted, the run directory as the working directory, and `--add-dir` for each path
       outside it. `judge_argv` is untouched.
-- [ ] The prompt names each path, relative to the working directory where it is under one.
-- [ ] Three votes and a majority of two, through the existing `read_reply` and `tally`.
+- [x] The prompt names each path, relative to the working directory where it is under one.
+- [x] Three votes and a majority of two, through the existing `read_reply` and `tally`.
       `run.judge` returns a `Result`, so a check returns it directly.
-- [ ] A call naming no path is a failed check saying so. There is no default of everything.
-- [ ] Phase 2 measures two facts about a tool-using `claude -p`, and each has a fallback that
+- [x] A call naming no path is a failed check saying so. There is no default of everything.
+- [x] Phase 2 measures two facts about a tool-using `claude -p`, and each has a fallback that
       ships if the measurement fails.
 
       | Fact                                                                      | If it does not hold                                                          |
@@ -158,8 +158,8 @@ Work one box, verify it, tick it, commit. Do not batch ticks.
       | A tool-using judge answers with the bare word, so `read_reply` reads it       | The check judge reads the last word of `result`. `read_reply` stays exact, per D6 |
 
       Both go into `docs/checks.md` as measured behaviour, with the CLI version they hold for.
-- [ ] `tests/unit/test_judge.py` gains the check judge's argument list and its prompt.
-- [ ] `tests/integration/test_judge.py` gains one `live` test: a real `claude -p` judging a
+- [x] `tests/unit/test_judge.py` gains the check judge's argument list and its prompt.
+- [x] `tests/integration/test_judge.py` gains one `live` test: a real `claude -p` judging a
       real PNG and a real PDF written by the test.
 
 ### Phase 3: into the result and into the run directory

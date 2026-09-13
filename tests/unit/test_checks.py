@@ -167,6 +167,21 @@ def test_a_name_that_leaves_the_workspace_raises(collected: Path) -> None:
     assert str(raised.value) == "../trace.jsonl resolves outside the workspace"
 
 
+# The judge over paths. Nothing here starts a process: the two refusals return before one.
+
+
+def test_a_judge_call_naming_no_path_is_a_failed_check(collected: Path) -> None:
+    result = one_run(collected).judge("Every slide carries a title.")
+    assert result.passed is False
+    assert result.explanation == checks.NO_PATHS
+
+
+def test_a_judge_call_naming_a_path_that_is_not_there_is_a_failed_check(collected: Path) -> None:
+    result = one_run(collected).judge("Every slide carries a title.", "scratch/deck.png")
+    assert result.passed is False
+    assert result.explanation == "scratch/deck.png is not there, so it cannot be judged"
+
+
 # Execution.
 
 
