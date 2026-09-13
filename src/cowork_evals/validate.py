@@ -11,6 +11,11 @@ reported, and `--require-coverage` is what turns that report into a failure.
 here is over a `Case` it already built. The one exception is a grader file with no `---` block:
 the reader drops it exactly as the harness drops it, so this compares the files on disk against
 the graders the reader returned rather than deciding again.
+
+A check file is the one thing here that is executed rather than parsed. `checks/*.py` is Python,
+and the only way to know it imports is to import it, so the validator imports every check of
+every selected plugin root before anything runs. A file that will not import at the preflight
+would otherwise fail the run it was written to decide. docs/checks.md.
 """
 
 from __future__ import annotations
@@ -19,7 +24,19 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .cases import CASE_YAML, EVAL_DIR, GRADER_TYPES, GRADERS_DIR, NO_COWORK, PRUNED, Case, discover
+from .cases import (
+    CASE_YAML,
+    CHECKS_DIR,
+    EVAL_DIR,
+    GRADER_TYPES,
+    GRADERS_DIR,
+    NO_COWORK,
+    PRUNED,
+    Case,
+    discover,
+)
+from .checks import discover as discover_checks
+from .checks import duplicate_names
 from .cowork_backend import MOCKS_DIR, unrunnable
 
 # The directory a plugin's skills live in. Coverage is one directory here against one
@@ -163,6 +180,7 @@ def _case_violations(case: Case, plugin: Path, evals: Path) -> list[Violation]:
         *_runnability_violations(case, plugin),
         *_case_yaml_violations(case),
         *_grader_violations(case),
+        *_check_violations(case),
     ]
 
 
@@ -322,20 +340,38 @@ def _case_yaml_violations(case: Case) -> list[Violation]:
 
 
 def _add_dirs_violations(case: Case, path: Path, declared: Any) -> list[Violation]:
-    """Every staged directory stays inside the case that uses it. docs/eval_format.md."""
+    """Every staged directory stays inside the case that uses it, and none of them is
+    `checks/`. docs/eval_format.md.
+
+    The harness refuses the case's own `graders/` itself. It knows nothing about `checks/`
+    and would grant it as a fixture directory, so refusing it is this repository's and is
+    not redundant: a case that stages its own assertions into the agent's working directory
+    is telling the agent what it is about to be judged on.
+    """
     if not isinstance(declared, list):
         return []
     directory = case.directory.resolve()
-    return [
-        Violation(
-            path=path,
-            rule="add-dirs",
-            detail=f"{entry} resolves to {resolved}, outside {directory}",
-        )
-        for entry in declared
-        for resolved in [(case.directory / str(entry)).resolve()]
-        if not resolved.is_relative_to(directory)
-    ]
+    checks_dir = (case.directory / CHECKS_DIR).resolve()
+    found = []
+    for entry in declared:
+        resolved = (case.directory / str(entry)).resolve()
+        if not resolved.is_relative_to(directory):
+            found.append(
+                Violation(
+                    path=path,
+                    rule="add-dirs",
+                    detail=f"{entry} resolves to {resolved}, outside {directory}",
+                )
+            )
+        elif resolved.is_relative_to(checks_dir):
+            found.append(
+                Violation(
+                    path=path,
+                    rule="add-dirs-checks",
+                    detail=f"{entry} resolves to {resolved}, and {CHECKS_DIR}/ is not staged",
+                )
+            )
+    return found
 
 
 def _grader_violations(case: Case) -> list[Violation]:
@@ -366,6 +402,42 @@ def _grader_violations(case: Case) -> list[Violation]:
                 )
             )
     return found
+
+
+def _check_violations(case: Case) -> list[Violation]:
+    """Every check file imports, every check has a name of its own, and `checks/` holds one.
+
+    A `checks/` directory holding no check at all asserts nothing while looking as if it
+    does. A single file holding none is not a violation: a helper beside a check is a file
+    like any other, which is why the rule is over the directory and never over a file.
+    """
+    directory = case.directory / CHECKS_DIR
+    if not directory.is_dir():
+        return []
+    found = discover_checks(case.directory)
+    broken = [
+        Violation(path=one.path, rule="check-import", detail=one.error)
+        for one in found
+        if one.error is not None
+    ]
+    if broken:
+        return broken
+    if not found:
+        return [
+            Violation(
+                path=directory,
+                rule="check-empty",
+                detail=f"no file under {CHECKS_DIR}/ carries a function decorated with @check",
+            )
+        ]
+    return [
+        Violation(
+            path=directory,
+            rule="check-duplicate",
+            detail=f"{name} is the name of more than one check",
+        )
+        for name in duplicate_names(found)
+    ]
 
 
 def _unread_grader_files(case: Case) -> list[Path]:

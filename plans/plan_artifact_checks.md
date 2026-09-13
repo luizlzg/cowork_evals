@@ -195,17 +195,17 @@ Work one box, verify it, tick it, commit. Do not batch ticks.
 
 ### Phase 4: the validator and the panel
 
-- [ ] The validator imports every `checks/*.py` of every selected plugin root before anything
+- [x] The validator imports every `checks/*.py` of every selected plugin root before anything
       runs. An import failure is a violation and exits 3.
-- [ ] A duplicate check name within one case is a violation.
-- [ ] A `checks/` directory holding no check at all is a violation. A single file holding
+- [x] A duplicate check name within one case is a violation.
+- [x] A `checks/` directory holding no check at all is a violation. A single file holding
       none is not, because a helper beside a check is a file like any other.
-- [ ] `context.add_dirs` naming `checks/` is a violation, exactly as naming `graders/` is.
+- [x] `context.add_dirs` naming `checks/` is a violation, exactly as naming `graders/` is.
       The harness refuses `graders/` itself and would grant `checks/` as a fixture directory,
       so this rule is this repository's and is not redundant. See
       `docs/claude_code/plugin_eval_reference.md`.
-- [ ] `panel._defining` hashes each `checks/*.py` in path order, after the graders.
-- [ ] `tests/unit/test_validate.py` and `tests/unit/test_panel.py` cover all four.
+- [x] `panel._defining` hashes each `checks/*.py` in path order, after the graders.
+- [x] `tests/unit/test_validate.py` and `tests/unit/test_panel.py` cover all four.
 
 ### Phase 5: the fixture and the integration tier
 
