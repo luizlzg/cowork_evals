@@ -126,7 +126,7 @@ Tick a box when it is verified, then commit. Do not batch ticks. `CLAUDE.md`.
 - [x] The `unattended` fixture forces `consent: dialog`, is renamed `attended`, and the five
       tests that take it follow
 - [x] `test_a_live_run_returns_the_marker` asserts `consent: dialog` and the flag set afterwards
-- [ ] The four documentation updates above
+- [x] The four documentation updates above
 
 ## Verification steps
 

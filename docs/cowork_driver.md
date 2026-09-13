@@ -132,7 +132,7 @@ for the length of an agentic run. Everything else uses `run`.
 | -- | ------------------- | ------------------------------------------------------------------------------ | -------- |
 | 1  | Refuse              | Check the configuration, the rate ceiling and the prompt cap                  | 2        |
 | 2  | Record the baseline | List the session directories that already exist                               |          |
-| 2a | Consent             | Check that this process asked for the keyboard                                | 2        |
+| 2a | Consent             | Ask for the keyboard, unless this process already did                         | 2        |
 | 2b | Activate and guard  | Activate CoWork, then check it is frontmost                                   | 3, 9     |
 | 2c | Clear               | Select all and delete, in the composer                                        | 3        |
 | 3  | Fire the deep link  | `open claude://claude.ai/new?q=<prompt>&surface=<surface>`                    | 3        |
@@ -153,8 +153,8 @@ after 4a would reopen the gap the check just closed.
 The clear is 2c and not a step after the deep link. The deep link is what puts the prompt in
 the composer, so clearing after it deletes the prompt.
 
-Step 2a refuses, and a refusal has fired nothing, so it leaves no run log line and does not
-count against the ceiling. That is the rule step 1 already follows, and code 2 is the one
+Step 2a refuses on Cancel, and a refusal has fired nothing, so it leaves no run log line and
+does not count against the ceiling. That is the rule step 1 already follows, and code 2 is the one
 taxonomy code that carries it.
 
 Step 6 identifies a session by structure, not by name: a directory holding an `audit.jsonl`
@@ -261,13 +261,18 @@ besides. It is module state in `cowork.py`, set by `cowork.consent` and read at 
 
 | Caller                        | Calls                                                |
 | ----------------------------- | ------------------------------------------------------ |
+| `run` and `submit`, at step 2a | `cowork.consent(self._config)` on every submission  |
 | `ask`, before the driver      | `cowork.consent(config.cowork)` once                 |
 | `run --cowork`, before the first plugin | the same, once for the whole sweep          |
 | A library caller              | the same, or sets `consent: none` in the file        |
 
-`run` and `submit` refuse with code 2 when consent was never given and `consent` is
-`dialog`. `collect`, `sessions`, `history`, `recent` and `deep_link` never ask, because they
-fire nothing, so `ask --session` and a dry run never show the modal.
+The driver asks rather than reading what a caller left, so a caller that forgot cannot take
+the keyboard with no warning. The command still asks up front, because asking once before a
+sweep beats asking at its first submission, and the ask is once per process, so the second
+call shows nothing. Cancel at step 2a is code 2 and nothing has fired.
+
+`collect`, `sessions`, `history`, `recent` and `deep_link` never ask, because they fire
+nothing, so `ask --session` and a dry run never show the modal.
 
 The modal is `osascript` `display dialog`, which needs no Accessibility grant. Only the
 keystrokes do, and the preflight covers that.
@@ -280,8 +285,8 @@ keystrokes do, and the preflight covers that.
 | `giving up after`     | Proceeds. An unattended run is the case the key exists for            |
 | The message           | States the timeout, because `display dialog` renders no countdown     |
 
-`consent: none` is the documented route for an unattended run and for this repository's own
-integration tier. It is a configuration value and not a test seam: a test sets it in a
+`consent: none` is the documented route for an unattended run, and the only route that fires
+without a warning. It is a configuration value and not a test seam: a test sets it in a
 configuration file exactly as a consumer would, and no parameter exists to inject an answer.
 
 ### The guard
