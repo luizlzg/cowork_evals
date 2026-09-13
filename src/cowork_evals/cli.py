@@ -22,9 +22,11 @@ from pathlib import Path
 from typing import Any
 
 from . import (
+    checks,
     cowork,
     cowork_backend,
     docker,
+    judge,
     logs,
     panel,
     preflight,
@@ -813,6 +815,9 @@ def _each_plugin(
     # checks hold each run's offered tool list against. The CoWork backend builds no
     # options and grants nothing, so those checks find nothing there.
     options = _options(args, config, tags) if image is not None else None
+    # The one ladder every other judge call resolves through, so `--judge-model` beats
+    # `eval.judge_model` for a check judge too. docs/checks.md.
+    judge_model = judge.resolve_model(args.judge_model, config)
 
     ceiling = config.eval.max_cost_total_usd
     roots: dict[str, Path] = {}
@@ -856,6 +861,12 @@ def _each_plugin(
                 granted = () if options is None else options.allow_tools
                 for warning in traces.collect(output, granted=granted):
                     print(f"trace: {warning}", file=sys.stderr)
+            # After the collection, because a check reads the collected run directory. It
+            # runs whether or not the traces were kept: with none there is nothing to read,
+            # and a case with checks then produces a skip, which fails the run.
+            # docs/checks.md.
+            for warning in checks.run(output, plugin, judge_model=judge_model):
+                print(f"check: {warning}", file=sys.stderr)
     return Swept((), roots)
 
 

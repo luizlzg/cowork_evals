@@ -20,6 +20,7 @@ import pytest
 from cowork_evals import checks
 from cowork_evals.cases import read
 from cowork_evals.checks import Check, CheckError, Result, Run
+from cowork_evals.harness import RESULT_NAME
 
 DATA = Path(__file__).resolve().parent.parent / "data" / "checks"
 PLUGIN = DATA / "plugin"
@@ -267,3 +268,296 @@ def test_the_line_one_check_writes(collected: Path) -> None:
     assert line["durationSeconds"] >= 0
     assert "traceback" not in line
     assert "judge" not in line
+
+
+# The layer: what it appends to the document, and what it writes beside the trace.
+
+
+def collected_runs(directory: Path, case: str, count: int) -> list[Path]:
+    """`count` collected run directories for one case, each a copy of the fixture run."""
+    made = []
+    for index in range(1, count + 1):
+        run_dir = directory / "traces" / case / f"run-{index}"
+        shutil.copytree(DATA / "run", run_dir)
+        made.append(run_dir)
+    return made
+
+
+def case_entry(name: str, where: str, runs: list[Path], **extra: Any) -> dict[str, Any]:
+    """One case of a v1 document, passing on one `file_exists` grader before any check runs."""
+    return {
+        "name": name,
+        "dir": where,
+        "source": "prose",
+        "promptMarkdown": "Write WRITTEN into written.txt.",
+        "graders": [{"name": "wrote-it", "type": "file_exists", "weight": 1, "config": {}}],
+        "arms": {
+            "with": [
+                {
+                    "score": 1.0,
+                    "passed": True,
+                    "turns": 1,
+                    "costUsd": 0.01,
+                    "judgeCostUsd": 0.002,
+                    "error": None,
+                    "skippedPaidGraders": False,
+                    "tracePath": str(run_dir / "trace.jsonl"),
+                    "graders": [
+                        {
+                            "name": "wrote-it",
+                            "passed": True,
+                            "weight": 1,
+                            "explanation": "created written.txt",
+                            "withOnly": False,
+                            "scored": True,
+                        }
+                    ],
+                }
+                for run_dir in runs
+            ]
+        },
+        "aggregates": {"score": 1.0, "passRate": 1.0},
+        **extra,
+    }
+
+
+def suite(tmp_path: Path, cases: list[dict[str, Any]]) -> Path:
+    """One plugin's output directory, holding the document those cases make up."""
+    directory = tmp_path / "smoke"
+    directory.mkdir(parents=True, exist_ok=True)
+    document = {
+        "schemaVersion": 1,
+        "claudeVersion": "2.1.270",
+        "startedAt": "2026-09-13T10:00:00+00:00",
+        "durationSeconds": 3.0,
+        "costUsd": 0.02,
+        "partial": False,
+        "suite": {
+            "root": str(PLUGIN),
+            "ablation": "none",
+            "threshold": 0,
+            "judgeModel": "haiku",
+            "plugins": [{"name": "smoke", "path": str(PLUGIN)}],
+        },
+        "cases": cases,
+        "aggregates": {
+            "casesTotal": len(cases),
+            "casesPassed": len(cases),
+            "overallScore": 1.0,
+            "overallPassRate": 1.0,
+        },
+    }
+    (directory / RESULT_NAME).write_text(json.dumps(document, indent=2), encoding="utf-8")
+    return directory
+
+
+def rerun(directory: Path) -> dict[str, Any]:
+    return json.loads((directory / RESULT_NAME).read_text(encoding="utf-8"))
+
+
+def layer(tmp_path: Path, case: str, count: int = 1, **extra: Any) -> tuple[Path, dict[str, Any]]:
+    """Run the layer over one case of one plugin, and return the directory and the document."""
+    directory = tmp_path / "smoke"
+    directory.mkdir(parents=True, exist_ok=True)
+    runs = collected_runs(directory, case, count)
+    suite(tmp_path, [case_entry(case, f"evals/plugin/{case}", runs, **extra)])
+    assert checks.run(directory, PLUGIN, judge_model="haiku") == []
+    return directory, rerun(directory)
+
+
+def one(document: dict[str, Any], index: int = 0) -> dict[str, Any]:
+    return document["cases"][0]["arms"]["with"][index]
+
+
+def test_each_definition_is_appended_to_the_case_with_type_check(tmp_path: Path) -> None:
+    _, document = layer(tmp_path, "checked")
+    assert document["cases"][0]["graders"] == [
+        {"name": "wrote-it", "type": "file_exists", "weight": 1, "config": {}},
+        {"name": "assertions.the_file_says_written", "type": "check", "weight": 1, "config": {}},
+        {
+            "name": "assertions.the_sibling_is_importable",
+            "type": "check",
+            "weight": 1,
+            "config": {},
+        },
+        {"name": "assertions.the_last_message_is_read", "type": "check", "weight": 1, "config": {}},
+        {"name": "assertions.the_scratch_is_writable", "type": "check", "weight": 1, "config": {}},
+    ]
+
+
+def test_each_result_is_appended_to_the_run(tmp_path: Path) -> None:
+    _, document = layer(tmp_path, "checked")
+    assert one(document)["graders"][1] == {
+        "name": "assertions.the_file_says_written",
+        "passed": True,
+        "weight": 1,
+        "explanation": "the check raised nothing",
+        "withOnly": False,
+        "scored": True,
+    }
+
+
+def test_a_passing_case_keeps_its_score(tmp_path: Path) -> None:
+    _, document = layer(tmp_path, "checked")
+    assert one(document)["score"] == 1.0
+    assert one(document)["passed"] is True
+    assert document["cases"][0]["aggregates"] == {"score": 1.0, "passRate": 1.0}
+
+
+def test_a_failed_check_drops_the_run_score_and_the_case_aggregates(tmp_path: Path) -> None:
+    _, document = layer(tmp_path, "failing")
+    # One passing grader and seven failed checks.
+    assert one(document)["score"] == 1 / 8
+    assert one(document)["passed"] is False
+    assert document["cases"][0]["aggregates"] == {"score": 1 / 8, "passRate": 0.0}
+
+
+def test_the_pass_rate_is_over_the_runs_of_the_case(tmp_path: Path) -> None:
+    _, document = layer(tmp_path, "checked", count=3)
+    assert [entry["passed"] for entry in document["cases"][0]["arms"]["with"]] == [True] * 3
+    assert document["cases"][0]["aggregates"]["passRate"] == 1.0
+
+
+def test_every_run_of_a_case_runs_every_check_again(tmp_path: Path) -> None:
+    directory, document = layer(tmp_path, "checked", count=2)
+    for index in (0, 1):
+        assert len(one(document, index)["graders"]) == 5
+    for index in (1, 2):
+        scratch = directory / "traces" / "checked" / f"run-{index}" / "scratch"
+        assert [path.name for path in scratch.iterdir()] == [f"note-{index}.txt"]
+
+
+def test_the_checks_file_is_written_beside_the_trace(tmp_path: Path) -> None:
+    directory, _ = layer(tmp_path, "failing")
+    path = directory / "traces" / "failing" / "run-1" / checks.CHECKS_FILE
+    lines = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+    assert [line["name"] for line in lines] == [
+        "failures.returns_false",
+        "failures.returns_a_failed_result",
+        "failures.raises",
+        "failures.asserts",
+        "failures.names_a_file_that_is_not_there",
+        "failures.leaves_the_workspace",
+        "failures.returns_something_else",
+    ]
+    assert all(line["passed"] is False for line in lines)
+    assert "traceback" in lines[2]
+    assert "traceback" not in lines[4]
+
+
+def test_the_scratch_sits_beside_the_trace(tmp_path: Path) -> None:
+    directory, _ = layer(tmp_path, "checked")
+    run_dir = directory / "traces" / "checked" / "run-1"
+    assert sorted(path.name for path in run_dir.iterdir()) == [
+        "checks.jsonl",
+        "last_message.txt",
+        "scratch",
+        "trace.jsonl",
+        "workspace",
+    ]
+
+
+def test_a_case_with_no_checks_is_untouched(tmp_path: Path) -> None:
+    _, document = layer(tmp_path, "noted")
+    assert document["cases"][0]["graders"] == [
+        {"name": "wrote-it", "type": "file_exists", "weight": 1, "config": {}}
+    ]
+    assert len(one(document)["graders"]) == 1
+    assert document["costUsd"] == 0.02
+
+
+def test_a_run_with_no_collected_artefacts_is_one_skip_per_check(tmp_path: Path) -> None:
+    directory = tmp_path / "smoke"
+    directory.mkdir(parents=True)
+    entry = case_entry("checked", "evals/plugin/checked", [tmp_path / "gone"])
+    suite(tmp_path, [entry])
+    assert checks.run(directory, PLUGIN, judge_model="haiku") == []
+    document = rerun(directory)
+    appended = one(document)["graders"][1:]
+    assert len(appended) == 4
+    assert all(result["skipped"] is True for result in appended)
+    assert all(result["scored"] is False for result in appended)
+    assert appended[0]["skipReason"] == checks.NO_ARTEFACTS
+    # A skip fails the run: it is out of the score, and the verdict fails on the skip itself.
+    assert one(document)["score"] == 1.0
+
+
+def test_a_declared_case_produces_no_check_result(tmp_path: Path) -> None:
+    directory = tmp_path / "smoke"
+    directory.mkdir(parents=True)
+    entry = case_entry("checked", "evals/plugin/checked", [])
+    entry["arms"] = {"with": []}
+    entry["declaredUnrunnable"] = True
+    entry["declaredReason"] = "max_turns"
+    suite(tmp_path, [entry])
+    assert checks.run(directory, PLUGIN, judge_model="haiku") == []
+    document = rerun(directory)
+    assert document["cases"][0]["graders"] == [
+        {"name": "wrote-it", "type": "file_exists", "weight": 1, "config": {}}
+    ]
+    assert document["cases"][0]["arms"]["with"] == []
+
+
+def test_only_the_with_arm_is_walked(tmp_path: Path) -> None:
+    directory = tmp_path / "smoke"
+    directory.mkdir(parents=True)
+    runs = collected_runs(directory, "checked", 1)
+    without = collected_runs(directory, "checked-without", 1)
+    entry = case_entry("checked", "evals/plugin/checked", runs)
+    entry["arms"]["without"] = case_entry("checked", "evals/plugin/checked", without)["arms"][
+        "with"
+    ]
+    suite(tmp_path, [entry])
+    assert checks.run(directory, PLUGIN, judge_model="haiku") == []
+    document = rerun(directory)
+    assert len(one(document)["graders"]) == 5
+    assert len(document["cases"][0]["arms"]["without"][0]["graders"]) == 1
+    assert not (directory / "traces" / "checked-without" / "run-1" / checks.CHECKS_FILE).exists()
+
+
+def test_a_document_that_cannot_be_read_is_silent(tmp_path: Path) -> None:
+    directory = tmp_path / "smoke"
+    directory.mkdir(parents=True)
+    assert checks.run(directory, PLUGIN, judge_model="haiku") == []
+    (directory / RESULT_NAME).write_text("not json", encoding="utf-8")
+    assert checks.run(directory, PLUGIN, judge_model="haiku") == []
+
+
+def test_the_spend_of_a_case_with_no_judge_call_is_nothing(tmp_path: Path) -> None:
+    _, document = layer(tmp_path, "checked")
+    assert document["costUsd"] == 0.02
+    assert one(document)["judgeCostUsd"] == 0.002
+
+
+def test_a_judge_spend_is_added_to_the_run_and_to_the_document() -> None:
+    entry = {"costUsd": 0.061, "judgeCostUsd": 0.002}
+    checks.add_spend(entry, 0.01)
+    assert entry == {"costUsd": 0.061, "judgeCostUsd": 0.012}
+
+    document = {"costUsd": 0.061}
+    checks.add_spend(document, 0.01, checks.SUITE_SPEND)
+    assert document == {"costUsd": 0.071}
+
+
+def test_a_check_that_asked_no_judge_adds_nothing() -> None:
+    entry = {"judgeCostUsd": 0.002}
+    checks.add_spend(entry, 0.0)
+    assert entry == {"judgeCostUsd": 0.002}
+
+
+def test_a_judged_check_keeps_the_whole_exchange_in_its_line() -> None:
+    call = checks.JudgeCall(
+        prompt="the whole prompt", replies=("PASS", "FAIL", "PASS"), cost_usd=0.01
+    )
+    outcome = checks.Outcome(
+        name="assertions.deck_is_readable",
+        passed=True,
+        explanation="judge votes: PASS FAIL PASS",
+        calls=(call,),
+        cost_usd=0.01,
+    )
+    line = outcome.document()
+    assert line["judge"] == [
+        {"prompt": "the whole prompt", "replies": ["PASS", "FAIL", "PASS"], "costUsd": 0.01}
+    ]
+    assert line["costUsd"] == 0.01

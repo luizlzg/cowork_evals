@@ -62,10 +62,12 @@ all three are things a Python function does.
 ```python
 from cowork_evals.checks import check, Run
 
+
 @check
 def totals_add_up(run: Run) -> None:
     book = openpyxl.load_workbook(run.file("totals.xlsx"))
     assert book.active["D10"].value == 4200
+
 
 @check
 def deck_is_readable(run: Run):
@@ -164,30 +166,30 @@ Work one box, verify it, tick it, commit. Do not batch ticks.
 
 ### Phase 3: into the result and into the run directory
 
-- [ ] Each check result is appended to that run's `graders[]`, and each definition to the
+- [x] Each check result is appended to that run's `graders[]`, and each definition to the
       case's `graders[]` with `type: check`.
-- [ ] The run's `score` and `passed`, and the case's `aggregates.score` and
+- [x] The run's `score` and `passed`, and the case's `aggregates.score` and
       `aggregates.passRate`, are recomputed after the append.
-- [ ] A check judge's spend is added to that run's `judgeCostUsd` and to the document's
+- [x] A check judge's spend is added to that run's `judgeCostUsd` and to the document's
       `costUsd`, so the panel and `eval.max_cost_total_usd` both see it.
-- [ ] `checks.jsonl` is written into `traces/<case>/run-N/`: one line per check, carrying the
+- [x] `checks.jsonl` is written into `traces/<case>/run-N/`: one line per check, carrying the
       name, the verdict, the explanation, the duration, and for a judge call the whole prompt,
       the three replies and the cost.
-- [ ] Only the `with` arm is walked. A `--ablation with-without` run leaves the baseline arm
+- [x] Only the `with` arm is walked. A `--ablation with-without` run leaves the baseline arm
       alone, for the reason in the out of scope table.
-- [ ] A case carrying `declaredUnrunnable` has no run and produces no check result. It is
+- [x] A case carrying `declaredUnrunnable` has no run and produces no check result. It is
       counted, not skipped, exactly as it is today.
-- [ ] `cli._each_plugin` calls the layer after `traces.collect`, once per plugin.
-- [ ] A case with checks and no collected artefacts produces one skipped check result per
+- [x] `cli._each_plugin` calls the layer after `traces.collect`, once per plugin.
+- [x] A case with checks and no collected artefacts produces one skipped check result per
       check, which fails the run.
-- [ ] `tests/unit/test_checks.py` covers the document it writes, field by field, and the
+- [x] `tests/unit/test_checks.py` covers the document it writes, field by field, and the
       recomputation.
-- [ ] A failed check produces a `FAIL` line from `verdict.decide` with no change to
+- [x] A failed check produces a `FAIL` line from `verdict.decide` with no change to
       `verdict.py`. Asserted in `tests/unit/test_verdict.py`.
-- [ ] That line's `[artifacts: ...]` suffix names the directory holding `scratch/` and
+- [x] That line's `[artifacts: ...]` suffix names the directory holding `scratch/` and
       `checks.jsonl`, because `verdict.artifacts` names the parent of `tracePath` and both sit
       beside it. Asserted rather than assumed.
-- [ ] `verdict.artifacts`'s docstring stops saying the directory is the session's transcript
+- [x] `verdict.artifacts`'s docstring stops saying the directory is the session's transcript
       directory on CoWork. `traces._one_run` rewrites `tracePath` to the collected copy on
       both backends, so the suffix names `traces/<case>/run-N` either way.
 

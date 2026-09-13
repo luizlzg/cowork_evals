@@ -37,7 +37,7 @@ from typing import Any
 from . import judge as judging
 from .cases import CHECKS_DIR, Grader, check_files
 from .harness import RESULT_NAME
-from .results import ARM_WITH
+from .results import ARM_WITH, DECLARED_UNRUNNABLE
 from .traces import LAST_MESSAGE_NAME, TRACE_NAME, WORKSPACE_NAME
 
 # The attribute `@check` writes, and the grader type a check result carries in the document.
@@ -64,6 +64,10 @@ NO_ARTEFACTS = (
 # What `run.judge` says when it was given no path. There is no default of everything: a judge
 # shown the whole run directory is judging the transcript as well as the artefact.
 NO_PATHS = "run.judge was called with no path, and it has no default of everything"
+
+# The two fields a check judge's spend is added to: one on a run, one on the document.
+RUN_SPEND = "judgeCostUsd"
+SUITE_SPEND = "costUsd"
 
 # The name `judge.tally` sees. It never leaves `run.judge`, which reads the verdict and the
 # spend off the result and carries the check's own name into the outcome.
@@ -501,6 +505,18 @@ def grader_result(outcome: Outcome) -> dict[str, Any]:
     return entry
 
 
+def add_spend(entry: dict[str, Any], spent: float, key: str = RUN_SPEND) -> None:
+    """Add a check judge's spend to one field of one entry, and nothing when it is 0.
+
+    The two fields it is added to are a run's `judgeCostUsd` and the document's `costUsd`,
+    which are what the panel and `eval.max_cost_total_usd` read. A healthy document with no
+    judged check is unchanged. docs/checks.md.
+    """
+    if not spent:
+        return
+    entry[key] = _number(entry.get(key)) + spent
+
+
 def score(run: dict[str, Any]) -> float:
     """The weighted fraction of scored grader results that passed. Zero when there are none.
 
@@ -556,12 +572,14 @@ def run(output_dir: Path | str, root: Path | str, *, judge_model: str) -> list[s
     for case in document.get("cases") or []:
         if not isinstance(case, dict):
             continue
+        if case.get(DECLARED_UNRUNNABLE):
+            # No run, so nothing to check. The case is counted, exactly as it is today.
+            continue
         checks = discover(plugin / str(case.get("dir") or ""))
         if not checks:
             continue
         spent += _each_case(case, checks, plugin, judge_model, warnings)
-    if spent:
-        document["costUsd"] = _number(document.get("costUsd")) + spent
+    add_spend(document, spent, SUITE_SPEND)
     try:
         path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
     except OSError as error:
@@ -621,8 +639,7 @@ def _each_run(
     entry["passed"] = entry["score"] == 1.0
 
     spent = sum(outcome.cost_usd for outcome in outcomes)
-    if spent:
-        entry["judgeCostUsd"] = _number(entry.get("judgeCostUsd")) + spent
+    add_spend(entry, spent)
     return spent
 
 
