@@ -255,7 +255,10 @@ Each of these has a silent failure mode, and each is fixed by editing the case.
 - **Scaffolds run in an empty working directory** with a minimal environment, no
   credentials, and a 2-minute cap. Reference resources as `$(dirname "$0")/...`.
 - **`context.add_dirs` must stay inside the case directory.** Naming the eval directory, a
-  sibling case, the plugin root or the case's own `graders/` refuses the run.
+  sibling case, the plugin root or the case's own `graders/` refuses the run. That list is
+  exhaustive: every other directory inside the case is a fixture directory to the harness and
+  is granted, so a directory holding anything the agent under test must not read is this
+  repository's to refuse.
 - **A `target` on an `llm` grader is ignored.** That key is `focus`, and the grader judges
   `last_message` while looking as if it judges a file.
 

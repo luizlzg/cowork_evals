@@ -16,8 +16,8 @@ while the work happens.
 
 ## Plans
 
-Seventeen plans. Fifteen build something and are numbered in build order, and one of those
-fifteen is skipped. `plan_fix` builds nothing, so it carries no number: it corrects what the
+Eighteen plans. Sixteen build something and are numbered in build order, and one of those
+sixteen is skipped. `plan_fix` builds nothing, so it carries no number: it corrects what the
 others wrote, and it ran before `plan_cowork_backend.md` because it changes what that plan and
 `plan_cli.md` both read. `plan_believable_results` carries no number for the same reason:
 it holds measurements and decisions, and its product is the four plans numbered 10 to 13. The order is the
@@ -46,6 +46,7 @@ not the system's: what is built and usable is
 | 13 | [`done/plan_ablation.20260912.md`](done/plan_ablation.20260912.md) | The baseline arm, and a verdict that decides on the per-case delta | implemented | `feat/ablation`       |
 | 14 | [`done/plan_panel.20260913.md`](done/plan_panel.20260913.md) | The per-case run history, the `panel` verb, and `prune --history` | implemented | `feat/panel` |
 | 15 | [`done/plan_consent.20260913.md`](done/plan_consent.20260913.md) | The keyboard consent dialog, shown by the driver rather than by a caller | implemented | `fix/consent` |
+| 16 | [`plan_artifact_checks.md`](plan_artifact_checks.md) | An assertion an author writes as code, deciding the run beside the harness's graders | written | `feat/artifact-checks` |
 
 | Status        | Means                                                                     |
 | ------------- | --------------------------------------------------------------------------- |
@@ -120,6 +121,13 @@ therefore took the keyboard with no warning while the developer was typing elsew
 the asking into the driver, so the dialog is shown by every path that takes the keyboard and
 `cowork.consent: none` is the one way to switch it off. What it changes is
 [`../docs/cowork_driver.md`](../docs/cowork_driver.md).
+
+Plan 16 is the first that adds a grader this package evaluates itself. The harness's five
+grader types are a closed vocabulary owned by a tool this repository does not control, so an
+assertion that does not fit one of them cannot be made and the case runs green having checked
+nothing. It adds a layer on top of `claude plugin eval`: the harness grades a run as it does
+now, and this layer then runs an author's own code over what the run produced and adds its
+assertions to the same result.
 
 Plans 2 and 3 each build one backend whole. Running an eval on those two backends is
 `claude plugin eval`, which discovers the cases, runs them, grades them and writes
