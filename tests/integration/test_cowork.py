@@ -99,7 +99,7 @@ def test_focus_the_guard_refuses_with_code_9_when_cowork_is_not_frontmost() -> N
 @pytest.mark.live
 @pytest.mark.timeout(1800)
 def test_focus_a_primed_composer_is_cleared_before_the_prompt(unattended: Path) -> None:
-    """The 2026-09-12 contamination, reproduced and then not reproduced.
+    """The composer contamination, reproduced and then not reproduced.
 
     The composer is primed by typing into it, which is what a developer working in another
     window did to it by accident. The clear runs before the deep link, so the audit prompt

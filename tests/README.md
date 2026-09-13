@@ -3,17 +3,18 @@
 Tests for this repository's own code. Python 3.10 under `.venv`, run by `scripts/test.sh`.
 Scope as each piece is built: the environments, the configuration file, the harness
 argument list, the container image and its parity probe, the test image over it, the CoWork
-driver, the CLI's option surface and backend mapping, the pass and fail decision, the case validator
-and the CoWork grader. The table below lists the files that exist today.
+driver, the CLI's option surface and backend mapping, the pass and fail decision, the case validator,
+the CoWork grader and the panel over the case history. The table below lists the files that exist today.
 
 These are not evals. An eval needs a model in the loop. If a failure can be caught by
 pytest, it is not an eval.
 
 A hand-written case tree under `tests/data/cases/`, `tests/data/validate/` and
 `tests/data/cli/`, a hand-written session document under `tests/data/documents/`, a
-hand-written result document under `tests/data/results/` and a recorded judge reply under
+hand-written result document under `tests/data/results/`, a hand-written history file under
+`tests/data/history/` and a recorded judge reply under
 `tests/data/judge/` are input on disk, not stand-ins. The reader, the graders, the validator,
-the verdict and the vote counting that parse them are the real ones.
+the verdict, the panel and the vote counting that parse them are the real ones.
 
 A harness sandbox is written by the test rather than kept under `tests/data/`, because a
 sandbox is a directory tree with modes on it and a checkout does not carry a mode-000
@@ -65,6 +66,7 @@ A skipped test reports as a pass and hides the thing it was written to catch.
 | `unit/test_logs.py`               | The run directory, `env.txt`, `latest`, pruning and the tee | yes    |
 | `unit/test_traces.py`             | What is kept out of a run on either backend, and the two validity checks over the kept trace, over sandboxes and session directories written by the test | yes |
 | `unit/test_verdict.py`               | Pass and fail over hand-written result documents                | yes    |
+| `unit/test_panel.py`              | The history store, the record, the join to the case tree, and the renders | yes |
 | `unit/test_preflight.py`          | Each backend's unmet conditions, and the rate ceiling      | yes    |
 | `unit/test_cli.py`                | The parser, the refusals, the verbs and the exit codes     | yes    |
 | `unit/test_cli_docs_init.py`      | The `docs` and `init` verbs: what they print and what they write | yes |
@@ -74,7 +76,7 @@ A skipped test reports as a pass and hides the thing it was written to catch.
 | `integration/test_judge.py`       | The judge against the real `claude -p`                     | yes    |
 | `integration/test_cowork_backend.py` | The backend against a real profile, and one real suite   | yes    |
 | `integration/test_pytest_image.py` | The built test image, its exit codes, and what it writes | yes    |
-| `integration/test_cli.py`         | The command against the real backends, through the executable, and `ask` against a live session | yes |
+| `integration/test_cli.py`         | The command against the real backends, through the executable, `panel` over the history a real run left, and `ask` against a live session | yes |
 
 One file per unit under test, named after the unit and not after the scenario. A unit tested
 in both tiers keeps its name in both directories, which is why `pyproject.toml` sets
@@ -144,7 +146,12 @@ the whole log layout over that same run, `run.log` and the run's collected trace
 descriptor-level tee proven against a real child process, and it cannot be reached without
 one. Its two `test` verb tests cost a container and no model call, so neither is `live`.
 
-Its second `live` test is the one that needs a profile. `ask` reaches a live session and
+One `live` test fires one case and then reads the record that run left, through
+`cowork_evals panel`. It writes a `cowork_evals.yaml` naming a history root under `tmp_path`,
+because `--out` does not move the history and a test left on the default would append to the
+developer's own tree. See [../docs/panel.md](../docs/panel.md).
+
+The one `live` test that needs a profile is `ask`. It reaches a live session and
 there is no other way to prove that the verb submits, waits, prints an answer and names a
 session that exists. It needs everything `integration/test_cowork.py` needs, and it carries
 the same cost: a VM boot, one entry against the rate ceiling, and a permanent session.
@@ -164,17 +171,17 @@ it starts no CoWork session and costs no ceiling entry.
 
 ### The live marker
 
-Nine integration tests submit a real run. The four CoWork ones each cost a VM boot, count
+Ten integration tests submit a real run. The four CoWork ones each cost a VM boot, count
 against the driver's rate ceiling and leave a permanent session in the signed-in account.
-The three container ones cost the model calls their case makes, and the two judge ones cost
-short `claude -p` calls. All nine carry `live` as well as `integration`. An integration run
+The four container ones cost the model calls their case makes, and the two judge ones cost
+short `claude -p` calls. All ten carry `live` as well as `integration`. An integration run
 that must not spend selects `-m "integration and not live"`.
 
 The CoWork ones need the macOS Accessibility grant, a signed-in CoWork, the desktop
 application already running, and `cowork_evals.yaml` naming the active profile. They fail,
 and do not skip, when no profile is configured. Nothing steals focus while one runs. See
 [../docs/cowork_desktop.md](../docs/cowork_desktop.md) for the authorizations. Three of them
-are in the two CoWork files and the fourth is `ask`, in `integration/test_cli.py`. The three
+are in the two CoWork files and the fourth is `ask`, in `integration/test_cli.py`. The four
 container ones need a credential route, and fail without one.
 
 Every CoWork test that fires reads the `unattended` fixture in

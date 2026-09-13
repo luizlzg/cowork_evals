@@ -91,9 +91,10 @@ mirrors an old VM. See [runtime.md](runtime.md).
 | `src/cowork_evals/logs.py`                | yes   | The run directory, `env.txt`, `latest`, pruning and the tee        |
 | `src/cowork_evals/traces.py`              | yes   | What one run left behind, lifted into the log directory            |
 | `src/cowork_evals/verdict.py`             | yes   | Pass and fail over `aggregate-result.json`                         |
+| `src/cowork_evals/panel.py`               | yes   | The history of what each case did, and the panel over it           |
 | `src/cowork_evals/preflight.py`           | yes   | Each backend's unmet conditions, for `check` and for `run`         |
 | `src/cowork_evals/resources.py`           | yes   | Where the shipped documentation and data are, in either layout     |
-| `src/cowork_evals/cli.py`                 | yes   | The parser, the nine verbs, the dispatch and the exit codes        |
+| `src/cowork_evals/cli.py`                 | yes   | The parser, the ten verbs, the dispatch and the exit codes         |
 | `src/cowork_evals/docker/`                | yes   | The container backend: the digest, the argument lists, build, check and run |
 | `src/cowork_evals/docker/Dockerfile`      | yes   | What `setup --docker` builds                                       |
 | `src/cowork_evals/docker/Dockerfile.pytest` | yes | One layer over it, carrying pytest                                 |
@@ -306,7 +307,7 @@ the file gets. The exit code is [cli.md](cli.md).
 `--runs` is the one option whose ceiling is not a setting. It replaces each case's own `runs`,
 so it takes that key's cap from the case format instead: [eval_format.md](eval_format.md).
 
-The file holds three sections, and a section is named for the thing that reads it. A new
+The file holds four sections, and a section is named for the thing that reads it. A new
 setting goes in the section of whatever reads it, which is the rule the file is kept to.
 
 | Section   | Read by                                                                     | Its keys and defaults are in         |
@@ -314,6 +315,7 @@ setting goes in the section of whatever reads it, which is the rule the file is 
 | `cowork:` | The CoWork driver                                                           | [cowork_driver.md](cowork_driver.md) |
 | `eval:`   | The `claude plugin eval` argument list, and the CoWork backend's judge model | [running_evals.md](running_evals.md) |
 | `docker:` | The container backend                                                       | [docker.md](docker.md)               |
+| `panel:`  | The case history and the panel over it                                      | [panel.md](panel.md)                 |
 
 ```yaml
 cowork:
@@ -322,6 +324,8 @@ eval:
   model: sonnet
 docker:
   platform: linux/arm64
+panel:
+  root: logs/evals/history
 ```
 
 | Rule                                                                                                 |
@@ -348,6 +352,7 @@ root, because `cowork_evals init` writes it on a machine with no checkout. See
 | Test image      | tag `cowork-evals-test:<digest>`          | `setup --docker` |
 | Container login | `docker.login_dir`                        | `login --docker` |
 | Run logs        | `./logs/evals/<yyyymmdd-hhmmss>-<scope>/` | `run`            |
+| Case history    | `panel.root`, `./logs/evals/history/`     | `run`            |
 
 Nothing writes into the installed package, and nothing writes a build product into the
 consumer checkout. `test` is the one command whose container writes into the tree it is
@@ -363,6 +368,11 @@ does not match is a failed preflight, never a silent run against a stale artefac
 
 Logs are resolved from the working directory, not from either root, and `--out` overrides
 them. A consumer running the CLI from its checkout gets `logs/` in its checkout.
+
+The case history is the one thing under `logs/` that `--out` does not move. That option
+relocates what one invocation produced, and a record is read after that invocation's directory
+has been pruned. It is resolved from the working directory like every other path, and
+`panel.root` is what moves it. See [panel.md](panel.md).
 
 ## The container holds none of this package
 

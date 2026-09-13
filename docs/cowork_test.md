@@ -94,9 +94,8 @@ what the image claims to be.
 Which of the three requirements files a new pin goes in is
 [environments.md](environments.md), which owns that split.
 
-Measured 2026-09-09 on `cowork-evals:57f48ba2adac`, `linux/arm64`, a snapshot.
-`pip install --dry-run pytest` inside that image resolves pytest 9.1.1 and would install
-five packages and move none:
+`pip install --dry-run pytest` inside the image on `linux/arm64` resolves pytest 9.1.1 and
+would install five packages and move none:
 
 | Package         | Version | In the inventory |
 | --------------- | ------- | ---------------- |

@@ -11,14 +11,15 @@ you are about to change, and link to it rather than restating it.
   first needs a model.
 - An eval is written once, in one case format, and runs on either backend. The backend
   changes, the case does not.
-- Every file states what is true of this repository now. A measured fact carries its capture
-  date and is called a snapshot.
+- Every file states what is true of this repository now. A measured fact states the
+  behaviour and the conditions it holds under, never the date it was taken on or the
+  incident that produced it.
 - No file here carries a build status of its own, and no file here links to a plan.
 - This tree ships inside the package. `cowork_evals docs` prints where it landed, and a
   reference that leaves this tree is named rather than linked. Both rules are in
   [`library.md`](library.md).
 
-The table below is in reading order. The first six files are the system; the next four are
+The table below is in reading order. The first six files are the system; the next five are
 the mechanisms under it; the next two are measurements of things this repository does not
 build; the last three are external material and one deferred design.
 
@@ -34,6 +35,7 @@ build; the last three are external material and one deferred design.
 | [`cowork_driver.md`](cowork_driver.md)     | Driving CoWork from a script: API, sequence, session document   |
 | [`cowork_backend.md`](cowork_backend.md)   | The layer over it: grading a session document, the judge, the result document |
 | [`environments.md`](environments.md)       | The two Python environments and how to build them               |
+| [`panel.md`](panel.md)                     | The history of what each case did, and the panel over it        |
 | [`runtime.md`](runtime.md)                 | What a CoWork session provides and what is on the image         |
 | [`cowork_desktop.md`](cowork_desktop.md)   | Desktop application internals: deep links, session filesystem   |
 | [`plugin_eval.md`](plugin_eval.md)         | `claude plugin eval`: availability, flags, harness limits, cost |
@@ -52,7 +54,8 @@ in `running_evals.md` covers it.
 
 A mechanism file holds how one thing works and everything measured about it.
 [`docker.md`](docker.md) is the container, [`cowork_driver.md`](cowork_driver.md) the desktop
-driver, [`environments.md`](environments.md) the two Python environments. A fact measured
+driver, [`environments.md`](environments.md) the two Python environments and
+[`panel.md`](panel.md) the history of what each case did. A fact measured
 during a run belongs with the mechanism it binds and not with the run.
 
 [`cowork_backend.md`](cowork_backend.md) is the layer over the driver, and the two files split

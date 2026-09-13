@@ -30,7 +30,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from cowork_evals import Config, logs, preflight, traces
+from cowork_evals import Config, logs, panel, preflight, traces, verdict
 from cowork_evals.cli import main
 from cowork_evals.config import CONFIG_FILENAME
 from cowork_evals.docker import Condition, Docker, remedy
@@ -255,6 +255,87 @@ def test_the_test_verb_writes_nothing_on_the_host(images, tmp_path) -> None:
     assert sorted(ROOT.iterdir()) == before
 
 
+# panel.
+
+
+def elsewhere(tmp_path: Path, section: str) -> Path:
+    """This machine's configuration with the given keys merged into it, in a new working
+    directory.
+
+    Every other key is this machine's own, so the login and any extra root CA are the ones a
+    run here already uses. `docker.login_dir` and `docker.extra_ca_file` are written back as
+    the loaded section resolved them, because a relative path in the source file would
+    otherwise resolve against this directory instead of the repository.
+    """
+    source = ROOT / CONFIG_FILENAME
+    assert source.is_file(), f"{CONFIG_FILENAME} is not in the repository root"
+    document = yaml.safe_load(source.read_text(encoding="utf-8")) or {}
+    settings = Config.load(source).docker
+    docker = document.setdefault("docker", {})
+    docker["login_dir"] = str(settings.login_dir)
+    if settings.extra_ca_file is not None:
+        docker["extra_ca_file"] = str(settings.extra_ca_file)
+    for name, values in (yaml.safe_load(section) or {}).items():
+        document.setdefault(name, {}).update(values)
+
+    (tmp_path / CONFIG_FILENAME).write_text(
+        yaml.safe_dump(document, sort_keys=False), encoding="utf-8"
+    )
+    return tmp_path
+
+
+@pytest.mark.live
+def test_a_run_writes_a_record_the_panel_then_shows(credentialled, tmp_path, monkeypatch, capsys):
+    """One real run, then the verb over the history it left.
+
+    The history root is named in a configuration file this test writes, which is what a
+    consumer writes and not a seam: `--out` does not move the history, so a test left on the
+    default would append to the developer's own tree.
+    """
+    history = tmp_path / "history"
+    monkeypatch.chdir(elsewhere(tmp_path, f"panel:\n  root: {history}\n"))
+    root = tmp_path / "logs"
+
+    code = main(
+        [
+            "run",
+            "--docker",
+            str(SMOKE),
+            "--out",
+            str(root),
+            "--runs",
+            "1",
+            "--case",
+            "python-version",
+        ]
+    )
+    assert code == 0, (root / logs.LATEST / logs.VERDICT_FILE).read_text()
+    run = (root / logs.LATEST).resolve()
+
+    file = panel.path(history, "smoke", "evals/plugin/python-version")
+    records, warnings = panel.read(file)
+    assert warnings == []
+    assert len(records) == 1
+    entry = records[0]
+    assert entry["backend"] == "docker"
+    assert entry["invocation"] == run.name
+    assert entry["image"] == credentialled.tag
+    assert entry["outcome"] == "pass"
+    assert entry["caseDigest"] == panel.digest(SMOKE / "evals" / "plugin" / "python-version")
+    assert Path(entry["tracePath"]).is_file()
+
+    capsys.readouterr()
+    assert main(["panel", str(SMOKE)]) == 0
+    printed = capsys.readouterr()
+    assert printed.err == ""
+    row = next(line for line in printed.out.splitlines() if "python-version" in line)
+    assert "pass 0d" in row
+    assert "never run" in row
+    assert verdict.display(Path(entry["tracePath"]).parent) in row
+    # The two cases this run did not select have no record and say so.
+    assert sum(1 for line in printed.out.splitlines() if "never run" in line) == 3
+
+
 # ask.
 
 # A prompt the session answers from itself. It calls no tool, so the run is the floor a
@@ -307,27 +388,8 @@ PROBE = "COWORK_EVALS_INTEGRATION_PROBE"
 
 
 def forwarding(tmp_path: Path) -> Path:
-    """This machine's configuration with `PROBE` forwarded, in a new working directory.
-
-    Every other key is this machine's own, so the login and any extra root CA are the ones
-    a run here already uses. `docker.login_dir` and `docker.extra_ca_file` are written back
-    as the loaded section resolved them, because a relative path in the source file would
-    otherwise resolve against this directory instead of the repository.
-    """
-    source = ROOT / CONFIG_FILENAME
-    assert source.is_file(), f"{CONFIG_FILENAME} is not in the repository root"
-    document = yaml.safe_load(source.read_text(encoding="utf-8")) or {}
-    settings = Config.load(source).docker
-    section = document.setdefault("docker", {})
-    section["login_dir"] = str(settings.login_dir)
-    if settings.extra_ca_file is not None:
-        section["extra_ca_file"] = str(settings.extra_ca_file)
-    section["env_passthrough"] = [PROBE]
-
-    (tmp_path / CONFIG_FILENAME).write_text(
-        yaml.safe_dump(document, sort_keys=False), encoding="utf-8"
-    )
-    return tmp_path
+    """This machine's configuration with `PROBE` forwarded, in a new working directory."""
+    return elsewhere(tmp_path, f"docker:\n  env_passthrough: [{PROBE}]\n")
 
 
 @pytest.mark.live

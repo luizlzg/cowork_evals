@@ -36,7 +36,7 @@ AUDIT = "audit.jsonl"
 TRANSCRIPTS = Path(".claude") / "projects" / "session"
 OUTPUTS = "outputs"
 
-# The terminal command_lifecycle state. docs/cowork_desktop.md, snapshot 2026-09-08.
+# The terminal command_lifecycle state. docs/cowork_desktop.md.
 TERMINAL_STATE = "completed"
 STARTED_STATE = "started"
 

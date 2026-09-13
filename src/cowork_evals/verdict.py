@@ -16,6 +16,10 @@ the with-arm score minus the without-arm score, the document works it out, and a
 the invocation asked for a delta and did not get one. Every other condition is unchanged and
 reads the with-arm.
 
+It returns what it concluded about each case as well as the lines. That is one conclusion per
+case, reached here once, so [panel.py](panel.py) records a word this module decided rather than
+deciding a second one over the same document.
+
 Nothing here writes a file or prints. The caller writes `lines` to `verdict.txt` and prints
 them, and turns `passed` into an exit code. [cli.py](cli.py).
 """
@@ -63,6 +67,14 @@ SKIPPED_PAID = "skippedPaidGraders"
 FAIL = "FAIL"
 NOTE = "NOTE"
 
+# What this module concluded about one case, on the `outcomes` of the verdict. They are the
+# three states a case reaches here and nowhere else: it produced no failure line, it produced
+# one, or the backend was told it cannot run the case. [panel.py](panel.py) records the word
+# rather than deciding one of its own, so no second rule can disagree with this one.
+OUTCOME_PASS = "pass"
+OUTCOME_FAIL = "fail"
+OUTCOME_DECLARED = "declared"
+
 # How a line names where one run's artefacts are. What is in that directory is
 # docs/running_evals.md; the container backend fills it through traces.py.
 ARTIFACTS = "artifacts"
@@ -77,11 +89,29 @@ VALIDITY = {
 
 
 @dataclass(frozen=True, slots=True)
+class CaseOutcome:
+    """What one case of one result document came to, and the pair that identifies it.
+
+    `plugin` is the run directory's child name, which is what this module walks, and `dir`
+    is the case's own `dir` in that document. The pair is the join key a caller uses to put
+    an outcome back beside the case that produced it, because neither alone is unique across
+    a sweep. The manifest name of the plugin is in the document and is not always that
+    directory name, so it is not repeated here.
+    """
+
+    plugin: str
+    dir: str
+    name: str
+    outcome: str
+
+
+@dataclass(frozen=True, slots=True)
 class Verdict:
     """The decision, and every line that explains it. The summary line is the last one."""
 
     passed: bool
     lines: tuple[str, ...]
+    outcomes: tuple[CaseOutcome, ...] = ()
 
     @property
     def text(self) -> str:
@@ -113,6 +143,7 @@ def decide(
     directory = Path(run_dir)
     failures = [f"{FAIL} {line}" for line in extra]
     notes: list[str] = []
+    outcomes: list[CaseOutcome] = []
     totals = _Totals(found=found, picked=picked)
 
     for plugin in sorted(child for child in directory.iterdir() if child.is_dir()):
@@ -121,9 +152,13 @@ def decide(
             failures.append(f"{FAIL} {unreadable}")
             continue
         totals.add(document)
-        _judge_document(plugin.name, document, failures, notes, totals, delta_threshold)
+        _judge_document(plugin.name, document, failures, notes, outcomes, totals, delta_threshold)
 
-    return Verdict(passed=not failures, lines=(*failures, *notes, totals.summary))
+    return Verdict(
+        passed=not failures,
+        lines=(*failures, *notes, totals.summary),
+        outcomes=tuple(outcomes),
+    )
 
 
 def two_arm(document: dict[str, Any]) -> bool:
@@ -162,6 +197,7 @@ def _judge_document(
     document: dict[str, Any],
     failures: list[str],
     notes: list[str],
+    outcomes: list[CaseOutcome],
     totals: _Totals,
     delta_threshold: float,
 ) -> None:
@@ -172,7 +208,7 @@ def _judge_document(
     arms = two_arm(document)
     totals.arms(document, arms)
     for case in document.get("cases") or []:
-        _judge_case(plugin, case, failures, notes, totals, arms, delta_threshold)
+        outcomes.append(_judge_case(plugin, case, failures, notes, totals, arms, delta_threshold))
 
 
 def _judge_case(
@@ -183,7 +219,7 @@ def _judge_case(
     totals: _Totals,
     arms: bool = False,
     delta_threshold: float = 0,
-) -> None:
+) -> CaseOutcome:
     """One case, and whether anything about it failed.
 
     The pass count is this package's own: a case passed when it produced no failure line.
@@ -198,10 +234,10 @@ def _judge_case(
     where = f"{plugin}/{case.get('name')}"
     if case.get(DECLARED_UNRUNNABLE):
         totals.declare_one()
-        return
+        return _outcome(plugin, case, OUTCOME_DECLARED)
     if case.get("skipped"):
         failures.append(f"{FAIL} {where}: the case was skipped: {case.get('skipReason')}")
-        return
+        return _outcome(plugin, case, OUTCOME_FAIL)
     definitions = {
         definition.get("name"): definition.get("type")
         for definition in case.get("graders") or []
@@ -213,6 +249,18 @@ def _judge_case(
         _judge_delta(where, case, failures, delta_threshold)
     if len(failures) == before:
         totals.pass_one()
+        return _outcome(plugin, case, OUTCOME_PASS)
+    return _outcome(plugin, case, OUTCOME_FAIL)
+
+
+def _outcome(plugin: str, case: dict[str, Any], outcome: str) -> CaseOutcome:
+    """The conclusion above, carrying the pair that identifies the case it is about."""
+    return CaseOutcome(
+        plugin=plugin,
+        dir=str(case.get("dir") or ""),
+        name=str(case.get("name") or ""),
+        outcome=outcome,
+    )
 
 
 def _judge_delta(
@@ -370,12 +418,15 @@ def artifacts(run: dict[str, Any]) -> str:
     directory = Path(named).parent
     if not directory.is_dir():
         return ""
-    return f" [{ARTIFACTS}: {_display(directory)}]"
+    return f" [{ARTIFACTS}: {display(directory)}]"
 
 
-def _display(directory: Path) -> str:
+def display(directory: Path) -> str:
     """The directory as a person types it: relative to the working directory when it is
-    under one, and absolute when it is not."""
+    under one, and absolute when it is not.
+
+    Public because [panel.py](panel.py) names the same directory in a row.
+    """
     try:
         return str(directory.relative_to(Path.cwd()))
     except ValueError:

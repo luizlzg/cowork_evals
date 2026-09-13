@@ -3,12 +3,14 @@
 Every setting this package defines is in that file. There is no second route: nothing is read
 from the process environment except the variables `docker.env_passthrough` names, whose values
 are forwarded into the run container and read as configuration nowhere, and there is no
-`.env`. The three sections and the ladder over
+`.env`. The four sections and the ladder over
 them are docs/library.md. The `cowork:` keys and their defaults are docs/cowork_driver.md, the
-`eval:` keys docs/running_evals.md, and the `docker:` keys docs/docker.md.
+`eval:` keys docs/running_evals.md, the `docker:` keys docs/docker.md and the `panel:` key
+docs/panel.md.
 
 A section is named for the thing that reads it: `cowork:` the driver, `eval:` the `claude plugin
-eval` argument list and the CoWork backend's judge, `docker:` the container backend.
+eval` argument list and the CoWork backend's judge, `docker:` the container backend, `panel:`
+the eval panel.
 
 `CoWorkError` lives here because configuration is the first thing that fails, and `cowork.py`
 imports it rather than the other way round.
@@ -322,12 +324,33 @@ class DockerSection:
 
 
 @dataclass(frozen=True, slots=True)
+class PanelSection:
+    """What the eval panel reads. docs/panel.md.
+
+    `root` is the history tree, and it is not under `--out`: that option relocates what one
+    invocation produced, and a record outlives the invocation that wrote it.
+    """
+
+    _NAME: ClassVar[str] = "panel"
+
+    root: Path = Path("logs") / "evals" / "history"
+
+    _FIELDS: ClassVar[dict[str, Callable[[str, Any], Any]]] = {
+        "root": _path,
+    }
+
+    def __post_init__(self) -> None:
+        _convert(self)
+
+
+@dataclass(frozen=True, slots=True)
 class Config:
     """The whole file. One frozen section per reader, and never reassigned."""
 
     cowork: CoWorkSection = field(default_factory=CoWorkSection)
     eval: EvalSection = field(default_factory=EvalSection)
     docker: DockerSection = field(default_factory=DockerSection)
+    panel: PanelSection = field(default_factory=PanelSection)
 
     @classmethod
     def load(cls, path: Path | str | None = None) -> Config:
@@ -342,12 +365,13 @@ class Config:
             cowork=_section(document, source, CoWorkSection),
             eval=_section(document, source, EvalSection),
             docker=_section(document, source, DockerSection),
+            panel=_section(document, source, PanelSection),
         )
 
 
 # A section field of `Config` is named for its section key, so a new section is one
 # dataclass and one line in `Config`.
-_Sections = CoWorkSection | EvalSection | DockerSection
+_Sections = CoWorkSection | EvalSection | DockerSection | PanelSection
 _S = TypeVar("_S", bound=_Sections)
 
 

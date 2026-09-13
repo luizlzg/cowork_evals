@@ -22,6 +22,7 @@ file is the authority for anything below.
 | The runtime a plugin's code gets        | `docs runtime`           |
 | `test`, and the runtime a suite gets    | `docs cowork_test`       |
 | Every grader field the format is silent on | `docs claude_code/plugin_eval_reference` |
+| What `panel` shows, and the records behind it | `docs panel`           |
 
 ## The command
 
@@ -32,6 +33,7 @@ cowork_evals login --docker                    # log in once, in a container
 cowork_evals run  --docker <path>              # an eval: a model, graders, a verdict
 cowork_evals test --docker <path>/tests        # pytest on the CoWork runtime, no model
 cowork_evals ask  --cowork "<prompt>"          # one prompt to a live session, and its answer
+cowork_evals panel <path>                      # every case, and what each backend last said
 cowork_evals docs [<name>]                     # where the documentation is
 cowork_evals init                              # write the config, the skills, and a CLAUDE.md block
 cowork_evals prune --docker                    # delete what setup built
@@ -45,6 +47,11 @@ plugin; `--dry-run` never shows it. Prefer `--docker` for iteration.
 The path is the scope: a case directory runs that case, `evals/<skill>/` runs that skill,
 `evals/` runs the plugin, and a directory holding several plugins runs each in turn.
 `--dry-run` prints what would run and spends nothing.
+
+`panel` takes the same path and spends nothing. It reads records earlier runs left and prints
+one row per case: the latest outcome on each backend, how old it is, and whether the case
+files have changed since. A case that has never run says so, which is how a gap in coverage is
+found without firing anything.
 
 `ask` is not an eval and is not part of this skill. It answers a question about what a live
 session does, and the `cowork-ask` skill covers it.

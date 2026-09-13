@@ -40,6 +40,7 @@ not restate any of them here.
 | Pass and fail                                 | yes      | this file                                    |
 | The baseline arm, and the verdict over its delta | yes   | this file                                    |
 | The case validator                            | yes      | [eval_format.md](eval_format.md)             |
+| The case history, and the `panel` verb over it | yes      | [panel.md](panel.md)                         |
 | The 3.10 and import check over code under test | no      | nowhere. Not designed, and no plan builds it |
 | The container backend and its Dockerfile      | yes      | [docker.md](docker.md)                       |
 | `scripts/parity.sh` and `tests/unit/test_parity.py` | yes | [docker.md](docker.md)                     |
@@ -185,8 +186,8 @@ A two-arm run doubles the agent runs, and the table in
 
 ### What a two-arm document holds
 
-Snapshot, 2026-09-12, CLI 2.1.265, image `cowork-evals:57f48ba2adac`.
-`docs/claude_code/eval_smoke/` run through the container with `--ablation with-without`.
+On CLI 2.1.265, `docs/claude_code/eval_smoke/` run through the container with
+`--ablation with-without`.
 Three cases at `runs: 1`, so six agent runs, 34 s and 0.35 USD.
 
 | Where                        | Field                                                            | Holds                                                          |
@@ -210,8 +211,8 @@ six reached the host under one `TMPDIR`.
 
 ### What a document holds when the arms are not comparable
 
-Same snapshot, one case re-run under `--max-cost-usd 0.10`, so the without-arm run overran the
-remainder and its paid graders were skipped.
+The same suite, one case re-run under `--max-cost-usd 0.10`, so the without-arm run overran
+the remainder and its paid graders were skipped.
 
 | The document                                       | Then                                                       |
 | -------------------------------------------------- | ------------------------------------------------------------ |
@@ -263,9 +264,9 @@ that has not been measured here.
 
 ### What the old grant actually denied
 
-Snapshot, 2026-09-12, CLI 2.1.265, four container runs over two throwaway plugins. All eight
-names above were accepted, with no `not granted` and no `malformed entry` notice against any
-of them.
+On CLI 2.1.265, over four container runs across two throwaway plugins, all eight names
+above were accepted, with no `not granted` and no `malformed entry` notice against any of
+them.
 
 | Run                                                     | What the trace showed                                     |
 | ------------------------------------------------------- | ------------------------------------------------------------ |
@@ -288,8 +289,8 @@ tools a session uses most.
 
 ### What the shipping grant offers
 
-Snapshot, 2026-09-12, CLI 2.1.265, image `cowork-evals:57f48ba2adac`, one container run of
-`plugins/smoke/` under the default `eval.allow_tools`. The `init` record's `tools` list read:
+On CLI 2.1.265, one container run of `plugins/smoke/` under the default
+`eval.allow_tools`. The `init` record's `tools` list read:
 
 ```
 Task Bash CronCreate CronDelete CronList Edit Glob Grep ListAgents NotebookEdit Read
@@ -438,9 +439,8 @@ Three differences matter:
 - **A session transcript carries an open set of record types**, listed and dated in
   [cowork_desktop.md](cowork_desktop.md), and only `user` and `assistant` carry a `message`.
   A reader takes turns from those two and ignores the rest.
-- **A harness trace carries the run's own envelope.** Types observed on the smoke case,
-  snapshot 2026-09-10, CLI 2.1.265: `system`, `assistant`, `user`, `rate_limit_event` and
-  `result`. Nothing else records this set, which is why it is measured here. A session's is
+- **A harness trace carries the run's own envelope.** Types observed on the smoke case on
+  CLI 2.1.265: `system`, `assistant`, `user`, `rate_limit_event` and `result`. Nothing else records this set, which is why it is measured here. A session's is
   not restated here, because that file owns it.
 
 No rendering of either is written. Each format is the one the thing that produced it writes,
@@ -462,8 +462,7 @@ command line beats the file, as it does for every other option: [library.md](lib
 Off, nothing is created and nothing is collected, and the harness deletes each sandbox as it
 always did.
 
-A measured cost, snapshot 2026-09-10, for the smoke case on the container backend: 12 KB per
-run, and 60 KB for a whole two-run suite including `run.log`, `report.html`, `debug.txt` and
+A measured cost for the smoke case on the container backend: 12 KB per run, and 60 KB for a whole two-run suite including `run.log`, `report.html`, `debug.txt` and
 both workspaces. A CoWork run's cost is the size of its `outputs/`, which is whatever the case
 made the session produce. The `⚠ kept ...` notice the harness prints per sandbox goes to
 `run.log` and to the terminal, one line per run.
@@ -691,6 +690,10 @@ reclaims space.
 `run.log` is captured at the file descriptor level, so a child process inherits it and the
 harness's own output and the container's reach the file.
 
+A run directory is not the record of what a case did. It is deleted at the retention above,
+and what outlives it is one line per case under `logs/evals/history/`, which `cowork_evals
+panel` reads. See [panel.md](panel.md).
+
 `traces/` is written by both backends, with the same three names in it, and the rule above
 says what goes in each. `<n>` is 1-based and is the same number printed as `run N`. Nothing
 makes a case name
@@ -763,12 +766,12 @@ A row reading `not yet measured` has not been run. The ceilings above were chose
 measured. The sweep row stays unmeasured here: this repository holds one fixture plugin, so
 a sweep measurement belongs to a consumer.
 
-The Docker row is a snapshot, 2026-09-09. It is `durationSeconds` and `costUsd` read from the
-`aggregate-result.json` of a passing `cowork_evals run --docker plugins/smoke`, on CLI
-2.1.265, `sonnet` and the `haiku` judge. The wall clock is the harness's own, so it excludes
-the image build and the container start.
+The Docker row is `durationSeconds` and `costUsd` read from the `aggregate-result.json` of a
+passing `cowork_evals run --docker plugins/smoke`, on CLI 2.1.265, `sonnet` and the `haiku`
+judge. The wall clock is the harness's own, so it excludes the image build and the container
+start.
 
-The cost is unchanged from the 2026-09-08 snapshot, which ran the same case through
-`Docker.run` rather than through the command. The command adds no model call, so an
-unchanged cost is what it should be. The wall clock moved from 3 s to 8 s, and that is the
+The cost is unchanged from running the same case through `Docker.run` rather than through the
+command. The command adds no model call, so an unchanged cost is what it should be. The wall
+clock moved from 3 s to 8 s, and that is the
 agent's own variance across runs rather than anything the command added.

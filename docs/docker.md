@@ -90,8 +90,8 @@ Four things do not come from jammy apt, and each has one source:
 | pip              | 25.3     | 22.0.2    | `pip install --upgrade pip==25.3`                                  |
 | uv               | 0.12.3   | absent    | The Astral installer, pinned to 0.12.3                             |
 
-Both upstream sources are present for aarch64 and carry the recorded versions, checked
-2026-09-08. The upstream release is named `26.2.5` in the path and the file name, and
+Both upstream sources are present for aarch64 and carry the recorded versions. The
+upstream release is named `26.2.5` in the path and the file name, and
 `soffice --version` reports the fourth component: 26.2.5.2.
 
 ## The Python pins
@@ -130,8 +130,7 @@ This image carries no pytest, so the inventory stays exact and the parity sectio
 unchanged by it. The image that does carry pytest is one layer over this one, and is
 [cowork_test.md](cowork_test.md).
 
-Measured on `ubuntu:22.04` `linux/arm64` on 2026-09-03, a snapshot: apt installs the nine
-above, `python3 -V` reports 3.10.12, and `pip freeze` reports all nine at the recorded pin
+On `ubuntu:22.04` `linux/arm64`, apt installs the nine above, `python3 -V` reports 3.10.12, and `pip freeze` reports all nine at the recorded pin
 strings exactly. Jammy's python3.10 carries no `EXTERNALLY-MANAGED` marker, so pip installs
 into the system interpreter without a flag.
 
@@ -208,8 +207,8 @@ Adding a certificate to a host that has already built the image therefore needs
 `scripts/image.sh --recreate`. The digest is unchanged, so the tag is unchanged, and BuildKit
 does not key a `--mount=type=secret` layer on the secret's contents, so the layer that
 installed no certificate is reused and every later fetch fails exactly as it did before.
-Measured on 2026-09-09: two builds failed at the LibreOffice fetch with `curl` exit 60, the
-certificate correctly named in `cowork_evals.yaml` throughout, and `--recreate` built clean.
+Two builds fail at the LibreOffice fetch with `curl` exit 60, the certificate correctly
+named in `cowork_evals.yaml` throughout, and `--recreate` then builds clean.
 
 ## How Docker is driven
 
@@ -243,7 +242,7 @@ file at <sandbox home>/.aws: Is a directory`, so every sandboxed command exits 1
 model reports a broken sandbox rather than the command's output. The path is inside the
 sandbox home, which the harness creates fresh per run, so nothing on the host or in the
 image changes it. 2.1.265 creates those directories rather than masking a missing one, and
-the smoke case passes. Measured 2026-09-08, both versions on the same image.
+the smoke case passes. Both versions behave that way on the same image.
 
 It is one deliberate delta against [runtime.md](runtime.md), which records corepack and npm
 as the only npm globals. Parity does not read npm globals and does not fail on it. No other
@@ -251,7 +250,7 @@ global is added.
 
 `bubblewrap` and `socat` are the second and third, and both are harness infrastructure in
 the same sense as the CLI above. The harness refuses to start a granted shell tool unless
-both are installed, and the pinned grant names `Bash`. Measured 2026-09-08:
+both are installed, and the pinned grant names `Bash`:
 without `socat` a run exits 1 with `sandbox is enabled but dependencies are missing: socat
 not installed`, and the case is scored 0 rather than errored, so the failure reads as a bad
 answer unless the notes column is read. `probe.py` reports both versions and parity fails on
@@ -270,7 +269,7 @@ image. The one consequence for a consumer: a skill that shells out to `bubblewra
 ## Credentials
 
 One route: a login this package owns, mounted. There is no API key route, by the
-developer's decision of 2026-09-08. A host with no interactive terminal logs in on a host
+developer's decision. A host with no interactive terminal logs in on a host
 that has one and carries the two paths below.
 
 The login happens once, in an interactive container that `login --docker` starts, and it
@@ -284,11 +283,11 @@ starts it: an image is a build product and a credential is not, which is the dis
 | `.claude.json`                      | the CLI state file                                         |
 
 The container carries no browser, so the CLI prints a URL and reads an authorization code
-back. That prompt masks its input, so a pasted code is not echoed. Measured 2026-09-08.
+back. That prompt masks its input, so a pasted code is not echoed.
 
 The state file is created holding `{}`. An empty file is not an absent one: the CLI parses
-it, fails, and exits 1 with `JSON Parse error: Unexpected EOF`. Measured 2026-09-08 on the
-image below. `Docker.seed_login_dir()` writes it, and `Docker.login()` calls that before
+it, fails, and exits 1 with `JSON Parse error: Unexpected EOF`. `Docker.seed_login_dir()`
+writes it, and `Docker.login()` calls that before
 starting the login container.
 
 A credential file is not a credential either. An OAuth flow that is started and not
@@ -299,17 +298,31 @@ tokens rather than testing that the file is there, and the two callers that chec
 starts a flow over such a file with no flag: `--force` is for the other case, a file whose
 tokens are there and no longer work. An expired access token is
 still a credential, because the CLI refreshes it: only the absence of both tokens is no
-login. Measured 2026-09-09, where presence alone reported a login and every container run
-then exited 1 with `Not logged in`.
+login. Reading the file's presence alone reports a login that every container run then
+exits 1 on, with `Not logged in`.
+
+## How long a login lasts
+
+The credentials file carries two lifetimes: an access token that expires 8 hours after the
+login, and a refresh token that expires 29 days after it. The CLI refreshes the access token
+inside the container and rewrites the mounted file, so an expired access token is not a
+re-login.
+
+A revocation is, and it can arrive at any time. The CLI clears both tokens when a refresh is
+refused, which is the hollow file above, so a revoked login reads as no login and the next
+run fails its preflight. Neither lifetime is therefore a guarantee that a login survives to
+the end of it.
+
+`login --docker --check` reports the state and starts nothing, and `check --docker` reports
+it before a run spends anything on a machine that cannot run.
 
 Both are mounted into the container home, read-write: the CLI refreshes its token and
 rewrites its state file on every start. They are the only host paths a run mounts besides
 the plugin and the log directory, and the container keeps nothing else.
 
 A first launch in a fresh configuration directory does not block a non-interactive run.
-Measured 2026-09-08 on the image below: `claude -p` in a container with an empty `$HOME`
-reaches the credential check and exits 1 with `Not logged in`, rather than stopping on a
-first-run prompt. So the run mounts the configuration directory alone, and the login step
+`claude -p` in a container with an empty `$HOME` reaches the credential check and exits 1
+with `Not logged in`, rather than stopping on a first-run prompt. So the run mounts the configuration directory alone, and the login step
 seeds no state file beside it.
 
 - Never bake a credential into an image layer.
@@ -378,9 +391,9 @@ the agent print a forwarded value puts that value in the log. What the container
 the container's. The limit is stated rather than closed: the alternative is filtering the
 log, which would rewrite what a run actually produced.
 
-Measured on 2026-09-12, a snapshot. Host: macOS on aarch64, Rancher Desktop. One variable
-holding a token that appears nowhere else was forwarded, `plugins/smoke/` was run whole on
-this backend, and the token was grepped for afterwards.
+On macOS on aarch64 with Rancher Desktop, one variable holding a token that appears nowhere
+else was forwarded, `plugins/smoke/` was run whole on this backend, and the token was
+grepped for afterwards.
 
 | Grepped                                  | Token found |
 | ---------------------------------------- | ----------- |
@@ -464,10 +477,10 @@ The second is the one a bare `bwrap` invocation does not reach. Docker masks ent
 `/proc` is covered that way. The harness mounts one, so every sandboxed command fails while
 `bwrap --ro-bind / / --unshare-user --unshare-pid true` still succeeds.
 `tests/integration/test_docker.py` therefore asserts the `--proc` mount as well as the bare
-invocation. Measured 2026-09-08.
+invocation.
 
 The documented fallback, `--cap-add SYS_ADMIN --security-opt apparmor=unconfined`, is not
-used: measured on the same date it fails earlier still, with `bwrap: pivot_root: Operation
+used: it fails earlier still, with `bwrap: pivot_root: Operation
 not permitted`.
 
 A container that cannot grant `Bash` cannot run a case that shells out, which is most of
@@ -535,13 +548,12 @@ those, see [cowork_driver.md](cowork_driver.md).
 
 ## Measurements
 
-Taken on one host and true of that host. Each is a snapshot, dated, with the host written as
-its OS, architecture and container runtime, never as a machine name. A reader on another
-platform re-runs `scripts/parity.sh` and the integration tier rather than assuming these.
+Taken on one host and true of that host. The host is written as its OS, architecture and
+container runtime, never as a machine name. A reader on another platform re-runs
+`scripts/parity.sh` and the integration tier rather than assuming these.
 
 | Measurement                       | Value                                                   |
 | --------------------------------- | ------------------------------------------------------- |
-| Captured on                       | 2026-09-08                                              |
 | Host                              | macOS on aarch64, Rancher Desktop, dockerd 29.5.3       |
 | Platform built                    | `linux/arm64`, native                                   |
 | Image size                        | 3.72 GB                                                 |

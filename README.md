@@ -245,6 +245,7 @@ cowork_evals check --all             # what each backend still needs, one line p
 cowork_evals run  --docker path/to/plugin          # an eval: a model, graders, a verdict
 cowork_evals test --docker path/to/plugin/tests    # pytest on the CoWork runtime, no model
 cowork_evals ask  --cowork "..."     # one prompt to a live CoWork session, and its answer
+cowork_evals panel plugins/mail      # every case, and what each backend last said about it
 cowork_evals docs [name]             # where the documentation is, or one document's path
 cowork_evals prune --docker          # delete what setup built
 ```

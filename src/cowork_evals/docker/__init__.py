@@ -470,7 +470,7 @@ class Docker:
         """Create the two login paths, with a state file the CLI will accept.
 
         An empty `.claude.json` is not an absent one: the CLI reads it, fails to parse it,
-        and exits 1 with `JSON Parse error: Unexpected EOF`. Measured 2026-09-08.
+        and exits 1 with `JSON Parse error: Unexpected EOF`.
         """
         self.claude_dir.mkdir(parents=True, exist_ok=True)
         if not self.state_file.is_file() or self.state_file.stat().st_size == 0:
@@ -546,7 +546,7 @@ class Docker:
         The file existing is not enough. An OAuth flow that never completed leaves one
         behind with every token empty, and the CLI then exits 1 inside the container with
         `Not logged in`, while `scripts/login.sh` reads the file, reports a login is
-        already there and declines to replace it. Measured 2026-09-09.
+        already there and declines to replace it.
 
         An expired access token is still a credential. The CLI refreshes it, so only the
         absence of both tokens means no login.

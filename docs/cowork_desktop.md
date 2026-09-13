@@ -18,17 +18,16 @@ drive it. These are the measured internals. What the driver does with them is
 - **Nothing here is a public interface.** The coupling list at the end is the checklist to
   re-probe after an application update.
 
-Captured 2026-09-02 on a macOS development machine by direct probe, re-probed 2026-09-08 for
-section 3, which reads session directories already on disk, and extended 2026-09-12 with the
-process name, what the keyboard does to a submission, and section 5, which is what five real
-sessions did when asked. Expect any release to change these.
+Captured on a macOS development machine by direct probe. Section 3 reads session
+directories already on disk, and section 5 is what five real sessions did when asked.
+Expect any release to change these.
 
 ## Measured facts
 
 | Fact              | Value                                                                |
 | ----------------- | -------------------------------------------------------------------- |
 | Application       | `Claude.app`, Electron, bundle id `com.anthropic.claudefordesktop`   |
-| Process name      | `Claude`, as `System Events` reports it. Snapshot 2026-09-12          |
+| Process name      | `Claude`, as `System Events` reports it                               |
 | Version probed    | 1.40609.1                                                            |
 | Profiles          | `~/Library/Application Support/<profile>`                            |
 | Session isolation | Apple Virtualization VM with gvisor networking, local to the machine |
@@ -36,10 +35,10 @@ sessions did when asked. Expect any release to change these.
 | Guest OS          | Ubuntu 22.04.5 LTS, kernel 6.8.0-136-generic, aarch64                |
 | Claude Code in VM | SDK payload at `claude-code-vm/<version>/claude`                     |
 | New session boot  | About 45 seconds from deep link to the first tool call in the guest  |
-| Driven run        | 8.2 seconds end to end, deep link to collected result. Snapshot 2026-09-08 |
+| Driven run        | 8.2 seconds end to end, deep link to collected result                 |
 | Guest bash tool   | `mcp__workspace__bash`, an MCP tool, not Claude Code's own `Bash`     |
-| Guest fetch tool  | `mcp__workspace__web_fetch`. Snapshot 2026-09-12                     |
-| Host write tool   | `Write`, which names a host path and lands in `outputs/`. Snapshot 2026-09-12 |
+| Guest fetch tool  | `mcp__workspace__web_fetch`                                          |
+| Host write tool   | `Write`, which names a host path and lands in `outputs/`              |
 
 A build may install more than one profile directory. Which one is active is read from `lsof`
 on the running process. Name the active profile in `cowork_evals.yaml`; do not hardcode it.
@@ -78,7 +77,7 @@ covered, and they are the two a grader reads:
 
 Not covered by those probes, and therefore not stated anywhere here: repeated runs,
 concurrent sessions, parallel tool calls, and attachments. The terminal lifecycle state was
-not covered either, and is established below by the 2026-09-08 re-probe.
+not covered either, and is established below by a re-probe.
 
 The application caps `q` at 14336 characters and truncates silently above it. A driver must
 refuse a longer prompt rather than truncate, or a case is graded on an altered prompt.
@@ -105,9 +104,7 @@ API. No supported method avoids it.
 
 ### What the keyboard does to a submission
 
-Snapshot 2026-09-12, on the same machine and application version.
-
-Two submissions of one prompt, `Reply with the single word: ready`, were recorded in
+On the same machine and application version, two submissions of one prompt, `Reply with the single word: ready`, were recorded in
 `audit.jsonl` as `Reply with the single word: readyennumera` and
 `Reply with the single word: read`. The developer was typing in another application while
 the driver held the keyboard. The first submission carried their characters into the prompt.
@@ -143,7 +140,7 @@ Transcript record keys observed: `type`, `message`, `toolUseResult`, `attributio
 `isSidechain`, `cwd`, `gitBranch`. Content blocks carry `id` on a `tool_use` and
 `tool_use_id` on a `tool_result`, which is how a reader pairs them.
 
-Transcript record types observed, snapshot 2026-09-08 over seven session directories:
+Transcript record types observed over seven session directories:
 `user`, `assistant`, `attachment`, `queue-operation`, `atis-latch`, `last-prompt` and
 `mode`. Only `user` and `assistant` carry a `message`. A reader takes turns from those two
 and ignores the rest, because the set is open. `mode` was absent from the five directories
@@ -169,8 +166,8 @@ Audit record shape:
 {"type":"command_lifecycle","command_uuid":"...","state":"completed","session_id":"..."}
 ```
 
-`completed` is the terminal `command_lifecycle` state. Snapshot 2026-09-08, five session
-directories, nine commands, every one of them reaching `completed`. No other terminal state
+`completed` is the terminal `command_lifecycle` state. Over five session directories and
+nine commands, every one of them reached `completed`. No other terminal state
 was seen, so a failed or cancelled command has an unknown state name and quiescence remains
 the fallback signal.
 
@@ -194,8 +191,7 @@ prompt verbatim. A driver compares it and refuses any session that does not matc
 
 ### Discovery by structure
 
-Snapshot 2026-09-08, two profiles. A session directory is exactly three levels below the
-sessions root and holds an `audit.jsonl`. No `audit.jsonl` exists at any other depth. The
+Over two profiles, a session directory is exactly three levels below the sessions root and holds an `audit.jsonl`. No `audit.jsonl` exists at any other depth. The
 `audit.jsonl` test is what separates a session from its siblings at the same depth:
 `cowork_plugins`, `memory`, `usage-ledger`, `rpm` and the `skills-plugin` tree all sit three
 levels down and hold none.
@@ -223,8 +219,7 @@ throwaway profile first.
 
 ## 5. What a session does when asked
 
-Snapshot, captured 2026-09-12 on application version 1.52386.0. Four prompts through
-`cowork_evals ask --cowork`, one submission each, on a profile with nothing granted to the
+On application version 1.52386.0, four prompts through `cowork_evals ask --cowork`, one submission each, on a profile with nothing granted to the
 session beyond what a fresh session has. Every prompt asked the session to do the thing. What
 a session says about its own configuration is not evidence, so every row below is read from
 the session document's `tool_calls` and `outputs`, and from the host filesystem afterwards.
@@ -255,8 +250,8 @@ The guest reported Python 3.10.12, which is the interpreter the code under test 
 
 ### What a session has, and what a named absent skill does
 
-Snapshot, captured 2026-09-12 on application version 1.52386.0, one further
-`cowork_evals ask --cowork` submission on the same profile. The prompt asked for a listing of
+On application version 1.52386.0, one further `cowork_evals ask --cowork` submission on the
+same profile. The prompt asked for a listing of
 the guest's skills directory, and then named a skill that is not installed.
 
 | Asked for                                      | What happened                                                |

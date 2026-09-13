@@ -25,8 +25,8 @@ other. One is built on clone and the other on demand.
 | Repo tooling  | `.venv`        | 3.10.12  | `init.sh`, on clone | `scripts/`, `tests/` |
 | CoWork mirror | `.venv_cowork` | 3.10.12  | `cowork_venv.sh`, on demand | Code that must behave like a session |
 
-The mirror costs 604 MB, snapshot 2026-09-09, and the interpreter is no longer a reason to
-build it: both environments are the same one. The wheel set is the only thing that separates
+The mirror costs 604 MB, and the interpreter is no longer a reason to build it: both
+environments are the same one. The wheel set is the only thing that separates
 them, so build the mirror when an import has to be checked against a session's packages
 without a container, and not otherwise. `cowork_evals test --docker` answers the same
 question against the real image.

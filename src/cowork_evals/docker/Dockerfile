@@ -23,8 +23,8 @@ ENV LANG=C.UTF-8
 #
 # socat is a deliberate delta from the CoWork inventory, which does not record it. The
 # harness refuses to start a granted Bash tool without both bubblewrap and socat, and every
-# case here is pinned --allow-tools Bash. Measured 2026-09-08: without it the run exits 1
-# with `sandbox is enabled but dependencies are missing: socat not installed`.
+# case here is pinned --allow-tools Bash. Without it the run exits 1 with `sandbox is
+# enabled but dependencies are missing: socat not installed`.
 #
 # The font list carries the Noto fallback faces and not fonts-noto-core, which alone adds
 # 192 families over what docs/runtime.md records.
@@ -183,8 +183,8 @@ RUN mkdir -p "${CONTAINER_HOME}" "${CONTAINER_PLUGIN}" "${CONTAINER_LOGS}" \
 # mounts a tmpfs there: the symlink resolves against a new root whose /dev is not staged
 # yet, so the mount fails with ENOENT. Every sandboxed command then exits 1 with `bwrap:
 # Can't mount tmpfs on /newroot/run/shm`, and the model reports a broken sandbox rather
-# than the command's output. Measured 2026-09-08. `mkdir -p` alone is a no-op on the
-# symlink, and running bwrap without that mount does not reach the failure.
+# than the command's output. `mkdir -p` alone is a no-op on the symlink, and running
+# bwrap without that mount does not reach the failure.
 RUN rm -f /run/shm && mkdir -p /run/shm && chmod 1777 /run/shm
 
 WORKDIR ${CONTAINER_WORK}

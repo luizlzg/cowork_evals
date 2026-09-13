@@ -494,7 +494,7 @@ def test_a_credential_file_with_empty_tokens_is_not_a_login(tmp_path):
     """An abandoned OAuth flow leaves the file behind carrying no token.
 
     The file is there, so presence alone reported a login that the CLI then refused
-    inside the container with `Not logged in`. Measured 2026-09-09.
+    inside the container with `Not logged in`.
     """
     docker = backend(login_dir=tmp_path / "login")
     credential(
@@ -600,7 +600,7 @@ def test_the_image_removal_names_one_tag():
 
 
 def test_a_recorded_listing_parses_into_tags_and_dates():
-    """One `docker image ls` listing, recorded 2026-09-09 on `linux/arm64`, a snapshot."""
+    """One recorded `docker image ls` listing, as that command prints it."""
     listing = (
         "cowork-evals-test:0eafee9a4184\t2026-09-09 05:15:58 -0400 EDT\n"
         "cowork-evals:57f48ba2adac\t2026-09-09 04:08:37 -0400 EDT\n"
