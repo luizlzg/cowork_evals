@@ -16,8 +16,8 @@ while the work happens.
 
 ## Plans
 
-Sixteen plans. Fourteen build something and are numbered in build order, and one of those
-fourteen is skipped. `plan_fix` builds nothing, so it carries no number: it corrects what the
+Seventeen plans. Fifteen build something and are numbered in build order, and one of those
+fifteen is skipped. `plan_fix` builds nothing, so it carries no number: it corrects what the
 others wrote, and it ran before `plan_cowork_backend.md` because it changes what that plan and
 `plan_cli.md` both read. `plan_believable_results` carries no number for the same reason:
 it holds measurements and decisions, and its product is the four plans numbered 10 to 13. The order is the
@@ -45,6 +45,7 @@ not the system's: what is built and usable is
 | 12 | [`done/plan_env_passthrough.20260912.md`](done/plan_env_passthrough.20260912.md) | Named host variables forwarded into the run container, values never logged | implemented | `feat/env-passthrough` |
 | 13 | [`done/plan_ablation.20260912.md`](done/plan_ablation.20260912.md) | The baseline arm, and a verdict that decides on the per-case delta | implemented | `feat/ablation`       |
 | 14 | [`plan_panel.md`](plan_panel.md) | The per-case run history, the `panel` verb, and `prune --history` | written | `feat/panel` |
+| 15 | [`plan_consent.md`](plan_consent.md) | The keyboard consent dialog, shown by the driver rather than by a caller | written | `fix/consent` |
 
 | Status        | Means                                                                     |
 | ------------- | --------------------------------------------------------------------------- |
@@ -110,6 +111,15 @@ nothing behind. It adds the one record that outlives that directory, one file pe
 the verb that renders it. What it changes in the verdict is a return value and no condition:
 pass and fail stay in [`../docs/running_evals.md`](../docs/running_evals.md), and the store
 and the render are `../docs/panel.md`, which it writes.
+
+Plan 15 corrects a defect in plan 9, the way plan 9 corrected one in plan 1. The consent
+dialog plan 9 built is shown by two callers in `cli.py` and by nothing else, so every other
+path that takes the keyboard either refuses or fires in silence, and this repository's own
+integration tier was configured to fire in silence. On 2026-09-13 a `-m integration` run
+therefore took the keyboard with no warning while the developer was typing elsewhere. It moves
+the asking into the driver, so the dialog is shown by every path that takes the keyboard and
+`cowork.consent: none` is the one way to switch it off. What it changes is
+[`../docs/cowork_driver.md`](../docs/cowork_driver.md).
 
 Plans 2 and 3 each build one backend whole. Running an eval on those two backends is
 `claude plugin eval`, which discovers the cases, runs them, grades them and writes
