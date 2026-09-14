@@ -287,3 +287,39 @@ def _one_case(root: Path, extra: str) -> Path:
         f"{extra}---\n\nSay hello.\n"
     )
     return root
+
+
+# checks/. It is Python, so the validator imports it rather than parsing it.
+
+
+def test_a_check_file_that_will_not_import_is_a_violation() -> None:
+    found = violations(BROKEN)
+    path = EVALS / "bad-checks" / "checks" / "unimportable.py"
+    assert rules_at(found, path) == ["check-import"]
+    detail = next(one.detail for one in found if one.path == path)
+    assert "unimportable.py could not be imported: RuntimeError" in detail
+    assert "openpyxl is not installed" in detail
+
+
+def test_a_checks_directory_holding_no_check_is_a_violation() -> None:
+    found = violations(BROKEN)
+    path = EVALS / "empty-checks" / "checks"
+    assert rules_at(found, path) == ["check-empty"]
+
+
+def test_a_helper_beside_a_check_is_not_a_violation() -> None:
+    """The rule is over the directory, never over a file: a helper is a file like any other."""
+    assert violations(CLEAN) == []
+    assert (CLEAN / "evals" / "greeter" / "hello" / "checks" / "helpers.py").is_file()
+
+
+def test_add_dirs_naming_the_checks_directory_is_a_violation() -> None:
+    found = violations(BROKEN)
+    path = EVALS / "staged-checks" / "case.yaml"
+    assert rules_at(found, path) == ["add-dirs-checks"]
+    detail = next(one.detail for one in found if one.path == path)
+    assert detail.endswith("and checks/ is not staged")
+
+
+def test_two_check_files_with_their_own_names_are_no_duplicate() -> None:
+    assert not [one for one in violations(CLEAN) if one.rule == "check-duplicate"]

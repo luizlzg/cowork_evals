@@ -2,44 +2,36 @@
 
 ## Summary
 
-How the desktop application starts a session, where it writes, and what a script needs to
-drive it. These are the measured internals. What the driver does with them is
-[cowork_driver.md](cowork_driver.md).
+This file records how the CoWork desktop application behaves, so that a script can drive it:
+how a session is started, where a session writes, what the records it writes look like, and
+what a machine has to be granted first. The application is not built here and promises no
+interface, so every statement is measured by direct probe on macOS and carries the conditions
+it holds under. Any release can change all of it, so the coupling list at the end is the checklist to
+re-probe after an application update. What the driver does with these facts is
+[cowork_driver.md](cowork_driver.md), which cites this file and never restates it.
 
-- **Input is a deep link.** The application registers the `claude` URL scheme and takes a
-  prompt in `q`. No query parameter submits.
-- **Submission is a synthetic Return**, which needs the macOS Accessibility grant. No
-  supported method avoids that permission prompt.
-- **Output is on the host filesystem.** Nothing reads the screen: a session writes a
-  transcript, a signed audit log and an `outputs/` directory under the profile.
-- **Never write anywhere under the profile.** Those directories are application managed.
-- **Five authorizations are needed**, none discoverable from the code. A second machine needs
-  all of them.
-- **Nothing here is a public interface.** The coupling list at the end is the checklist to
-  re-probe after an application update.
-
-Captured 2026-09-02 on a macOS development machine by direct probe, re-probed 2026-09-08 for
-section 3, which reads session directories already on disk, and extended 2026-09-12 with the
-process name, what the keyboard does to a submission, and section 5, which is what five real
-sessions did when asked. Expect any release to change these.
+Four things shape everything below. Input is a deep link, and no query parameter submits.
+Submission is a synthetic Return, which needs the macOS Accessibility grant, and no supported
+method avoids that permission prompt. Output is on the host filesystem, so nothing reads the
+screen. Nothing writes anywhere under the profile: those directories are application managed.
 
 ## Measured facts
 
 | Fact              | Value                                                                |
 | ----------------- | -------------------------------------------------------------------- |
 | Application       | `Claude.app`, Electron, bundle id `com.anthropic.claudefordesktop`   |
-| Process name      | `Claude`, as `System Events` reports it. Snapshot 2026-09-12          |
-| Version probed    | 1.40609.1                                                            |
+| Process name      | `Claude`, as `System Events` reports it                               |
+| Version probed    | 1.40609.1. Section 5 states the version it was measured on           |
 | Profiles          | `~/Library/Application Support/<profile>`                            |
 | Session isolation | Apple Virtualization VM with gvisor networking, local to the machine |
 | Host to guest RPC | vsock, `CID=2 port=51234`. Not SSH                                   |
 | Guest OS          | Ubuntu 22.04.5 LTS, kernel 6.8.0-136-generic, aarch64                |
 | Claude Code in VM | SDK payload at `claude-code-vm/<version>/claude`                     |
 | New session boot  | About 45 seconds from deep link to the first tool call in the guest  |
-| Driven run        | 8.2 seconds end to end, deep link to collected result. Snapshot 2026-09-08 |
+| Driven run        | 8.2 seconds end to end, deep link to collected result                 |
 | Guest bash tool   | `mcp__workspace__bash`, an MCP tool, not Claude Code's own `Bash`     |
-| Guest fetch tool  | `mcp__workspace__web_fetch`. Snapshot 2026-09-12                     |
-| Host write tool   | `Write`, which names a host path and lands in `outputs/`. Snapshot 2026-09-12 |
+| Guest fetch tool  | `mcp__workspace__web_fetch`                                          |
+| Host write tool   | `Write`, which names a host path and lands in `outputs/`              |
 
 A build may install more than one profile directory. Which one is active is read from `lsof`
 on the running process. Name the active profile in `cowork_evals.yaml`; do not hardcode it.
@@ -49,8 +41,8 @@ Chrome DevTools Protocol was not pursued. The application ships Electron fuses t
 `RunAsNode` and `EnableNodeCliInspectArguments`.
 
 The driven run is one measurement of one prompt: a marker prompt, no tool call, and a warm
-VM bundle already on disk. It is the floor, not the typical case. The 45 second boot above
-is what a cold VM costs, and a prompt that calls a tool pays it.
+VM bundle already on disk. It is the floor, not the typical case. The 45 second boot above is
+what a cold VM costs, and a prompt that calls a tool pays it.
 
 ## 1. Input, by deep link
 
@@ -68,7 +60,7 @@ Both `surface=cowork` and the bare form produced a session, so the parameter is 
 bearing on the evidence available.
 
 The three route statuses above come from three probes, one prompt each. Two shapes were
-covered, and they are the two a grader reads:
+covered, and they are the two a collected session is read for:
 
 | Probe                                                              | Established                                                       |
 | ------------------------------------------------------------------ | ----------------------------------------------------------------- |
@@ -78,10 +70,9 @@ covered, and they are the two a grader reads:
 
 Not covered by those probes, and therefore not stated anywhere here: repeated runs,
 concurrent sessions, parallel tool calls, and attachments. The terminal lifecycle state was
-not covered either, and is established below by the 2026-09-08 re-probe.
+not covered either, and is established below by a re-probe.
 
-The application caps `q` at 14336 characters and truncates silently above it. A driver must
-refuse a longer prompt rather than truncate, or a case is graded on an altered prompt.
+The application caps `q` at 14336 characters and truncates silently above it.
 
 The prefill does not submit. No query parameter submits.
 
@@ -100,27 +91,23 @@ System Events got an error: osascript is not allowed to send keystrokes. (1002)
 ```
 
 The same permission check applies to CGEvent and to pressing the send button through the
-Accessibility
-API. No supported method avoids it.
+Accessibility API. No supported method avoids it.
 
 ### What the keyboard does to a submission
 
-Snapshot 2026-09-12, on the same machine and application version.
+Two probes, on the same machine and application version, with the prompt
+`Reply with the single word: ready`.
 
-Two submissions of one prompt, `Reply with the single word: ready`, were recorded in
-`audit.jsonl` as `Reply with the single word: readyennumera` and
-`Reply with the single word: read`. The developer was typing in another application while
-the driver held the keyboard. The first submission carried their characters into the prompt.
-The second lost the prompt's own last character.
+| Probe                                                                          | Recorded in `audit.jsonl`                                                                  |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| Two submissions while a person typed in another application                    | `Reply with the single word: readyennumera`, and `Reply with the single word: read`         |
+| One submission fired into a composer that already held the text `RESIDUE`      | The submitted prompt exactly, carrying none of the residue                                  |
 
-The deep link had already brought the application forward, so the characters a human typed
-next went into its composer, beside the prefilled prompt. Attribution refused both, so
-nothing was submitted to a grader and nothing was scored on an altered prompt.
-
-A separate probe the same day, one prompt, fired the deep link into a composer that already
-held the text `RESIDUE`. The recorded prompt was the submitted prompt exactly, carrying none
-of it. `claude://claude.ai/new` starts a new conversation, so what a driver has to protect
-against is a human typing after the deep link, not text left in a field before it.
+The deep link brings the application forward, so characters a person types next land in its
+composer beside the prefilled prompt: one submission gained their characters and the other
+lost its own last one. `claude://claude.ai/new` starts a new conversation, so text left in a
+field before the deep link does not survive it. What has to be protected against is a person
+typing after the deep link, not text present before it.
 
 What the driver does about all of this is [cowork_driver.md](cowork_driver.md).
 
@@ -143,12 +130,11 @@ Transcript record keys observed: `type`, `message`, `toolUseResult`, `attributio
 `isSidechain`, `cwd`, `gitBranch`. Content blocks carry `id` on a `tool_use` and
 `tool_use_id` on a `tool_result`, which is how a reader pairs them.
 
-Transcript record types observed, snapshot 2026-09-08 over seven session directories:
+Transcript record types observed over seven session directories:
 `user`, `assistant`, `attachment`, `queue-operation`, `atis-latch`, `last-prompt` and
 `mode`. Only `user` and `assistant` carry a `message`. A reader takes turns from those two
-and ignores the rest, because the set is open. `mode` was absent from the five directories
-probed earlier the same day and present in the seven probed later, which is the set being
-open in practice.
+and ignores the rest, because the set is open. `mode` was absent from five directories on one
+build and present in seven on a later one, which is the set being open in practice.
 
 `message.content` is a string or a list of blocks. Observed block types: `text`, `thinking`,
 `tool_use` and `tool_result`. A `thinking` block is not turn text.
@@ -169,10 +155,9 @@ Audit record shape:
 {"type":"command_lifecycle","command_uuid":"...","state":"completed","session_id":"..."}
 ```
 
-`completed` is the terminal `command_lifecycle` state. Snapshot 2026-09-08, five session
-directories, nine commands, every one of them reaching `completed`. No other terminal state
-was seen, so a failed or cancelled command has an unknown state name and quiescence remains
-the fallback signal.
+`completed` is the terminal `command_lifecycle` state. Over five session directories and
+nine commands, every one of them reached `completed`. No other terminal state was seen, so a
+failed or cancelled command has an unknown state name.
 
 The terminal record carries `type`, `state`, `command_uuid`, `session_id`, `uuid`,
 `timestamp`, `_audit_timestamp` and `_audit_hmac`, and nothing else. It carries no assistant
@@ -185,25 +170,24 @@ text, `num_turns` the turn count, `total_cost_usd` the cost. It also carries `su
 
 Every lifecycle record carries `command_uuid`. One session directory holds more than one
 command: three of the five held three each, one prompt per command, and the states of two
-commands interleave when a prompt is queued before the previous one completes. A driver that
-submits one prompt into a fresh session sees one command, and keys completion on the first
-`completed` it sees.
+commands interleave when a prompt is queued before the previous one completes. One prompt
+submitted into a fresh session is one command.
 
-The `user` record is what makes a run identifiable: its `message.content` is the submitted
-prompt verbatim. A driver compares it and refuses any session that does not match.
+The first `user` record is what makes a run identifiable: its `message.content` is the
+submitted prompt verbatim.
 
 ### Discovery by structure
 
-Snapshot 2026-09-08, two profiles. A session directory is exactly three levels below the
-sessions root and holds an `audit.jsonl`. No `audit.jsonl` exists at any other depth. The
-`audit.jsonl` test is what separates a session from its siblings at the same depth:
+Over two profiles, a session directory is exactly three levels below the sessions root and
+holds an `audit.jsonl`. No `audit.jsonl` exists at any other depth. The `audit.jsonl` test is
+what separates a session from its siblings at the same depth:
 `cowork_plugins`, `memory`, `usage-ledger`, `rpm` and the `skills-plugin` tree all sit three
 levels down and hold none.
 
 `.claude/projects/session/` was present in every session directory probed, holding one
 top level `<uuid>.jsonl` per run. The `<uuid>/subagents/` directory exists only when a
-subagent ran. A reader still tolerates the directory's absence, because a session directory
-is created before its first transcript is written.
+subagent ran. A session directory is created before its first transcript is written, so the
+transcript directory can be absent while a run is live.
 
 ## 4. Guest mounts
 
@@ -223,11 +207,11 @@ throwaway profile first.
 
 ## 5. What a session does when asked
 
-Snapshot, captured 2026-09-12 on application version 1.52386.0. Four prompts through
-`cowork_evals ask --cowork`, one submission each, on a profile with nothing granted to the
-session beyond what a fresh session has. Every prompt asked the session to do the thing. What
-a session says about its own configuration is not evidence, so every row below is read from
-the session document's `tool_calls` and `outputs`, and from the host filesystem afterwards.
+On application version 1.52386.0, four prompts through `cowork_evals ask --cowork`, one
+submission each, on a profile with nothing granted to the session beyond what a fresh session
+has. Every prompt asked the session to do the thing. What a session says about its own
+configuration is not evidence, so every row below is read from the session document's
+`tool_calls` and `outputs`, and from the host filesystem afterwards.
 
 | Asked for                       | Tool called                  | Result                                   |
 | ------------------------------- | ---------------------------- | ---------------------------------------- |
@@ -241,23 +225,23 @@ was asked, and the driver sends the deep link and one Return and nothing else, s
 prompt would have stalled the run until the run timeout. A session writes files, shells out and
 reaches the network on its own.
 
-Four consequences a case format and a grader act on.
+Four consequences for anything reading a session.
 
 | Measured                                                | Consequence                                                    |
 | ------------------------------------------------------- | --------------------------------------------------------------- |
-| No tool was granted and four were used                  | A tool grant is not a key a CoWork case can honour. It is the Docker backend's, and only there |
+| No tool was granted and three were called over the four probes | Nothing on the host grants or denies a session's tools. A tool grant belongs to the container backend alone. See [approaches.md](approaches.md) |
 | `Write` named a host path, `mcp__workspace__bash` named a guest path | Both landed in the same `outputs/` directory. `Write` runs on the host and the bash tool runs in the guest, over the mount section 4 records |
-| A skill was read with `cat` over its mounted directory  | There is no `Skill` tool in the transcript. A grader that looks for one finds nothing |
-| `rm` of a file the session had created under `outputs/` was refused, `Operation not permitted` | A file a session wrote into `outputs/` stays there, so a collector reads a complete set |
+| A skill was read with `cat` over its mounted directory  | That invocation leaves no `Skill` tool record in the transcript |
+| `rm` of a file the session had created under `outputs/` was refused, `Operation not permitted` | A file a session wrote into `outputs/` stays there, so a reader sees a complete set |
 
 The guest reported Python 3.10.12, which is the interpreter the code under test runs on. See
 [runtime.md](runtime.md).
 
 ### What a session has, and what a named absent skill does
 
-Snapshot, captured 2026-09-12 on application version 1.52386.0, one further
-`cowork_evals ask --cowork` submission on the same profile. The prompt asked for a listing of
-the guest's skills directory, and then named a skill that is not installed.
+On application version 1.52386.0, one further `cowork_evals ask --cowork` submission on the
+same profile. The prompt asked for a listing of the guest's skills directory, and then named a
+skill that is not installed.
 
 | Asked for                                      | What happened                                                |
 | ---------------------------------------------- | -------------------------------------------------------------- |
@@ -270,9 +254,8 @@ is the mount in section 4. A session's skill set is a property of the profile. T
 application managed and mounted read only, and nothing here writes under a profile, so a
 skill is made absent by using a profile it was never installed into and by nothing else.
 
-The second row is why a prompt does not name the skill it is testing. The session refused the
-name and produced no file, so a prompt that names the skill measures the name rather than the
-behaviour.
+The second row is why a prompt does not name the skill it is testing: the session refused the
+name and produced no file, so naming it measures the name rather than the behaviour.
 
 The session's own prose named ten of the eleven and added two the directory does not hold.
 The eleven above are what `bash` printed. What a session says about its own configuration is
@@ -316,8 +299,9 @@ git-ignored:
 Re-probe every item after an application update. This is a checklist, not an investigation.
 
 The `claude://claude.ai/new` route, the `q`, `surface`, `file` and `folder` parameter names,
-the 14336 cap, the `Claude` process name `System Events` reports, the sessions root path, the three level session directory depth, the
-`audit.jsonl` filename, the `user` and `command_lifecycle` record types, the `state` values,
+the 14336 cap, the `Claude` process name `System Events` reports, the sessions root path, the
+three level session directory depth, the `audit.jsonl` filename, the `user` and
+`command_lifecycle` record types, the `state` values,
 the transcript path under `.claude/projects/session`, the `subagents/*.jsonl` layout, the
 `tool_use` `id` and `tool_result` `tool_use_id` fields, the `outputs/` directory, and the
 `Write`, `mcp__workspace__bash` and `mcp__workspace__web_fetch` tool names.

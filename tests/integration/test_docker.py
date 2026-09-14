@@ -145,7 +145,7 @@ def test_bwrap_mounts_proc_where_the_harness_mounts_one(docker):
     The harness mounts a fresh procfs in the sandbox. Docker's default profile masks
     entries under `/proc`, and the kernel refuses a new procfs mount to a process whose
     own `/proc` is covered that way, so every sandboxed command exits 1 with `bwrap:
-    Can't mount proc on /newroot/proc: Operation not permitted`. Measured 2026-09-08.
+    Can't mount proc on /newroot/proc: Operation not permitted`.
     `systempaths=unconfined` removes the masks. docs/docker.md.
     """
     output = container(

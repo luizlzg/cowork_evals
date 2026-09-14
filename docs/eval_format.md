@@ -2,32 +2,25 @@
 
 ## Summary
 
-What a case is made of: the tree, the file names, the frontmatter, the graders and the
-authoring traps. This is the authoring contract for every eval in this repository, on both
-backends.
+A case is a directory: a `prompt.md` carrying frontmatter and the prompt body, a `graders/`
+directory, an optional `case.yaml` and an optional `checks/` directory. This file is the
+authoring contract for every one of them, on both backends: the tree, the file names, the
+frontmatter keys, the grader types, what the validator refuses and the traps that fail
+silently. The format is `claude plugin eval`'s own, so a case needs no adapter to run under
+that harness.
 
-- **A case is a directory**: a `prompt.md` with frontmatter and a prompt body, a `graders/`
-  directory, and an optional `case.yaml`.
-- **Two addressability keys are required**, `tags` and `plugins`, and both are checked.
-- **Graders come in two classes.** Structural graders are deterministic and carry the verdict;
-  judged graders call a model and are printed. Which one answers which question is
-  [eval_design.md](eval_design.md).
-- **Only two grader types choose what they look at, and they use different keys.** `regex`
-  uses `target`, `llm` uses `focus`.
-- **A case a CoWork session cannot run says so, with the `no-cowork` tag.** The validator
-  checks it in both directions.
-- **Every trap in the last section has a silent failure mode.** Read it before writing a case.
-
-The format is `claude plugin eval`'s own, so a case needs no adapter to run under that
-harness. What the CLI does with a case is [plugin_eval.md](plugin_eval.md). How this
-repository invokes it is [running_evals.md](running_evals.md). Which backend honours which
-field is [approaches.md](approaches.md). The full field-by-field reference is vendored at
+Which cases a skill needs, and which grader answers which question, is
+[eval_design.md](eval_design.md). What the CLI does with a case is
+[plugin_eval.md](plugin_eval.md). How this repository invokes it is
+[running_evals.md](running_evals.md). Which backend honours which field is
+[approaches.md](approaches.md). The full field-by-field reference is vendored at
 [claude_code/plugin_eval_reference.md](claude_code/plugin_eval_reference.md), and it is the
 authority where this file is silent.
 
-Three rules here are this repository's own and not the harness's: the `<skill>` layer under
-`evals/`, the two addressability keys below, and the reserved tag. Everything else is the
-harness. `docs/claude_code/eval_smoke/` is deliberately outside all of it; see
+Four rules here are this repository's own and not the harness's: the `<skill>` layer under
+`evals/`, the two addressability keys below, the reserved tag, and the `checks/` directory,
+which the harness neither reads nor knows is there. Everything else is the harness.
+`docs/claude_code/eval_smoke/` is deliberately outside all of it; see
 [claude_code/eval_smoke/README.md](claude_code/eval_smoke/README.md).
 
 ## The tree
@@ -38,6 +31,7 @@ One eval directory per skill, inside the plugin, in the repository that owns the
 <plugin>/.claude-plugin/plugin.json               # what makes <plugin> a plugin root
 <plugin>/evals/<skill>/<case>/prompt.md
 <plugin>/evals/<skill>/<case>/graders/<name>.md
+<plugin>/evals/<skill>/<case>/checks/<name>.py    # optional, this package's own
 <plugin>/evals/<skill>/<case>/case.yaml           # optional, context.* only
 <plugin>/evals/plugin/<case>/                     # cross-skill composition
 <plugin>/evals/mocks/<server>/<tool>.md           # shared MCP stand-ins
@@ -50,14 +44,16 @@ parent. See [library.md](library.md).
 Discovery is recursive, so a grouping directory that is not itself a case is searched
 through rather than run. `evals/` is the harness default, so nothing is configured.
 
-A directory directly under `evals/` is a skill name, `plugin`, or `mocks`. Nothing else.
-The case validator enforces that in both directions. That layer is this repository's
-convention: the harness puts a case directly under `evals/` and recurses through anything
-that is not a case, so the layer costs nothing and one directory per skill is what makes
-`--tag` selection match the tree.
+A directory directly under `evals/` is a skill name, `plugin`, or `mocks`. Nothing else, and
+the validator refuses anything else. A skill name is a directory under `<plugin>/skills/`, so
+a tree naming a skill the plugin does not have is refused rather than run against nothing.
+The reverse, a skill with no eval directory, is coverage and is not a violation. That layer is
+this repository's convention: the harness puts a case directly under `evals/` and recurses
+through anything that is not a case, so one directory per skill costs nothing and is what
+makes `--tag` selection match the tree.
 
 Fixtures live inside the case that uses them. `context.add_dirs` refuses any entry outside
-the case directory.
+the case directory, and any entry inside its `checks/`.
 
 ## Addressability
 
@@ -123,13 +119,12 @@ required. Leaving it out does not, because a default is not a request. See
 
 ### What an unknown key does, in each of the two files
 
-Snapshot, 2026-09-12, CLI 2.1.265, through the container backend. One fixture case carried
-`backends: [docker]`, first in `prompt.md` and then in `case.yaml`.
+On CLI 2.1.265, through the container backend.
 
-| Where the key was       | The harness                                                          |
-| ----------------------- | ---------------------------------------------------------------------- |
+| Where the key was       | The harness                                                                                                            |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `prompt.md` frontmatter | Refused the case at load, named the allowed set, ran nothing and wrote no `aggregate-result.json`. The command exited 1 |
-| `case.yaml`             | Loaded the case and ran it                                            |
+| `case.yaml`             | Loaded the case and ran it                                                                                             |
 
 The refusal is at case load and before the credential is read, so it costs no model call, and
 a whole suite produces no result document for one malformed case. A fact this repository has
@@ -143,8 +138,13 @@ a case writing either is refused by the preflight although the harness accepts i
 
 Optional. It carries only what `prompt.md` cannot: `context.scaffold_script`,
 `context.history_file`, `context.add_dirs`. It needs `schema_version: "1.1"` and `name`.
-An unknown top-level key there is ignored, as the snapshot above records, and this repository
+An unknown top-level key there is ignored, as the table above records, and this repository
 writes none.
+
+`context.scaffold_script` is a key no backend here runs. `--no-scaffold` is pinned on the
+container backend, and nothing stages files into the VM on CoWork. A case that needs a fixture
+ships it inside the case directory and grants it with `context.add_dirs`. See
+[running_evals.md](running_evals.md).
 
 ## Graders
 
@@ -173,7 +173,10 @@ delete the grader, or use `arm`.
 `last_message`.
 
 Values for `target` and `focus`: `last_message` (default), `trace`, `files` (created paths,
-not contents), `{source: file, path}` (a produced file's contents), `mock_calls`.
+not contents), `{source: file, path}` (a produced file's contents), `mock_calls` (calls to
+mocked MCP tools). `mock_calls` names the harness's stand-ins, so a grader reading it is
+skipped on the CoWork backend, where the MCP servers are real. See
+[running_evals.md](running_evals.md).
 
 ### A regex anchor is string-anchored
 
@@ -182,7 +185,7 @@ and `$` therefore match the start and the end of the whole target, not of a line
 `flags` carries `m`. This differs from Python, where `$` also matches before a trailing
 newline, and it is what a grader asserting that an answer is exactly one thing rests on.
 
-Snapshot, 2026-09-09, Node 25.9.0, over the pattern `^\s*(?:blocker|major|minor)\s*$`:
+On Node 25.9.0, over the pattern `^\s*(?:blocker|major|minor)\s*$`:
 
 | Target                      | no flags | `m`   |
 | --------------------------- | -------- | ----- |
@@ -210,6 +213,27 @@ tool: Skill
 input_match: '"skill"\s*:\s*"(?:[\w-]+:)?<skill>"'
 ```
 
+## checks/
+
+Optional. Each file holds assertions an author writes as Python, run on the host after the run
+is graded, on either backend. How to write one is [checks.md](checks.md). This section is the
+part of it that binds a case file.
+
+| Fact                                                             | Is                                                   |
+| ------------------------------------------------------------------ | ---------------------------------------------------- |
+| A check's name                                                   | `<file stem>.<function name>`                        |
+| A check's weight                                                 | 1, always. `@check` takes no arguments               |
+| The result                                                       | a grader result of `type: check`, in the same document |
+| A failed check                                                   | fails the run, as a failed structural grader does    |
+| A file under `checks/` carrying no `@check`                      | a helper, and no violation                           |
+| A `checks/` directory carrying no `@check` at all                | a violation                                          |
+
+**A check file is host code and is not bound by the image wheel set.** It sits under the path
+passed to `cowork_evals run`, and everything else under that path is code under test, which
+imports only what the CoWork image carries. A check is not: the run is over and graded before
+a check starts, and a check reads what that run left on the host. Its own imports are the
+consumer's own dependency. See [runtime.md](runtime.md) and [library.md](library.md).
+
 ## What the validator enforces
 
 `cowork_evals run` validates every selected plugin root before it runs anything, and a
@@ -230,6 +254,10 @@ sibling case blocks a single-case run. There is no option to skip it. See
 | Every `context.add_dirs` entry resolves inside its own case directory       |
 | Every grader has a `type` the table above lists, and a `weight` above 0     |
 | Every file under `graders/` carries a `---` block                           |
+| Every file under `checks/` imports                                          |
+| A `checks/` directory carries at least one function decorated with `@check` |
+| No two checks of one case share a name                                      |
+| No `context.add_dirs` entry resolves under the case's own `checks/`         |
 | A case a CoWork session cannot run carries `no-cowork`                      |
 | A case carrying `no-cowork` is one a CoWork session cannot run              |
 
@@ -244,19 +272,35 @@ Each of these has a silent failure mode, and each is fixed by editing the case.
 
 - **A grader file needs `---` frontmatter delimiters.** Without them it is a note and is
   ignored, so the case runs with fewer graders than it appears to have.
+- **A prompt that names the skill it is testing measures the name.** A CoWork session that
+  does not have the skill refuses the name and produces nothing. Ask for the outcome the
+  skill exists to produce. See [cowork_desktop.md](cowork_desktop.md).
 - **`min: 0, max: 0` is how a must-not-call assertion is written.** `max: 0` alone can never
   pass, because `min` stays 1.
-- **`file_exists` only sees files created during the run.** Not scaffold output, and not
-  files merely modified.
+- **`file_exists` only sees files created during the run.** A file the agent modified rather
+  than created is invisible to it. Grade the contents, or assert a `tool_used` on `Edit`.
 - **`llm` graders refuse binaries.** A `.pptx` is a ZIP. Render to an image, or write text.
   An image file is shown to the judge as an image, except on the CoWork backend, where an
   image focus is a grader skip. See [cowork_backend.md](cowork_backend.md).
-- **Scaffolds run in an empty working directory** with a minimal environment, no
-  credentials, and a 2-minute cap. Reference resources as `$(dirname "$0")/...`.
 - **`context.add_dirs` must stay inside the case directory.** Naming the eval directory, a
-  sibling case, the plugin root or the case's own `graders/` refuses the run.
+  sibling case or the plugin root refuses the run, and so does the case's own `graders/`, which
+  the harness refuses itself, and its own `checks/`, which this repository refuses. That list is
+  exhaustive: every other directory inside the case is a fixture directory to the harness and is
+  granted, so a directory holding anything the agent under test must not read is this
+  repository's to refuse.
+- **`target: trace` is not portable between backends.** Each renders the transcript its own
+  way, so a `regex` over it can pass on one and fail on the other. Every other target reads
+  the same on both. See [cowork_backend.md](cowork_backend.md).
 - **A `target` on an `llm` grader is ignored.** That key is `focus`, and the grader judges
   `last_message` while looking as if it judges a file.
+- **A case carrying `checks/` and no grader does not load.** The harness refuses a case with
+  no grader at all, so `checks/` is added to a case and never replaces its `graders/`.
+- **A check reads a collected run, so `--no-keep-traces` gives up every check.** With nothing
+  collected each check is a skip, and a skip fails the run.
+- **A `checks/` file with no decorated function asserts nothing.** A helper is a file like any
+  other, so only a `checks/` directory with no check anywhere in it is reported.
+- **Each run of a case runs every check again.** A case at `runs: 3` carrying one judged check
+  costs three of every judge call it makes.
 
 The traps that a case cannot fix, because they are the harness rather than the file, are in
 [plugin_eval.md](plugin_eval.md).

@@ -122,6 +122,19 @@ def test_scripts_readme_carries_a_row_for_every_script():
         assert f"`{script.name}`" in index, f"{script.name} has no row in scripts/README.md"
 
 
+def test_login_sh_holds_no_logic_and_execs_the_verb():
+    """The login decision is the verb's, and the script only passes arguments to it.
+
+    An interpreter embedded in the script would put the conditions, the messages and the
+    exit codes in two places, and the two would drift. scripts/README.md and
+    ../../docs/cli.md.
+    """
+    script = (ROOT / "scripts" / "login.sh").read_text()
+    for embedded in ("python3 -c", "python -c", 'uv run --project "$ROOT" python3'):
+        assert embedded not in script, f"login.sh embeds an interpreter: {embedded}"
+    assert 'exec uv run --project "$ROOT" cowork_evals login --docker "$@"' in script
+
+
 def test_every_script_is_executable_and_parses():
     """Every `*.sh` in the repository, outside a dot directory.
 

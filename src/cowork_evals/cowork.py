@@ -20,7 +20,6 @@ from typing import Any
 from urllib.parse import quote, urlencode
 
 from .config import (
-    CONSENT_DIALOG,
     CONSENT_NONE,
     PROMPT_LIMIT,
     Config,
@@ -36,7 +35,7 @@ AUDIT = "audit.jsonl"
 TRANSCRIPTS = Path(".claude") / "projects" / "session"
 OUTPUTS = "outputs"
 
-# The terminal command_lifecycle state. docs/cowork_desktop.md, snapshot 2026-09-08.
+# The terminal command_lifecycle state. docs/cowork_desktop.md.
 TERMINAL_STATE = "completed"
 STARTED_STATE = "started"
 
@@ -241,19 +240,14 @@ class CoWork:
         return session_dir
 
     def _consented(self) -> None:
-        """Step 2a. Code 2 when `consent` is `dialog` and this process never asked.
+        """Step 2a. Ask for the keyboard, and code 2 on Cancel.
 
-        The driver never shows the modal itself. It knows submissions and nothing above
-        them, and the developer approves once for a whole invocation rather than once per
-        case, so the asking belongs to the caller and this reads what the caller left.
+        It asks rather than reading a flag a caller was supposed to set. Every route to a
+        submission passes through here, so a route that does not ask cannot take the
+        keyboard with no warning. `consent` is once per process, so a caller that asked
+        before a sweep reaches a no-op here and the developer is asked once, not per case.
         """
-        if self._config.consent == CONSENT_DIALOG and not _CONSENTED:
-            raise CoWorkError(
-                2,
-                "consent was never given in this process: call cowork_evals.cowork.consent "
-                f"before submitting, or set cowork.consent: {CONSENT_NONE} to fire without "
-                "asking",
-            )
+        consent(self._config)
 
     def _clear(self) -> None:
         """Steps 2b and 2c: activate, guard, then select all and delete.
@@ -472,14 +466,15 @@ class CoWork:
 def consent(section: CoWorkSection) -> None:
     """Ask once per process for the keyboard. Cancel is code 2, and nothing has fired.
 
-    The caller is the command, once per invocation, before it builds a driver: `cli._ask`
-    and `cli._each_plugin`. A library caller does the same, or sets `cowork.consent: none`
-    in the configuration file. `run` and `submit` then refuse a submission that never asked.
+    Step 2a calls it, so every submission asks. `cli._ask` and `cli._each_plugin` call it
+    first, before they build a driver, so a sweep asks once up front rather than at its
+    first submission. A library caller does the same, or sets `cowork.consent: none` in the
+    configuration file.
 
     `consent: none` shows nothing and sets nothing, which is the documented route for an
-    unattended run and for this repository's own integration tier. It is a configuration
-    value and not a test seam: a test sets it in a file exactly as a consumer would, and no
-    parameter exists to inject an answer.
+    unattended run, and the only route that fires without a warning. It is a
+    configuration value and not a test seam: a test sets it in a file exactly as a consumer
+    would, and no parameter exists to inject an answer.
 
     The timeout proceeds rather than refuses. An unattended run is the case it exists for.
     """

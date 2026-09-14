@@ -10,16 +10,16 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
 
-from cowork_evals import cli, logs, preflight, results
+from cowork_evals import cli, logs, panel, preflight, results
 from cowork_evals.cases import plugin_name, plugin_roots
 from cowork_evals.cli import FAILED, OK, PREFLIGHT_FAILED, USAGE, main, parse_args
 from cowork_evals.config import Config, CoWorkError, EvalSection, checked
-from cowork_evals.docker import Docker
+from cowork_evals.docker import Condition, Docker, remedy
 from cowork_evals.docker.pytest_image import PytestImage
 from cowork_evals.harness import RESULT_NAME
 
@@ -165,6 +165,48 @@ def test_ask_with_no_backend_is_a_usage_error() -> None:
 
 def test_setup_takes_docker_alone() -> None:
     assert parse("setup", "--docker").backend == "docker"
+
+
+def test_login_takes_docker_alone_and_its_two_reports_are_exclusive() -> None:
+    """`--check` reports and `--force` writes, so asking for both says nothing coherent."""
+    assert parse("login", "--docker").backend == "docker"
+    assert parse("login", "--docker", "--check").check
+    assert parse("login", "--docker", "--force").force
+    for argv in (
+        ("login",),
+        ("login", "--cowork"),
+        ("login", "--docker", "--check", "--force"),
+    ):
+        with pytest.raises(SystemExit) as raised:
+            parse(*argv)
+        assert raised.value.code == USAGE
+
+
+def test_login_is_the_verb_a_missing_credential_names() -> None:
+    """The preflight sends an operator to the verb that makes a credential, not to `setup`.
+
+    `setup --docker` on a machine holding two current images prints `current` twice and
+    returns 0, so a line naming it would be a fix that changes nothing.
+    """
+    assert remedy(Condition.CREDENTIAL) == "run cowork_evals login --docker"
+    assert "login" in remedy(Condition.CREDENTIAL)
+    assert "setup" not in remedy(Condition.CREDENTIAL)
+
+
+def test_login_refuses_under_the_bedrock_route(tmp_path: Path, capsys) -> None:
+    """That route reads Claude's own credential from the host, so there is nothing to make.
+
+    Both modes refuse, because `--check` under this route would report a credentials file
+    that route never writes. What reports the four host variables is `check --docker`.
+    """
+    path = tmp_path / "cowork_evals.yaml"
+    path.write_text("docker:\n  credential: bedrock\n", encoding="utf-8")
+    config = Config.load(path)
+    for args in (parse("login", "--docker"), parse("login", "--docker", "--check")):
+        assert cli._login(args, config) == PREFLIGHT_FAILED
+    printed = capsys.readouterr().err
+    assert printed.count("no login to make") == 2
+    assert "cowork_evals check --docker" in printed
 
 
 def test_check_takes_both_backends_and_all() -> None:
@@ -453,6 +495,7 @@ VALIDATE = Path(__file__).resolve().parent.parent / "data" / "validate"
 FIRST = MARKETPLACE / "first"
 SECOND = MARKETPLACE / "second"
 SMOKE = Path(__file__).resolve().parent.parent.parent / "plugins" / "smoke"
+HISTORY = Path(__file__).resolve().parent.parent / "data" / "history"
 
 
 def settings(tmp_path: Path, text: str = "") -> Config:
@@ -563,9 +606,15 @@ def test_the_docker_dry_run_prints_the_container_argument_list(tmp_path, capsys)
     assert cli._dry_run(args, config, root, [(FIRST, FIRST / "evals")], ()) == 0
     printed = capsys.readouterr().out.splitlines()
     assert printed[0] == "# shared"
+    # The directory name carries the second it was composed in, so read the printed one back
+    # rather than compose a second name. The two differ whenever the test straddles a second.
+    logs_dir = next(Path(arg.split(":", 1)[0]) for arg in printed if arg.endswith(":/work/logs:rw"))
+    assert logs_dir.name == "shared"
+    assert logs_dir.parent.parent == root
+    assert logs_dir.parent.name.endswith("-shared")
     assert printed[1:] == Docker(config).run_argv(
         FIRST / "evals",
-        root / logs.run_dir_name("shared") / "shared",
+        logs_dir,
         cli._options(args, config, ()),
     )
 
@@ -677,13 +726,14 @@ def test_a_ceiling_of_zero_stops_the_sweep_before_the_first_plugin(tmp_path, cap
     config = settings(tmp_path, "eval:\n  max_cost_total_usd: 0\ncowork:\n  consent: none\n")
     args = parse("run", "--cowork", str(MARKETPLACE))
     directory = logs.run_dir(tmp_path / "logs", "all")
-    extra = cli._each_plugin(
+    swept = cli._each_plugin(
         args, config, directory, [(FIRST, FIRST), (SECOND, SECOND)], (), image=None
     )
     capsys.readouterr()
-    assert len(extra) == 1
-    assert "the total cost ceiling stopped the sweep" in extra[0]
-    assert "eval.max_cost_total_usd is 0" in extra[0]
+    assert len(swept.warnings) == 1
+    assert "the total cost ceiling stopped the sweep" in swept.warnings[0]
+    assert "eval.max_cost_total_usd is 0" in swept.warnings[0]
+    assert swept.roots == {}
     assert not list(directory.iterdir())
 
 
@@ -814,9 +864,104 @@ def test_a_named_backend_keeps_its_unmet_lines_on_stderr(tmp_path, capsys) -> No
     assert printed.out == ""
 
 
+# panel.
+
+
+def test_panel_takes_a_path_and_its_three_options() -> None:
+    args = parse("panel", "plugin/evals", "--markdown", "p.md", "--json", "p.json", "--removed")
+    assert args.verb == "panel"
+    assert args.path == "plugin/evals"
+    assert args.markdown == "p.md"
+    assert args.json == "p.json"
+    assert args.removed
+
+
+def test_panel_takes_no_backend() -> None:
+    """It renders both columns and reaches neither, so a backend flag is unknown."""
+    with pytest.raises(SystemExit) as raised:
+        parse("panel", "--docker", "plugin/evals")
+    assert raised.value.code == USAGE
+
+
+def test_panel_prints_one_row_per_case_under_the_path(tmp_path, capsys) -> None:
+    config = settings(tmp_path, f"panel:\n  root: {tmp_path / 'history'}\n")
+    assert cli._panel(parse("panel", str(SMOKE)), config) == OK
+    printed = capsys.readouterr()
+    lines = printed.out.splitlines()
+    assert lines[0].split() == list(panel.COLUMNS)
+    assert len(lines) == 5
+    assert printed.err == ""
+
+
+def test_panel_writes_the_two_files_it_is_given(tmp_path, capsys) -> None:
+    config = settings(tmp_path, f"panel:\n  root: {tmp_path / 'history'}\n")
+    markdown = tmp_path / "panel.md"
+    snapshot = tmp_path / "panel.json"
+    args = parse("panel", str(SMOKE), "--markdown", str(markdown), "--json", str(snapshot))
+    assert cli._panel(args, config) == OK
+    capsys.readouterr()
+    assert markdown.read_text().count("| smoke |") == 4
+    assert len(json.loads(snapshot.read_text())["rows"]) == 4
+
+
+def test_a_panel_path_selecting_no_case_returns_two(tmp_path, capsys) -> None:
+    """The same refusal `run` makes, so a mistyped path never reads as an empty repository."""
+    config = settings(tmp_path, f"panel:\n  root: {tmp_path / 'history'}\n")
+    assert cli._panel(parse("panel", str(MARKETPLACE / "library")), config) == USAGE
+    assert "selects no case" in capsys.readouterr().err
+
+
+def test_an_unparsable_history_line_warns_and_leaves_the_exit_code_at_zero(
+    tmp_path, capsys
+) -> None:
+    """A record is one line, so one truncated line loses one measurement and no row."""
+    history = tmp_path / "history"
+    file = panel.path(history, "smoke", "evals/plugin/python-version")
+    file.parent.mkdir(parents=True)
+    file.write_bytes((HISTORY / "truncated.jsonl").read_bytes())
+    config = settings(tmp_path, f"panel:\n  root: {history}\n")
+    assert cli._panel(parse("panel", str(SMOKE)), config) == OK
+    printed = capsys.readouterr()
+    assert printed.err.startswith("panel: ")
+    assert "pass" in printed.out
+
+
+# prune.
+
+
 def test_prune_with_no_selection_flag_returns_two(capsys) -> None:
     assert main(["prune"]) == USAGE
-    assert "prune takes --docker, --logs, or both" in capsys.readouterr().err
+    assert "prune takes --docker, --logs, --history" in capsys.readouterr().err
+
+
+def test_prune_takes_history_beside_the_other_two(tmp_path: Path) -> None:
+    args = parse("prune", "--logs", "--history", "--docker", "--older-than", "7")
+    assert args.logs and args.history and args.docker
+    assert args.older_than == 7
+
+
+def test_prune_history_deletes_a_record_under_the_panel_root(tmp_path, capsys) -> None:
+    """`--out` names the log root, and the history root is `panel.root`. docs/panel.md."""
+    history = tmp_path / "history"
+    old = (datetime.now(timezone.utc) - timedelta(days=40)).isoformat()
+    panel.append(
+        history,
+        [
+            {
+                "schemaVersion": 1,
+                "plugin": "smoke",
+                "dir": "evals/plugin/one",
+                "backend": "docker",
+                "startedAt": old,
+                "outcome": "pass",
+            }
+        ],
+    )
+    config = settings(tmp_path, f"panel:\n  root: {history}\n")
+    args = parse("prune", "--history", "--out", str(tmp_path / "elsewhere"))
+    assert cli._prune(args, config) == 0
+    assert "pruned " in capsys.readouterr().out
+    assert not (history / "smoke").exists()
 
 
 def test_prune_logs_deletes_under_the_resolved_root(tmp_path, capsys) -> None:

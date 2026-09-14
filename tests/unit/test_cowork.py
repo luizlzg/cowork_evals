@@ -512,7 +512,9 @@ def test_a_refusal_before_firing_leaves_no_run_log_line(tmp_path: Path) -> None:
 # Consent, and the taxonomy the guard added. docs/cowork_driver.md.
 #
 # Nothing in the unit tier ever grants consent, so the module flag is false throughout it.
-# Granting it means showing a modal, and no test here drives the desktop.
+# Granting it means showing a modal, and no test here drives the desktop. A test here may
+# call `_consented` under `consent: none`, and may never call `run` or `submit` without it:
+# the driver asks at step 2a, so a submission under `consent: dialog` opens a real modal.
 
 
 def test_consent_none_shows_nothing_and_leaves_the_module_flag_alone(tmp_path: Path) -> None:
@@ -520,17 +522,6 @@ def test_consent_none_shows_nothing_and_leaves_the_module_flag_alone(tmp_path: P
     driver_module.consent(CoWorkSection(consent=CONSENT_NONE))
     assert driver_module._CONSENTED is False
     build(tmp_path, consent=CONSENT_NONE)._consented()
-
-
-def test_a_submission_with_no_consent_raises_code_2_and_fires_nothing(tmp_path: Path) -> None:
-    driver = stepping(tmp_path)
-    assert driver.config.consent == CONSENT_DIALOG
-    with pytest.raises(CoWorkError) as raised:
-        driver.run("Reply with exactly: PONG")
-    assert raised.value.code == 2
-    assert "consent" in str(raised.value)
-    assert driver.history() == [], "a refusal fired nothing, so it leaves no run log line"
-    assert driver.sessions() == []
 
 
 def test_reading_a_session_never_asks_for_consent(driver: CoWork, tmp_path: Path) -> None:

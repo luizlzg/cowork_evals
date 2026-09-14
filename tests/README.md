@@ -3,17 +3,24 @@
 Tests for this repository's own code. Python 3.10 under `.venv`, run by `scripts/test.sh`.
 Scope as each piece is built: the environments, the configuration file, the harness
 argument list, the container image and its parity probe, the test image over it, the CoWork
-driver, the CLI's option surface and backend mapping, the pass and fail decision, the case validator
-and the CoWork grader. The table below lists the files that exist today.
+driver, the CLI's option surface and backend mapping, the pass and fail decision, the case validator,
+the CoWork grader and the panel over the case history. The table below lists the files that exist today.
 
 These are not evals. An eval needs a model in the loop. If a failure can be caught by
 pytest, it is not an eval.
 
-A hand-written case tree under `tests/data/cases/`, `tests/data/validate/` and
-`tests/data/cli/`, a hand-written session document under `tests/data/documents/`, a
-hand-written result document under `tests/data/results/` and a recorded judge reply under
+A hand-written case tree under `tests/data/cases/`, `tests/data/validate/`,
+`tests/data/checks/` and `tests/data/cli/`, a hand-written session document under
+`tests/data/documents/`, a hand-written result document under `tests/data/results/`, a
+hand-written history file under `tests/data/history/` and a recorded judge reply under
 `tests/data/judge/` are input on disk, not stand-ins. The reader, the graders, the validator,
-the verdict and the vote counting that parse them are the real ones.
+the verdict, the panel and the vote counting that parse them are the real ones.
+
+A check file under `tests/data/checks/` is input on disk too, and it is the one fixture that
+is executed rather than parsed: the loader that imports it is the real one, and the file is
+the author's code a consumer would write. The collected run directory beside it is copied into
+`tmp_path` before anything runs, because a check writes `scratch/` and the layer writes
+`checks.jsonl` beside the three collected names.
 
 A harness sandbox is written by the test rather than kept under `tests/data/`, because a
 sandbox is a directory tree with modes on it and a checkout does not carry a mode-000
@@ -64,17 +71,19 @@ A skipped test reports as a pass and hides the thing it was written to catch.
 | `unit/test_validate.py`           | The case validator and the coverage report over hand-written trees | yes |
 | `unit/test_logs.py`               | The run directory, `env.txt`, `latest`, pruning and the tee | yes    |
 | `unit/test_traces.py`             | What is kept out of a run on either backend, and the two validity checks over the kept trace, over sandboxes and session directories written by the test | yes |
+| `unit/test_checks.py`             | The check layer: discovery, the loader, execution, and what it appends to the document, over hand-written case trees and run directories | yes |
 | `unit/test_verdict.py`               | Pass and fail over hand-written result documents                | yes    |
+| `unit/test_panel.py`              | The history store, the record, the join to the case tree, and the renders | yes |
 | `unit/test_preflight.py`          | Each backend's unmet conditions, and the rate ceiling      | yes    |
 | `unit/test_cli.py`                | The parser, the refusals, the verbs and the exit codes     | yes    |
 | `unit/test_cli_docs_init.py`      | The `docs` and `init` verbs: what they print and what they write | yes |
 | `unit/test_resources.py`          | The shipped documentation and data, the two reference rules, and the skill against the documents it condenses | yes |
 | `integration/test_cowork.py`      | The same driver against a real profile and a real run      | yes    |
 | `integration/test_docker.py`      | The built image, its mounts, its sandbox and one real eval run | yes |
-| `integration/test_judge.py`       | The judge against the real `claude -p`                     | yes    |
+| `integration/test_judge.py`       | The judge against the real `claude -p`, and the check judge over a real PNG and a real PDF | yes |
 | `integration/test_cowork_backend.py` | The backend against a real profile, and one real suite   | yes    |
 | `integration/test_pytest_image.py` | The built test image, its exit codes, and what it writes | yes    |
-| `integration/test_cli.py`         | The command against the real backends, through the executable, and `ask` against a live session | yes |
+| `integration/test_cli.py`         | The command against the real backends, through the executable, `panel` over the history a real run left, and `ask` against a live session | yes |
 
 One file per unit under test, named after the unit and not after the scenario. A unit tested
 in both tiers keeps its name in both directories, which is why `pyproject.toml` sets
@@ -83,6 +92,10 @@ in both tiers keeps its name in both directories, which is why `pyproject.toml` 
 tiers share. No test in the default selection starts a live eval run, a container or a
 CoWork session: it asserts over recorded output, and `--dry-run` is how the command line is
 asserted over without spending money.
+
+The driver asks for the keyboard inside a submission, so a unit test may call `_consented`
+under `cowork.consent: none` and may never call `run` or `submit` without it. Either one
+opens a real modal and then activates the application.
 
 A CoWork session fixture is written by hand, never copied from a profile. A copied session
 directory carries an account identifier, a profile identifier, a session identifier and the
@@ -142,9 +155,16 @@ proven with `--dry-run --cowork` in the unit tier. Nothing there builds an image
 Its first `live` test fires `plugins/smoke/` through `cowork_evals run --docker` and asserts
 the whole log layout over that same run, `run.log` and the run's collected trace included. That log line is the
 descriptor-level tee proven against a real child process, and it cannot be reached without
-one. Its two `test` verb tests cost a container and no model call, so neither is `live`.
+one. One more fires the `checked-file` case and reads what the check layer left: the `FAIL`
+line, the appended grader result, `checks.jsonl` and `scratch/`. Its two `test` verb tests
+cost a container and no model call, so neither is `live`.
 
-Its second `live` test is the one that needs a profile. `ask` reaches a live session and
+One `live` test fires one case and then reads the record that run left, through
+`cowork_evals panel`. It writes a `cowork_evals.yaml` naming a history root under `tmp_path`,
+because `--out` does not move the history and a test left on the default would append to the
+developer's own tree. See [../docs/panel.md](../docs/panel.md).
+
+The one `live` test that needs a profile is `ask`. It reaches a live session and
 there is no other way to prove that the verb submits, waits, prints an answer and names a
 session that exists. It needs everything `integration/test_cowork.py` needs, and it carries
 the same cost: a VM boot, one entry against the rate ceiling, and a permanent session.
@@ -164,25 +184,35 @@ it starts no CoWork session and costs no ceiling entry.
 
 ### The live marker
 
-Nine integration tests submit a real run. The four CoWork ones each cost a VM boot, count
+Sixteen integration tests submit a real run. The five CoWork ones each cost a VM boot, count
 against the driver's rate ceiling and leave a permanent session in the signed-in account.
-The three container ones cost the model calls their case makes, and the two judge ones cost
-short `claude -p` calls. All nine carry `live` as well as `integration`. An integration run
+The eight container ones cost the model calls their case makes, and the three judge ones cost
+short `claude -p` calls. All sixteen carry `live` as well as `integration`. An integration run
 that must not spend selects `-m "integration and not live"`.
 
 The CoWork ones need the macOS Accessibility grant, a signed-in CoWork, the desktop
 application already running, and `cowork_evals.yaml` naming the active profile. They fail,
 and do not skip, when no profile is configured. Nothing steals focus while one runs. See
-[../docs/cowork_desktop.md](../docs/cowork_desktop.md) for the authorizations. Three of them
-are in the two CoWork files and the fourth is `ask`, in `integration/test_cli.py`. The three
+[../docs/cowork_desktop.md](../docs/cowork_desktop.md) for the authorizations. Four of them
+are in the two CoWork files and the fifth is `ask`, in `integration/test_cli.py`. The eight
 container ones need a credential route, and fail without one.
 
-Every CoWork test that fires reads the `unattended` fixture in
-`integration/conftest.py`. It copies this machine's `cowork_evals.yaml` and sets
-`cowork.consent: none`, which is what an unattended run sets and what keeps a modal out of a
-test run. It is a configuration value, not a seam: the fixture writes a file exactly as a
-consumer would, and no parameter injects an answer. The driver's own consent is module
-state, so a test that granted it would leak into every test after it in the same process.
+The integration tier asks for the keyboard once before any of its tests run, through the
+session-scoped autouse `keyboard` fixture in `integration/conftest.py`. It asks on every
+integration run, including a Docker-only one that takes no keyboard, because a marker is what
+a new test omits. It needs no CoWork profile. Cancel raises code 2 and every integration test
+then errors.
+
+`-m "integration and not live"` takes the keyboard too: two focus tests in
+`integration/test_cowork.py` activate Finder, and `live` does not select them.
+
+Every CoWork test that fires reads the `attended` fixture in `integration/conftest.py`. It
+copies this machine's `cowork_evals.yaml` and forces `cowork.consent: dialog`, so a developer
+whose own file carries `none` is still warned by a test run. The modal does not appear a
+second time, because `keyboard` already asked and consent is once per process. It is a
+configuration value, not a seam: the fixture writes a file exactly as a consumer would, and
+no parameter injects an answer. The driver's own consent is module state, which is what makes
+one ask cover a whole run.
 
 Everything in this repository is 3.10, tests included, and ruff targets `py310`, so a file
 here parses on the runtime as well. What still belongs to the code a consumer points the
