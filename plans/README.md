@@ -16,8 +16,8 @@ while the work happens.
 
 ## Plans
 
-Sixteen plans. Fourteen build something and are numbered in build order, and one of those
-fourteen is skipped. `plan_fix` builds nothing, so it carries no number: it corrects what the
+Seventeen plans. Fifteen build something and are numbered in build order, and one of those
+fifteen is skipped. `plan_fix` builds nothing, so it carries no number: it corrects what the
 others wrote, and it ran before `plan_cowork_backend.md` because it changes what that plan and
 `plan_cli.md` both read. `plan_believable_results` carries no number for the same reason:
 it holds measurements and decisions, and its product is the four plans numbered 10 to 13. The order is the
@@ -45,6 +45,7 @@ not the system's: what is built and usable is
 | 12 | [`done/plan_env_passthrough.20260912.md`](done/plan_env_passthrough.20260912.md) | Named host variables forwarded into the run container, values never logged | implemented | `feat/env-passthrough` |
 | 13 | [`done/plan_ablation.20260912.md`](done/plan_ablation.20260912.md) | The baseline arm, and a verdict that decides on the per-case delta | implemented | `feat/ablation`       |
 | 14 | [`plan_eval_design.md`](plan_eval_design.md) | The document that owns which cases to write, the interview the skill runs, and a second credential route | written | `feat/eval-enhancement` |
+| 15 | [`plan_eval_triage.md`](plan_eval_triage.md) | The document that says what to change when a run fails, and the skill that proposes the changes and applies the approved ones | not started | `plan/eval-triage` |
 
 | Status        | Means                                                                     |
 | ------------- | --------------------------------------------------------------------------- |
@@ -112,6 +113,14 @@ skill, and the rule that separates the two documents. The boundary it moves is
 [`../docs/eval_design.md`](../docs/eval_design.md). Its last phase is unrelated to the rest and
 is there because the same developer could run nothing without it: the container backend accepted
 one credential, and a host that authenticates Claude Code through Bedrock failed the preflight.
+
+Plan 15 builds no part of a run either. A run ends at a verdict and a transcript, and no file
+says what to change when a finding is real. A session given a failing run edited the case until
+it passed. It adds one shipped document, a third shipped skill, and the two rules that
+separate three skills and three documents. The boundary it moves is
+[`../docs/library.md`](../docs/library.md), which counted two skills. It adds no verb: reading a
+finished run stays the consumer's own script, which is
+[`../docs/running_evals.md`](../docs/running_evals.md).
 
 Plans 2 and 3 each build one backend whole. Running an eval on those two backends is
 `claude plugin eval`, which discovers the cases, runs them, grades them and writes
