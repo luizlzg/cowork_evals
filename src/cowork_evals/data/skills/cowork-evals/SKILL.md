@@ -30,11 +30,19 @@ file is the authority for anything below.
 
 `docs eval_design` owns this. The short form:
 
-Claude Code does not invent a suite. Ask the developer what the skill has to get right, what a
-bad answer looks like, and what a release must not ship. Read the cases and the graders out of
-the reply, and ask a follow-up question when the reply does not decide one. Never ask which eval
-and which grader they want: that hands the design back to the developer, and a developer who
-could answer it would have written the case already.
+Claude Code does not invent a suite. Read the skill under test first, then talk to the developer
+about what the reading did not settle. There is no questionnaire: no fixed set of questions, in
+no fixed order, and no question whose answer the skill already carries. A session opening with
+the same three questions every time gets three shallow answers, and asks a developer to restate
+their own skill.
+
+Read for the job the skill exists for, which of its capabilities are separable, and what it reads
+and writes. Talk about what a wrong answer looks like, what must never happen, and which part
+breaks most often, one thing at a time and in whatever order the conversation takes. Never ask
+which eval and which grader they want: that hands the design back to the developer, and a
+developer who could answer it would have written the case already. Whether the model would do the
+job unaided is settled by the baseline arm and by no conversation: `## Did the plugin do anything`
+below.
 
 A reply names a symptom, not a case, and turning it into one is the work. `The summaries are too
 long` is a `regex` over `last_message`. `It makes things up about our schema` is a fixture and a
@@ -73,6 +81,13 @@ carries both, and a case whose only assertion directory is `checks/` never loads
 name a check, because a grader reads text and a workbook, a deck, a PDF and an image are not.
 Prefer a grader anyway: a check is code you own. Unlike an `llm` grader, a check decides the exit
 code however it reached its verdict, `run.judge` included.
+
+Usefulness is a delta. A prompt the model answers as well unaided measures the model, so move it
+onto what the skill knows and the model does not, and prefer a prompt naming the outcome to one
+naming the skill or its steps, because the arm with no skill gets the same prompt. A case whose
+only assertion is that the skill fired says nothing about usefulness: the assertion cannot hold
+without the plugin, so give the case an assertion over the output as well. The arm itself is
+`## Did the plugin do anything` below.
 
 Context relevancy, leakage and the malformed form of edge cases each need a staged fixture, which
 is a `context.*` key, which makes the case `no-cowork`. The leakage marker is a fixture the case

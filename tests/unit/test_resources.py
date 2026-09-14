@@ -241,11 +241,36 @@ def test_the_skill_carries_every_coverage_dimension_the_design_defines() -> None
         assert dimension in skill, dimension
 
 
-def test_the_skill_carries_the_interview_default() -> None:
-    """The default and its one exception. Without both, a session invents a suite again."""
+def test_the_skill_carries_the_conversation_default() -> None:
+    """The default, its one exception, and the rule against a fixed set of questions.
+
+    Without the first two a session invents a suite again. Without the third it interrogates
+    the developer from a script, which is what the questions replaced.
+    """
     skill = resources.skill("cowork-evals").read_text()
     design = _document("eval_design.md")
-    for sentence in ("Claude Code does not invent a suite.", "The signal is the reply."):
+    for sentence in (
+        "Claude Code does not invent a suite.",
+        "The signal is the reply.",
+        "There is no questionnaire",
+    ):
+        assert sentence in skill, sentence
+        assert sentence in design, sentence
+
+
+def test_usefulness_is_a_delta_in_both_files() -> None:
+    """A suite run only with the plugin loaded credits the skill for what the model did.
+
+    The arm is running_evals.md. That designing for it is a design decision is this file's, and
+    a session reads it out of the skill.
+    """
+    skill = resources.skill("cowork-evals").read_text()
+    design = _document("eval_design.md")
+    for sentence in (
+        "Usefulness is a delta",
+        "measures the model",
+        "says nothing about usefulness",
+    ):
         assert sentence in skill, sentence
         assert sentence in design, sentence
 

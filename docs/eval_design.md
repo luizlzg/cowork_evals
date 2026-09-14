@@ -6,14 +6,18 @@ Which cases a skill needs, and which assertion answers which question. This is t
 contract over [eval_format.md](eval_format.md), which is the file contract, and over
 [checks.md](checks.md), which is the other assertion mechanism.
 
-- **Claude Code does not invent a suite.** It asks the developer what the skill has to get
-  right, and reads the cases and the graders out of the reply.
+- **Claude Code does not invent a suite.** It reads the skill first, and talks to the developer
+  about what the reading did not settle.
+- **There is no questionnaire.** No fixed set of questions, in no fixed order. A question whose
+  answer is already in the skill is not asked.
 - **It never asks which eval and which grader the developer wants.** That question hands the
   design back.
 - **A developer who says they do not know gets a suite Claude Code designed.** The signal is
   the reply, not a flag.
 - **Ten dimensions.** Each one that applies to the skill has at least one case, whichever route
   produced the suite.
+- **Usefulness is a delta.** A skill earns its place when the agent does better with it than
+  without it, and the baseline arm is what measures that.
 - **A grader, or a check.** Can a grader type read the target, and say what has to be true of
   it? Yes, and it is a grader. No, and it is a check.
 - **A missing access changes the design.** A case that needs access it does not have measures
@@ -54,23 +58,37 @@ The no side is two files, because there are two assertion mechanisms. A statemen
 type is [eval_format.md](eval_format.md), and a statement about a check is
 [checks.md](checks.md). Which of the two an assertion needs depends on the skill, so it is here.
 
-## The interview
+## The conversation
 
-Claude Code does not invent a suite. Before it writes a case it asks the developer what the
-skill has to get right, what a bad answer looks like, and what a release must not ship. It reads
-the cases and the grader kinds out of the reply, and asks a follow-up question when the reply
-does not decide one.
+Claude Code does not invent a suite. It reads the skill under test first, and then talks to the
+developer about what the reading did not settle.
+
+There is no questionnaire. No fixed set of questions, in no fixed order, and no question asked
+because a document said to ask it. A session that opens with the same three questions every time
+gets the same three shallow answers, and it asks a developer to restate what their own skill
+already says.
+
+So read first. The skill's own description and instructions, the repository around it, and any
+suite already there answer most of the table below. Then talk about the rest, one thing at a
+time, in whatever order the conversation takes. A question the reading could have answered is a
+question not to ask.
+
+| The design needs                              | Where it comes from                                       |
+| --------------------------------------------- | ---------------------------------------------------------- |
+| The job the skill exists for                  | its own description and instructions, confirmed in a sentence rather than asked from nothing |
+| Which capabilities are separable              | its instructions, and one case each                        |
+| What it reads and what it writes              | its instructions and its fixtures, which decide the access and whether the target is text |
+| What a wrong answer looks like                | the developer. Nothing in the repository records it         |
+| What must never happen                        | the developer, and it is what carries a structural assertion |
+| Which part breaks most often                  | the developer, and it is which capability gets a case first |
+| Whether the model would do the job unaided    | the baseline arm, and no conversation settles it            |
+
+The bottom four rows are what a conversation is for. The top three are what reading is for, and
+raising one of them as a question is how a session loses the developer's patience before the
+suite is designed.
 
 It never asks which eval and which grader the developer wants. That question hands the design
 back to the developer, and a developer who could answer it would have written the case already.
-
-| Ask                                                    | Read out of the reply                                     |
-| ------------------------------------------------------ | --------------------------------------------------------- |
-| What does this skill have to get right?                | the end to end case, and the goal the grader asserts      |
-| What does a bad answer look like?                      | the edge cases, and every `not_contains` pattern          |
-| What must a release never ship?                        | which dimension carries a structural grader               |
-| What does it read, and what does it write?             | the fixtures, the access, which target a grader reads, and whether what it writes is text |
-| Which part of it breaks most often?                    | which capability gets a case of its own                   |
 
 A reply names a symptom, not a case. The work is to turn it into one. `The summaries are too
 long` is a `regex` over `last_message`. `It makes things up about our schema` is a fixture and a
@@ -136,6 +154,31 @@ Code says back to the developer.
 - **Directory coverage is not dimension coverage.** One `evals/<skill>/` per skill is what `run`
   reports and `--require-coverage` enforces. See [cli.md](cli.md). Nothing enforces the table
   above, which is why it is written here.
+
+## Usefulness is a delta
+
+A green suite says the cases passed. It does not say the skill is worth loading. Ask a model to
+build a spreadsheet and it builds one whether or not a spreadsheet skill is in the profile, so a
+suite that only ever runs with the plugin loaded measures the model and credits the skill.
+
+What measures the skill is the same case run twice, once with the plugin and once with nothing
+loaded, and the difference between the two scores. The arm, its settings, and what a delta does
+to pass and fail are [running_evals.md](running_evals.md). What it asks of the design is here.
+
+| The design decision                                        | Because the baseline arm runs the same prompt                  |
+| ----------------------------------------------------------- | -------------------------------------------------------------- |
+| A prompt the model answers as well unaided measures the model | its delta is zero. Move the prompt onto what the skill knows and the model does not |
+| The case to write first is the one the model is worst at unaided | it is the case that shows what the skill is for              |
+| A case whose only assertion is that the skill fired says nothing about usefulness | that assertion cannot hold without the plugin, so the delta records that the plugin was loaded. Give the case an assertion over the output as well |
+| A prompt naming the skill, or naming its steps, is weaker than one naming the outcome | the arm with no skill gets the same prompt, so a prompt carrying the method hands the method to it |
+
+Design for the delta whether or not a suite runs the arm. Would the model do this anyway is the
+same question either way, and a case that cannot answer it was going to pass from the day it was
+written.
+
+The arm is `--docker` only. A CoWork session takes its skills from the profile the application
+runs, so nothing can unload the plugin for one arm there. See
+[approaches.md](approaches.md).
 
 ## A grader or a check
 

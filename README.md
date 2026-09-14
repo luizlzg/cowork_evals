@@ -301,7 +301,7 @@ your repository picks them up from there. They fire on different questions.
 | `cowork-evals` | Deciding which evals a skill needs; writing or fixing a case, a `prompt.md`, a grader or a check; a failing `cowork_evals` command; the configuration file; plugin code that has to run inside a session |
 | `cowork-ask`   | A question about what a live CoWork session actually does; a claim that has to be confirmed in the product; a failing `cowork_evals ask` |
 
-`cowork-evals` carries the interview that decides which cases a skill needs and the ten
+`cowork-evals` carries the conversation that decides which cases a skill needs and the ten
 coverage dimensions it checks the suite against, then the case tree, the two required
 frontmatter keys, the six grader types, three copy-paste grader idioms, two copy-paste checks,
 the eleven authoring traps, the exit codes and the 3.10 runtime constraint. `cowork-ask` carries
