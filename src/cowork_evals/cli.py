@@ -1,4 +1,4 @@
-"""The command: the parser, the eight verbs, the dispatch and the exit codes.
+"""The command: the parser, the ten verbs, the dispatch and the exit codes.
 
 The surface is docs/cli.md, and this module is the whole of it. There is no second entry point
 and no per-backend executable.
@@ -16,15 +16,19 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from . import (
+    checks,
     cowork,
     cowork_backend,
     docker,
+    judge,
     logs,
+    panel,
     preflight,
     resources,
     results,
@@ -35,7 +39,7 @@ from . import (
 from .cases import CaseError, discover, plugin_name, plugin_roots
 from .config import ABLATION_CHOICES, Config, CoWorkError, CoWorkSection, EvalSection, checked
 from .cowork import CoWork
-from .docker import Docker, DockerError, pytest_image
+from .docker import Condition, Docker, DockerError, pytest_image, remedy
 from .docker.pytest_image import PytestImage
 from .harness import RunOptions
 from .preflight import COWORK, DOCKER, TEST
@@ -137,8 +141,10 @@ def build_parser() -> argparse.ArgumentParser:
     _ask_parser(verbs)
     _test_parser(verbs)
     _setup_parser(verbs)
+    _login_parser(verbs)
     _check_parser(verbs)
     _prune_parser(verbs)
+    _panel_parser(verbs)
     _docs_parser(verbs)
     _init_parser(verbs)
     return parser
@@ -262,9 +268,57 @@ def _setup_parser(verbs: Any) -> None:
     _backend_group(verb, DOCKER)
 
 
+def _login_parser(verbs: Any) -> None:
+    """`login` makes the one credential a run needs, and builds nothing.
+
+    It is a verb and not a side effect of `setup`, because an image is a build product and a
+    credential is not: `_prune_images` already keeps the two apart, and one command that
+    makes both cannot be run again for either one alone.
+
+    `--check` reports and writes nothing. `--force` logs in again over a login this package
+    already accepts, which is tokens that are present and no longer work, or the wrong
+    account. A credentials file carrying no token is not a login, and needs no flag.
+    docs/cli.md.
+    """
+    verb = verbs.add_parser("login", help="log in to Claude Code once, in a container")
+    _backend_group(verb, DOCKER)
+    group = verb.add_mutually_exclusive_group()
+    group.add_argument(
+        "--check",
+        action="store_true",
+        help="report whether a login is present, and write nothing",
+    )
+    group.add_argument(
+        "--force",
+        action="store_true",
+        help="log in again over a login that is already there",
+    )
+
+
 def _check_parser(verbs: Any) -> None:
     verb = verbs.add_parser("check", help="report what a backend is missing")
     _backend_group(verb, DOCKER, COWORK, ALL)
+
+
+def _panel_parser(verbs: Any) -> None:
+    """`panel` takes a path and three options, and no backend.
+
+    It renders both backend columns and reaches neither, so there is nothing for a backend
+    flag to select. There is no `--tag` and no `--case` either: the verb exists to show what
+    has never run, and a filter hides exactly those rows. The path is the only selector, and
+    it is the one `run` uses.
+    """
+    verb = verbs.add_parser(
+        "panel", help="print every case under a path with its latest result on each backend"
+    )
+    verb.add_argument("path", help="a case, a skill, an evals/ tree, a plugin root or a sweep")
+    verb.add_argument("--markdown", help="write the same rows as a Markdown table to this file")
+    verb.add_argument("--json", help="write the same rows as a JSON snapshot to this file")
+    verb.add_argument(
+        "--removed",
+        action="store_true",
+        help="add a row for history whose case is no longer in the tree",
+    )
 
 
 def _prune_parser(verbs: Any) -> None:
@@ -273,10 +327,16 @@ def _prune_parser(verbs: Any) -> None:
     They are not a mutually exclusive group: pruning images and logs in one invocation is
     ordinary. `argparse` cannot express `at least one`, so the refusal is the verb's and
     returns 2.
+
+    `--out` does not reach `--history`. That option names the log root, and the history root
+    is `panel.root`. docs/panel.md.
     """
     verb = verbs.add_parser("prune", help="delete artefacts this command created")
     verb.add_argument("--docker", action="store_true", help="images this command built")
     verb.add_argument("--logs", action="store_true", help="run directories under the log root")
+    verb.add_argument(
+        "--history", action="store_true", help="records under the panel's history root"
+    )
     verb.add_argument(
         "--older-than", type=int, default=logs.RUN_PRUNE_DAYS, help="restrict every selection"
     )
@@ -420,8 +480,12 @@ def _dispatch(args: argparse.Namespace, config: Config) -> int:
         return _test(args, config)
     if args.verb == "setup":
         return _setup(config)
+    if args.verb == "login":
+        return _login(args, config)
     if args.verb == "check":
         return _check(args, config)
+    if args.verb == "panel":
+        return _panel(args, config)
     if args.verb == "docs":
         return _docs(args)
     if args.verb == "init":
@@ -640,6 +704,20 @@ def _delta_threshold(args: argparse.Namespace, config: Config) -> float:
     return float(config.eval.delta_threshold)
 
 
+@dataclass(frozen=True)
+class Swept:
+    """What one sweep leaves the verdict and the history.
+
+    `roots` maps a run directory's child name to the plugin root on this host. The result
+    document cannot supply it: on the container backend `suite.root` is the path the plugin
+    was mounted at inside the container, `/work/plugin`, and the case files a digest covers
+    are on the host.
+    """
+
+    warnings: tuple[str, ...] = ()
+    roots: dict[str, Path] = field(default_factory=dict)
+
+
 def _sweep(
     args: argparse.Namespace,
     config: Config,
@@ -667,17 +745,50 @@ def _sweep(
             credential=None if image is None else image.credential,
             env_passthrough=() if image is None else image.env_passthrough,
         )
-        extra = _each_plugin(args, config, directory, targets, tags, image)
+        swept = _each_plugin(args, config, directory, targets, tags, image)
         decided = verdict.decide(
             directory,
             found=found,
             picked=picked,
-            extra=extra,
+            extra=swept.warnings,
             delta_threshold=_delta_threshold(args, config),
         )
         (directory / logs.VERDICT_FILE).write_text(decided.text, encoding="utf-8")
         print(decided.text, end="")
+        _record(args, config, directory, decided, image, swept.roots)
     return OK if decided.passed else FAILED
+
+
+def _record(
+    args: argparse.Namespace,
+    config: Config,
+    directory: Path,
+    decided: verdict.Verdict,
+    image: Docker | None,
+    roots: dict[str, Path],
+) -> None:
+    """Append one record per case to the history, from the documents this invocation wrote.
+
+    It runs after the verdict, once, and the outcome it records is the one the verdict
+    reached. A `--dry-run` and every refusal return before the sweep, so neither appends.
+
+    A failure to write is a warning on stderr and leaves the exit code alone. Recording a
+    result is not deciding one, and an unwritable history root must not turn a passing run
+    red. docs/panel.md.
+    """
+    try:
+        panel.append(
+            config.panel.root,
+            panel.records(
+                directory,
+                decided.outcomes,
+                args.backend,
+                image=None if image is None else image.tag,
+                roots=roots,
+            ),
+        )
+    except OSError as error:
+        print(f"panel: {error}", file=sys.stderr)
 
 
 def _each_plugin(
@@ -687,7 +798,7 @@ def _each_plugin(
     targets: list[tuple[Path, Path]],
     tags: tuple,
     image: Docker | None,
-) -> tuple[str, ...]:
+) -> Swept:
     """Run each plugin, stopping on the total cost ceiling.
 
     The check runs before the first plugin, so a ceiling of 0 stops the invocation before
@@ -699,22 +810,33 @@ def _each_plugin(
         try:
             cowork.consent(config.cowork)
         except CoWorkError as error:
-            return (str(error),)
+            return Swept((str(error),))
 
     # Built once: it does not vary by plugin, and the grant in it is what the validity
     # checks hold each run's offered tool list against. The CoWork backend builds no
     # options and grants nothing, so those checks find nothing there.
     options = _options(args, config, tags) if image is not None else None
+    # The one ladder every other judge call resolves through, so `--judge-model` beats
+    # `eval.judge_model` for a check judge too. docs/checks.md.
+    judge_model = judge.resolve_model(args.judge_model, config)
 
     ceiling = config.eval.max_cost_total_usd
+    roots: dict[str, Path] = {}
     for plugin, target in targets:
         spent = results.spend(directory)
         if spent >= ceiling:
-            return (
-                f"the total cost ceiling stopped the sweep at {plugin}: "
-                f"{spent} spent, eval.max_cost_total_usd is {ceiling}",
+            return Swept(
+                (
+                    f"the total cost ceiling stopped the sweep at {plugin}: "
+                    f"{spent} spent, eval.max_cost_total_usd is {ceiling}",
+                ),
+                roots,
             )
         output = logs.plugin_dir(directory, plugin_name(plugin))
+        # The run directory's child name against the plugin root on this host. `plugin_dir`
+        # owns the name, including the `-2` suffix two plugins of one name get, so it is
+        # read back here rather than derived a second time.
+        roots[output.name] = Path(plugin)
         try:
             if image is not None and options is not None:
                 image.run(target, output, options)
@@ -740,7 +862,13 @@ def _each_plugin(
                 granted = () if options is None else options.allow_tools
                 for warning in traces.collect(output, granted=granted):
                     print(f"trace: {warning}", file=sys.stderr)
-    return ()
+            # After the collection, because a check reads the collected run directory. It
+            # runs whether or not the traces were kept: with none there is nothing to read,
+            # and a case with checks then produces a skip, which fails the run.
+            # docs/checks.md.
+            for warning in checks.run(output, plugin, judge_model=judge_model):
+                print(f"check: {warning}", file=sys.stderr)
+    return Swept((), roots)
 
 
 # ask.
@@ -925,15 +1053,15 @@ def _test(args: argparse.Namespace, config: Config) -> int:
     return image.run(args.path, pytest_args=tail)
 
 
-# setup, check and prune.
+# setup, login, check, prune and panel.
 
 
 def _setup(config: Config) -> int:
-    """Build the two images, then log in. An image already at its digest is `current`.
+    """Build the two images. An image already at its digest is `current`.
 
-    There is no login under `docker.credential: bedrock`: that route reads Claude's own
-    credential from the host, and `check --docker` is what reports a name it is missing.
-    docs/docker.md.
+    It does not log in. Building an image and obtaining a credential are two things, and
+    `login` is the verb that does the second: a machine whose login was revoked needs that
+    one act and not a second pass over two images that are already current. docs/cli.md.
     """
     image = Docker(config)
     test_image = PytestImage(config)
@@ -942,13 +1070,65 @@ def _setup(config: Config) -> int:
             print(f"{artefact.tag}: current")
         else:
             artefact.build()
+    return OK
+
+
+def _login(args: argparse.Namespace, config: Config) -> int:
+    """Make the container login, report it, or replace it. It builds nothing.
+
+    The daemon and the image are the two conditions the login container itself needs, and
+    they are the two this reads from `Docker.check`: the credential is what it is about to
+    make, and `docker.env_passthrough` reaches a run and not this container.
+
+    There is no login under `docker.credential: bedrock`. That route reads Claude's own
+    credential from the host, so this verb has nothing to make, in either mode, and
+    `check --docker` is what reports a name it is missing. docs/docker.md.
+
+    There is no headless login. The CLI opens a browser and reads a code back in its own
+    prompt, so a stdin that is not a terminal is refused here rather than left to `docker
+    run -it`, whose message says nothing about what the operator has to do.
+    """
+    image = Docker(config)
     if not image.uses_login:
-        print(f"docker.credential: {image.credential}, so no login is made")
-        return OK
-    if image.has_credential():
+        return _refuse(
+            [
+                f"docker.credential is {image.credential}, so there is no login to make: "
+                "the host variables are the credential, and cowork_evals check --docker "
+                "reports one that is unset"
+            ],
+            PREFLIGHT_FAILED,
+        )
+    if args.check:
+        if image.has_credential():
+            print(f"{image.credentials_file}: current")
+            return OK
+        return _refuse([f"no credential: {remedy(Condition.CREDENTIAL)}"], PREFLIGHT_FAILED)
+
+    if image.has_credential() and not args.force:
         print(f"{image.credentials_file}: current")
         return OK
-    image.login()
+
+    blocking = [
+        message
+        for condition, message in image.check()
+        if condition in (Condition.DAEMON, Condition.IMAGE)
+    ]
+    if blocking:
+        return _refuse(blocking, PREFLIGHT_FAILED)
+    if not sys.stdin.isatty():
+        return _refuse(
+            [
+                "no terminal: the login opens a browser and reads a code back, so run "
+                "cowork_evals login --docker from a shell, not from a pipe or an agent"
+            ],
+            PREFLIGHT_FAILED,
+        )
+
+    try:
+        image.login()
+    except DockerError as error:
+        return _refuse([str(error)], FAILED)
+    print(f"{image.credentials_file}: logged in")
     return OK
 
 
@@ -1007,6 +1187,39 @@ def _docs(args: argparse.Namespace) -> int:
     return OK
 
 
+def _panel(args: argparse.Namespace, config: Config) -> int:
+    """Every case under the path, joined to what each backend last said about it.
+
+    The path is resolved exactly as `run` resolves it, so the same argument shows what would
+    run and what running it last produced. It reaches no backend, spends nothing and writes
+    nothing under the history root.
+
+    A path selecting no case is exit 2, as on `run`. A history line that does not parse is a
+    warning on stderr and leaves the exit code at 0: the row is rendered from the records
+    that did parse, which is how a failed append behaves on `run`.
+    """
+    try:
+        roots = plugin_roots(args.path)
+    except CaseError as error:
+        return _usage(str(error))
+
+    discovered = [(plugin, discover(target)) for plugin, target in _targets(args.path, roots)]
+    if not sum(len(cases) for _, cases in discovered):
+        return _usage(f"{args.path} selects no case")
+
+    built, warnings = panel.rows(config.panel.root, discovered, removed=args.removed)
+    for warning in warnings:
+        print(f"panel: {warning}", file=sys.stderr)
+    print(panel.table(built), end="")
+
+    for option, render in (("markdown", panel.markdown), ("json", panel.snapshot)):
+        named = getattr(args, option)
+        if named is not None:
+            Path(named).write_text(render(built), encoding="utf-8")
+            print(f"wrote {named}")
+    return OK
+
+
 def _init() -> int:
     """Write the configuration file, every shipped skill and the `CLAUDE.md` block, into the
     working directory.
@@ -1062,12 +1275,19 @@ def _init_memory() -> int:
 
 
 def _prune(args: argparse.Namespace, config: Config) -> int:
-    """Delete what this command created, and nothing else."""
-    if not args.docker and not args.logs:
-        return _usage("prune takes --docker, --logs, or both")
+    """Delete what this command created, and nothing else.
+
+    `--history` reads `panel.root` and ignores `--out`: that option names the log root, and a
+    record outlives the run directory it was made in. docs/panel.md.
+    """
+    if not args.docker and not args.logs and not args.history:
+        return _usage("prune takes --docker, --logs, --history, or any combination of them")
     if args.logs:
         for deleted in logs.prune(logs.log_root(args.out), args.older_than):
             print(f"removed {deleted}")
+    if args.history:
+        for pruned in panel.prune(config.panel.root, args.older_than):
+            print(f"pruned {pruned}")
     if args.docker:
         _prune_images(config, args.older_than)
     return OK

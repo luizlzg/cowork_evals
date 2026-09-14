@@ -17,7 +17,10 @@ about each.
 
 A case asserts what a unit test cannot reach: the answer text, which tools ran and in what
 order, which files the agent created, and a rubric a judge model votes on. The four structural
-graders are deterministic and carry the verdict. The two judged ones are printed.
+graders are deterministic and carry the verdict. The two judged ones are printed. The third
+kind of assertion is a check: an author's own Python in the case's `checks/` directory, run on
+the host over what the run produced, which is how a case says what is inside the file rather
+than only that it appeared. See [`docs/checks.md`](docs/checks.md).
 
 The CoWork backend honours a subset of the format, because it drives a live session rather
 than the harness. [`docs/approaches.md`](docs/approaches.md) says which subset, what each
@@ -74,7 +77,7 @@ rm -r .claude/skills/cowork-evals .claude/skills/cowork-ask && cowork_evals init
 
 | Backend                    | You need                                                       |
 | -------------------------- | ---------------------------------------------------------------- |
-| The container, `--docker`  | Docker or Rancher Desktop running, the images, and a credential: the one-time login `setup --docker` makes, or the Bedrock variables already on your host under `docker.credential: bedrock` |
+| The container, `--docker`  | Docker or Rancher Desktop running, the images from `setup --docker`, and a credential: the one-time login from `login --docker`, or the Bedrock variables already on your host under `docker.credential: bedrock` |
 | CoWork, `--cowork`         | macOS, `claude` on `PATH`, CoWork signed in, the profile named in `cowork_evals.yaml`, and the macOS Accessibility grant |
 
 `cowork_evals check --all` reports what each backend is still missing, and names the command
@@ -105,7 +108,8 @@ Install the package as above, then build the container backend:
 
 ```bash
 cowork_evals init             # the config, the skills, and the CLAUDE.md block
-cowork_evals setup --docker   # two images, and one interactive login. Minutes, and once only
+cowork_evals setup --docker   # two images. Minutes, and once only
+cowork_evals login --docker   # one interactive login. Needs a terminal and a browser
 cowork_evals check --docker   # exits 0 when the backend is ready
 ```
 
@@ -169,6 +173,28 @@ is read as a note and is silently ignored.
 Two cases are not a suite. Which cases a skill needs, which grader answers which question, and
 what a case measures when it lacks the access it needs are
 [`docs/eval_design.md`](docs/eval_design.md).
+
+A grader can say that the agent created `totals.xlsx`. No grader type can say what is inside
+it, so the case passes on a spreadsheet holding the wrong numbers. A check is how you assert
+the rest: a Python function under the case's `checks/` directory, run on your machine once the
+eval has finished, which fails the case the same way a grader does.
+
+```python
+# plugins/notes/evals/summarize/one-paragraph/checks/assertions.py
+import openpyxl
+
+from cowork_evals.checks import Run, check
+
+
+@check
+def totals_add_up(run: Run) -> None:
+    book = openpyxl.load_workbook(run.file("totals.xlsx"))
+    assert book.active["D10"].value == 4200
+```
+
+`openpyxl` is your dependency, not this package's: a check runs on the machine you ran
+`cowork_evals` on, never in the session. A worked example, end to end, is in
+[`docs/checks.md`](docs/checks.md).
 
 Run it:
 
@@ -242,11 +268,13 @@ costs to run, is [`docs/approaches.md`](docs/approaches.md).
 
 ```bash
 cowork_evals init                    # the config, the skills, and the CLAUDE.md block
-cowork_evals setup --docker          # build the container images, and log in once
+cowork_evals setup --docker          # build the container images
+cowork_evals login --docker          # log in once, in a container
 cowork_evals check --all             # what each backend still needs, one line per backend
 cowork_evals run  --docker path/to/plugin          # an eval: a model, graders, a verdict
 cowork_evals test --docker path/to/plugin/tests    # pytest on the CoWork runtime, no model
 cowork_evals ask  --cowork "..."     # one prompt to a live CoWork session, and its answer
+cowork_evals panel plugins/mail      # every case, and what each backend last said about it
 cowork_evals docs [name]             # where the documentation is, or one document's path
 cowork_evals prune --docker          # delete what setup built
 ```
@@ -270,16 +298,16 @@ your repository picks them up from there. They fire on different questions.
 
 | Skill          | Fires on                                                                   |
 | -------------- | ---------------------------------------------------------------------------- |
-| `cowork-evals` | Deciding which evals a skill needs; writing or fixing a case, a `prompt.md` or a grader; a failing `cowork_evals` command; the configuration file; plugin code that has to run inside a session |
+| `cowork-evals` | Deciding which evals a skill needs; writing or fixing a case, a `prompt.md`, a grader or a check; a failing `cowork_evals` command; the configuration file; plugin code that has to run inside a session |
 | `cowork-ask`   | A question about what a live CoWork session actually does; a claim that has to be confirmed in the product; a failing `cowork_evals ask` |
 
 `cowork-evals` carries the interview that decides which cases a skill needs and the ten
 coverage dimensions it checks the suite against, then the case tree, the two required
-frontmatter keys, the six grader types, three copy-paste grader idioms, the seven authoring
-traps, the exit codes and the 3.10 runtime constraint. `cowork-ask` carries the verb, what one
-ask costs, and the rule that makes an answer evidence: ask the session to do the thing and read
-what it did, because what a session says about its own configuration is not evidence. Both send
-a reader to `cowork_evals docs` for everything they do not carry.
+frontmatter keys, the six grader types, three copy-paste grader idioms, two copy-paste checks,
+the eleven authoring traps, the exit codes and the 3.10 runtime constraint. `cowork-ask` carries
+the verb, what one ask costs, and the rule that makes an answer evidence: ask the session to do
+the thing and read what it did, because what a session says about its own configuration is not
+evidence. Both send a reader to `cowork_evals docs` for everything they do not carry.
 
 The files are yours once `init` writes them. Edit them, commit them, and refresh them after an
 upgrade with the two commands above. What they hold and why they are copies is
@@ -296,6 +324,7 @@ reads the same files without this repository checked out.
 | [`docs/cli.md`](docs/cli.md)                     | The whole command surface: verbs, options, exit codes |
 | [`docs/eval_format.md`](docs/eval_format.md)     | How to write a case: tree, frontmatter, graders    |
 | [`docs/eval_design.md`](docs/eval_design.md)     | Which cases to write, and which grader answers what |
+| [`docs/checks.md`](docs/checks.md)               | Assertions you write as Python, over the files a run produced |
 | [`docs/approaches.md`](docs/approaches.md)       | The two backends, and what each one proves         |
 | [`docs/running_evals.md`](docs/running_evals.md) | The run: what is built today, pass and fail, logs, cost |
 | [`docs/cowork_test.md`](docs/cowork_test.md)     | `test`, and the runtime your suite gets            |

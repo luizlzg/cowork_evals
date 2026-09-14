@@ -16,8 +16,8 @@ while the work happens.
 
 ## Plans
 
-Seventeen plans. Fifteen build something and are numbered in build order, and one of those
-fifteen is skipped. `plan_fix` builds nothing, so it carries no number: it corrects what the
+Twenty plans. Eighteen build something and are numbered in build order, and one of those
+eighteen is skipped. `plan_fix` builds nothing, so it carries no number: it corrects what the
 others wrote, and it ran before `plan_cowork_backend.md` because it changes what that plan and
 `plan_cli.md` both read. `plan_believable_results` carries no number for the same reason:
 it holds measurements and decisions, and its product is the four plans numbered 10 to 13. The order is the
@@ -44,8 +44,11 @@ not the system's: what is built and usable is
 | 11 | [`done/plan_runnability.20260912.md`](done/plan_runnability.20260912.md) | The `no-cowork` tag on a case, enforced both ways, counted rather than failed | implemented | `feat/runnability`    |
 | 12 | [`done/plan_env_passthrough.20260912.md`](done/plan_env_passthrough.20260912.md) | Named host variables forwarded into the run container, values never logged | implemented | `feat/env-passthrough` |
 | 13 | [`done/plan_ablation.20260912.md`](done/plan_ablation.20260912.md) | The baseline arm, and a verdict that decides on the per-case delta | implemented | `feat/ablation`       |
-| 14 | [`plan_eval_design.md`](plan_eval_design.md) | The document that owns which cases to write, the interview the skill runs, and a second credential route | written | `feat/eval-enhancement` |
-| 15 | [`plan_eval_triage.md`](plan_eval_triage.md) | The document that says what to change when a run fails, and the skill that proposes the changes and applies the approved ones | not started | `plan/eval-triage` |
+| 14 | [`done/plan_panel.20260913.md`](done/plan_panel.20260913.md) | The per-case run history, the `panel` verb, and `prune --history` | implemented | `feat/panel` |
+| 15 | [`done/plan_consent.20260913.md`](done/plan_consent.20260913.md) | The keyboard consent dialog, shown by the driver rather than by a caller | implemented | `fix/consent` |
+| 16 | [`plan_artifact_checks.md`](plan_artifact_checks.md) | An assertion an author writes as code, deciding the run beside the harness's graders | written | `feat/artifact-checks` |
+| 17 | [`plan_eval_design.md`](plan_eval_design.md) | The document that owns which cases to write, the interview the skill runs, and a second credential route | written | `feat/eval-enhancement` |
+| 18 | [`plan_eval_triage.md`](plan_eval_triage.md) | The document that says what to change when a run fails, and the skill that proposes the changes and applies the approved ones | not started | `plan/eval-triage` |
 
 | Status        | Means                                                                     |
 | ------------- | --------------------------------------------------------------------------- |
@@ -105,7 +108,30 @@ because it rewrites the pass and fail rules that `plan_run_validity` and `plan_r
 both change, and `plan_env_passthrough` is independent of all three. What those rules are now
 is [`../docs/running_evals.md`](../docs/running_evals.md).
 
-Plan 14 builds no part of a run. A session pointed at a consumer repository invented its eval
+Plan 14 builds no part of a run either. A result document lives in a run directory, and a
+run directory is deleted once it is old enough, so a suite that passed last month leaves
+nothing behind. It adds the one record that outlives that directory, one file per case, and
+the verb that renders it. What it changes in the verdict is a return value and no condition:
+pass and fail stay in [`../docs/running_evals.md`](../docs/running_evals.md), and the store
+and the render are `../docs/panel.md`, which it writes.
+
+Plan 15 corrects a defect in plan 9, the way plan 9 corrected one in plan 1. The consent
+dialog plan 9 built is shown by two callers in `cli.py` and by nothing else, so every other
+path that takes the keyboard either refuses or fires in silence, and this repository's own
+integration tier was configured to fire in silence. On 2026-09-13 a `-m integration` run
+therefore took the keyboard with no warning while the developer was typing elsewhere. It moves
+the asking into the driver, so the dialog is shown by every path that takes the keyboard and
+`cowork.consent: none` is the one way to switch it off. What it changes is
+[`../docs/cowork_driver.md`](../docs/cowork_driver.md).
+
+Plan 16 is the first that adds a grader this package evaluates itself. The harness's five
+grader types are a closed vocabulary owned by a tool this repository does not control, so an
+assertion that does not fit one of them cannot be made and the case runs green having checked
+nothing. It adds a layer on top of `claude plugin eval`: the harness grades a run as it does
+now, and this layer then runs an author's own code over what the run produced and adds its
+assertions to the same result.
+
+Plan 17 builds no part of a run. A session pointed at a consumer repository invented its eval
 cases and graders, because no file said which cases a skill needs: the format contract covers
 the file and nothing covers the suite. It adds one shipped document, one section to one shipped
 skill, and the rule that separates the two documents. The boundary it moves is
@@ -114,7 +140,7 @@ skill, and the rule that separates the two documents. The boundary it moves is
 is there because the same developer could run nothing without it: the container backend accepted
 one credential, and a host that authenticates Claude Code through Bedrock failed the preflight.
 
-Plan 15 builds no part of a run either. A run ends at a verdict and a transcript, and no file
+Plan 18 builds no part of a run either. A run ends at a verdict and a transcript, and no file
 says what to change when a finding is real. A session given a failing run edited the case until
 it passed. It adds one shipped document, a third shipped skill, and the two rules that
 separate three skills and three documents. The boundary it moves is

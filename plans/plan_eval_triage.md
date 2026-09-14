@@ -72,18 +72,18 @@ known to move.
 | Owns                                | Which is                                                                                     |
 | ----------------------------------- | -------------------------------------------------------------------------------------------- |
 | The workflow, in order              | locate the run, read `verdict.txt`, separate the failing lines from the notes, open the evidence each failing line names, classify, propose, get approval, apply one item at a time, hand back the command to re-run |
-| The cause classes                   | the skill under test is wrong; the case is wrong; the access is wrong; the run is non-deterministic; there is nothing to fix. A finding the evidence does not decide is reported undecided |
+| The cause classes                   | the skill under test is wrong; the case is wrong, which includes a check that asserts the wrong thing; the access is wrong; the run is non-deterministic; there is nothing to fix. A finding the evidence does not decide is reported undecided |
 | Finding kind to cause               | one row per kind `verdict.py` emits, so a new kind has a place to land. The kinds and their texts stay in `verdict.py`, and the document links |
 | The default hypothesis              | the skill under test is wrong. A case is edited only where the evidence shows the case is wrong, and never to turn a failing run green |
 | Approval, and what a run costs      | no file changes before the developer approves that item, and the skill runs no suite itself: it proposes the scoped `cowork_evals run` command and stops |
-| What the evidence settles           | `## Reading a failure` in full: the `[artifacts: ...]` suffix, the three file names, the two `trace.jsonl` formats, and what `--no-keep-traces` gives up |
+| What the evidence settles           | `## Reading a failure` in full: the `[artifacts: ...]` suffix, every file a kept run leaves, the two `trace.jsonl` formats, and what `--no-keep-traces` gives up |
 
 Each cause class other than the skill under test says what the evidence has to show before an
 edit is proposed.
 
 | Cause class                  | The evidence has to show                                                                                    |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| The case is wrong            | the prompt does not ask for what the grader asserts, or the pattern is misanchored, or the target or the grader type is wrong |
+| The case is wrong            | the prompt does not ask for what the grader asserts, or the pattern is misanchored, or the target or the grader type is wrong, or a check asserts something the prompt never asked for |
 | The access is wrong          | a tool was never offered, or a tool was refused, or a fixture is absent, or the case needed `no-cowork`       |
 | The run is non-deterministic | two runs of one case disagree                                                                                |
 
@@ -91,7 +91,7 @@ edit is proposed.
 
 | Not in scope                                    | Where it is instead                                                                          |
 | ----------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| A `report` or an `analyse` verb                  | Nowhere. Post-hoc reading is the consumer's own script, and that is [`../docs/running_evals.md`](../docs/running_evals.md) |
+| A `report` or an `analyse` verb                  | Nowhere. Post-hoc reading of a run is the consumer's own script, and that is [`../docs/running_evals.md`](../docs/running_evals.md). `panel` reads the history a run appends and not a verdict, so it is not that route: [`../docs/panel.md`](../docs/panel.md) |
 | Anything about a passing run                    | Nowhere. What a suite should hold is [`../docs/eval_design.md`](../docs/eval_design.md)        |
 | A new grader type, option or configuration key   | Nowhere. Nothing here needs one                                                              |
 | Code under `src/cowork_evals/`, beyond one string | Nowhere. `resources.skills()` reads the directory, so `init` installs a third skill with no code change |
@@ -104,6 +104,8 @@ edit is proposed.
 | -------------------------------------------------------- | ------------------------------------------------------------ |
 | A skill states no fact of its own                        | [`../docs/library.md`](../docs/library.md)                    |
 | Every finding kind, and its exact text                    | `src/cowork_evals/verdict.py`                                 |
+| What a failed check is, and what it leaves behind          | [`../docs/checks.md`](../docs/checks.md)                      |
+| What state a case tree is in between runs                  | [`../docs/panel.md`](../docs/panel.md)                        |
 | Which grader class decides the exit code                  | [`../docs/running_evals.md`](../docs/running_evals.md)        |
 | What a run leaves, and under which names                  | [`../docs/running_evals.md`](../docs/running_evals.md)        |
 | Which case feature the CoWork backend cannot honour        | [`../docs/approaches.md`](../docs/approaches.md)              |
@@ -120,8 +122,8 @@ name changes that list and the assertion is re-read rather than assumed.
 ### Phase 1: the document
 
 - [ ] `docs/eval_triage.md`: the workflow in order, the cause classes and what the evidence has
-      to show for each, the finding kind table, the default hypothesis, the approval rule, the
-      cost rule, and the evidence section
+      to show for each, the finding kind table, which covers the check kinds beside the grader
+      ones, the default hypothesis, the approval rule, the cost rule, and the evidence section
 - [ ] [`../docs/README.md`](../docs/README.md): the row, the count in the divide prose, and both
       split questions beside the ones already there
 - [ ] [`../docs/running_evals.md`](../docs/running_evals.md): the sentence that says a consumer

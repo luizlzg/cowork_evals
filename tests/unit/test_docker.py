@@ -444,7 +444,7 @@ def test_a_credential_name_is_refused_whatever_it_holds(monkeypatch):
         unmet = backend(env_passthrough=[name]).check_environment()
         assert [condition for condition, _ in unmet] == [Condition.ENV_CREDENTIAL], name
         assert name in unmet[0][1]
-        assert "cowork_evals setup --docker" in unmet[0][1]
+        assert "cowork_evals login --docker" in unmet[0][1]
 
 
 def test_a_credential_name_is_refused_when_the_host_does_not_set_it_either(monkeypatch):
@@ -575,7 +575,7 @@ def test_the_remedy_for_an_unset_bedrock_name_names_both_ways_out():
     """`scripts/image.sh` drops this condition beside `CREDENTIAL`, so both exist."""
     assert Condition.BEDROCK in Condition
     assert "docker.credential: login" in remedy(Condition.BEDROCK)
-    assert "cowork_evals setup --docker" in remedy(Condition.BEDROCK)
+    assert "cowork_evals login --docker" in remedy(Condition.BEDROCK)
 
 
 def credential(docker, **oauth) -> None:
@@ -605,7 +605,7 @@ def test_a_credential_file_with_empty_tokens_is_not_a_login(tmp_path):
     """An abandoned OAuth flow leaves the file behind carrying no token.
 
     The file is there, so presence alone reported a login that the CLI then refused
-    inside the container with `Not logged in`. Measured 2026-09-09.
+    inside the container with `Not logged in`.
     """
     docker = backend(login_dir=tmp_path / "login")
     credential(
@@ -664,9 +664,14 @@ def test_the_remedy_for_a_missing_image_is_the_setup_verb():
     assert remedy(Condition.IMAGE) == "run cowork_evals setup --docker"
 
 
-def test_the_remedy_for_a_missing_login_is_the_same_verb():
-    """`setup --docker` builds the image and then logs in, so one command fixes both."""
-    assert remedy(Condition.CREDENTIAL) == "run cowork_evals setup --docker"
+def test_the_remedy_for_a_missing_login_is_the_login_verb_and_not_the_setup_verb():
+    """An image is a build product and a credential is not, so one command does not fix both.
+
+    A machine whose login was revoked holds two current images, and `setup --docker` there
+    prints `current` twice and returns 0 without making the one thing that is missing.
+    """
+    assert remedy(Condition.CREDENTIAL) == "run cowork_evals login --docker"
+    assert remedy(Condition.CREDENTIAL) != remedy(Condition.IMAGE)
 
 
 def test_the_remedy_for_an_unreachable_daemon_names_no_command_of_this_package():
@@ -706,7 +711,7 @@ def test_the_image_removal_names_one_tag():
 
 
 def test_a_recorded_listing_parses_into_tags_and_dates():
-    """One `docker image ls` listing, recorded 2026-09-09 on `linux/arm64`, a snapshot."""
+    """One recorded `docker image ls` listing, as that command prints it."""
     listing = (
         "cowork-evals-test:0eafee9a4184\t2026-09-09 05:15:58 -0400 EDT\n"
         "cowork-evals:57f48ba2adac\t2026-09-09 04:08:37 -0400 EDT\n"

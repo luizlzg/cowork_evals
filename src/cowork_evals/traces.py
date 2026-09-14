@@ -228,8 +228,8 @@ def unoffered_tools(records: list[dict[str, Any]], granted: tuple[str, ...]) -> 
     A granted name and an offered name are compared on the part before any `(`. A grant may
     be written `WebFetch(domain:example.com)`, and the reference records that a bare `Read`,
     `Glob` or `Grep` reaches the child path-scoped, so a literal comparison would report a run
-    as missing a tool it had. The 2026-09-12 snapshot in docs/running_evals.md measured every
-    granted name arriving in the list bare, so no name needs excluding from the comparison.
+    as missing a tool it had. Every granted name arrives in the list bare, which
+    docs/running_evals.md records, so no name needs excluding from the comparison.
     """
     offered = _offered(records)
     if offered is None:

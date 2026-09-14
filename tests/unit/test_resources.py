@@ -142,6 +142,7 @@ def test_every_commented_default_in_the_example_is_the_built_in_default(
 
     assert loaded.eval == defaults.eval
     assert loaded.docker == defaults.docker
+    assert loaded.panel == defaults.panel
     assert replace(loaded.cowork, profile=None) == defaults.cowork
 
 

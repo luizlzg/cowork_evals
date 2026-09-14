@@ -76,7 +76,11 @@ def test_an_unknown_backend_is_refused() -> None:
 
 def test_every_docker_line_names_the_command_that_fixes_it() -> None:
     for line in preflight.checks(preflight.DOCKER, Config()):
-        assert "cowork_evals setup --docker" in line or "Docker Desktop" in line
+        assert (
+            "cowork_evals setup --docker" in line
+            or "cowork_evals login --docker" in line
+            or "Docker Desktop" in line
+        )
 
 
 # The CoWork lines.
@@ -191,7 +195,7 @@ def test_a_credential_name_is_refused_and_names_the_one_route(tmp_path: Path, mo
     named = [
         line
         for line in preflight.checks(preflight.DOCKER, config)
-        if "ANTHROPIC_API_KEY" in line and "cowork_evals setup --docker" in line
+        if "ANTHROPIC_API_KEY" in line and "cowork_evals login --docker" in line
     ]
     assert named
     assert "probe-value-not-a-secret" not in " ".join(named)

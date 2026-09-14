@@ -17,6 +17,7 @@ from cowork_evals.config import (
     CoWorkSection,
     DockerSection,
     EvalSection,
+    PanelSection,
 )
 
 
@@ -91,19 +92,39 @@ def test_every_section_is_read_from_one_file(tmp_path: Path) -> None:
         "  model: opus\n"
         "  allow_tools: [Bash, Write]\n"
         "docker:\n"
-        "  platform: linux/amd64\n",
+        "  platform: linux/amd64\n"
+        "panel:\n"
+        "  root: /elsewhere/history\n",
     )
     config = Config.load(file)
     assert config.cowork.profile == "Fixture"
     assert config.eval.model == "opus"
     assert config.eval.allow_tools == ("Bash", "Write")
     assert config.docker.platform == "linux/amd64"
+    assert config.panel.root == Path("/elsewhere/history")
 
 
 def test_a_section_the_file_omits_is_the_default(tmp_path: Path) -> None:
     file = write(tmp_path, "cowork:\n  profile: Fixture\n")
     assert Config.load(file).eval == EvalSection()
     assert Config.load(file).docker == DockerSection()
+    assert Config.load(file).panel == PanelSection()
+
+
+def test_missing_file_yields_the_panel_default(working_directory, tmp_path: Path) -> None:
+    """The history sits under the log root, and is resolved from the working directory the
+    way every other path is. It is not under `--out`. docs/panel.md."""
+    with working_directory(tmp_path):
+        section = Config.load().panel
+    assert section.root == tmp_path / "logs" / "evals" / "history"
+
+
+def test_the_panel_root_resolves_against_the_working_directory(
+    working_directory, tmp_path: Path
+) -> None:
+    file = write(tmp_path, "panel:\n  root: build/history\n")
+    with working_directory(tmp_path):
+        assert Config.load(file).panel.root == tmp_path / "build" / "history"
 
 
 def test_the_forwarded_names_are_read_as_written(tmp_path: Path) -> None:

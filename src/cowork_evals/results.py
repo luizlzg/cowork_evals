@@ -375,15 +375,16 @@ def _elapsed(start: Any, end: Any) -> float | None:
     if not isinstance(start, str) or not isinstance(end, str):
         return None
     try:
-        return (_isoformat(end) - _isoformat(start)).total_seconds()
+        return (moment(end) - moment(start)).total_seconds()
     except ValueError:
         return None
 
 
-def _isoformat(value: str) -> datetime:
+def moment(value: str) -> datetime:
     """`datetime.fromisoformat`, with the `Z` suffix the harness writes.
 
     The harness stamps `...T10:00:00.000Z`. `fromisoformat` accepts `Z` from Python 3.11,
-    and this package runs on 3.10, so the suffix is rewritten here.
+    and this package runs on 3.10, so the suffix is rewritten here. It is public because
+    [panel.py](panel.py) reads a document's `startedAt` back and needs the same rewrite.
     """
     return datetime.fromisoformat(value[:-1] + "+00:00" if value.endswith("Z") else value)

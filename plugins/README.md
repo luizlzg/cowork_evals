@@ -11,6 +11,7 @@ plugins/<plugin>/.claude-plugin/plugin.json
 plugins/<plugin>/skills/<skill>/SKILL.md
 plugins/<plugin>/evals/<skill>/<case>/prompt.md
 plugins/<plugin>/evals/<skill>/<case>/graders/<name>.md
+plugins/<plugin>/evals/<skill>/<case>/checks/<name>.py
 plugins/<plugin>/tests/<name>.py
 ```
 
@@ -18,13 +19,14 @@ The layout is the standard one, because a fixture that does not look like a real
 proves nothing about discovery. The case format is
 [../docs/eval_format.md](../docs/eval_format.md).
 
-`smoke` holds three cases, all under `evals/plugin/`.
+`smoke` holds four cases, all under `evals/plugin/`.
 
 | Case            | Asks for                              | Graded by                                    |
 | --------------- | ------------------------------------- | -------------------------------------------- |
 | `python-version` | `python3 -V`                         | a `regex` grader over the last message       |
 | `writes-a-file` | one word written to `written.txt`     | a `file_exists` grader over the created file |
 | `capped-turns`  | one word in the reply                 | a `regex` grader over the last message       |
+| `checked-file`  | one word written to `written.txt`     | a `file_exists` grader, and two checks over the file's contents |
 
 `python-version` matches the exact string [../docs/runtime.md](../docs/runtime.md) records, so
 it proves a case reaches a running command on the interpreter the backend put there. See
@@ -44,6 +46,18 @@ The exact string carries a patch release. The container installs it, and the CoW
 it, so this fixture serves both backends. The CoWork backend loads no plugin, and no case here
 needs one: each writes `runs: 1`, carries no skill, and asks for something any session can do.
 
+`checked-file` is the fixture for the check layer. It asks for the same file `writes-a-file`
+asks for, and asserts what is inside it, which no grader type can express: the `file_exists`
+grader beside the checks sees that the file appeared and never what it says. The grader is
+also what makes the case loadable at all, because the harness refuses a case carrying no
+grader; see [../docs/eval_format.md](../docs/eval_format.md). It carries two checks on purpose.
+`the_file_says_written` passes, and `the_file_is_a_workbook` fails, so one run produces the
+`FAIL` line, the appended grader result, the `checks.jsonl` line and the `scratch/` directory
+that `integration/test_cli.py` reads. It is the only case here that always exits 1, which is
+what `smoke/tests/test_fails.py` is for the test image. It carries no `no-cowork` tag: a check
+runs on the host after the run is graded, and needs nothing a session cannot do. See
+[../docs/checks.md](../docs/checks.md).
+
 `capped-turns` is the fixture for the `no-cowork` tag. It writes `max_turns`, which no CoWork
 session honours, so it carries the tag and satisfies both directions the validator checks. On
 the container backend it runs like any other case and passes. On CoWork it is not submitted
@@ -51,11 +65,11 @@ and is counted, which is what makes it the one case here that an integration tes
 through that backend without a VM boot, a ceiling entry or a session. The tag is
 [../docs/eval_format.md](../docs/eval_format.md).
 
-Three cases, and each integration test that fires one names it with a case glob. A test about
+Four cases, and each integration test that fires one names it with a case glob. A test about
 one mechanism pays for one case, and a CoWork test that submits pays for one VM boot.
 
 None carries a skill. Whether a model activates a skill is an eval question, and this
-fixture answers a mechanism question. All three cases are therefore `plugin` ones: a directory
+fixture answers a mechanism question. All four cases are therefore `plugin` ones: a directory
 under `evals/` is a skill name, `plugin` or `mocks`, and there is no skill to name. See
 [../docs/eval_format.md](../docs/eval_format.md).
 
