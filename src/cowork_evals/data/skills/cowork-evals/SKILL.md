@@ -15,7 +15,7 @@ file is the authority for anything below.
 
 | Question                                | Read                     |
 | --------------------------------------- | ------------------------ |
-| Which cases to write, and which grader answers what | `docs eval_design`   |
+| Which cases to write, and which assertion answers what | `docs eval_design`   |
 | How to write a case, field by field     | `docs eval_format`       |
 | Every verb, option and exit code        | `docs cli`               |
 | Which backend proves what, and its cost | `docs approaches`        |
@@ -39,7 +39,8 @@ could answer it would have written the case already.
 A reply names a symptom, not a case, and turning it into one is the work. `The summaries are too
 long` is a `regex` over `last_message`. `It makes things up about our schema` is a fixture and a
 `not_contains` pattern per invented value. `It ignores the config file` is a `tool_used` with an
-`input_match` naming that file.
+`input_match` naming that file. `The totals in the spreadsheet come out wrong` is a check that
+opens the workbook, because no grader type reads a cell.
 
 A reply that says the developer does not know, or that asks Claude Code to decide, is the
 authorization to design the suite alone. The signal is the reply. No option and no configuration
@@ -49,22 +50,29 @@ left-out one does not apply.
 Whichever route produced the suite, check it against these. Each dimension that applies has at
 least one case, and one case may answer more than one row.
 
-| Dimension                                | The grader                                                                  | Applies when                                  |
+| Dimension                                | The assertion                                                                  | Applies when                                  |
 | ---------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------- |
-| Expected behaviour, end to end           | `file_exists` on the artefact, `tool_order` on the steps that have an order, `llm` over `{source: file, path}` | always                    |
+| Expected behaviour, end to end           | `file_exists` on the artefact, `tool_order` on the steps that have an order, `llm` over `{source: file, path}`, a check over that file when it is not text | always |
 | The right tools are used                 | the skill-fired `tool_used` below, `tool_order` for a required sequence, `min: 0, max: 0` for a tool it must not call and for a request it must not fire on | always |
-| The goal is achieved                     | `file_exists`, `regex` over `{source: file, path}` for a value that has to be in it, `llm` when the outcome is prose | always                |
-| Each capability on its own               | `tool_used` with that capability's `input_match`, `regex` over its output    | the skill names more than one capability      |
-| The instructions are followed            | `regex` over `last_message` with `contains`, `not_contains` or `count:N`, and `m` in `flags` when the anchor is per line | the instructions constrain the output |
+| The goal is achieved                     | `file_exists`, `regex` over `{source: file, path}` for a value that has to be in it, `llm` when the outcome is prose, a check when the value has to be computed or the file parsed | always |
+| Each capability on its own               | `tool_used` with that capability's `input_match`, `regex` over its output, a check when that output is not text | the skill names more than one capability |
+| The instructions are followed            | `regex` over `last_message` with `contains`, `not_contains` or `count:N`, and `m` in `flags` when the anchor is per line, a check when the constraint is on a file no pattern can read | the instructions constrain the output |
 | Edge cases                               | `regex` for the stated refusal or the handled result, `min: 0, max: 0` for the destructive action | the input has a boundary: empty, absent, malformed, oversized, conflicting |
-| Hallucination                            | `regex` with `not_contains` per value the fixture does not carry, `baseline` against a `baseline_file` | the skill reports what it read       |
+| Hallucination                            | `regex` with `not_contains` per value the fixture does not carry, `baseline` against a `baseline_file`, a check when the invented value lands in an artefact no pattern can read | the skill reports what it read |
 | Context relevancy                        | `tool_used` with `input_match` naming the file it had to open, `regex` over `trace` for that path | the skill chooses what to read     |
 | Answer relevancy                         | `regex` with `count:N` or `not_contains` for the padding shape, `llm`, `baseline` | the product is the message and not a file |
-| PII and confidential information leakage | `regex` with `not_contains` over `last_message`, over each artefact, over `trace`, and over `mock_calls` | the skill reads anything the prompt did not carry |
+| PII and confidential information leakage | `regex` with `not_contains` over `last_message`, over each artefact, over `trace`, over `mock_calls`, and a check per artefact that is not text | the skill reads anything the prompt did not carry |
 
 Prefer a structural grader. A judged grader over a non-deterministic agent is a flaky verdict,
 and a judge is noisy on a long input. A dimension whose only grader is `llm` or `baseline` is
 printed and leaves the exit code silent about it.
+
+Can a grader type read the target, and say what has to be true of it? Yes, and it is a grader.
+No, and it is a check, which is `## Checks` below. Ask it per assertion, not per case: a case
+carries both, and a case whose only assertion directory is `checks/` never loads. Six rows above
+name a check, because a grader reads text and a workbook, a deck, a PDF and an image are not.
+Prefer a grader anyway: a check is code you own. Unlike an `llm` grader, a check decides the exit
+code however it reached its verdict, `run.judge` included.
 
 Context relevancy, leakage and the malformed form of edge cases each need a staged fixture, which
 is a `context.*` key, which makes the case `no-cowork`. The leakage marker is a fixture the case
@@ -79,13 +87,14 @@ A case that needs access it does not have measures the access and not the skill.
 | An MCP server                | `evals/mocks/<server>/<tool>.md`, which makes the case `no-cowork` and `mock_calls` readable |
 | A tool                       | `eval.allow_tools`, or the case's own `allowed_tools`, which makes it `no-cowork` |
 | A file staged before the run | `context.add_dirs` or `context.scaffold_script`, which makes the case `no-cowork` |
+| A library a check imports    | your own project declares it, as for a unit test. The preflight imports every check and exits 3 |
 | A wheel the skill imports    | `cowork_evals test`, before an eval is written over the import error             |
 
 Design around the access that exists. When the developer proposes a case that needs access that
 is not there, say so before writing the case, and name the route that would supply it.
 
 Propose the suite before writing a file: one line per case, naming the dimension it covers, the
-grader that decides it, the access it needs, and whether it carries `no-cowork`. A developer
+grader or the check that decides it, the access it needs, and whether it carries `no-cowork`. A developer
 strikes a case in one sentence there, and pays for a rewrite after the files exist.
 
 ## The command

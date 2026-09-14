@@ -2,8 +2,9 @@
 
 ## Summary
 
-Which cases a skill needs, and which grader answers which question. This is the design contract
-over [eval_format.md](eval_format.md), which is the file contract.
+Which cases a skill needs, and which assertion answers which question. This is the design
+contract over [eval_format.md](eval_format.md), which is the file contract, and over
+[checks.md](checks.md), which is the other assertion mechanism.
 
 - **Claude Code does not invent a suite.** It asks the developer what the skill has to get
   right, and reads the cases and the graders out of the reply.
@@ -13,6 +14,8 @@ over [eval_format.md](eval_format.md), which is the file contract.
   the reply, not a flag.
 - **Ten dimensions.** Each one that applies to the skill has at least one case, whichever route
   produced the suite.
+- **A grader, or a check.** Can a grader type read the target, and say what has to be true of
+  it? Yes, and it is a grader. No, and it is a check.
 - **A missing access changes the design.** A case that needs access it does not have measures
   the access and not the skill.
 - **The split against the format is one question**: does the statement depend on what the skill
@@ -37,13 +40,19 @@ and it is the design.
 | The grader type table, and its class column                     | no                   | format |
 | The regex anchoring snapshot                                    | no                   | format |
 | The validator rules, and the authoring traps                    | no                   | format |
+| The `@check` decorator, the `Run` fields, what a check may import | no                  | checks |
 | Which grader class a case should prefer                         | yes                  | design |
+| Which of the two assertion mechanisms a dimension needs         | yes                  | design |
 | Which cases the suite needs, and which it is missing            | yes                  | design |
 | What a missing access changes                                   | yes                  | design |
 
 A statement about a case file that any reader can check without opening the skill is the
 format's. Everything that needs the skill's own instructions, or the developer's answer about
 what the skill is for, is here.
+
+The no side is two files, because there are two assertion mechanisms. A statement about a grader
+type is [eval_format.md](eval_format.md), and a statement about a check is
+[checks.md](checks.md). Which of the two an assertion needs depends on the skill, so it is here.
 
 ## The interview
 
@@ -60,13 +69,14 @@ back to the developer, and a developer who could answer it would have written th
 | What does this skill have to get right?                | the end to end case, and the goal the grader asserts      |
 | What does a bad answer look like?                      | the edge cases, and every `not_contains` pattern          |
 | What must a release never ship?                        | which dimension carries a structural grader               |
-| What does it read, and what does it write?             | the fixtures, the access, and which target a grader reads |
+| What does it read, and what does it write?             | the fixtures, the access, which target a grader reads, and whether what it writes is text |
 | Which part of it breaks most often?                    | which capability gets a case of its own                   |
 
 A reply names a symptom, not a case. The work is to turn it into one. `The summaries are too
 long` is a `regex` over `last_message`. `It makes things up about our schema` is a fixture and a
 `not_contains` pattern per invented value. `It ignores the config file` is a `tool_used` with an
-`input_match` naming that file.
+`input_match` naming that file. `The totals in the spreadsheet come out wrong` is a check that
+opens the workbook, because no grader type reads a cell.
 
 Ask again when the reply does not decide the grader. One follow-up question that settles a
 target is worth more than a case that grades the wrong thing.
@@ -85,21 +95,21 @@ out, and why each left-out one does not apply.
 Ten dimensions. Each one that applies to the skill has at least one case. One case may answer
 more than one row, so the check is that no applying row has none.
 
-Every grader named below is one of the six types [eval_format.md](eval_format.md) defines. This
-file adds none.
+Every grader named below is one of the six types [eval_format.md](eval_format.md) defines, and
+every check is [checks.md](checks.md). This file adds neither.
 
-| Dimension | The case | The grader | Applies when |
+| Dimension | The case | The assertion | Applies when |
 | --------- | -------- | ---------- | ------------ |
-| Expected behaviour, end to end | one prompt carrying the whole job the skill exists for | `file_exists` on the artefact, `tool_order` on the steps that have an order, one `llm` over `{source: file, path}` on the contents | always. Every skill has one job |
+| Expected behaviour, end to end | one prompt carrying the whole job the skill exists for | `file_exists` on the artefact, `tool_order` on the steps that have an order, one `llm` over `{source: file, path}` on the contents, a check over that file when it is not text | always. Every skill has one job |
 | The right tools are used | the request the skill's own description triggers on, and a second request near its subject that it must not fire on | the skill-fired `tool_used` idiom, `tool_order` for a required sequence, `tool_used` with `min: 0, max: 0` for a tool it must not call and for the request it must not fire on | always |
-| The goal is achieved | a prompt naming the outcome and no steps | `file_exists` on the artefact, `regex` over `{source: file, path}` for a value that has to be in it, `llm` over the same when the outcome is prose | always. It differs from the first row in which grader carries the assertion |
-| Each capability on its own | one case per capability the skill's own instructions name, each prompt asking for that capability alone | `tool_used` with the `input_match` for the call that capability makes, `regex` over `{source: file, path}` or `last_message` for its output | the skill names more than one capability |
-| The instructions are followed | a prompt whose answer the instructions constrain: a format, a length, an ordering, a required section | `regex` over `last_message` with `match: contains`, `not_contains` or `count:N`, and `m` in `flags` when the anchor is per line. `llm` over `last_message` when the constraint is not a pattern | the instructions constrain the output |
+| The goal is achieved | a prompt naming the outcome and no steps | `file_exists` on the artefact, `regex` over `{source: file, path}` for a value that has to be in it, `llm` over the same when the outcome is prose, a check when the value has to be computed or the file parsed | always. It differs from the first row in which grader carries the assertion |
+| Each capability on its own | one case per capability the skill's own instructions name, each prompt asking for that capability alone | `tool_used` with the `input_match` for the call that capability makes, `regex` over `{source: file, path}` or `last_message` for its output, a check per capability whose output is not text | the skill names more than one capability |
+| The instructions are followed | a prompt whose answer the instructions constrain: a format, a length, an ordering, a required section | `regex` over `last_message` with `match: contains`, `not_contains` or `count:N`, and `m` in `flags` when the anchor is per line. `llm` over `last_message` when the constraint is not a pattern, a check when the constraint is on a file no pattern can read | the instructions constrain the output |
 | Edge cases | the input at a boundary: empty, absent, malformed, oversized, or two instructions that conflict | `regex` over `last_message` for the stated refusal or the handled result, `tool_used` with `min: 0, max: 0` for the destructive action it must not take | the developer named a boundary, or the input is a file or a value that has one |
-| Hallucination | a prompt asking for a fact only the case's own fixture carries, or naming a thing that is not there | `regex` over `last_message` with `match: not_contains` for each value the fixture does not carry, `baseline` against a `baseline_file` holding the correct answer | the skill reports what it read rather than transforming what it was given |
+| Hallucination | a prompt asking for a fact only the case's own fixture carries, or naming a thing that is not there | `regex` over `last_message` with `match: not_contains` for each value the fixture does not carry, `baseline` against a `baseline_file` holding the correct answer, a check when the invented value lands in an artefact no pattern can read | the skill reports what it read rather than transforming what it was given |
 | Context relevancy | more context than the answer needs, with the answer in one named part of it | `tool_used` with `input_match` naming the file it had to open, `regex` over `trace` for that path, `regex` over `last_message` with `not_contains` for a value only the irrelevant part carries | the skill chooses what to read |
 | Answer relevancy | one question, asked once, whose answer has a shape | `regex` over `last_message` with `count:N` or `not_contains` for the padding shape, `llm` over `last_message` for the criteria, `baseline` when a reference answer exists | the product is the message and not a file |
-| PII and confidential information leakage | a fixture carrying a marked value the answer does not need, and a prompt that does not ask for it | `regex` with `match: not_contains` over `last_message`, over `{source: file, path}` for each artefact, over `trace` for the value reaching a tool call, and over `mock_calls` for it reaching an MCP call | the skill reads anything the prompt did not carry: a staged fixture, a forwarded credential, a service |
+| PII and confidential information leakage | a fixture carrying a marked value the answer does not need, and a prompt that does not ask for it | `regex` with `match: not_contains` over `last_message`, over `{source: file, path}` for each artefact, over `trace` for the value reaching a tool call, and over `mock_calls` for it reaching an MCP call, and a check per artefact that is not text | the skill reads anything the prompt did not carry: a staged fixture, a forwarded credential, a service |
 
 The applies-when column is read against the skill's own `SKILL.md` and against the developer's
 answers. A row that does not apply gets no case, and the reason it does not apply is what Claude
@@ -109,7 +119,8 @@ Code says back to the developer.
 
 - **A row whose only grader is `llm` or `baseline` leaves the exit code silent about it.** Those
   two are judged, are printed, and carry no verdict. Give every dimension a release must not
-  ship a structural grader as well. See [running_evals.md](running_evals.md).
+  ship a structural grader as well, or a check, which is judged or not and decides either way.
+  See [running_evals.md](running_evals.md).
 - **Prefer a structural grader.** A judged grader over a non-deterministic agent is a flaky
   verdict, and a judge is noisy on a long input. Where a structural grader can decide a
   dimension, it decides it.
@@ -126,6 +137,41 @@ Code says back to the developer.
   reports and `--require-coverage` enforces. See [cli.md](cli.md). Nothing enforces the table
   above, which is why it is written here.
 
+## A grader or a check
+
+A grader reads text. `file_exists` reports that a file appeared and says nothing about what is
+in it, and `regex` and `llm` are shown a produced file as text. So a skill whose product is a
+workbook, a deck, a PDF or an image satisfies every grader available to it having asserted
+nothing about the thing it made. A check is the route, and the mechanism is
+[checks.md](checks.md).
+
+**Can a grader type read the target, and say what has to be true of it?** Yes, and it is a
+grader. No, and it is a check. The question is per assertion and not per case: one case carries
+both, and the harness refuses a case whose only assertion directory is `checks/`.
+
+Prefer a grader. A grader is a file the harness reads, and a check is code the consumer owns,
+maintains and declares the imports of.
+
+| The assertion is over                                    | Why no grader type reaches it                    |
+| -------------------------------------------------------- | ------------------------------------------------ |
+| What is inside a file that is not text                   | `regex` and `llm` are shown the bytes as text    |
+| A value that has to be computed or parsed out            | no grader type computes                          |
+| Two produced files that have to agree                    | a grader reads one target                        |
+| A file the agent changed rather than created             | `file_exists` globs created files                |
+| A property a model has to look at rather than read       | `llm` is shown text, and `run.judge` is shown the paths |
+
+Six rows of the dimension table name a check for that reason. The four that do not are the rows
+whose target is a tool call, a trace, or the message itself: the right tools are used, edge
+cases, context relevancy and answer relevancy.
+
+Two consequences for the design, and neither is visible in the dimension table.
+
+- **A check decides the exit code however it reached its verdict.** `run.judge` included. So a
+  dimension only a model can settle is not condemned to a printed note: an `llm` grader is judged
+  and silent, and a check returning what `run.judge` returned is judged and binding.
+- **A check costs nothing when it cannot run.** Every check of every selected plugin is imported
+  before the first case starts, so a check that does not import exits 3 having spent nothing.
+
 ## Access
 
 A case that needs access it does not have measures the access and not the skill.
@@ -137,6 +183,7 @@ A case that needs access it does not have measures the access and not the skill.
 | An MCP server                 | nothing. The tool is not there                                   | `evals/mocks/<server>/<tool>.md`, which makes the case `no-cowork` and makes `mock_calls` a readable target |
 | A tool                        | the grant. A run that never had a granted tool fails rather than scores | `eval.allow_tools`, or the case's own `allowed_tools`, which makes the case `no-cowork`. See [running_evals.md](running_evals.md) |
 | A file staged before the run  | a prompt with nothing to read                                    | `context.add_dirs` or `context.scaffold_script` in `case.yaml`, which makes the case `no-cowork` |
+| A library a check imports     | nothing about the skill. The suite does not start                | the consumer's own project declares it, as it would for a unit test. The preflight imports every check and exits 3. See [checks.md](checks.md) |
 | A wheel the skill imports     | an import error inside the session, in every case at once        | `cowork_evals test` catches it before an eval is written over it. See [runtime.md](runtime.md) |
 | The deployed stack            | the container, and not CoWork                                    | the honoured subset in [approaches.md](approaches.md)                       |
 
@@ -149,8 +196,8 @@ Two rules follow, and the route above decides neither.
 ## The proposal
 
 Either route proposes the suite before a file is written: one line per case, naming the
-dimension it covers and the grader that decides it. A developer reads that list and strikes a
-case in one sentence. The same list read after the cases exist costs a rewrite.
+dimension it covers and the grader or the check that decides it. A developer reads that list and
+strikes a case in one sentence. The same list read after the cases exist costs a rewrite.
 
 The proposal also names, per case, the access it needs and whether it carries `no-cowork`. Those
 two are what a developer objects to, and they are invisible in a case name.

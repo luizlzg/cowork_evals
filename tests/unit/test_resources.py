@@ -200,6 +200,22 @@ def _dimensions(design: str) -> list[str]:
     return [cell for cell in cells if cell and cell != "Dimension" and set(cell) != {"-"}]
 
 
+def _dimensions_naming_a_check(table: str) -> set[str]:
+    """The dimensions whose row names a check, out of a rendered dimension table.
+
+    Read out of the table in either file, so neither the dimensions nor the count is spelled
+    here.
+    """
+    named = set()
+    for line in table.splitlines():
+        if not line.startswith("| "):
+            continue
+        cells = [cell.strip() for cell in line.split("|")[1:-1]]
+        if cells and cells[0] not in ("Dimension", "") and "a check" in " ".join(cells[1:]):
+            named.add(cells[0])
+    return named
+
+
 def test_the_skill_carries_every_grader_type_the_format_defines() -> None:
     """The skill states no fact of its own, so a type in one is a type in the other."""
     skill = resources.skill("cowork-evals").read_text()
@@ -242,6 +258,37 @@ def test_the_grader_class_preference_is_in_the_design_file() -> None:
     """
     assert "Prefer a" not in _document("eval_format.md")
     assert "Prefer a structural grader." in _document("eval_design.md")
+
+
+def test_the_choice_between_a_grader_and_a_check_is_in_the_design_file() -> None:
+    """Each mechanism file says what its own assertion is. Which one to use depends on the skill.
+
+    So the question is the design's, and it is in the skill that reads the design. Without it in
+    both, a session writes `file_exists` over a workbook and calls the case covered.
+    """
+    question = "Can a grader type read the target, and say what has to be true of it?"
+    assert question in _document("eval_design.md")
+    assert question in resources.skill("cowork-evals").read_text()
+
+
+def test_the_same_dimensions_name_a_check_in_both_files() -> None:
+    """A dimension that names a check in one and not the other sends two sessions two ways.
+
+    Both files also count the rows in prose, so the count is asserted against the tables. A row
+    that gains or loses a check makes that sentence false.
+    """
+    design = _document("eval_design.md")
+    skill = resources.skill("cowork-evals").read_text()
+    in_design = _dimensions_naming_a_check(
+        design[design.index("| Dimension") : design.index("### What the table does not decide")]
+    )
+    in_skill = _dimensions_naming_a_check(
+        skill[skill.index("| Dimension") : skill.index("Prefer a structural grader.")]
+    )
+    assert in_design == in_skill, in_design ^ in_skill
+    assert len(in_design) == 6, in_design
+    assert "Six rows of the dimension table name a check" in design
+    assert "Six rows above\nname a check" in skill
 
 
 def test_the_skill_carries_as_many_traps_as_the_format() -> None:

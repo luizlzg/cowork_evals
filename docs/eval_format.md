@@ -9,7 +9,7 @@ frontmatter keys, the grader types, what the validator refuses and the traps tha
 silently. The format is `claude plugin eval`'s own, so a case needs no adapter to run under
 that harness.
 
-Which cases a skill needs, and which grader answers which question, is
+Which cases a skill needs, and which assertion answers which question, is
 [eval_design.md](eval_design.md). What the CLI does with a case is
 [plugin_eval.md](plugin_eval.md). How this repository invokes it is
 [running_evals.md](running_evals.md). Which backend honours which field is

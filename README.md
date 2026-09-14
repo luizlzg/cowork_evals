@@ -170,7 +170,7 @@ match: not_contains
 Both are structural, so both decide the exit code. A grader file without the `---` delimiters
 is read as a note and is silently ignored.
 
-Two cases are not a suite. Which cases a skill needs, which grader answers which question, and
+Two cases are not a suite. Which cases a skill needs, which assertion answers which question, and
 what a case measures when it lacks the access it needs are
 [`docs/eval_design.md`](docs/eval_design.md).
 
@@ -323,7 +323,7 @@ reads the same files without this repository checked out.
 | ------------------------------------------------ | ---------------------------------------------------- |
 | [`docs/cli.md`](docs/cli.md)                     | The whole command surface: verbs, options, exit codes |
 | [`docs/eval_format.md`](docs/eval_format.md)     | How to write a case: tree, frontmatter, graders    |
-| [`docs/eval_design.md`](docs/eval_design.md)     | Which cases to write, and which grader answers what |
+| [`docs/eval_design.md`](docs/eval_design.md)     | Which cases to write, and which assertion answers what |
 | [`docs/checks.md`](docs/checks.md)               | Assertions you write as Python, over the files a run produced |
 | [`docs/approaches.md`](docs/approaches.md)       | The two backends, and what each one proves         |
 | [`docs/running_evals.md`](docs/running_evals.md) | The run: what is built today, pass and fail, logs, cost |
