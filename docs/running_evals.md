@@ -414,6 +414,13 @@ verdict. A `check` grader is this package's own, not the harness's, and it decid
 reason: it is an author's Python over what the run produced, deterministic unless the author
 made it otherwise. The verdict needs no condition for it. See [checks.md](checks.md).
 
+A judged line carries the reason as well as the tally. Every judge this package asks answers under
+a JSON schema, so a vote is a `PASS` or `FAIL` and the reasoning beside it, and the winning side's
+reasoning reaches the `explanation` a `NOTE` line prints and the `evidence` the document keeps. How
+many votes are cast is `eval.judge_votes`, three by default; the answer is the majority, so one
+vote needs one pass and three need two. The mechanism, and what an older CLI does instead, are
+[checks.md](checks.md).
+
 Every line printed carries `FAIL` or `NOTE`, so a judged failure is never read as the cause of
 exit 1. A run's grader results carry `name`, `passed` and `scored`, never `type`, so the
 verdict joins each result to that case's grader definition by name to learn which class it is

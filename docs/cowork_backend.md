@@ -159,19 +159,21 @@ unreadable file are each a failed grader carrying the reason.
 ## The judge
 
 `llm` and `baseline` are answered by `claude -p --output-format json --model <model>
---strict-mcp-config`, with the rubric, the material and a closing instruction sent as one
-text on stdin. Three votes, and the grader passes on two `PASS` answers. A reply that is
-neither word is a lost vote and is not a `PASS`; three lost votes are a failed grader naming
-the reason. `--strict-mcp-config` keeps the developer's own MCP servers out of a text vote.
-The material is truncated head and tail as the harness truncates it.
+--strict-mcp-config --json-schema <schema>`, with the rubric, the material and a closing
+instruction sent as one text on stdin. `eval.judge_votes` votes, three by default, and the grader
+passes on a majority of `PASS` answers. `--json-schema` is what makes a vote a `verdict` field and
+a `reasoning` field rather than a bare word, so the reason the grader decided as it did reaches the
+document; a reply carrying neither is a lost vote and is not a `PASS`, and all votes lost is a
+failed grader naming the reason. `--strict-mcp-config` keeps the developer's own MCP servers out of
+a text vote. The material is truncated head and tail as the harness truncates it.
 
 The model is `--judge-model` where one was given and `eval.judge_model` otherwise. The
 signed-in `claude` on `PATH` is the one credential route, which is why [cli.md](cli.md) makes
 it part of the `--cowork` preflight. `CLAUDE_CODE_WALNUT_SPIRE` is not exported: it enables
 `claude plugin eval`, and this is `claude -p`.
 
-The same three-vote machinery answers a check's `llm` assertion, with an argument list and a
-material rule of its own. That is [checks.md](checks.md).
+The same voting machinery answers a check's judged assertion, with an argument list and a material
+rule of its own. That is [checks.md](checks.md).
 
 ## What the result document says that the reference does not
 

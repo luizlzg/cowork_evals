@@ -24,6 +24,7 @@ from cowork_evals.judge import (
     MATERIAL_CLOSE,
     MATERIAL_LIMIT,
     MATERIAL_OPEN,
+    VERDICT_SCHEMA,
     VOTES,
     Reply,
     check_argv,
@@ -31,6 +32,7 @@ from cowork_evals.judge import (
     compose_paths,
     criteria,
     judge_argv,
+    majority,
     material,
     read_reply,
     resolve_model,
@@ -81,7 +83,21 @@ def test_judge_argv_is_claude_p_with_the_model_and_strict_mcp_config() -> None:
         "--model",
         "haiku",
         "--strict-mcp-config",
+        "--json-schema",
+        json.dumps(VERDICT_SCHEMA),
     ]
+
+
+def test_the_schema_asks_for_a_reason_and_one_of_two_words() -> None:
+    """Both fields required, and nothing else accepted: the shape is the CLI's to enforce."""
+    assert VERDICT_SCHEMA["required"] == ["reasoning", "verdict"]
+    assert VERDICT_SCHEMA["properties"]["verdict"]["enum"] == ["PASS", "FAIL"]
+    assert VERDICT_SCHEMA["additionalProperties"] is False
+
+
+def test_the_check_judge_carries_the_schema_too() -> None:
+    """One flag, in judge_argv, so the check judge and a judged grader read the same shape."""
+    assert "--json-schema" in check_argv("haiku")
 
 
 def test_the_check_judge_argv_adds_the_grant_to_the_judge_argv() -> None:
@@ -120,10 +136,14 @@ def test_the_check_judge_is_shown_the_paths_and_never_the_material() -> None:
     )
 
 
-def test_the_check_instruction_asks_for_a_read_and_then_one_word() -> None:
-    assert CHECK_INSTRUCTION == (
-        "Read each file named above, then answer with exactly one word: PASS or FAIL."
-    )
+def test_the_check_instruction_asks_for_a_read_a_reason_and_a_verdict() -> None:
+    """The schema enforces the shape, so the instruction asks for substance instead."""
+    assert "Read each file named above" in CHECK_INSTRUCTION
+    assert "as many turns as the question needs" in CHECK_INSTRUCTION
+    assert "'reasoning'" in CHECK_INSTRUCTION
+    assert "'verdict'" in CHECK_INSTRUCTION
+    assert "exactly one word" not in CHECK_INSTRUCTION
+    assert "exactly one word" not in INSTRUCTION
 
 
 def test_the_enablement_variable_is_not_exported() -> None:
@@ -299,3 +319,64 @@ def test_the_evidence_is_truncated() -> None:
     judged = tally(grader("llm"), [read_reply(recorded("reply_pass"))] * 3, "x" * 5000)
     assert judged.result.evidence is not None
     assert len(judged.result.evidence) == EVIDENCE_LIMIT + len("\n...\n")
+
+
+# The reasoning a structured reply carries, and the older shape that carries none.
+
+
+def test_a_structured_reply_is_a_vote_and_its_reasoning() -> None:
+    reply = read_reply(recorded("reply_structured_pass"))
+    assert reply.vote is True
+    assert reply.error is None
+    assert "xlsx.sh dedup" in reply.reasoning, "the judge's own words, not a tally"
+    assert reply.cost_usd == 0.0021
+
+
+def test_a_structured_fail_is_the_other_vote_and_still_reasons() -> None:
+    reply = read_reply(recorded("reply_structured_fail"))
+    assert reply.vote is False
+    assert reply.reasoning
+
+
+def test_a_verdict_outside_the_schema_is_a_lost_vote_that_keeps_its_reasoning() -> None:
+    """The reason is worth keeping even when the verdict is unreadable: it says what went wrong."""
+    reply = read_reply(recorded("reply_structured_neither"))
+    assert reply.vote is None
+    assert reply.error is not None
+    assert "UNSURE" in reply.error
+    assert reply.reasoning
+
+
+def test_a_bare_word_reply_still_votes_and_carries_no_reasoning() -> None:
+    """The older shape, from a CLI with no --json-schema. It votes; it just cannot explain."""
+    reply = read_reply(recorded("reply_pass"))
+    assert reply.vote is True
+    assert reply.reasoning == ""
+
+
+def test_the_tally_carries_the_winning_reasoning() -> None:
+    replies = [
+        Reply(vote=True, reasoning="it ran the command"),
+        Reply(vote=False, reasoning="it did not"),
+        Reply(vote=True, reasoning="the command is there"),
+    ]
+    judged = tally(grader("llm"), replies, "Hello.")
+    assert judged.result.passed is True
+    assert judged.result.explanation.startswith("judge votes: PASS FAIL PASS")
+    assert "it ran the command" in judged.result.explanation, "the winning side's words"
+    assert "it did not" not in judged.result.explanation
+    assert judged.result.evidence is not None
+    assert "Hello." in judged.result.evidence, "what the judge was shown survives"
+    assert "it ran the command" in judged.result.evidence, "and what it made of it"
+
+
+def test_a_tally_over_replies_with_no_reasoning_is_the_bare_line() -> None:
+    judged = tally(grader("llm"), [Reply(vote=True), Reply(vote=True)], "Hello.")
+    assert judged.result.explanation == "judge votes: PASS PASS"
+    assert judged.result.evidence == "Hello."
+
+
+def test_the_majority_scales_with_the_vote_count() -> None:
+    assert majority(1) == 1
+    assert majority(3) == 2
+    assert majority(5) == 3

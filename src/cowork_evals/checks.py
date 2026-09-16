@@ -199,12 +199,12 @@ class Run:
 
         text = judging.compose_paths(prompt, tuple(names))
         argv = judging.check_argv(self.judge_model, tuple(add_dirs))
-        replies = [judging.ask(argv, text, cwd=root) for _ in range(judging.VOTES)]
+        replies = [judging.ask(argv, text, cwd=root) for _ in range(judging.resolve_votes())]
         judged = judging.tally(_judge_grader(prompt), replies, "\n".join(names))
         self.calls.append(
             JudgeCall(
                 prompt=text,
-                replies=tuple(reply.word for reply in replies),
+                replies=tuple(_said(reply) for reply in replies),
                 cost_usd=judged.cost_usd,
             )
         )
@@ -258,6 +258,17 @@ class Outcome:
         if self.cost_usd:
             entry["costUsd"] = self.cost_usd
         return entry
+
+
+def _said(reply: judging.Reply) -> str:
+    """One reply, as `checks.jsonl` keeps it: the vote, and what the judge said decided it.
+
+    The word alone is what a reader of a failed judged check does not have. A reply that carried no
+    reasoning, which is the older shape, is the word by itself.
+    """
+    if not reply.reasoning:
+        return reply.word
+    return f"{reply.word}: {reply.reasoning}"
 
 
 def _judge_grader(prompt: str) -> Grader:

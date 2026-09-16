@@ -337,3 +337,22 @@ def test_the_traces_key_reads_a_boolean_and_refuses_anything_else(tmp_path: Path
     with pytest.raises(CoWorkError) as raised:
         Config.load(written)
     assert "eval.keep_traces: expected true or false, got str" in str(raised.value)
+
+
+def test_the_judge_vote_count_defaults_to_three() -> None:
+    assert Config().eval.judge_votes == 3
+
+
+def test_a_written_judge_vote_count_is_read(tmp_path: Path) -> None:
+    written = tmp_path / CONFIG_FILENAME
+    written.write_text("eval:\n  judge_votes: 1\n", encoding="utf-8")
+    assert Config.load(written).eval.judge_votes == 1
+
+
+def test_no_votes_at_all_is_refused_at_load(tmp_path: Path) -> None:
+    """Zero turns every judged assertion into a lost vote, so it is named at load."""
+    written = tmp_path / CONFIG_FILENAME
+    written.write_text("eval:\n  judge_votes: 0\n", encoding="utf-8")
+    with pytest.raises(CoWorkError) as raised:
+        Config.load(written)
+    assert "at or above one" in str(raised.value)

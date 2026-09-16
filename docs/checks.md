@@ -128,8 +128,9 @@ The two transcript formats are [running_evals.md](running_evals.md). A check rea
 
 Some things are not decidable in code: whether a slide is clipped, whether a chart is readable,
 whether prose answers the question. `run.judge(prompt, *paths)` asks a model. It runs `claude
--p` three times, takes the majority of the three votes, and returns a `Result`, so a check can
-return it straight back.
+-p` once per `eval.judge_votes`, three times by default, takes the majority of the votes, and
+returns a `Result` carrying the verdict and what the winning side said, so a check can return it
+straight back.
 
 ```python
 import subprocess
@@ -169,7 +170,17 @@ The grant is those three read-only tools, with no permission mode and no turn ca
 2.1.270 they alone let a non-interactive `claude -p` read a file in its working directory and
 answer on what it says, and the CLI's own default binds the loop. The model resolves through
 the one ladder every other judge call resolves through, so `--judge-model` beats
-`eval.judge_model`. The layer has no configuration key of its own.
+`eval.judge_model`, and the vote count comes down the same ladder from `eval.judge_votes`.
+
+**The judge says why, and the shape is the CLI's to enforce.** `--json-schema` makes
+`--output-format json` carry a `structured_output` object beside the `result` string, so a vote is
+a `verdict` of `PASS` or `FAIL` and a `reasoning` beside it. Nothing here parses prose. A judge
+asked to investigate a long file answers at length and then gives its verdict in the field, where
+before it had to answer in one word and a reasoned reply was a lost vote.
+
+Measured on CLI 2.1.273, with the tool grant above and without it. A CLI too old for the flag
+returns no `structured_output`, and a bare `PASS` or `FAIL` is still read: that reply votes and
+carries no reasoning.
 
 There is no `@transform` decorator and no `run.ask`. Converting a file before asserting on it,
 and asking a model something `run.judge` does not answer, are both things a Python function
@@ -326,9 +337,11 @@ that the plugin was the thing that produced it.
 
 A check that asserts costs nothing. It is a function call on the host.
 
-A check that calls `run.judge` costs three `claude -p` calls at the judge model, per call per
-run. Each run of every arm runs every check again, so a case at `runs: 3` carrying one judged
-check costs nine on one arm and eighteen under `--ablation with-without`. The harness has already
+A check that calls `run.judge` costs `eval.judge_votes` `claude -p` calls at the judge model, per
+call per run, three of them by default. Each run of every arm runs every check again, so a case at
+`runs: 3` carrying one judged check costs nine on one arm and eighteen under
+`--ablation with-without`. Structured output adds a round trip to each of them, because the verdict
+is a tool call the judge makes after it has read what it was given. The harness has already
 finished when a check runs, so `eval.max_cost_usd` does not bind that spend; it is added to the
 document's `costUsd`, which `eval.max_cost_total_usd` reads. The ceilings are
 [running_evals.md](running_evals.md).

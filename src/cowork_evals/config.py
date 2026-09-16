@@ -111,6 +111,19 @@ def _count(name: str, value: Any) -> int:
     return value
 
 
+def _votes(name: str, value: Any) -> int:
+    """A vote count, which is at or above one.
+
+    Not a policy: `judge.majority` of zero votes is one, and `judge.tally` over no reply at all
+    reports that the judge could not be asked. Zero therefore turns every judged assertion into a
+    lost vote, and saying so here is the only way a consumer finds out.
+    """
+    count = _count(name, value)
+    if count < 1:
+        raise CoWorkError(2, f"{name}: expected an integer at or above one, got {count}")
+    return count
+
+
 def _path(name: str, value: Any) -> Path:
     if isinstance(value, Path):
         return _absolute(value)
@@ -268,6 +281,10 @@ class EvalSection:
 
     model: str = "sonnet"
     judge_model: str = "haiku"
+    # How many times a judged assertion is asked, the answer being the majority. Three is what a
+    # judged grader has always cast. One costs a third of it and reads the reasoning rather than
+    # outvoting the noise. docs/running_evals.md.
+    judge_votes: int = 3
     # What a CoWork session can do, named in the container's own tool names. A session
     # grants nothing and acts, so a container run that is denied a tool a session has is
     # measuring this package's configuration and not the plugin. docs/running_evals.md.
@@ -301,6 +318,7 @@ class EvalSection:
     _FIELDS: ClassVar[dict[str, Callable[[str, Any], Any]]] = {
         "model": _text,
         "judge_model": _text,
+        "judge_votes": _votes,
         "allow_tools": _tools,
         "ablation": _ablation,
         "delta_threshold": _fraction,
