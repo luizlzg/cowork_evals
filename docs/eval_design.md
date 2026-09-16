@@ -28,6 +28,10 @@ contract over [eval_format.md](eval_format.md), which is the file contract, and 
   match.
 - **A grader, or a check.** Can a grader type read the target, and say what has to be true of
   it? Yes, and it is a grader. No, and it is a check.
+- **The deliverable does not show the route.** A third assertion reads the trace and asks a model
+  three things: was the route right, were the instructions followed, was anything invented.
+- **Show the judge the skill, not a summary of it.** A rubric restating the skill's rules is a
+  snapshot of one reading of them.
 - **A missing access changes the design.** A case that needs access it does not have measures
   the access and not the skill.
 - **The split against the format is one question**: does the statement depend on what the skill
@@ -265,6 +269,58 @@ Two consequences for the design, and neither is visible in the dimension table.
   and silent, and a check returning what `run.judge` returned is judged and binding.
 - **A check costs nothing when it cannot run.** Every check of every selected plugin is imported
   before the first case starts, so a check that does not import exits 3 having spent nothing.
+
+## The deliverable does not show the route
+
+A grader and a check both read what the run produced. Neither can see how the run reached it. A
+workbook whose totals are right was produced either by the command the skill documents or by a
+script that reimplemented it, and the file is byte-comparable in both cases. So a suite of graders
+and checks passes a run that never used the skill, and passes a run that used it and then wrote over
+its output.
+
+That is the reward-hacking shape, and it is reachable without any intent to hack: measured on a
+spreadsheet suite, a case scored 1.00 on a run that called the skill's own dedup command and then
+saved a Python script's output over the file it had produced. Every assertion on the case passed,
+because the delivered workbook was deduplicated.
+
+**So a third assertion reads the trace, and a model is what reads it.** It is a check returning what
+`run.judge` returned, which makes it binding rather than a printed note. The judge is shown the trace
+and the skill's own document as paths, so nothing is truncated. The mechanism is
+[checks.md](checks.md).
+
+It asks three questions and no more.
+
+| The question                    | The run fails it when                                                      |
+| ------------------------------- | -------------------------------------------------------------------------- |
+| Was the route the right one     | the deliverable came from something other than what the skill documents for it, or from a command that ran and was then superseded |
+| Were the instructions followed  | the skill states a thing to do, or an order to do it in, and the run did not |
+| Was anything invented           | a value in the final message appears in no tool result                      |
+
+Six rules, and the first is what makes the assertion a regression test.
+
+- **Show the judge the skill, not a summary of it.** Name the subject in the rubric and let the judge
+  find the wording: *the document says what this command does when a sheet holds formulas, and
+  elsewhere says what to do about that; find both*. A rubric that restates the rules is a snapshot of
+  one reading of the skill, and it keeps passing a run the skill itself would now fail.
+- **A rubric may not demand a route the skill cannot take.** Read the command list before writing the
+  clause. Measured: a skill's pitfalls section said to convert formulas to values before sorting and
+  none of its forty commands did that, so the skill's own escape to a script was the only route left
+  open. The clause demanding otherwise failed every run for a gap in the skill.
+- **A split vote is a rubric fault before it is a judge fault.** The run above went two to one, and
+  three to nothing on the same trace once the impossible clause was gone.
+- **Judge the route, not the result.** Whether the numbers are right is what the graders and the
+  checks already decide. A rubric doing both spends votes re-deciding that and splits them on the
+  half it was not asked for.
+- **The baseline arm is not held to the route.** The route and the instructions are both the skill's,
+  so a run with no plugin loaded has neither, and asserting them there fails by construction and
+  inflates the delta. This is the rule in [checks.md](checks.md) against a check that cannot hold
+  without the plugin, in the one place it is easiest to break.
+- **It is the layer over the others and not a replacement for them.** A judged rubric is the most
+  expensive assertion in a suite and the least deterministic. What a `regex`, a `file_exists` or a
+  check can settle, it settles.
+
+One judged assertion costs `eval.judge_votes` calls per run per arm, so it is one per case and not
+one per question. [running_evals.md](running_evals.md).
 
 ## An assertion is tested both ways
 

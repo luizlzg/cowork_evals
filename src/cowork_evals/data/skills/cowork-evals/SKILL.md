@@ -123,6 +123,26 @@ check the skill's own output fails is a broken check and not a finding. Both tes
 first case does, because neither needs a model, and a pattern is tested in the engine the harness
 grades with rather than the one the test is written in.
 
+The deliverable does not show the route. A grader and a check both read what the run produced, and
+a file the skill's own command wrote is byte-comparable with one a script reimplemented, so a green
+suite passes a run that never used the skill and passes a run that used it and then wrote over its
+output. So add a third assertion that reads the trace: a check returning what `run.judge` returned,
+shown the trace and the skill's own document as paths, asking three things and no more. Was the
+route the right one, were the instructions followed, was anything invented.
+
+| The rule for that rubric                                | Because                                                                      |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Show the judge the skill, not a summary of it           | a rubric restating the rules is a snapshot of one reading, and keeps passing a run the skill would now fail |
+| Name the subject and let the judge find the wording     | the assertion then moves with the skill on its next edit                      |
+| Never demand a route the skill cannot take              | read the command list first: a clause asking the impossible fails every run for a gap in the skill |
+| A split vote is a rubric fault before a judge fault     | the clause, not the model, is usually what two votes read differently         |
+| Judge the route, not the result                         | the graders and the checks already decide whether the numbers are right       |
+| Do not hold the baseline arm to it                      | the route and the instructions are the skill's, so asserting them with no plugin loaded inflates the delta |
+
+It is the layer over the others, not a replacement: it is the most expensive assertion in a suite
+and the least deterministic, it costs `eval.judge_votes` calls per run per arm, and so it is one per
+case. What a `regex`, a `file_exists` or a plain check can settle, let it settle.
+
 Context relevancy, leakage and the malformed form of edge cases each need a staged fixture, which
 is a `context.*` key, which makes the case `no-cowork`. The leakage marker is a fixture the case
 owns, never a forwarded credential: `run.log` carries whatever the container printed.
