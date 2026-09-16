@@ -607,6 +607,38 @@ def test_a_suite_with_no_check_anywhere_is_left_exactly_as_the_backend_wrote_it(
 # Both arms. Under `--ablation with-without` a check reads what the baseline produced too.
 
 
+def two_arm_case(
+    directory: Path,
+    case: str = "checked",
+    count: int = 1,
+    *,
+    name: str | None = None,
+    baseline_wrote: str | None = None,
+    comparable: bool = True,
+) -> dict[str, Any]:
+    """One two-arm case entry, both arms collected under the name its traces take.
+
+    `baseline_wrote` replaces `written.txt` in every baseline workspace, which is how the two
+    arms come to hold different artefacts: the fixture run is one directory, so without an edge
+    like this both arms carry the same bytes and every check reaches the same verdict.
+
+    `name` names the traces and the entry while `case` stays the directory the checks are read
+    from, so one fixture case can appear twice in one document.
+    """
+    named = name or case
+    runs = collected_runs(directory, named, count)
+    without = collected_runs(directory, named, count, arm="without")
+    if baseline_wrote is not None:
+        for run_dir in without:
+            (run_dir / "workspace" / "written.txt").write_text(baseline_wrote, encoding="utf-8")
+    entry = case_entry(named, f"evals/plugin/{case}", runs, without=without)
+    if not comparable:
+        # The harness omits both when the arms were graded under different rules.
+        del entry["aggregates"]["delta"]
+        del entry["aggregates"]["scoreWithout"]
+    return entry
+
+
 def two_arm_layer(
     tmp_path: Path,
     case: str = "checked",
@@ -615,24 +647,12 @@ def two_arm_layer(
     baseline_wrote: str | None = None,
     comparable: bool = True,
 ) -> tuple[Path, dict[str, Any]]:
-    """The layer over a two-arm case, and the directory and document it leaves.
-
-    `baseline_wrote` replaces `written.txt` in every baseline workspace, which is how the two
-    arms come to hold different artefacts: the fixture run is one directory, so without an edge
-    like this both arms carry the same bytes and every check reaches the same verdict.
-    """
+    """The layer over a two-arm case, and the directory and document it leaves."""
     directory = tmp_path / "smoke"
     directory.mkdir(parents=True, exist_ok=True)
-    runs = collected_runs(directory, case, count)
-    without = collected_runs(directory, case, count, arm="without")
-    if baseline_wrote is not None:
-        for run_dir in without:
-            (run_dir / "workspace" / "written.txt").write_text(baseline_wrote, encoding="utf-8")
-    entry = case_entry(case, f"evals/plugin/{case}", runs, without=without)
-    if not comparable:
-        # The harness omits both when the arms were graded under different rules.
-        del entry["aggregates"]["delta"]
-        del entry["aggregates"]["scoreWithout"]
+    entry = two_arm_case(
+        directory, case, count, baseline_wrote=baseline_wrote, comparable=comparable
+    )
     suite(tmp_path, [entry], ablation="with-without")
     assert checks.run(directory, PLUGIN, judge_model="haiku") == []
     return directory, rerun(directory)
@@ -682,15 +702,22 @@ def test_a_check_failing_only_on_the_baseline_moves_the_delta(tmp_path: Path) ->
     )
 
 
-def test_the_suite_mean_delta_is_recomputed(tmp_path: Path) -> None:
-    _, document = two_arm_layer(tmp_path, baseline_wrote="SOMETHING ELSE")
-    assert document["aggregates"]["meanDelta"] == pytest.approx(1 / 5)
+def test_the_suite_mean_delta_is_the_mean_of_the_case_deltas(tmp_path: Path) -> None:
+    """Two cases: one whose baseline a check fails, and one whose arms hold the same artefact.
 
-
-def test_two_arms_holding_the_same_artefact_leave_the_delta_at_zero(tmp_path: Path) -> None:
-    _, document = two_arm_layer(tmp_path)
-    assert document["cases"][0]["aggregates"]["delta"] == 0.0
-    assert document["aggregates"]["meanDelta"] == 0.0
+    A one-case document makes the mean that case's own delta, so two cases are what reach the
+    arithmetic, and the second is what holds a check to a delta of zero where it found nothing.
+    """
+    directory = tmp_path / "smoke"
+    directory.mkdir(parents=True)
+    moved = two_arm_case(directory, baseline_wrote="SOMETHING ELSE")
+    same = two_arm_case(directory, name="checked-again")
+    suite(tmp_path, [moved, same], ablation="with-without")
+    assert checks.run(directory, PLUGIN, judge_model="haiku") == []
+    document = rerun(directory)
+    deltas = [case["aggregates"]["delta"] for case in document["cases"]]
+    assert deltas == pytest.approx([1 / 5, 0.0])
+    assert document["aggregates"]["meanDelta"] == pytest.approx(1 / 10)
 
 
 def test_a_delta_the_harness_omitted_is_not_resurrected(tmp_path: Path) -> None:
@@ -712,7 +739,11 @@ def test_every_run_of_every_arm_runs_every_check_again(tmp_path: Path) -> None:
         assert [path.name for path in scratch.iterdir()] == [f"note-{index}.txt"]
 
 
-def test_a_one_arm_document_gains_no_baseline_numbers(tmp_path: Path) -> None:
+def test_a_one_arm_document_gains_no_mean_delta(tmp_path: Path) -> None:
+    """The harness writes it for a two-arm document alone, and this layer introduces no number.
+
+    That the case gains no baseline pair either is `test_a_passing_case_keeps_its_score`, which
+    reads the whole aggregates dictionary.
+    """
     _, document = layer(tmp_path, "checked")
-    assert document["cases"][0]["aggregates"] == {"score": 1.0, "passRate": 1.0}
     assert "meanDelta" not in document["aggregates"]
