@@ -16,8 +16,16 @@ contract over [eval_format.md](eval_format.md), which is the file contract, and 
   the reply, not a flag.
 - **Ten dimensions.** Each one that applies to the skill has at least one case, whichever route
   produced the suite.
+- **A case that ticks a row is worse than the gap it fills.** The table finds gaps. It is not a
+  quota.
+- **A suite answers two questions.** Does the skill still work, and is the skill better than no
+  skill. The same case files answer both.
 - **Usefulness is a delta.** A skill earns its place when the agent does better with it than
   without it, and the baseline arm is what measures that.
+- **The fixture has to need the tool.** An input small enough to reason about unaided measures the
+  model.
+- **An assertion is tested both ways.** One sample that has to match, and one that has to not
+  match.
 - **A grader, or a check.** Can a grader type read the target, and say what has to be true of
   it? Yes, and it is a grader. No, and it is a check.
 - **A missing access changes the design.** A case that needs access it does not have measures
@@ -154,6 +162,30 @@ Code says back to the developer.
 - **Directory coverage is not dimension coverage.** One `evals/<skill>/` per skill is what `run`
   reports and `--require-coverage` enforces. See [cli.md](cli.md). Nothing enforces the table
   above, which is why it is written here.
+- **A case that ticks a row is worse than the gap it fills.** The table finds gaps, and is not a
+  quota. A case written to complete it costs a run on every sweep, and its pass says nothing about
+  the skill. Ten rows is the most a suite covers, not the number it aims at.
+
+## Two questions, one suite
+
+A suite answers two questions. Does the skill still work, and is the skill better than no skill. The
+same case files answer both, and the run is what differs.
+
+| The question                          | Reads    | Answered by                        |
+| ------------------------------------- | -------- | ---------------------------------- |
+| Does the skill still work             | one arm  | every assertion the case carries   |
+| Is the skill better than no skill     | two arms | the assertions that score in both  |
+
+That gives one rule per assertion. An assertion has to be deep enough to fail on its own when the
+skill regresses, and it has to score in both arms to move a delta. One that does the first and not
+the second leaves the second question unanswered, and a suite of them reports a delta of zero
+whatever the baseline produced.
+
+So neither question is designed for alone. A suite of shallow arm-visible assertions passes a broken
+skill, and a suite of deep one-arm assertions cannot say the skill is worth loading.
+
+Which assertion scores in which arm is [running_evals.md](running_evals.md). When each run happens
+is [approaches.md](approaches.md).
 
 ## Usefulness is a delta
 
@@ -179,6 +211,25 @@ written.
 The arm is `--docker` only. A CoWork session takes its skills from the profile the application
 runs, so nothing can unload the plugin for one arm there. See
 [approaches.md](approaches.md).
+
+## The fixture has to need the tool
+
+A skill is a tool over an input. The fixture is that input, at the size and the shape of the one the
+skill exists for.
+
+| The rule                                              | What the case measures without it                                        |
+| ----------------------------------------------------- | ------------------------------------------------------------------------ |
+| The fixture is the size of the real input             | an input small enough to reason about unaided measures the model          |
+| The prompt does not quote the fixture                 | the arm with no skill answers from the prompt and opens no file           |
+| The boundary the skill handles is in the fixture      | a boundary that appears only at scale is unreachable at four rows         |
+| The input is as untidy as the real one                | a fixture with no duplicate, no gap and no stray type exercises no handling |
+
+Realism is also what makes the dimension table decidable. Edge cases, context relevancy and
+hallucination each need an input carrying the thing the row asserts, and a fixture written to be
+readable in the case file carries none of them.
+
+A fixture at that size is generated rather than typed, and committed rather than staged at run time.
+Where the file lives, and the key that grants it, are [eval_format.md](eval_format.md).
 
 ## A grader or a check
 
@@ -214,6 +265,24 @@ Two consequences for the design, and neither is visible in the dimension table.
   and silent, and a check returning what `run.judge` returned is judged and binding.
 - **A check costs nothing when it cannot run.** Every check of every selected plugin is imported
   before the first case starts, so a check that does not import exits 3 having spent nothing.
+
+## An assertion is tested both ways
+
+An assertion is not known to measure anything until it has been tested both ways. One that cannot
+fail and one that cannot pass report the same thing on every run, and both read as a working
+assertion in the case directory.
+
+| Test         | Against                                                          |
+| ------------ | ---------------------------------------------------------------- |
+| Every pattern | one sample that has to match, and one that has to not match      |
+| Every check   | one artefact that has to pass, and one that has to fail          |
+
+The artefact that has to pass is the skill's own output. A check the skill's own output fails is a
+broken check and not a finding, and a case run is the expensive way to learn that.
+
+Both tests run before the first case does, because neither needs a model. A pattern is tested in the
+engine the harness grades with, not in the one the test is written in: two regular expression engines
+agree on most patterns and not on all of them.
 
 ## Access
 

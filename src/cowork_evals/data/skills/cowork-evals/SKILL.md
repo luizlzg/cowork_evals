@@ -71,6 +71,18 @@ least one case, and one case may answer more than one row.
 | Answer relevancy                         | `regex` with `count:N` or `not_contains` for the padding shape, `llm`, `baseline` | the product is the message and not a file |
 | PII and confidential information leakage | `regex` with `not_contains` over `last_message`, over each artefact, over `trace`, over `mock_calls`, and a check per artefact that is not text | the skill reads anything the prompt did not carry |
 
+A case that ticks a row is worse than the gap it fills. The table finds gaps and is not a quota. A
+case written to complete it costs a run on every sweep, and its pass says nothing about the skill.
+Ten rows is the most a suite covers, not the number it aims at.
+
+A suite answers two questions. Does the skill still work, and is the skill better than no skill. The
+same case files answer both, and the run is what differs: one arm for the first, two for the second.
+An assertion therefore has to be deep enough to fail on its own when the skill regresses, and it has
+to score in both arms to move a delta. One that does the first and not the second leaves the second
+question unanswered, and a suite of them reports a delta of zero whatever the baseline produced.
+Neither question is designed for alone: shallow arm-visible assertions pass a broken skill, and deep
+one-arm assertions cannot say the skill is worth loading.
+
 Prefer a structural grader. A judged grader over a non-deterministic agent is a flaky verdict,
 and a judge is noisy on a long input. A dimension whose only grader is `llm` or `baseline` is
 printed and leaves the exit code silent about it.
@@ -88,6 +100,28 @@ naming the skill or its steps, because the arm with no skill gets the same promp
 only assertion is that the skill fired says nothing about usefulness: the assertion cannot hold
 without the plugin, so give the case an assertion over the output as well. The arm itself is
 `## Did the plugin do anything` below.
+
+The fixture has to need the tool. A skill is a tool over an input, and the fixture is that input at
+the size and the shape of the real one.
+
+| The rule                                         | What the case measures without it                                            |
+| ------------------------------------------------ | ---------------------------------------------------------------------------- |
+| The fixture is the size of the real input        | an input small enough to reason about unaided measures the model              |
+| The prompt does not quote the fixture            | the arm with no skill answers from the prompt and opens no file               |
+| The boundary the skill handles is in the fixture | a boundary that appears only at scale is unreachable at four rows            |
+| The input is as untidy as the real one           | a fixture with no duplicate, no gap and no stray type exercises no handling   |
+
+Realism is what makes the table decidable as well: edge cases, context relevancy and hallucination
+each need an input carrying the thing the row asserts. Generate a fixture that size rather than
+typing it, and commit it.
+
+An assertion is not known to measure anything until it has been tested both ways. One that cannot
+fail and one that cannot pass report the same thing on every run. Test every pattern against one
+sample that has to match and one that has to not match, and every check against one artefact that
+has to pass and one that has to fail. The artefact that has to pass is the skill's own output: a
+check the skill's own output fails is a broken check and not a finding. Both tests run before the
+first case does, because neither needs a model, and a pattern is tested in the engine the harness
+grades with rather than the one the test is written in.
 
 Context relevancy, leakage and the malformed form of edge cases each need a staged fixture, which
 is a `context.*` key, which makes the case `no-cowork`. The leakage marker is a fixture the case

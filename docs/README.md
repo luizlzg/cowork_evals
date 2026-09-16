@@ -35,7 +35,7 @@ Read them in this order.
 | [`cli.md`](cli.md)                     | The `cowork_evals` command: every verb, its options, what it refuses, exit codes |
 | [`approaches.md`](approaches.md)       | The two backends: what each proves, what each costs, which part of a case each honours |
 | [`eval_format.md`](eval_format.md)     | The authoring contract: the case tree, frontmatter, graders, what the validator refuses |
-| [`eval_design.md`](eval_design.md)     | Which cases a skill needs, which assertion answers what, and the conversation that decides |
+| [`eval_design.md`](eval_design.md)     | Which cases a skill needs, which assertion answers what, what the fixture has to be, and the conversation that decides |
 | [`running_evals.md`](running_evals.md) | What a run does with a case tree: build status, pinned flags, pass and fail, logs, cost |
 | [`cowork_test.md`](cowork_test.md)     | `cowork_evals test`: a consumer's pytest suite on the CoWork runtime, no model |
 
@@ -91,7 +91,8 @@ it binds, not with the run.
 Yes, and it is in [`eval_design.md`](eval_design.md). No, and it is with the mechanism it is
 about: a grader type is [`eval_format.md`](eval_format.md), and a check is
 [`checks.md`](checks.md). Which of those two an assertion needs depends on the skill, so it is
-the design's. The format is checked by the validator, and the design is checked by nothing, which
+the design's. A fixture splits the same way: where the file lives and the key that grants it are
+the format's, and what it has to contain for a dimension to be measurable is the design's. The format is checked by the validator, and the design is checked by nothing, which
 is why it is written down.
 
 **The driver, or the backend over it.** Does the statement need to know what a case is? Yes,
