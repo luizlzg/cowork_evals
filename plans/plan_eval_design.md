@@ -94,6 +94,13 @@ those two headings changes it, so the new section goes above them.
 - [x] `README.md`: the row in the documentation table, and one sentence where the quickstart
       stops after two graders
 - [x] `scripts/build.sh`: the new document is a wheel member, and the comment counts three
+- [x] Four rules the first real suite showed the document was missing: the table is not a quota,
+      a suite answers two questions, the fixture has to need the tool, and an assertion is tested
+      both ways. Two Summary bullets, one bullet under what the table does not decide, and three
+      sections. Nothing lands between the dimension table's heading and the one after it, which
+      is the span the tests parse
+- [x] [`../docs/README.md`](../docs/README.md): the row names the fixture, and the fixture split
+      is written beside the others
 
 ### Phase 2: the skill
 
@@ -109,6 +116,8 @@ those two headings changes it, so the new section goes above them.
       interview. The marker is unchanged, so a consumer who already ran `init` keeps the old
       block, which [`../docs/cli.md`](../docs/cli.md) already states
 - [x] [`../docs/cli.md`](../docs/cli.md) and `README.md`, wherever they say what that skill holds
+- [x] The same four rules, in the skill's own register, so a session reads them rather than only
+      the document
 
 ### Phase 3: the tests
 
@@ -122,6 +131,8 @@ Unit tier, over the real files, in the pattern already there.
 - [x] The interview default and its exception are in both files
 - [x] The format carries no preference statement and the document carries one, which pins the
       split
+- [x] One both-files assertion per new rule. Each fragment is short enough to survive a reflow,
+      because a wrapped sentence is not a substring of either file
 - [x] `scripts/lint.sh` and `scripts/test.sh` pass
 
 ### Phase 4: the Bedrock credential route

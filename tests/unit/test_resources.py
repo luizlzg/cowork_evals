@@ -275,6 +275,71 @@ def test_usefulness_is_a_delta_in_both_files() -> None:
         assert sentence in design, sentence
 
 
+def test_the_table_is_not_a_quota_in_both_files() -> None:
+    """The inverse of the coverage rule. Without it a suite grows one case per row and stops there.
+
+    The rows say which gaps exist. A case written to close a gap that is not there costs a run on
+    every sweep and asserts nothing about the skill.
+    """
+    skill = resources.skill("cowork-evals").read_text()
+    design = _document("eval_design.md")
+    for sentence in (
+        "ticks a row is worse than the gap it fills",
+        "quota",
+    ):
+        assert sentence in skill, sentence
+        assert sentence in design, sentence
+
+
+def test_the_two_questions_are_in_both_files() -> None:
+    """Regression and comparison are one suite, and each constrains an assertion differently.
+
+    Depth alone answers the first. Scoring in both arms answers the second. A file naming only one
+    sends a session to write assertions that answer only that one.
+    """
+    skill = resources.skill("cowork-evals").read_text()
+    design = _document("eval_design.md")
+    for sentence in (
+        "A suite answers two questions.",
+        "score in both arms to move a delta",
+    ):
+        assert sentence in skill, sentence
+        assert sentence in design, sentence
+
+
+def test_the_fixture_rule_is_in_both_files() -> None:
+    """A fixture small enough to read in the case file measures the model, whatever the skill did.
+
+    Where a fixture lives is eval_format.md. What it has to contain depends on the skill under
+    test, so it is the design's, and a session reads it out of the skill.
+    """
+    skill = resources.skill("cowork-evals").read_text()
+    design = _document("eval_design.md")
+    for sentence in (
+        "The fixture has to need the tool",
+        "The prompt does not quote the fixture",
+        "the size of the real input",
+    ):
+        assert sentence in skill, sentence
+        assert sentence in design, sentence
+
+
+def test_an_assertion_is_tested_both_ways_in_both_files() -> None:
+    """An assertion that cannot fail and one that cannot pass read the same in a case directory.
+
+    The known-good artefact is the skill's own output, which is why the rule is the design's and
+    not the format's.
+    """
+    skill = resources.skill("cowork-evals").read_text()
+    design = _document("eval_design.md")
+    for sentence in (
+        "tested both ways",
+        "the skill's own output",
+    ):
+        assert sentence in skill, sentence
+        assert sentence in design, sentence
+
+
 def test_the_grader_class_preference_is_in_the_design_file() -> None:
     """The split: which class to prefer depends on the skill, so the format does not say.
 
