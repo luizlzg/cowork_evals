@@ -16,11 +16,13 @@ while the work happens.
 
 ## Plans
 
-Nineteen plans. Seventeen build something and are numbered in build order, and one of those
-seventeen is skipped. `plan_fix` builds nothing, so it carries no number: it corrects what the
+Twenty-one plans. Eighteen build something and are numbered in build order, and one of those
+eighteen is skipped. `plan_fix` builds nothing, so it carries no number: it corrects what the
 others wrote, and it ran before `plan_cowork_backend.md` because it changes what that plan and
 `plan_cli.md` both read. `plan_believable_results` carries no number for the same reason:
-it holds measurements and decisions, and its product is the four plans numbered 10 to 13. The order is the
+it holds measurements and decisions, and its product is the four plans numbered 10 to 13.
+`plan_check_arms` carries no number too: it builds no part of an eval and corrects one hardcoded
+arm in what plan 16 built, found by using plan 17's document to write a real suite. The order is the
 order they are built in, not a precondition: a plan is
 written whenever the developer decides to write it, and a plan whose inputs already exist is
 executable whether or not the plan before it is finished. `status` is the plan's own state,
@@ -46,8 +48,10 @@ not the system's: what is built and usable is
 | 13 | [`done/plan_ablation.20260912.md`](done/plan_ablation.20260912.md) | The baseline arm, and a verdict that decides on the per-case delta | implemented | `feat/ablation`       |
 | 14 | [`done/plan_panel.20260913.md`](done/plan_panel.20260913.md) | The per-case run history, the `panel` verb, and `prune --history` | implemented | `feat/panel` |
 | 15 | [`done/plan_consent.20260913.md`](done/plan_consent.20260913.md) | The keyboard consent dialog, shown by the driver rather than by a caller | implemented | `fix/consent` |
-| 16 | [`plan_artifact_checks.md`](plan_artifact_checks.md) | An assertion an author writes as code, deciding the run beside the harness's graders | written | `feat/artifact-checks` |
-| 17 | [`plan_eval_design.md`](plan_eval_design.md) | The document that owns which cases to write, the interview the skill runs, and a second credential route | written | `feat/eval-enhancement` |
+| 16 | [`done/plan_artifact_checks.20260923.md`](done/plan_artifact_checks.20260923.md) | An assertion an author writes as code, deciding the run beside the harness's graders | implemented | `feat/artifact-checks` |
+| 17 | [`done/plan_eval_design.20260917.md`](done/plan_eval_design.20260917.md) | The document that owns which cases to write, the interview the skill runs, and a second credential route | implemented | `feat/eval-enhancement` |
+| - | [`done/plan_check_arms.20260917.md`](done/plan_check_arms.20260917.md) | Nothing. A check runs on every arm the case carries, so a suite of checks has a delta | implemented | `fix/checks-both-arms` |
+| 18 | [`done/plan_trace_judge.20260917.md`](done/plan_trace_judge.20260917.md) | A judge that returns its reasoning, an advisory check, and the assertion that reads the route a run took | implemented | `feat/trace-judging` |
 
 | Status        | Means                                                                     |
 | ------------- | --------------------------------------------------------------------------- |
@@ -138,6 +142,25 @@ skill, and the rule that separates the two documents. The boundary it moves is
 [`../docs/eval_design.md`](../docs/eval_design.md). Its last phase is unrelated to the rest and
 is there because the same developer could run nothing without it: the container backend accepted
 one credential, and a host that authenticates Claude Code through Bedrock failed the preflight.
+
+`plan_check_arms` and plan 18 both come out of using plan 17's document to write a real suite in a
+consumer repository, and both correct what plans 16 and 17 left. Neither was foreseen when those two
+were written, which is the argument for building a suite with the document rather than reviewing it.
+
+`plan_check_arms` builds no part of an eval. A suite whose assertions are all checks, because its
+deliverable is a workbook that no grader type reads, reported a delta of `+0.00` on every case: the
+check layer read the with-arm and no other, three layers under the flag that runs the second one. It
+walks every arm the case carries instead, and recomputes the delta only where the harness already put
+one.
+
+Plan 18 answers what a suite of checks still cannot see. Every assertion in plans 16 and 17 reads what
+the run produced, and a file the skill's own command wrote is byte-comparable with one a script
+reimplemented, so a case can score 1.00 on a run that bypassed the skill entirely. It adds an assertion
+that reads the transcript instead, and the two mechanisms that assertion needs: a judge that returns its
+reasoning beside its verdict, so it can be asked to investigate rather than to answer in a word, and
+`@check(advisory=True)`, so an assertion whose model is not yet calibrated reports without deciding.
+What it asks and how to write one is [`../docs/eval_design.md`](../docs/eval_design.md); the two
+mechanisms are [`../docs/checks.md`](../docs/checks.md).
 
 Plans 2 and 3 each build one backend whole. Running an eval on those two backends is
 `claude plugin eval`, which discovers the cases, runs them, grades them and writes

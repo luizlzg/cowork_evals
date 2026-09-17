@@ -170,7 +170,7 @@ test reads.
 
 - [x] `scripts/lint.sh`, `scripts/test.sh`, `scripts/build.sh`. 725 unit tests pass, the
       formatter and the linter are clean, and both artefacts carry the new document
-- [ ] `cowork_evals docs eval_design` resolves in an install and in a checkout
+- [x] `cowork_evals docs eval_design` resolves in an install and in a checkout
 - [ ] A `--docker` run under `credential: bedrock`, which is the only thing that says whether the
       four forwarded values authenticate the CLI inside the container, and whether `eval.model`
       has to be an inference profile id
@@ -181,3 +181,20 @@ test reads.
       dimensions it left out
 - [ ] The integration tier, at the end and after the merge, as
       [`../tests/README.md`](../tests/README.md) requires
+
+## What was never run
+
+Four boxes above are open, and the plan is closed with them open because none of the four is reachable
+from this repository:
+
+- The `bedrock` route needs a host that authenticates Claude Code through Bedrock. The key, its
+  refusal and the preflight under each route are unit-tested; whether the four forwarded values
+  authenticate the CLI inside the container is not.
+- The two consumer-repository session behaviours need a session in a consumer repository asked for
+  evals for a skill that has none. The document and the skill carry the instructions, and
+  `tests/unit/test_resources.py` asserts the skill carries every dimension the document defines, which
+  is as far as a unit test reaches.
+- The integration tier runs after the merge, as [`../tests/README.md`](../tests/README.md) requires.
+
+The suite this document was written for was built in `enterprise-ai-claude-marketplace` while the
+plan ran, and what that suite showed the document was missing is in `plan_trace_judge`.

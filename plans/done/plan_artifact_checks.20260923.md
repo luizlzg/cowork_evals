@@ -249,7 +249,7 @@ Work one box, verify it, tick it, commit. Do not batch ticks.
 - [x] `src/cowork_evals/data/skills/cowork-evals/SKILL.md` carries the `checks/` directory,
       one copy-paste check and one copy-paste judge call.
 - [x] `tests/unit/test_resources.py` is green against the changed skill.
-- [ ] `plans/README.md` row 16 moves to `implemented`, and this file moves to
+- [x] `plans/README.md` row 16 moves to `implemented`, and this file moves to
       `done/plan_artifact_checks.<YYYYMMDD>.md` on the merge.
 
 ## Out of scope
