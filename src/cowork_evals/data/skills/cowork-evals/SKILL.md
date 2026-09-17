@@ -123,6 +123,19 @@ check the skill's own output fails is a broken check and not a finding. Both tes
 first case does, because neither needs a model, and a pattern is tested in the engine the harness
 grades with rather than the one the test is written in.
 
+Both samples are ones you wrote, so they only prove the assertion works on the output you pictured, and
+there is none until the suite runs. Three questions settle it without one. Does it fail a wrong answer.
+Does it pass a right one: a `not_contains` over the subject's own vocabulary fails thorough answers and
+passes vague ones, so the arm with the plugin scores lower and reads as a broken skill. Does it fail an
+empty one: a clean fixture carries only negative assertions, which silence and the baseline arm satisfy.
+
+A requirement is knowable now, its rendering is not, so write the same correct answer two or three ways
+before asserting on it: one that passes only one of them is pinned to a rendering. Hence a check reading
+the conclusion over a pattern guessing its words, what must be present over what must be absent, a floor
+over unanimity, and the evidence a tool leaves over the name of a tool you would have picked. Firing needs
+both halves: `tool_used: Skill` detects it, on every case needing the plugin and not just activation, and
+the prompt causes it, so a capability case carries a phrase the description declares and a boundary none.
+
 The deliverable does not show the route. A grader and a check both read what the run produced, and
 a file the skill's own command wrote is byte-comparable with one a script reimplemented, so a green
 suite passes a run that never used the skill and passes a run that used it and then wrote over its

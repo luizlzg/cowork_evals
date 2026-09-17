@@ -26,6 +26,12 @@ contract over [eval_format.md](eval_format.md), which is the file contract, and 
   model.
 - **An assertion is tested both ways.** One sample that has to match, and one that has to not
   match.
+- **An assertion is a discriminator.** It has to fail a wrong answer, pass a right one, and fail an
+  empty one. Most broken assertions do only the first, and all three are decided at design time.
+- **Assert the requirement, not the rendering.** The wording of the output is unknowable when the
+  suite is written, so an assertion resting on it is a guess dressed as a test.
+- **The firing indicator goes on every case.** Without it a case scores full marks while the plugin
+  never loaded, and nothing in the result says so.
 - **A grader, or a check.** Can a grader type read the target, and say what has to be true of
   it? Yes, and it is a grader. No, and it is a check.
 - **The deliverable does not show the route.** A third assertion reads the trace and asks a model
@@ -356,6 +362,103 @@ broken check and not a finding, and a case run is the expensive way to learn tha
 Both tests run before the first case does, because neither needs a model. A pattern is tested in the
 engine the harness grades with, not in the one the test is written in: two regular expression engines
 agree on most patterns and not on all of them.
+
+Both of those samples are ones the author wrote, so passing them says the assertion works against the
+output the author pictured. The next section is what that does not catch.
+
+### An assertion is a discriminator
+
+There is no output to look at when a suite is written, and there will not be one until it runs. So
+the discipline is not to guess the output better. It is to write assertions that do not depend on
+having seen it, and three questions settle that without a run.
+
+| Ask                          | The failure it catches                                                         |
+| ---------------------------- | ------------------------------------------------------------------------------ |
+| Does it fail a wrong answer  | an assertion that cannot fail. This is the one that always gets asked           |
+| Does it pass a right answer  | an assertion the correct answer trips, which scores the skill down for working  |
+| Does it fail an empty answer | a case built only from negative assertions, which silence satisfies             |
+
+The second question is what inverts a delta, and a `not_contains` is where it usually happens: the
+vocabulary a wrong answer uses is often the vocabulary a right answer uses. Forbidding a word can
+therefore fail every thorough answer while passing every vague one, and because the plugin is what
+makes answers thorough, the arm with it scores below the arm without. The number then reads as a
+broken skill. Ask it as a question about the correct answer, which needs no run: **would an answer
+that gets this right still contain the string?** If yes, the assertion belongs on what the answer
+concluded, not on which words it used.
+
+The third question is the shape a case takes when its fixture is clean and there is nothing to find.
+Every assertion on it is negative, so an answer that did no work satisfies all of them, and so does
+the baseline arm. Such a case needs something positive to clear as well: evidence in the output that
+the work happened.
+
+### Assert the requirement, not the rendering
+
+A requirement is knowable at design time. Its rendering is not. *The review concludes that this item
+fails* is fixed by the fixture; whether that arrives as a table row, a bold bullet, a symbol, or a
+sentence with the verdict before the subject is not, and every one of those is a correct answer.
+
+One technique makes the difference visible without a run. Before writing the assertion, write down
+the same correct answer two or three times, in deliberately different styles. An assertion that
+passes only one of them is pinned to a rendering, and the fix is usually to move it from a pattern to
+a check, because a check can read a whole line, or a whole file, and decide what it says.
+
+That principle picks the form whenever two would express the same thing.
+
+| Rather than                                   | Prefer                                                              |
+| --------------------------------------------- | ------------------------------------------------------------------- |
+| a pattern guessing how the answer words it     | a check that reads what the answer concluded                        |
+| what the answer must not contain              | what it must contain, because absence has unbounded phrasings       |
+| every expected finding, unanimously            | a floor, since the agent's consistency is not knowable either       |
+| the tool the author would have reached for     | the evidence the tool leaves behind, which any route produces       |
+
+The floor row is the same argument as the rest. An assertion demanding every finding assumes zero
+variance from a non-deterministic agent, and that assumption is not available at design time any more
+than the wording is. Ask what number would prove the skill did the job, rather than what number a
+perfect run would produce.
+
+Where a fixture carries something real that no reasonable answer may be required to catch, keep it in
+an advisory check rather than the gate. It records the number without failing the suite, which is how
+a later run shows the skill improving.
+
+Finally, make every assertion say what it saw and not only that it failed. A message naming the
+expectation and the value found is what separates a skill that got it wrong from an assertion that
+was written wrong, and without it the two are indistinguishable in a result document.
+
+### Firing is two things, and a case needs both
+
+Whether the plugin loaded is the one fact that decides how to read every other number in a case, and
+it has an assertion side and a prompt side. Getting one without the other leaves the case unreadable.
+
+**The assertion detects firing.** A `tool_used: Skill` grader on the activation case alone leaves
+every other case unable to tell a bad answer from a plugin that never loaded, because both look like a
+low score. Worse, a case can score full marks having never loaded the plugin, whenever its other
+assertions are ones the model satisfies unaided, and the result then reads as success. Under
+`--ablation with-without` the harness stops scoring that grader and reports it as an indicator, so it
+moves no delta and costs nothing; in a one-arm run it gates. Both are wanted, so it goes on every case
+that needs the plugin and not only on the case that exists to test firing.
+
+**The prompt causes firing.** A skill's description declares the phrases it triggers on, so those
+phrases are knowable at design time and are the only part of the output side of this that is. A case
+meant to exercise a capability, whose prompt carries none of them, measures the trigger gap instead:
+its score becomes a fact about the description rather than about the capability, and it will look like
+a capability failure. Read the description's trigger list before writing any prompt, and decide per
+case which of the two the case is for.
+
+| The case is for      | The prompt                                                                 |
+| -------------------- | -------------------------------------------------------------------------- |
+| a capability         | carries a phrase the description declares, close enough together to read as that phrase |
+| the trigger boundary | deliberately carries none, and sits near the subject so over-triggering shows |
+
+Asking for the outcome and avoiding the skill's own name are both still the rule, and neither means
+avoiding the subject. The name and the method stay out; the vocabulary the description advertises is
+what a real user says. A phrase whose words end up scattered across a sentence is not the phrase: keep
+them adjacent, or the case is relying on the model to generalise rather than on the trigger the skill
+declares.
+
+Both halves are checkable with no run, by reading the description and the prompt side by side. A
+capability the skill documents and its description declares no phrase for is a finding about the
+skill, to report rather than to work around in a prompt, because a user asking for it in their own
+words gets nothing either.
 
 ## Access
 
