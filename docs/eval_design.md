@@ -30,8 +30,12 @@ contract over [eval_format.md](eval_format.md), which is the file contract, and 
   it? Yes, and it is a grader. No, and it is a check.
 - **The deliverable does not show the route.** A third assertion reads the trace and asks a model
   three things: was the route right, were the instructions followed, was anything invented.
+- **A judged rubric is advisory until it is calibrated.** It records its verdict and fails nothing,
+  because a model judging how an agent worked is not yet reliable enough to gate a suite.
 - **Show the judge the skill, not a summary of it.** A rubric restating the skill's rules is a
   snapshot of one reading of them.
+- **The judge is shown the task too.** The trace does not carry the prompt, so the case's own is what
+  the check passes.
 - **A missing access changes the design.** A case that needs access it does not have measures
   the access and not the skill.
 - **The split against the format is one question**: does the statement depend on what the skill
@@ -284,9 +288,22 @@ saved a Python script's output over the file it had produced. Every assertion on
 because the delivered workbook was deduplicated.
 
 **So a third assertion reads the trace, and a model is what reads it.** It is a check returning what
-`run.judge` returned, which makes it binding rather than a printed note. The judge is shown the trace
-and the skill's own document as paths, so nothing is truncated. The mechanism is
-[checks.md](checks.md).
+`run.judge` returned. The judge is shown the trace and the skill's own document as paths, so nothing is
+truncated. The mechanism is [checks.md](checks.md).
+
+**Write it advisory until it is calibrated.** `@check(advisory=True)` runs the check and records its
+verdict, and a failure prints as a note instead of failing the run. A judge asked how an agent worked
+is not yet reliable enough to gate a suite: measured over three runs whose right answer was known, one
+model got two and a slower one got one, both erring towards leniency by reading a skill's escape to a
+script more broadly than it was written. A miss would otherwise turn into a red suite, and a suite
+nobody trusts is worse than one assertion fewer. The verdict still lands in the document, which is what
+a rubric is calibrated against. Drop the argument when the misses stop.
+
+**It is also shown the task, because the trace does not carry it.** A collected trace opens on a
+`system` record and goes straight into the agent's work: what the agent was asked is nowhere in it, and
+a judge that does not know the task cannot say whether the route suited it. The case's own `prompt.md`
+is the one source, and the check reads it rather than the rubric restating it, so editing a prompt moves
+the assertion with it. Strip the frontmatter and pass the body.
 
 It asks three questions and no more.
 

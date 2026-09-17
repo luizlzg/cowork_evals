@@ -747,3 +747,72 @@ def test_a_one_arm_document_gains_no_mean_delta(tmp_path: Path) -> None:
     """
     _, document = layer(tmp_path, "checked")
     assert "meanDelta" not in document["aggregates"]
+
+
+# Advisory checks. docs/checks.md.
+
+
+def test_the_decorator_takes_both_forms() -> None:
+    """`@check` and `@check(advisory=True)` both mark, and only the second is advisory."""
+
+    @checks.check
+    def plain(run: Run) -> None:
+        return None
+
+    @checks.check(advisory=True)
+    def advised(run: Run) -> None:
+        return None
+
+    assert getattr(plain, checks.MARKER) is True
+    assert getattr(advised, checks.MARKER) is True
+    assert getattr(plain, checks.ADVISORY_MARKER) is False
+    assert getattr(advised, checks.ADVISORY_MARKER) is True
+
+
+def test_an_advisory_definition_carries_its_own_type() -> None:
+    """The verdict learns a result's class from its definition, so the type is the marker."""
+    assert checks.definition("a.one")["type"] == checks.CHECK_TYPE
+    assert checks.definition("a.one", advisory=True)["type"] == checks.ADVISORY_TYPE
+
+
+def test_an_advisory_result_keeps_its_verdict_and_leaves_the_score() -> None:
+    """A failure stays a failure in the document, and is not scored against the run."""
+    failed = checks.Outcome(
+        name="a.one", passed=False, explanation="the judge said FAIL", advisory=True
+    )
+    entry = checks.grader_result(failed)
+    assert entry["passed"] is False
+    assert entry["scored"] is False
+
+
+def test_an_advisory_failure_does_not_move_the_score() -> None:
+    passing = checks.grader_result(checks.Outcome(name="a.one", passed=True, explanation=""))
+    advised = checks.grader_result(
+        checks.Outcome(name="a.two", passed=False, explanation="", advisory=True)
+    )
+    assert checks.score({"graders": [passing, advised]}) == 1.0
+
+
+def test_the_advisory_flag_reaches_the_outcome(collected: Path) -> None:
+    """`execute` carries it off the `Check`, so one value builds the document."""
+
+    def failing(run: Run) -> Result:
+        return Result(passed=False, explanation="no")
+
+    one = Check(name="a.one", path=Path("a.py"), function=failing, advisory=True)
+    outcome = checks.execute(one, one_run(collected))
+    assert outcome.advisory is True
+    assert outcome.passed is False
+
+
+def test_discovery_reads_the_advisory_marker_off_the_function(tmp_path: Path) -> None:
+    """The loader is what puts the flag on the `Check`, so a case tree decides it."""
+    case = tmp_path / "case"
+    (case / "checks").mkdir(parents=True)
+    (case / "checks" / "a.py").write_text(
+        "from cowork_evals.checks import Run, check\n\n"
+        "@check\ndef plain(run: Run) -> None:\n    return None\n\n"
+        "@check(advisory=True)\ndef advised(run: Run) -> None:\n    return None\n"
+    )
+    found = {one.name: one.advisory for one in checks.discover(case)}
+    assert found == {"a.plain": False, "a.advised": True}

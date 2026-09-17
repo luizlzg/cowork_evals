@@ -126,9 +126,13 @@ grades with rather than the one the test is written in.
 The deliverable does not show the route. A grader and a check both read what the run produced, and
 a file the skill's own command wrote is byte-comparable with one a script reimplemented, so a green
 suite passes a run that never used the skill and passes a run that used it and then wrote over its
-output. So add a third assertion that reads the trace: a check returning what `run.judge` returned,
+output. So add a third assertion that reads the trace: an advisory check returning what `run.judge`
+returned,
 shown the trace and the skill's own document as paths, asking three things and no more. Was the
-route the right one, were the instructions followed, was anything invented.
+route the right one, were the instructions followed, was anything invented. Show it the task as well,
+because the trace does not carry it: a collected trace opens on a `system` record and goes straight into
+the agent's work, and a judge that does not know what was asked cannot say whether the route suited it.
+Read the case's own `prompt.md`, strip the frontmatter, pass the body.
 
 | The rule for that rubric                                | Because                                                                      |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------- |
@@ -321,7 +325,7 @@ max: 0
 A grader type cannot say what is inside the file the run wrote. A check can: it is your own
 Python, in the case's `checks/` directory, run on the host after the run is graded, on either
 backend. Its verdict is a grader result in the same document, so a failed check fails
-the run like a failed `regex` grader.
+the run like a failed `regex` grader, unless it is marked advisory.
 
 ```python
 # evals/<skill>/<case>/checks/assertions.py
@@ -345,6 +349,12 @@ def the_deck_is_readable(run: Run) -> Result:
     subprocess.run(["soffice", "--convert-to", "png", run.file("deck.pptx")], cwd=run.scratch)
     return run.judge("Every slide carries a title, and no text is clipped.", run.scratch)
 ```
+
+`@check(advisory=True)` runs the check and decides nothing: the verdict is recorded, a failure
+prints as a note, and it is out of the score and out of the exit code. Use it for an assertion
+whose mechanism is not calibrated yet, which is what a judged rubric over a trace is, and return
+the real verdict rather than swallowing it, because the recorded failures are what you calibrate
+against. Drop the argument to make the same check binding.
 
 `None` or `True` passes, `False` fails, a `Result` decides, and any exception fails the check
 carrying its message. The name is `<file stem>.<function name>`. `run` carries `workspace`,

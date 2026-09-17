@@ -10,7 +10,7 @@ a spreadsheet: `file_exists` reports that the file was created and says nothing 
 numbers in it, while `regex` and `llm` read a produced file as text, which a workbook is not. A
 check goes in the case's `checks/` directory. It runs on the host after the harness has graded
 the run, over the files that run left, and its verdict is appended to the result document as a
-grader result, so a failed check fails the case.
+grader result, so a failed check fails the case unless it is marked advisory.
 
 ## Writing one
 
@@ -60,8 +60,8 @@ The harness grades the case, the run's files are collected, and then every `@che
 
 ## What a check returns
 
-`@check` takes no arguments. A check's name is `<file stem>.<function name>`, so
-`totals_add_up` in `checks/assertions.py` is `assertions.totals_add_up` everywhere a name
+`@check` takes one argument, `advisory`, which is below. A check's name is
+`<file stem>.<function name>`, so `totals_add_up` in `checks/assertions.py` is `assertions.totals_add_up` everywhere a name
 appears, and every check has weight 1.
 
 | The function          | The check                               |
@@ -313,7 +313,8 @@ as passed there whatever a check said, and this package decides pass and fail. A
 check anywhere leaves the document exactly as the backend wrote it.
 
 A `check` grader result is not judged, so a failed one fails the run exactly as a failed `regex`
-grader does, and the line reads `the check grader failed: <explanation>`.
+grader does, and the line reads `the check grader failed: <explanation>`. A `check-advisory` result is
+the exception: it fails nothing and prints `the advisory check failed: <explanation>` as a note.
 
 Every arm a case carries is walked. The baseline arm's runs are collected into
 `traces/<case>/without/run-<n>` like any other run, so a check reads the artefact the baseline
@@ -329,9 +330,42 @@ document says are not comparable. See [running_evals.md](running_evals.md).
 A case carrying `declaredUnrunnable` has no run and produces no check result.
 
 **A check that cannot hold without the plugin inflates the delta.** A `tool_used: Skill` grader
-has the same problem and the harness solves it by making that one grader an unscored indicator. A
-check has no such marker, so it is the author's job: assert what the deliverable has to be, never
-that the plugin was the thing that produced it.
+has the same problem and the harness solves it by making that one grader an unscored indicator.
+`@check(advisory=True)` is the equivalent marker here, and it is the section below. What it does not
+excuse is an assertion aimed at the wrong thing: assert what the deliverable has to be, never that
+the plugin was the thing that produced it.
+
+## An advisory check
+
+`@check(advisory=True)` runs the check, records its verdict, and decides nothing. A failure prints as
+a `NOTE`, stays out of the score and stays out of the exit code.
+
+```python
+@check(advisory=True)
+def the_route_was_the_right_one(run: Run) -> Result:
+    return run.judge(RUBRIC, run.trace)
+```
+
+It is for an assertion whose mechanism is not calibrated yet, and a judged rubric over a transcript is
+the case it exists for. A judge asked how an agent worked is measurably not reliable enough to gate a
+suite: over three runs whose right answer was known, one model got two and a slower one got one, both
+erring towards leniency. A check that decided the exit code would turn each miss into a red suite, and
+a suite nobody trusts is worse than one assertion fewer.
+
+| An advisory check                | Where it lands                                                    |
+| -------------------------------- | ----------------------------------------------------------------- |
+| its definition                   | `{"type": "check-advisory"}`, which is how the verdict knows       |
+| its result                       | the run's `graders[]`, carrying its real `passed` and `scored: false` |
+| a failure                        | a `NOTE` line, never a `FAIL` line                                 |
+| the run's `score`, and the delta | unmoved, because the result is not scored in either arm            |
+| the whole judge exchange         | `checks.jsonl`, as for any judged check                            |
+
+**Return the real verdict.** The point of the marker is that a `FAIL` stays a `FAIL` in the document,
+so a miss can be counted and the rubric calibrated against it. A check that swallows the verdict and
+returns a pass reports nothing to calibrate against, and adds a result that always passes, which lifts
+every score a little and dilutes the assertions that do decide.
+
+Drop the argument to make the same check binding. Nothing else about it changes.
 
 ## What it costs
 
