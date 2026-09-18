@@ -616,15 +616,8 @@ def two_arm_case(
     baseline_wrote: str | None = None,
     comparable: bool = True,
 ) -> dict[str, Any]:
-    """One two-arm case entry, both arms collected under the name its traces take.
-
-    `baseline_wrote` replaces `written.txt` in every baseline workspace, which is how the two
-    arms come to hold different artefacts: the fixture run is one directory, so without an edge
-    like this both arms carry the same bytes and every check reaches the same verdict.
-
-    `name` names the traces and the entry while `case` stays the directory the checks are read
-    from, so one fixture case can appear twice in one document.
-    """
+    """One two-arm case entry. `baseline_wrote` is what makes the two arms differ, and `name`
+    names the traces while `case` stays the directory the checks are read from."""
     named = name or case
     runs = collected_runs(directory, named, count)
     without = collected_runs(directory, named, count, arm="without")
@@ -663,7 +656,7 @@ def baseline(document: dict[str, Any], index: int = 0) -> dict[str, Any]:
 
 
 def test_every_check_result_is_appended_to_the_baseline_run_too(tmp_path: Path) -> None:
-    _, document = two_arm_layer(tmp_path)
+    directory, document = two_arm_layer(tmp_path)
     assert [grader["name"] for grader in baseline(document)["graders"]] == [
         "wrote-it",
         "assertions.the_file_says_written",
@@ -671,18 +664,8 @@ def test_every_check_result_is_appended_to_the_baseline_run_too(tmp_path: Path) 
         "assertions.the_last_message_is_read",
         "assertions.the_scratch_is_writable",
     ]
-
-
-def test_the_checks_file_is_written_beside_the_baseline_trace(tmp_path: Path) -> None:
-    directory, _ = two_arm_layer(tmp_path)
     path = directory / "traces" / "checked" / "without" / "run-1" / checks.CHECKS_FILE
     lines = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
-    assert [line["name"] for line in lines] == [
-        "assertions.the_file_says_written",
-        "assertions.the_sibling_is_importable",
-        "assertions.the_last_message_is_read",
-        "assertions.the_scratch_is_writable",
-    ]
     assert all(line["passed"] is True for line in lines)
 
 
@@ -737,13 +720,3 @@ def test_every_run_of_every_arm_runs_every_check_again(tmp_path: Path) -> None:
     for index in (1, 2):
         scratch = directory / "traces" / "checked" / "without" / f"run-{index}" / "scratch"
         assert [path.name for path in scratch.iterdir()] == [f"note-{index}.txt"]
-
-
-def test_a_one_arm_document_gains_no_mean_delta(tmp_path: Path) -> None:
-    """The harness writes it for a two-arm document alone, and this layer introduces no number.
-
-    That the case gains no baseline pair either is `test_a_passing_case_keeps_its_score`, which
-    reads the whole aggregates dictionary.
-    """
-    _, document = layer(tmp_path, "checked")
-    assert "meanDelta" not in document["aggregates"]

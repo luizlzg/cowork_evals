@@ -305,22 +305,18 @@ A `check` grader result is not judged, so a failed one fails the run exactly as 
 grader does, and the line reads `the check grader failed: <explanation>`.
 
 Every arm a case carries is walked. The baseline arm's runs are collected into
-`traces/<case>/without/run-<n>` like any other run, so a check reads the artefact the baseline
-produced and both arms are decided on the same assertions. A check is the only way to say what is
-inside a workbook, a deck or a PDF, so a suite whose assertions are checks would otherwise report
-no delta whatever the baseline did.
+`traces/<case>/without/run-<n>` like any other run, so a check reads what the baseline produced
+and both arms are decided on the same assertions.
 
-The delta is recomputed only where the document already carries one. The harness omits it, and
-`scoreWithout` with it, when the two arms were graded under different rules, and that judgement
-stays the harness's: a check moving a score is not a reason to resurrect a delta between arms the
-document says are not comparable. See [running_evals.md](running_evals.md).
+The delta is recomputed only where the document already carries one. The harness omits `delta`,
+and `scoreWithout` with it, when the two arms were graded under different rules, and this layer
+leaves both omitted. See [running_evals.md](running_evals.md).
 
 A case carrying `declaredUnrunnable` has no run and produces no check result.
 
-**A check that cannot hold without the plugin inflates the delta.** A `tool_used: Skill` grader
-has the same problem and the harness solves it by making that one grader an unscored indicator. A
-check has no such marker, so it is the author's job: assert what the deliverable has to be, never
-that the plugin was the thing that produced it.
+A check that cannot hold without the plugin inflates the delta. The harness makes its own
+`tool_used: Skill` grader an unscored indicator for that reason, and a check has no such marker.
+Assert what the deliverable has to be, never that the plugin produced it.
 
 ## What it costs
 
