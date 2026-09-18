@@ -140,15 +140,12 @@ def test_env_txt_carries_one_line_per_row(tmp_path: Path) -> None:
     assert names == ["cowork_evals", "claude", "python3", "backend", "image", "credential"]
 
 
-def test_the_credential_line_is_the_route_and_no_name(tmp_path: Path) -> None:
-    """The route says which credential a run used. The names it forwards are fixed.
+def test_the_credential_line_carries_the_route_and_never_a_forwarded_value(tmp_path: Path) -> None:
+    """The route says which credential a run used, and no value reaches the file.
     docs/docker.md."""
     written = logs.write_env(tmp_path, "docker", credential="bedrock").read_text()
     assert "credential: bedrock\n" in written
     assert "AWS_BEARER_TOKEN_BEDROCK" not in written
-
-
-def test_the_credential_line_is_absent_without_a_route(tmp_path: Path) -> None:
     assert "credential" not in logs.write_env(tmp_path, "cowork").read_text()
 
 

@@ -4,8 +4,10 @@
 
 Which cases a skill needs, and which assertion answers which question. This is the design
 contract over [eval_format.md](eval_format.md), which is the file contract, and over
-[checks.md](checks.md), which is the other assertion mechanism.
+[checks.md](checks.md), which is the other assertion mechanism. The procedure a session follows
+to apply these rules is in the `cowork-evals` skill, which [library.md](library.md) places.
 
+<<<<<<< HEAD
 - **Claude Code does not invent a suite.** It reads the skill first, and the reading is what
   produces the draft.
 - **There is no questionnaire, and the proposal is the question.** No fixed set of questions, in
@@ -50,6 +52,17 @@ contract over [eval_format.md](eval_format.md), which is the file contract, and 
   the access and not the skill.
 - **The split against the format is one question**: does the statement depend on what the skill
   under test does?
+=======
+- The coverage table decides which cases a suite needs. Every row that applies to the skill gets
+  at least one case, and a row that does not apply gets none.
+- An assertion has to fail on its own when the skill regresses, and it has to score in both arms
+  of an ablation run.
+- The fixture is the real input at its real size. A smaller one measures the model.
+- A grader reads text. An assertion over anything else is a check.
+- Every pattern and every check is tested against one sample that has to pass and one that has to
+  fail, before the first case runs.
+- A case that needs access it does not have measures the access and not the skill.
+>>>>>>> fix/checks-both-arms
 
 Pass and fail over what these cases produce is [running_evals.md](running_evals.md). Which
 backend honours which case feature is [approaches.md](approaches.md). No case field and no
@@ -57,10 +70,9 @@ validator rule is here. Both are [eval_format.md](eval_format.md).
 
 ## The split against the format
 
-One question decides the side, and it holds for every statement in either file.
-
-**Does the statement depend on what the skill under test does?** No, and it is the format. Yes,
-and it is the design.
+One question decides the side, and it holds for every statement in either file. Does the
+statement depend on what the skill under test does? No, and it is the format. Yes, and it is the
+design.
 
 | Statement                                                       | Depends on the skill | Side   |
 | --------------------------------------------------------------- | -------------------- | ------ |
@@ -77,13 +89,18 @@ and it is the design.
 | What a missing access changes                                   | yes                  | design |
 
 A statement about a case file that any reader can check without opening the skill is the
+<<<<<<< HEAD
 format's. Everything that needs the skill's own instructions, or the input the skill exists to
 process, is here.
+=======
+format's. A statement that needs the skill's own instructions is here.
+>>>>>>> fix/checks-both-arms
 
 The no side is two files, because there are two assertion mechanisms. A statement about a grader
 type is [eval_format.md](eval_format.md), and a statement about a check is
 [checks.md](checks.md). Which of the two an assertion needs depends on the skill, so it is here.
 
+<<<<<<< HEAD
 ## Read, then propose
 
 Claude Code does not invent a suite, and it does not interview one out of the developer either. It
@@ -149,6 +166,14 @@ left with none.
 **The names in the first column are this file's vocabulary and stay in it.** What a developer is
 told is what a case covers, in the words the skill under test uses. Naming a dimension asks a
 developer to learn a word to read their own coverage.
+=======
+## The coverage dimensions
+
+The table finds gaps in a suite that is already drafted. It is not a list to work through, and it
+is not a quota. Every row that the skill's own text triggers gets at least one case, and one case
+may answer more than one row. A case written only to fill a row costs a run on every sweep, and
+its pass says nothing about the skill.
+>>>>>>> fix/checks-both-arms
 
 Every grader named below is one of the six types [eval_format.md](eval_format.md) defines, and
 every check is [checks.md](checks.md). This file adds neither.
@@ -166,11 +191,17 @@ every check is [checks.md](checks.md). This file adds neither.
 | Answer relevancy | one question, asked once, whose answer has a shape | `regex` over `last_message` with `count:N` or `not_contains` for the padding shape, `llm` over `last_message` for the criteria, `baseline` when a reference answer exists | the product is the message and not a file |
 | PII and confidential information leakage | a fixture carrying a marked value the answer does not need, and a prompt that does not ask for it | `regex` with `match: not_contains` over `last_message`, over `{source: file, path}` for each artefact, over `trace` for the value reaching a tool call, and over `mock_calls` for it reaching an MCP call, and a check per artefact that is not text | the skill reads something the prompt did not name, and an artefact or an answer could carry a value out of it that nothing asked for |
 
+<<<<<<< HEAD
 The applies-when column is read against the skill's own `SKILL.md`. A row the skill's text does not
 trigger gets no case.
+=======
+The applies-when column is read against the skill's own `SKILL.md`. A row the skill's text does
+not trigger gets no case.
+>>>>>>> fix/checks-both-arms
 
-### What the table does not decide
+Six things the table does not decide.
 
+<<<<<<< HEAD
 - **A row whose only grader is `llm` or `baseline` leaves the exit code silent about it.** Those
   two are judged, are printed, and carry no verdict. Give every dimension a release must not
   ship a structural grader as well, or a check, which is judged or not and decides either way.
@@ -190,57 +221,46 @@ trigger gets no case.
 - **Directory coverage is not dimension coverage.** One `evals/<skill>/` per skill is what `run`
   reports and `--require-coverage` enforces. See [cli.md](cli.md). Nothing enforces the table
   above, which is why it is written here.
+=======
+| The rule                                                    | Where the detail is                         |
+| ----------------------------------------------------------- | ------------------------------------------- |
+| Prefer a structural grader wherever one can decide a row. A judged grader over a non-deterministic agent is a flaky verdict, and a judge is noisy on a long input | [running_evals.md](running_evals.md)        |
+| A row whose only grader is `llm` or `baseline` is printed and leaves the exit code silent. Give every row a release depends on a structural grader as well, or a check | [running_evals.md](running_evals.md)        |
+| A `regex` anchor covers the whole target unless `flags` carries `m`                     | [eval_format.md](eval_format.md)            |
+| Context relevancy, leakage, and the malformed form of edge cases each need a staged fixture, which is a `context.*` key, which makes the case `no-cowork` | [eval_format.md](eval_format.md)            |
+| The leakage row's marked value is a fixture the case owns, never a credential `docker.env_passthrough` forwards. `run.log` is captured at the file descriptor level, so a run that prints a forwarded value puts it in the log | [docker.md](docker.md)                      |
+| Directory coverage is not dimension coverage. `--require-coverage` enforces one `evals/<skill>/` per skill and nothing enforces this table | [cli.md](cli.md)                            |
+>>>>>>> fix/checks-both-arms
 
-## Two questions, one suite
+## The two questions a suite answers
 
-A suite answers two questions. Does the skill still work, and is the skill better than no skill. The
-same case files answer both, and the run is what differs.
+A suite answers two questions. Does the skill still work, and is the skill better than no skill.
+The same case files answer both. A one-arm run answers the first. `--ablation with-without` answers
+the second by running every case twice, once with the plugin loaded and once with nothing loaded,
+and comparing the two scores. The arm and its settings are
+[running_evals.md](running_evals.md), and it is `--docker` only because a CoWork session takes its
+skills from the profile the application runs. See [approaches.md](approaches.md).
 
-| The question                          | Reads    | Answered by                        |
-| ------------------------------------- | -------- | ---------------------------------- |
-| Does the skill still work             | one arm  | every assertion the case carries   |
-| Is the skill better than no skill     | two arms | the assertions that score in both  |
+Each question puts one requirement on every assertion. An assertion has to fail on its own when
+the skill regresses, or the first question is unanswered. It has to score in both arms, or the
+second one is. A suite of shallow assertions passes a broken skill, and a suite of assertions that
+cannot hold without the plugin reports the same delta whatever the baseline produced.
 
-That gives one rule per assertion. An assertion has to be deep enough to fail on its own when the
-skill regresses, and it has to score in both arms to move a delta. One that does the first and not
-the second leaves the second question unanswered, and a suite of them reports a delta of zero
-whatever the baseline produced.
+The second question also decides the prompt, because the baseline arm gets the same one.
 
-So neither question is designed for alone. A suite of shallow arm-visible assertions passes a broken
-skill, and a suite of deep one-arm assertions cannot say the skill is worth loading.
+| The prompt                                  | What the baseline arm does with it                                    |
+| ------------------------------------------- | --------------------------------------------------------------------- |
+| One the model answers as well unaided       | scores the same, so the delta is zero. Move the prompt onto what the skill knows and the model does not |
+| One naming the skill, or naming its steps   | follows the steps without the skill, so the prompt hands over the method. Name the outcome instead |
+| One whose only assertion is that the skill fired | cannot score at all, so the delta records that the plugin was loaded and nothing else. Add an assertion over the output |
 
-Which assertion scores in which arm is [running_evals.md](running_evals.md). When each run happens
-is [approaches.md](approaches.md).
+The case to write first is the one the model is worst at unaided, because it is the case that
+shows what the skill is for. Design for the delta whether or not a suite runs the arm.
 
-## Usefulness is a delta
+## The fixture
 
-A green suite says the cases passed. It does not say the skill is worth loading. Ask a model to
-build a spreadsheet and it builds one whether or not a spreadsheet skill is in the profile, so a
-suite that only ever runs with the plugin loaded measures the model and credits the skill.
-
-What measures the skill is the same case run twice, once with the plugin and once with nothing
-loaded, and the difference between the two scores. The arm, its settings, and what a delta does
-to pass and fail are [running_evals.md](running_evals.md). What it asks of the design is here.
-
-| The design decision                                        | Because the baseline arm runs the same prompt                  |
-| ----------------------------------------------------------- | -------------------------------------------------------------- |
-| A prompt the model answers as well unaided measures the model | its delta is zero. Move the prompt onto what the skill knows and the model does not |
-| The case to write first is the one the model is worst at unaided | it is the case that shows what the skill is for              |
-| A case whose only assertion is that the skill fired says nothing about usefulness | that assertion cannot hold without the plugin, so the delta records that the plugin was loaded. Give the case an assertion over the output as well |
-| A prompt naming the skill, or naming its steps, is weaker than one naming the outcome | the arm with no skill gets the same prompt, so a prompt carrying the method hands the method to it |
-
-Design for the delta whether or not a suite runs the arm. Would the model do this anyway is the
-same question either way, and a case that cannot answer it was going to pass from the day it was
-written.
-
-The arm is `--docker` only. A CoWork session takes its skills from the profile the application
-runs, so nothing can unload the plugin for one arm there. See
-[approaches.md](approaches.md).
-
-## The fixture has to need the tool
-
-A skill is a tool over an input. The fixture is that input, at the size and the shape of the one the
-skill exists for.
+A skill is a tool over an input. The fixture is that input, at the size and the shape of the one
+the skill exists for.
 
 | The rule                                              | What the case measures without it                                        |
 | ----------------------------------------------------- | ------------------------------------------------------------------------ |
@@ -251,23 +271,28 @@ skill exists for.
 
 Realism is also what makes the dimension table decidable. Edge cases, context relevancy and
 hallucination each need an input carrying the thing the row asserts, and a fixture written to be
-readable in the case file carries none of them.
+readable inside the case file carries none of them.
 
+<<<<<<< HEAD
 A fixture at that size is generated rather than typed, generated by Claude Code rather than asked of
 the developer, and committed rather than staged at run time.
 Where the file lives, and the key that grants it, are [eval_format.md](eval_format.md).
+=======
+A fixture at that size is generated rather than typed, and committed rather than staged at run
+time. Where the file lives, and the key that grants it, are [eval_format.md](eval_format.md).
+>>>>>>> fix/checks-both-arms
 
 ## A grader or a check
 
-A grader reads text. `file_exists` reports that a file appeared and says nothing about what is
-in it, and `regex` and `llm` are shown a produced file as text. So a skill whose product is a
-workbook, a deck, a PDF or an image satisfies every grader available to it having asserted
-nothing about the thing it made. A check is the route, and the mechanism is
+A grader reads text. `file_exists` reports that a file appeared and says nothing about what is in
+it, and `regex` and `llm` are shown a produced file as text. A skill whose product is a workbook,
+a deck, a PDF or an image can therefore satisfy every grader available to it without any
+assertion having read the thing it made. A check is the route, and the mechanism is
 [checks.md](checks.md).
 
-**Can a grader type read the target, and say what has to be true of it?** Yes, and it is a
-grader. No, and it is a check. The question is per assertion and not per case: one case carries
-both, and the harness refuses a case whose only assertion directory is `checks/`.
+Ask one question per assertion, not per case: can a grader type read the target, and say what has
+to be true of it? Yes, and it is a grader. No, and it is a check. One case carries both, and the
+harness refuses a case whose only assertion directory is `checks/`.
 
 Prefer a grader. A grader is a file the harness reads, and a check is code the consumer owns,
 maintains and declares the imports of.
@@ -281,11 +306,15 @@ maintains and declares the imports of.
 | A property a model has to look at rather than read       | `llm` is shown text, and `run.judge` is shown the paths |
 
 Six rows of the dimension table name a check for that reason. The four that do not are the rows
-whose target is a tool call, a trace, or the message itself: the right tools are used, edge
-cases, context relevancy and answer relevancy.
+whose target is a tool call, a trace, or the message itself: the right tools are used, edge cases,
+context relevancy and answer relevancy.
 
-Two consequences for the design, and neither is visible in the dimension table.
+Two consequences the dimension table does not show. A check decides the exit code however it
+reached its verdict, `run.judge` included, so a row only a model can settle is not limited to a
+printed note. Every check of every selected plugin is imported before the first case starts, so a
+check that does not import exits 3 having spent nothing.
 
+<<<<<<< HEAD
 - **A check decides the exit code however it reached its verdict.** `run.judge` included. So a
   dimension only a model can settle is not condemned to a printed note: an `llm` grader is judged
   and silent, and a check returning what `run.judge` returned is judged and binding.
@@ -367,22 +396,25 @@ One judged assertion costs `eval.judge_votes` calls per run per arm, so it is on
 one per question. [running_evals.md](running_evals.md).
 
 ## An assertion is tested both ways
+=======
+## Testing an assertion before the first case runs
+>>>>>>> fix/checks-both-arms
 
 An assertion is not known to measure anything until it has been tested both ways. One that cannot
 fail and one that cannot pass report the same thing on every run, and both read as a working
 assertion in the case directory.
 
-| Test         | Against                                                          |
-| ------------ | ---------------------------------------------------------------- |
+| Test          | Against                                                          |
+| ------------- | ---------------------------------------------------------------- |
 | Every pattern | one sample that has to match, and one that has to not match      |
 | Every check   | one artefact that has to pass, and one that has to fail          |
 
-The artefact that has to pass is the skill's own output. A check the skill's own output fails is a
-broken check and not a finding, and a case run is the expensive way to learn that.
+The artefact that has to pass is the skill's own output. A check that the skill's own output fails
+is a broken check and not a finding, and a case run is the expensive way to learn that.
 
-Both tests run before the first case does, because neither needs a model. A pattern is tested in the
-engine the harness grades with, not in the one the test is written in: two regular expression engines
-agree on most patterns and not on all of them.
+Both tests run before the first case does, because neither needs a model. Test a pattern in the
+engine the harness grades with rather than the one the test is written in, because two regular
+expression engines agree on most patterns and not on all of them.
 
 Both of those samples are ones the author wrote, so passing them says the assertion works against the
 output the author pictured. The next section is what that does not catch.
@@ -496,6 +528,7 @@ A case that needs access it does not have measures the access and not the skill.
 | A wheel the skill imports     | an import error inside the session, in every case at once        | `cowork_evals test` catches it before an eval is written over it. See [runtime.md](runtime.md) |
 | The deployed stack            | the container, and not CoWork                                    | the honoured subset in [approaches.md](approaches.md)                       |
 
+<<<<<<< HEAD
 Two rules follow, and the route above decides neither.
 
 - When Claude Code designs the suite, it designs around the access that exists.
@@ -518,3 +551,7 @@ The last two are what a developer objects to, and both are invisible in a case n
 
 Every case also carries the assertion that reads how the run reached its answer, so the proposal
 states that once rather than on every line.
+=======
+A suite is designed around the access that exists. A case that needs access that is not there is
+named as such before it is written, together with the route above that would supply it.
+>>>>>>> fix/checks-both-arms

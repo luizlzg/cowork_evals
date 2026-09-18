@@ -102,7 +102,7 @@ second.
 
 | Skill          | Fires on                                                                                                                          | Holds                                                                             |
 | -------------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `cowork-evals` | Which cases a skill needs, reviewing a suite it already has, writing or fixing a case, a `prompt.md` or a grader, a failing command, the configuration file, plugin code that runs in a session | How a suite is read out of the skill and proposed, the coverage dimensions, the case tree, the addressability keys, the grader types and idioms, the authoring traps, the exit codes and the runtime constraint |
+| `cowork-evals` | Which cases a skill needs, reviewing a suite it already has, writing or fixing a case, a `prompt.md` or a grader, a failing command, the configuration file, plugin code that runs in a session | The order of work and what not to ask, the coverage table, the case tree, the addressability keys, the grader types and idioms, the authoring traps, the exit codes and the runtime constraint |
 | `cowork-ask`   | A question about what a live CoWork session does, a claim that has to be confirmed in the product, a failing `cowork_evals ask`    | The verb, what one ask costs, and the rule that the session is asked to do the thing and what it did is read back |
 
 `cowork-evals` is a condensed [eval_design.md](eval_design.md),

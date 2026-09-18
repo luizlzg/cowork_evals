@@ -28,89 +28,64 @@ file is the authority for anything below.
 
 ## What to evaluate
 
-`docs eval_design` owns this. The short form:
+`docs eval_design` holds the rules. This is the order of work.
 
-Claude Code does not invent a suite, and does not interview one out of the developer either. Read
-the skill under test, and let the reading produce the draft: its own description and instructions,
-the repository around it, and any suite already there. Read for the job the skill exists for, which
-of its capabilities are separable, and what it reads and writes. There is no questionnaire, and the
-proposal is the question: a developer strikes a case in one sentence, and that turn is worth more
-than any question asked before a draft exists.
+1. Read the skill under test: its description, its instructions, the repository around it, and any
+   suite already there. The reading produces the draft, not a conversation.
+2. Propose the suite before writing a file. One line per case: what the case covers in plain words,
+   what has to be true of the output for it to pass, the access it needs, and whether it carries
+   `no-cowork`. Say once that every case also carries the trace assertion below. A developer strikes
+   a case in one sentence there, and pays for a rewrite once the files exist.
+3. Write the fixture, the prompt and the assertions. Test every assertion both ways before running
+   a case.
+4. Run it on `--docker`, then with `--ablation with-without` to say whether the skill earns its
+   place.
 
-Never ask the developer to predict failure. Where it fails, what must never happen, which part
-breaks most often: the usual answer is that they do not know, and the design does not need it. The
-skill's own instructions state what it has to do, so the case that asserts an instruction is the
-case that catches the failure. Never ask which eval and which grader they want either: that hands
-the design back, and a developer who could answer it would have written the case already. Whether
-the model would do the job unaided is settled by the baseline arm and by no conversation.
+Ask almost nothing. Never ask the developer to predict failure: where it fails, what must never
+happen, which part breaks most often. The usual answer is that they do not know, and the skill's own
+instructions already state what it has to do. Never ask which eval or which grader they want, which
+hands the design back. Never ask for a fixture, and generate every one. The one thing worth asking
+is access the repository does not show, such as a credential, a service or an MCP server. `I do not
+know` ends the topic, and is the authorization to design that part alone.
 
-One thing is worth a direct question, because the proposal cannot be written without it: access the
-repository does not show, meaning a credential, a service or an MCP server a case needs. Never ask
-for a fixture, and generate every one at the size and the shape below. `I do not know` ends the
-topic. It is the common reply, it is the authorization to design that part alone, and it is never
-rephrased and asked a second way.
+A developer who does name something names a symptom, not a case. `The summaries are too long` is a
+`regex` over `last_message`. `It makes things up about our schema` is a fixture and a `not_contains`
+pattern per invented value. `It ignores the config file` is a `tool_used` with an `input_match`
+naming that file. `The totals in the spreadsheet come out wrong` is a check that opens the workbook,
+because no grader type reads a cell.
 
-A reply that does name something names a symptom, not a case, and turning it into one is the work.
-`The summaries are too long` is a `regex` over `last_message`. `It makes things up about our schema`
-is a fixture and a `not_contains` pattern per invented value. `It ignores the config file` is a
-`tool_used` with an `input_match` naming that file. `The totals in the spreadsheet come out wrong`
-is a check that opens the workbook, because no grader type reads a cell.
+The table finds gaps in a draft. Never work through it. The default for every row is no case, and a
+row earns one when the skill's own text carries the condition beside it. A case written only to fill
+a row costs a run on every sweep and its pass says nothing about the skill. The names are this
+file's words: tell the developer what a case covers in the words the skill under test uses.
 
-The names in the first column below are this file's vocabulary and stay in it. Tell the developer
-what a case covers, in the words the skill under test uses. Naming a dimension asks them to learn a
-word to read their own coverage.
+| Dimension                                | Applies when                                                                 |
+| ---------------------------------------- | ---------------------------------------------------------------------------- |
+| Expected behaviour, end to end           | always                                                                       |
+| The right tools are used                 | always                                                                       |
+| The goal is achieved                     | always                                                                       |
+| Each capability on its own               | the skill names more than one capability                                      |
+| The instructions are followed            | the instructions constrain the output                                         |
+| Edge cases                               | the instructions state a boundary, or the input the skill reads has one        |
+| Hallucination                            | the skill reports what it read rather than transforming what it was given      |
+| Context relevancy                        | the skill chooses which of several inputs to read                             |
+| Answer relevancy                         | the product is the message and not a file                                     |
+| PII and confidential information leakage | the skill reads something the prompt did not name, and an artefact or an answer could carry a value out of it that nothing asked for |
 
-Read the table after the suite is drafted, to find a gap in it. Never work through it. The default
-for every row is no case: a row gets one when the skill's own text carries the condition in its
-applies-when column, and the proposal says which text that is. One case may answer more than one
-row.
+Which assertion answers which row is `docs eval_design`. Prefer a structural grader: a judged grader
+over a non-deterministic agent is a flaky verdict, and a row whose only grader is `llm` or `baseline`
+is printed and leaves the exit code silent.
 
-| Dimension                                | The assertion                                                                  | Applies when                                  |
-| ---------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------- |
-| Expected behaviour, end to end           | `file_exists` on the artefact, `tool_order` on the steps that have an order, `llm` over `{source: file, path}`, a check over that file when it is not text | always |
-| The right tools are used                 | the skill-fired `tool_used` below, `tool_order` for a required sequence, `min: 0, max: 0` for a tool it must not call and for a request it must not fire on | always |
-| The goal is achieved                     | `file_exists`, `regex` over `{source: file, path}` for a value that has to be in it, `llm` when the outcome is prose, a check when the value has to be computed or the file parsed | always |
-| Each capability on its own               | `tool_used` with that capability's `input_match`, `regex` over its output, a check when that output is not text | the skill names more than one capability |
-| The instructions are followed            | `regex` over `last_message` with `contains`, `not_contains` or `count:N`, and `m` in `flags` when the anchor is per line, a check when the constraint is on a file no pattern can read | the instructions constrain the output |
-| Edge cases                               | `regex` for the stated refusal or the handled result, `min: 0, max: 0` for the destructive action | the instructions state a boundary, or the input the skill reads has one: empty, absent, malformed, oversized, conflicting |
-| Hallucination                            | `regex` with `not_contains` per value the fixture does not carry, `baseline` against a `baseline_file`, a check when the invented value lands in an artefact no pattern can read | the skill reports what it read rather than transforming what it was given |
-| Context relevancy                        | `tool_used` with `input_match` naming the file it had to open, `regex` over `trace` for that path | the skill chooses which of several inputs to read |
-| Answer relevancy                         | `regex` with `count:N` or `not_contains` for the padding shape, `llm`, `baseline` | the product is the message and not a file |
-| PII and confidential information leakage | `regex` with `not_contains` over `last_message`, over each artefact, over `trace`, over `mock_calls`, and a check per artefact that is not text | the skill reads something the prompt did not name, and an artefact or an answer could carry a value out of it that nothing asked for |
+Ask one question per assertion. Can a grader type read the target, and say what has to be true of
+it? Yes, and it is a grader. No, and it is a check, which is `## Checks` below. A case carries both,
+and a case whose only assertion directory is `checks/` never loads.
 
-A case that ticks a row is worse than the gap it fills: it costs a run on every sweep, and its pass
-says nothing about the skill. Never write one to complete the table. A row whose condition the
-skill's own text does not carry gets no case, and inventing a fixture so that it can have one
-measures the fixture.
+A suite answers two questions: does the skill still work, and is the skill better than no skill. An
+assertion has to fail on its own when the skill regresses, or the first is unanswered, and it has to
+score in both arms, or the second is. The baseline arm gets the same prompt, so name the outcome
+rather than the skill or its steps, and never let a case rest on the firing assertion alone.
 
-A suite answers two questions. Does the skill still work, and is the skill better than no skill. The
-same case files answer both, and the run is what differs: one arm for the first, two for the second.
-An assertion therefore has to be deep enough to fail on its own when the skill regresses, and it has
-to score in both arms to move a delta. One that does the first and not the second leaves the second
-question unanswered, and a suite of them reports a delta of zero whatever the baseline produced.
-Neither question is designed for alone: shallow arm-visible assertions pass a broken skill, and deep
-one-arm assertions cannot say the skill is worth loading.
-
-Prefer a structural grader. A judged grader over a non-deterministic agent is a flaky verdict,
-and a judge is noisy on a long input. A dimension whose only grader is `llm` or `baseline` is
-printed and leaves the exit code silent about it.
-
-Can a grader type read the target, and say what has to be true of it? Yes, and it is a grader.
-No, and it is a check, which is `## Checks` below. Ask it per assertion, not per case: a case
-carries both, and a case whose only assertion directory is `checks/` never loads. Six rows above
-name a check, because a grader reads text and a workbook, a deck, a PDF and an image are not.
-Prefer a grader anyway: a check is code you own. Unlike an `llm` grader, a check decides the exit
-code however it reached its verdict, `run.judge` included.
-
-Usefulness is a delta. A prompt the model answers as well unaided measures the model, so move it
-onto what the skill knows and the model does not, and prefer a prompt naming the outcome to one
-naming the skill or its steps, because the arm with no skill gets the same prompt. A case whose
-only assertion is that the skill fired says nothing about usefulness: the assertion cannot hold
-without the plugin, so give the case an assertion over the output as well. The arm itself is
-`## Did the plugin do anything` below.
-
-The fixture has to need the tool. A skill is a tool over an input, and the fixture is that input at
-the size and the shape of the real one.
+The fixture is the real input at its real size.
 
 | The rule                                         | What the case measures without it                                            |
 | ------------------------------------------------ | ---------------------------------------------------------------------------- |
@@ -119,68 +94,49 @@ the size and the shape of the real one.
 | The boundary the skill handles is in the fixture | a boundary that appears only at scale is unreachable at four rows            |
 | The input is as untidy as the real one           | a fixture with no duplicate, no gap and no stray type exercises no handling   |
 
-Realism is what makes the table decidable as well: edge cases, context relevancy and hallucination
-each need an input carrying the thing the row asserts. Generate a fixture that size rather than
-typing it, and commit it.
+Test every pattern against one sample that has to match and one that has to not match, and every
+check against one artefact that has to pass and one that has to fail. The artefact that has to pass
+is the skill's own output. Neither test needs a model, so both run before the first case does.
 
-An assertion is not known to measure anything until it has been tested both ways. One that cannot
-fail and one that cannot pass report the same thing on every run. Test every pattern against one
-sample that has to match and one that has to not match, and every check against one artefact that
-has to pass and one that has to fail. The artefact that has to pass is the skill's own output: a
-check the skill's own output fails is a broken check and not a finding. Both tests run before the
-first case does, because neither needs a model, and a pattern is tested in the engine the harness
-grades with rather than the one the test is written in.
+Three questions settle an assertion before any output exists. Does it fail a wrong answer. Does it
+pass a right one: a `not_contains` over the subject's own vocabulary fails thorough answers and
+passes vague ones, so the arm with the plugin scores lower and reads as a broken skill. Does it fail
+an empty one: a clean fixture carries only negative assertions, which silence satisfies.
 
-Both samples are ones you wrote, so they only prove the assertion works on the output you pictured, and
-there is none until the suite runs. Three questions settle it without one. Does it fail a wrong answer.
-Does it pass a right one: a `not_contains` over the subject's own vocabulary fails thorough answers and
-passes vague ones, so the arm with the plugin scores lower and reads as a broken skill. Does it fail an
-empty one: a clean fixture carries only negative assertions, which silence and the baseline arm satisfy.
+Assert the requirement, not the rendering. Write the same correct answer two or three ways first, and
+an assertion that passes only one of them is pinned to a wording. Prefer a check reading the
+conclusion to a pattern guessing its words, what must be present to what must be absent, a floor to
+unanimity, and the evidence a tool leaves to the name of a tool you would have picked.
 
-A requirement is knowable now, its rendering is not, so write the same correct answer two or three ways
-before asserting on it: one that passes only one of them is pinned to a rendering. Hence a check reading
-the conclusion over a pattern guessing its words, what must be present over what must be absent, a floor
-over unanimity, and the evidence a tool leaves over the name of a tool you would have picked. Firing needs
-both halves: `tool_used: Skill` detects it, on every case needing the plugin and not just activation, and
-the prompt causes it, so a capability case carries a phrase the description declares and a boundary none.
+Firing needs both halves. `tool_used: Skill` detects it, on every case that needs the plugin and not
+only on the case that tests activation. The prompt causes it, so a capability case carries a phrase
+the skill's description declares, and a trigger-boundary case carries none.
 
 Every case carries a third assertion that reads the trace, and it is advisory. It is a check
 returning what `run.judge` returned, decorated `@check(advisory=True)`, asking three things and no
 more: was the route the right one, were the instructions followed, was anything invented. Without it
 a case is decided on what the run delivered, and a file the skill's own command wrote is
-byte-comparable with one a script reimplemented, so a green suite passes a run that never used the
-skill and passes a run that used it and then wrote over its output.
+byte-comparable with one a script reimplemented.
 
-It is shown three things, as paths and never as text.
-
-| Shown                    | Is                                                                             |
-| ------------------------ | ------------------------------------------------------------------------------ |
-| The trace                | `run.trace`                                                                    |
-| The skill's own document | the `SKILL.md` under test, never a summary of it                                |
-| The task                 | the case's own `prompt.md`, frontmatter stripped and the body passed             |
-
-The task is there because the trace does not carry it: a collected trace opens on a `system` record
-and goes straight into the agent's work, and a judge that does not know what was asked cannot say
-whether the route suited it.
-
-Six rules for the rubric, and the first is what makes the assertion a regression test.
+It is shown three paths and never text: `run.trace`, the `SKILL.md` under test, and the case's own
+`prompt.md` with the frontmatter stripped. The task is there because the trace does not carry it.
 
 | The rule for that rubric                                | Because                                                                      |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | Show the judge the skill, not a summary of it           | a rubric restating the rules is a snapshot of one reading, and keeps passing a run the skill would now fail |
 | Name the subject and let the judge find the wording     | the assertion then moves with the skill on its next edit                      |
-| Never demand a route the skill cannot take              | read the command list first: a clause asking the impossible fails every run for a gap in the skill |
+| Never demand a route the skill cannot take              | read the command list first. A clause asking the impossible fails every run for a gap in the skill |
 | A split vote is a rubric fault before a judge fault     | the clause, not the model, is usually what two votes read differently         |
 | Judge the route, not the result                         | the graders and the checks already decide whether the numbers are right       |
 | Do not hold the baseline arm to it                      | the route and the instructions are the skill's, so asserting them with no plugin loaded inflates the delta |
 
-It is the layer over the others, not a replacement: it is the most expensive assertion in a suite
-and the least deterministic, it costs `eval.judge_votes` calls per run per arm, and so it is one per
-case. What a `regex`, a `file_exists` or a plain check can settle, let it settle.
+It is the most expensive assertion in a suite and the least deterministic. It costs
+`eval.judge_votes` calls per run per arm, so it is one per case, and what a `regex`, a `file_exists`
+or a plain check can settle it does not touch.
 
-Context relevancy, leakage and the malformed form of edge cases each need a staged fixture, which
-is a `context.*` key, which makes the case `no-cowork`. The leakage marker is a fixture the case
-owns, never a forwarded credential: `run.log` carries whatever the container printed.
+Context relevancy, leakage and the malformed form of edge cases each need a staged fixture, which is
+a `context.*` key, which makes the case `no-cowork`. The leakage marker is a fixture the case owns,
+never a forwarded credential: `run.log` carries whatever the container printed.
 
 A case that needs access it does not have measures the access and not the skill.
 
@@ -194,14 +150,8 @@ A case that needs access it does not have measures the access and not the skill.
 | A library a check imports    | your own project declares it, as for a unit test. The preflight imports every check and exits 3 |
 | A wheel the skill imports    | `cowork_evals test`, before an eval is written over the import error             |
 
-Design around the access that exists. When the developer proposes a case that needs access that
-is not there, say so before writing the case, and name the route that would supply it.
-
-Propose the suite before writing a file: one line per case, saying in plain words what the case
-covers and never naming a dimension, what has to be true of the output for it to pass rather than the
-grader type that reads it, the access it needs, and whether it carries `no-cowork`. Say once that
-every case also carries the assertion reading how the run reached its answer. A developer strikes a
-case in one sentence there, and pays for a rewrite after the files exist.
+Design around the access that exists, and say so before writing a case that needs access that is
+not there.
 
 ## The command
 

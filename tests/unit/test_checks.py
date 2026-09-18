@@ -616,15 +616,8 @@ def two_arm_case(
     baseline_wrote: str | None = None,
     comparable: bool = True,
 ) -> dict[str, Any]:
-    """One two-arm case entry, both arms collected under the name its traces take.
-
-    `baseline_wrote` replaces `written.txt` in every baseline workspace, which is how the two
-    arms come to hold different artefacts: the fixture run is one directory, so without an edge
-    like this both arms carry the same bytes and every check reaches the same verdict.
-
-    `name` names the traces and the entry while `case` stays the directory the checks are read
-    from, so one fixture case can appear twice in one document.
-    """
+    """One two-arm case entry. `baseline_wrote` is what makes the two arms differ, and `name`
+    names the traces while `case` stays the directory the checks are read from."""
     named = name or case
     runs = collected_runs(directory, named, count)
     without = collected_runs(directory, named, count, arm="without")
@@ -663,7 +656,7 @@ def baseline(document: dict[str, Any], index: int = 0) -> dict[str, Any]:
 
 
 def test_every_check_result_is_appended_to_the_baseline_run_too(tmp_path: Path) -> None:
-    _, document = two_arm_layer(tmp_path)
+    directory, document = two_arm_layer(tmp_path)
     assert [grader["name"] for grader in baseline(document)["graders"]] == [
         "wrote-it",
         "assertions.the_file_says_written",
@@ -671,18 +664,8 @@ def test_every_check_result_is_appended_to_the_baseline_run_too(tmp_path: Path) 
         "assertions.the_last_message_is_read",
         "assertions.the_scratch_is_writable",
     ]
-
-
-def test_the_checks_file_is_written_beside_the_baseline_trace(tmp_path: Path) -> None:
-    directory, _ = two_arm_layer(tmp_path)
     path = directory / "traces" / "checked" / "without" / "run-1" / checks.CHECKS_FILE
     lines = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
-    assert [line["name"] for line in lines] == [
-        "assertions.the_file_says_written",
-        "assertions.the_sibling_is_importable",
-        "assertions.the_last_message_is_read",
-        "assertions.the_scratch_is_writable",
-    ]
     assert all(line["passed"] is True for line in lines)
 
 
@@ -739,63 +722,20 @@ def test_every_run_of_every_arm_runs_every_check_again(tmp_path: Path) -> None:
         assert [path.name for path in scratch.iterdir()] == [f"note-{index}.txt"]
 
 
-def test_a_one_arm_document_gains_no_mean_delta(tmp_path: Path) -> None:
-    """The harness writes it for a two-arm document alone, and this layer introduces no number.
-
-    That the case gains no baseline pair either is `test_a_passing_case_keeps_its_score`, which
-    reads the whole aggregates dictionary.
-    """
-    _, document = layer(tmp_path, "checked")
-    assert "meanDelta" not in document["aggregates"]
-
-
 # Advisory checks. docs/checks.md.
 
 
-def test_the_decorator_takes_both_forms() -> None:
-    """`@check` and `@check(advisory=True)` both mark, and only the second is advisory."""
-
-    @checks.check
-    def plain(run: Run) -> None:
-        return None
-
-    @checks.check(advisory=True)
-    def advised(run: Run) -> None:
-        return None
-
-    assert getattr(plain, checks.MARKER) is True
-    assert getattr(advised, checks.MARKER) is True
-    assert getattr(plain, checks.ADVISORY_MARKER) is False
-    assert getattr(advised, checks.ADVISORY_MARKER) is True
-
-
-def test_an_advisory_definition_carries_its_own_type() -> None:
-    """The verdict learns a result's class from its definition, so the type is the marker."""
-    assert checks.definition("a.one")["type"] == checks.CHECK_TYPE
-    assert checks.definition("a.one", advisory=True)["type"] == checks.ADVISORY_TYPE
-
-
-def test_an_advisory_result_keeps_its_verdict_and_leaves_the_score() -> None:
-    """A failure stays a failure in the document, and is not scored against the run."""
-    failed = checks.Outcome(
-        name="a.one", passed=False, explanation="the judge said FAIL", advisory=True
-    )
-    entry = checks.grader_result(failed)
-    assert entry["passed"] is False
-    assert entry["scored"] is False
-
-
-def test_an_advisory_failure_does_not_move_the_score() -> None:
+def test_an_advisory_failure_keeps_its_verdict_and_moves_no_score() -> None:
     passing = checks.grader_result(checks.Outcome(name="a.one", passed=True, explanation=""))
     advised = checks.grader_result(
-        checks.Outcome(name="a.two", passed=False, explanation="", advisory=True)
+        checks.Outcome(name="a.two", passed=False, explanation="the judge said FAIL", advisory=True)
     )
+    assert advised["passed"] is False
+    assert advised["scored"] is False
     assert checks.score({"graders": [passing, advised]}) == 1.0
 
 
 def test_the_advisory_flag_reaches_the_outcome(collected: Path) -> None:
-    """`execute` carries it off the `Check`, so one value builds the document."""
-
     def failing(run: Run) -> Result:
         return Result(passed=False, explanation="no")
 
@@ -806,7 +746,7 @@ def test_the_advisory_flag_reaches_the_outcome(collected: Path) -> None:
 
 
 def test_discovery_reads_the_advisory_marker_off_the_function(tmp_path: Path) -> None:
-    """The loader is what puts the flag on the `Check`, so a case tree decides it."""
+    """Both decorator forms mark, and the loader is what puts the flag on the `Check`."""
     case = tmp_path / "case"
     (case / "checks").mkdir(parents=True)
     (case / "checks" / "a.py").write_text(

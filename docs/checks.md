@@ -317,28 +317,24 @@ grader does, and the line reads `the check grader failed: <explanation>`. A `che
 the exception: it fails nothing and prints `the advisory check failed: <explanation>` as a note.
 
 Every arm a case carries is walked. The baseline arm's runs are collected into
-`traces/<case>/without/run-<n>` like any other run, so a check reads the artefact the baseline
-produced and both arms are decided on the same assertions. A check is the only way to say what is
-inside a workbook, a deck or a PDF, so a suite whose assertions are checks would otherwise report
-no delta whatever the baseline did.
+`traces/<case>/without/run-<n>` like any other run, so a check reads what the baseline produced
+and both arms are decided on the same assertions.
 
-The delta is recomputed only where the document already carries one. The harness omits it, and
-`scoreWithout` with it, when the two arms were graded under different rules, and that judgement
-stays the harness's: a check moving a score is not a reason to resurrect a delta between arms the
-document says are not comparable. See [running_evals.md](running_evals.md).
+The delta is recomputed only where the document already carries one. The harness omits `delta`,
+and `scoreWithout` with it, when the two arms were graded under different rules, and this layer
+leaves both omitted. See [running_evals.md](running_evals.md).
 
 A case carrying `declaredUnrunnable` has no run and produces no check result.
 
-**A check that cannot hold without the plugin inflates the delta.** A `tool_used: Skill` grader
-has the same problem and the harness solves it by making that one grader an unscored indicator.
-`@check(advisory=True)` is the equivalent marker here, and it is the section below. What it does not
-excuse is an assertion aimed at the wrong thing: assert what the deliverable has to be, never that
-the plugin was the thing that produced it.
+A check that cannot hold without the plugin inflates the delta. The harness makes its own
+`tool_used: Skill` grader an unscored indicator for that reason, and `@check(advisory=True)` is the
+equivalent marker here. Neither marker excuses an assertion aimed at the wrong thing. Assert what
+the deliverable has to be, never that the plugin produced it.
 
 ## An advisory check
 
-`@check(advisory=True)` runs the check, records its verdict, and decides nothing. A failure prints as
-a `NOTE`, stays out of the score and stays out of the exit code.
+`@check(advisory=True)` runs the check, records its verdict, and decides nothing. A failure prints
+as a `NOTE`, stays out of the score and stays out of the exit code.
 
 ```python
 @check(advisory=True)
@@ -346,11 +342,9 @@ def the_route_was_the_right_one(run: Run) -> Result:
     return run.judge(RUBRIC, run.trace)
 ```
 
-It is for an assertion whose mechanism is not calibrated yet, and a judged rubric over a transcript is
-the case it exists for. A judge asked how an agent worked is measurably not reliable enough to gate a
-suite: over three runs whose right answer was known, one model got two and a slower one got one, both
-erring towards leniency. A check that decided the exit code would turn each miss into a red suite, and
-a suite nobody trusts is worse than one assertion fewer.
+Use it for an assertion whose mechanism is not calibrated yet. A judged rubric over a transcript is
+the case it exists for, because a judge asked how an agent worked misses often enough that a binding
+check would turn each miss into a red suite.
 
 | An advisory check                | Where it lands                                                    |
 | -------------------------------- | ----------------------------------------------------------------- |
@@ -360,12 +354,11 @@ a suite nobody trusts is worse than one assertion fewer.
 | the run's `score`, and the delta | unmoved, because the result is not scored in either arm            |
 | the whole judge exchange         | `checks.jsonl`, as for any judged check                            |
 
-**Return the real verdict.** The point of the marker is that a `FAIL` stays a `FAIL` in the document,
-so a miss can be counted and the rubric calibrated against it. A check that swallows the verdict and
-returns a pass reports nothing to calibrate against, and adds a result that always passes, which lifts
-every score a little and dilutes the assertions that do decide.
+Return the real verdict. A `FAIL` that stays a `FAIL` in the document is what a rubric is calibrated
+against. A check that swallows its verdict reports nothing to calibrate, and adds a result that
+always passes.
 
-Drop the argument to make the same check binding. Nothing else about it changes.
+Drop the argument to make the same check binding.
 
 ## What it costs
 
