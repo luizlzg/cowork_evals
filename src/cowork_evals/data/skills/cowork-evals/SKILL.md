@@ -44,10 +44,11 @@ case that catches the failure. Never ask which eval and which grader they want e
 the design back, and a developer who could answer it would have written the case already. Whether
 the model would do the job unaided is settled by the baseline arm and by no conversation.
 
-Two things are worth a direct question, because the proposal cannot be written without them: a real
-input sample, which the repository does not carry, and access the repository does not show.
-`I do not know` ends the topic. It is the common reply, it is the authorization to design that part
-alone, and it is never rephrased and asked a second way.
+One thing is worth a direct question, because the proposal cannot be written without it: access the
+repository does not show, meaning a credential, a service or an MCP server a case needs. Never ask
+for a fixture, and generate every one at the size and the shape below. `I do not know` ends the
+topic. It is the common reply, it is the authorization to design that part alone, and it is never
+rephrased and asked a second way.
 
 A reply that does name something names a symptom, not a case, and turning it into one is the work.
 `The summaries are too long` is a `regex` over `last_message`. `It makes things up about our schema`
@@ -56,8 +57,8 @@ is a fixture and a `not_contains` pattern per invented value. `It ignores the co
 is a check that opens the workbook, because no grader type reads a cell.
 
 The names in the first column below are this file's vocabulary and stay in it. Tell the developer
-what a case covers, and what the suite does not test, in the words the skill under test uses.
-Naming a dimension asks them to learn a word to read their own coverage.
+what a case covers, in the words the skill under test uses. Naming a dimension asks them to learn a
+word to read their own coverage.
 
 Read the table after the suite is drafted, to find a gap in it. Never work through it. The default
 for every row is no case: a row gets one when the skill's own text carries the condition in its
@@ -78,9 +79,9 @@ row.
 | PII and confidential information leakage | `regex` with `not_contains` over `last_message`, over each artefact, over `trace`, over `mock_calls`, and a check per artefact that is not text | the skill reads something the prompt did not name, and an artefact or an answer could carry a value out of it that nothing asked for |
 
 A case that ticks a row is worse than the gap it fills: it costs a run on every sweep, and its pass
-says nothing about the skill. Leakage is the row this happens to most. A fixture holding nothing that
-must not be disclosed gets no leakage case, and a marker invented for the fixture measures the
-marker.
+says nothing about the skill. Never write one to complete the table. A row whose condition the
+skill's own text does not carry gets no case, and inventing a fixture so that it can have one
+measures the fixture.
 
 A suite answers two questions. Does the skill still work, and is the skill better than no skill. The
 same case files answer both, and the run is what differs: one arm for the first, two for the second.
@@ -197,10 +198,10 @@ Design around the access that exists. When the developer proposes a case that ne
 is not there, say so before writing the case, and name the route that would supply it.
 
 Propose the suite before writing a file: one line per case, saying in plain words what the case
-covers and never naming a dimension, the grader or the check that decides it, the access it needs,
-and whether it carries `no-cowork`. Say once that every case carries the route check. Say what the
-suite does not test, in the skill's own words. A developer strikes a case in one sentence there, and
-pays for a rewrite after the files exist.
+covers and never naming a dimension, what has to be true of the output for it to pass rather than the
+grader type that reads it, the access it needs, and whether it carries `no-cowork`. Say once that
+every case also carries the assertion reading how the run reached its answer. A developer strikes a
+case in one sentence there, and pays for a rewrite after the files exist.
 
 ## The command
 
