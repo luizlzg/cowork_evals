@@ -10,7 +10,7 @@ a spreadsheet: `file_exists` reports that the file was created and says nothing 
 numbers in it, while `regex` and `llm` read a produced file as text, which a workbook is not. A
 check goes in the case's `checks/` directory. It runs on the host after the harness has graded
 the run, over the files that run left, and its verdict is appended to the result document as a
-grader result, so a failed check fails the case unless it is marked advisory.
+grader result, so a failed check fails the case.
 
 ## Writing one
 
@@ -60,8 +60,8 @@ The harness grades the case, the run's files are collected, and then every `@che
 
 ## What a check returns
 
-`@check` takes one argument, `advisory`, which is below. A check's name is
-`<file stem>.<function name>`, so `totals_add_up` in `checks/assertions.py` is `assertions.totals_add_up` everywhere a name
+`@check` takes no arguments. A check's name is `<file stem>.<function name>`, so
+`totals_add_up` in `checks/assertions.py` is `assertions.totals_add_up` everywhere a name
 appears, and every check has weight 1.
 
 | The function          | The check                               |
@@ -128,9 +128,8 @@ The two transcript formats are [running_evals.md](running_evals.md). A check rea
 
 Some things are not decidable in code: whether a slide is clipped, whether a chart is readable,
 whether prose answers the question. `run.judge(prompt, *paths)` asks a model. It runs `claude
--p` once per `eval.judge_votes`, three times by default, takes the majority of the votes, and
-returns a `Result` carrying the verdict and what the winning side said, so a check can return it
-straight back.
+-p` three times, takes the majority of the three votes, and returns a `Result`, so a check can
+return it straight back.
 
 ```python
 import subprocess
@@ -170,17 +169,7 @@ The grant is those three read-only tools, with no permission mode and no turn ca
 2.1.270 they alone let a non-interactive `claude -p` read a file in its working directory and
 answer on what it says, and the CLI's own default binds the loop. The model resolves through
 the one ladder every other judge call resolves through, so `--judge-model` beats
-`eval.judge_model`, and the vote count comes down the same ladder from `eval.judge_votes`.
-
-**The judge says why, and the shape is the CLI's to enforce.** `--json-schema` makes
-`--output-format json` carry a `structured_output` object beside the `result` string, so a vote is
-a `verdict` of `PASS` or `FAIL` and a `reasoning` beside it. Nothing here parses prose. A judge
-asked to investigate a long file answers at length and then gives its verdict in the field, where
-before it had to answer in one word and a reasoned reply was a lost vote.
-
-Measured on CLI 2.1.273, with the tool grant above and without it. A CLI too old for the flag
-returns no `structured_output`, and a bare `PASS` or `FAIL` is still read: that reply votes and
-carries no reasoning.
+`eval.judge_model`. The layer has no configuration key of its own.
 
 There is no `@transform` decorator and no `run.ask`. Converting a file before asserting on it,
 and asking a model something `run.judge` does not answer, are both things a Python function
@@ -303,75 +292,32 @@ the changes, and nothing else in the document moves.
 | the case's `graders[]`      | one definition per check, `{name, type: check, weight: 1, config: {}}` |
 | the run's `graders[]`       | one result per check, in the shape every grader result has            |
 | the run's `score`, `passed` | recomputed over every scored result, the checks included              |
-| the case's `aggregates`     | `score` and `passRate` over the with-arm runs, `scoreWithout` and `passRateWithout` over the baseline arm's, and `delta` over the two |
+| the case's `aggregates`     | `score` and `passRate` recomputed over the runs                       |
 | the run's `judgeCostUsd`    | plus what a check judge spent                                         |
 | the document's `costUsd`    | the same, so the panel and `eval.max_cost_total_usd` both see it      |
-| the document's `aggregates` | `overallScore` and `overallPassRate` over the cases, and `meanDelta` over the case deltas that are defined |
+| the document's `aggregates` | `overallScore` and `overallPassRate` recomputed over the cases        |
 
 `casesTotal` and `casesPassed` are untouched. `--threshold` is pinned to 0, so every case counts
 as passed there whatever a check said, and this package decides pass and fail. A suite with no
 check anywhere leaves the document exactly as the backend wrote it.
 
 A `check` grader result is not judged, so a failed one fails the run exactly as a failed `regex`
-grader does, and the line reads `the check grader failed: <explanation>`. A `check-advisory` result is
-the exception: it fails nothing and prints `the advisory check failed: <explanation>` as a note.
+grader does, and the line reads `the check grader failed: <explanation>`.
 
-Every arm a case carries is walked. The baseline arm's runs are collected into
-`traces/<case>/without/run-<n>` like any other run, so a check reads what the baseline produced
-and both arms are decided on the same assertions.
-
-The delta is recomputed only where the document already carries one. The harness omits `delta`,
-and `scoreWithout` with it, when the two arms were graded under different rules, and this layer
-leaves both omitted. See [running_evals.md](running_evals.md).
-
-A case carrying `declaredUnrunnable` has no run and produces no check result.
-
-A check that cannot hold without the plugin inflates the delta. The harness makes its own
-`tool_used: Skill` grader an unscored indicator for that reason, and `@check(advisory=True)` is the
-equivalent marker here. Neither marker excuses an assertion aimed at the wrong thing. Assert what
-the deliverable has to be, never that the plugin produced it.
-
-## An advisory check
-
-`@check(advisory=True)` runs the check, records its verdict, and decides nothing. A failure prints
-as a `NOTE`, stays out of the score and stays out of the exit code.
-
-```python
-@check(advisory=True)
-def the_route_was_the_right_one(run: Run) -> Result:
-    return run.judge(RUBRIC, run.trace)
-```
-
-Use it for an assertion whose mechanism is not calibrated yet. A judged rubric over a transcript is
-the case it exists for, because a judge asked how an agent worked misses often enough that a binding
-check would turn each miss into a red suite.
-
-| An advisory check                | Where it lands                                                    |
-| -------------------------------- | ----------------------------------------------------------------- |
-| its definition                   | `{"type": "check-advisory"}`, which is how the verdict knows       |
-| its result                       | the run's `graders[]`, carrying its real `passed` and `scored: false` |
-| a failure                        | a `NOTE` line, never a `FAIL` line                                 |
-| the run's `score`, and the delta | unmoved, because the result is not scored in either arm            |
-| the whole judge exchange         | `checks.jsonl`, as for any judged check                            |
-
-Return the real verdict. A `FAIL` that stays a `FAIL` in the document is what a rubric is calibrated
-against. A check that swallows its verdict reports nothing to calibrate, and adds a result that
-always passes.
-
-Drop the argument to make the same check binding.
+Only the `with` arm is walked. The baseline arm runs without the plugin under test, so an
+assertion about what the plugin produced has nothing to read there. A two-arm document's
+`aggregates.delta` and its `meanDelta` are the harness's own and are not recomputed. A case
+carrying `declaredUnrunnable` has no run and produces no check result.
 
 ## What it costs
 
 A check that asserts costs nothing. It is a function call on the host.
 
-A check that calls `run.judge` costs `eval.judge_votes` `claude -p` calls at the judge model, per
-call per run, three of them by default. Each run of every arm runs every check again, so a case at
-`runs: 3` carrying one judged check costs nine on one arm and eighteen under
-`--ablation with-without`. Structured output adds a round trip to each of them, because the verdict
-is a tool call the judge makes after it has read what it was given. The harness has already
-finished when a check runs, so `eval.max_cost_usd` does not bind that spend; it is added to the
-document's `costUsd`, which `eval.max_cost_total_usd` reads. The ceilings are
-[running_evals.md](running_evals.md).
+A check that calls `run.judge` costs three `claude -p` calls at the judge model, per call per
+run. Each run of a case runs every check again, so a case at `runs: 3` carrying one judged check
+costs nine. The harness has already finished when a check runs, so `eval.max_cost_usd` does not
+bind that spend; it is added to the document's `costUsd`, which `eval.max_cost_total_usd` reads.
+The ceilings are [running_evals.md](running_evals.md).
 
 ## Common mistakes
 
@@ -382,5 +328,5 @@ document's `costUsd`, which `eval.max_cost_total_usd` reads. The ceilings are
 | Wrote a `checks/` directory whose files have no `@check` | The preflight refuses the tree with exit 3. A directory that asserts nothing looks like one that asserts something               |
 | Imported a helper inside the function body               | `ModuleNotFoundError`. The `checks/` directory is on `sys.path` only while the files load, so import at the top                  |
 | Wrote into `run.workspace`                               | You have edited the record of what the agent produced. Write to `run.scratch`                                                   |
-| Called `run.judge` on a case at `runs: 3`                | Three judge calls per run, nine in total, and eighteen under `--ablation with-without`. Every check runs again for every run of every arm |
-| Wrote a check that asserts the plugin was involved       | It fails the baseline arm by construction, so the case reports a delta it has not earned. Assert the deliverable, not the route to it |
+| Called `run.judge` on a case at `runs: 3`                | Three judge calls per run, nine in total. Every check runs again for every run of the case                                       |
+| Expected a check to run on the `without` arm             | It does not. `--ablation with-without` runs the baseline arm with no plugin loaded, and checks run on the with-arm only          |
