@@ -742,7 +742,6 @@ def _sweep(
             directory,
             args.backend,
             image=None if image is None else image.tag,
-            credential=None if image is None else image.credential,
             env_passthrough=() if image is None else image.env_passthrough,
         )
         swept = _each_plugin(args, config, directory, targets, tags, image)

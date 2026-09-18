@@ -170,10 +170,6 @@ match: not_contains
 Both are structural, so both decide the exit code. A grader file without the `---` delimiters
 is read as a note and is silently ignored.
 
-Two cases are not a suite. Which cases a skill needs, which assertion answers which question, and
-what a case measures when it lacks the access it needs are
-[`docs/eval_design.md`](docs/eval_design.md).
-
 A grader can say that the agent created `totals.xlsx`. No grader type can say what is inside
 it, so the case passes on a spreadsheet holding the wrong numbers. A check is how you assert
 the rest: a Python function under the case's `checks/` directory, run on your machine once the

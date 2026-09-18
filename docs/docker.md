@@ -255,10 +255,9 @@ runs in this container and should not be assumed to run on CoWork.
 
 ## Credentials
 
-Two routes, and `docker.credential` chooses between them. One question decides which one a
-host uses: **how does Claude Code already authenticate on this host?** Through claude.ai, and
-it is `login`. Through Bedrock, and it is `bedrock`. There is no API key route, by the
-developer's decision.
+Two routes, and `docker.credential` chooses between them. A host where Claude Code
+authenticates through claude.ai uses `login`. A host where it authenticates through Bedrock
+uses `bedrock`. There is no API key route, by the developer's decision.
 
 | `docker.credential` | The container gets                          | The host needs                                     |
 | ------------------- | -------------------------------------------- | -------------------------------------------------- |
@@ -364,13 +363,10 @@ This route makes no login and needs none. `login --docker` refuses under it in b
 and `Docker.login()` raises rather than opening a browser for a credential the route never
 reads.
 
-Two things follow from the route and are the developer's to set, not this package's to guard.
-
-- `eval.model` and `eval.judge_model` are names the CLI resolves against Bedrock, so an alias
-  such as `sonnet` may have to be an inference profile id. Nothing here has measured which
-  aliases resolve, and no check refuses one.
-- The host's own credential lifetime is the host's. This package reads the four variables at
-  preflight and forwards what it read, and refreshes nothing.
+`eval.model` and `eval.judge_model` are names the CLI resolves against Bedrock, so an alias
+such as `sonnet` may have to be an inference profile id. Nothing here has measured which
+aliases resolve, and no check refuses one. This package reads the four variables at preflight
+and forwards what it read, and refreshes nothing.
 
 ## Environment passthrough
 
@@ -416,11 +412,8 @@ reads it, and is not read a second time at container start.
 `--dry-run` prints `NAME=<not shown>` and reads no value at all, so the list it prints is safe to
 paste into a message and carries every configured name whether or not the host has that name set.
 
-The table holds for the four names the Bedrock route forwards, with one difference in the
-first two rows: those names are configured nowhere, so `cowork_evals.yaml` carries
-`credential: bedrock` and `env.txt` carries `credential: bedrock`, and neither carries a
-Bedrock name. The route says which credential the run used, and the names the route owns are
-the four above.
+The table holds for the four names the Bedrock route forwards, except that those names are
+configured nowhere. `cowork_evals.yaml` carries `credential: bedrock` and no Bedrock name.
 
 `run.log` is the one artefact this package cannot fully control. It is captured at the file
 descriptor level, so whatever the container prints reaches it, and a case whose prompt makes the
