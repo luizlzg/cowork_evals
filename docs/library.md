@@ -123,10 +123,9 @@ by `scripts/dev_skills.sh` and git-ignored. The shipped copy is the one source.
 ## Why the documentation ships
 
 A consumer writes cases, writes plugin code and runs the command. The authoring contract is
-[eval_format.md](eval_format.md), which cases to write is [eval_design.md](eval_design.md), the
-option surface is [cli.md](cli.md), and the wheel set the code under test may import is
-[runtime.md](runtime.md). None of that is derivable from the module source, so a consumer
-without this tree is reading a command with no reference.
+[eval_format.md](eval_format.md), the option surface is [cli.md](cli.md), and the wheel set the
+code under test may import is [runtime.md](runtime.md). None of that is derivable from the
+module source, so a consumer without this tree is reading a command with no reference.
 
 The tree ships whole, so there is no ship list to curate and no decision to take when a
 document is added. `docs/claude_code/` is included: it is the authority where
