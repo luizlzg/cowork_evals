@@ -298,13 +298,13 @@ your repository picks them up from there. They fire on different questions.
 
 | Skill          | Fires on                                                                   |
 | -------------- | ---------------------------------------------------------------------------- |
-| `cowork-evals` | Deciding which evals a skill needs; writing or fixing a case, a `prompt.md`, a grader or a check; a failing `cowork_evals` command; the configuration file; plugin code that has to run inside a session |
+| `cowork-evals` | Deciding which evals a skill needs; reviewing the suite it already has, and whether that suite is complete; writing or fixing a case, a `prompt.md`, a grader or a check; a failing `cowork_evals` command; the configuration file; plugin code that has to run inside a session |
 | `cowork-ask`   | A question about what a live CoWork session actually does; a claim that has to be confirmed in the product; a failing `cowork_evals ask` |
 
-`cowork-evals` carries the conversation that decides which cases a skill needs and the ten
-coverage dimensions it checks the suite against, then the case tree, the two required
+`cowork-evals` carries how a suite is drafted from the skill and proposed rather than interviewed,
+and the coverage dimensions it checks that draft against, then the case tree, the two required
 frontmatter keys, the six grader types, three copy-paste grader idioms, two copy-paste checks,
-the eleven authoring traps, the exit codes and the 3.10 runtime constraint. `cowork-ask` carries
+the twelve authoring traps, the exit codes and the 3.10 runtime constraint. `cowork-ask` carries
 the verb, what one ask costs, and the rule that makes an answer evidence: ask the session to do
 the thing and read what it did, because what a session says about its own configuration is not
 evidence. Both send a reader to `cowork_evals docs` for everything they do not carry.
