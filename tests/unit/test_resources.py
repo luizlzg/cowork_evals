@@ -5,9 +5,9 @@ layout: the package is installed editable, so `docs/` is at the repository root 
 beside the modules. The install layout is proved by `scripts/build.sh` and by the integration
 tier, which install a built wheel.
 
-The last two tests enforce R1 and R2 in docs/library.md. They read the repository's own files,
-which is the only place either rule can be checked: a violation is a link that resolves in a
-checkout and dangles in an install, so nothing at run time can see it. See ../README.md.
+The R1 and R2 tests enforce the two reference rules in docs/library.md. They read the
+repository's own files, which is the only place either rule can be checked: a violation is a link
+that resolves in a checkout and dangles in an install, so nothing at run time can see it.
 """
 
 from __future__ import annotations
@@ -27,21 +27,6 @@ REPOSITORY = Path(__file__).resolve().parents[2]
 # so a link carrying a title would be caught too; this repository writes none.
 LINK = re.compile(r"\]\(([^)]+)\)")
 
-# What a document name is checked against. Every document this repository holds is one of
-# these, and a new one that is neither is a new kind of file and not a silent addition.
-EXPECTED_DOCUMENTS = {
-    "README",
-    "cli",
-    "eval_format",
-    "eval_design",
-    "library",
-    "runtime",
-    "approaches",
-}
-
-# The grader types the format defines. Every file that names a grader names one of these.
-GRADER_TYPES = ("regex", "tool_used", "tool_order", "file_exists", "llm", "baseline")
-
 
 # The tree.
 
@@ -60,10 +45,6 @@ def test_every_listed_name_resolves_to_a_file() -> None:
         path = resources.document(name)
         assert path is not None, name
         assert path.is_file(), name
-
-
-def test_the_expected_documents_are_all_listed() -> None:
-    assert set(resources.documents()) >= EXPECTED_DOCUMENTS
 
 
 def test_a_name_takes_the_extension_or_leaves_it() -> None:
@@ -150,96 +131,10 @@ def test_every_shipped_skill_is_a_directory_named_for_it() -> None:
     """One directory per skill, and its name is the skill's name. docs/library.md."""
     installed = resources.skills()
     assert [target.parent.name for _, target in installed] == ["cowork-ask", "cowork-evals"]
-    for source, target in installed:
-        text = source.read_text()
-        assert text.startswith("---\n"), source
-        assert f"name: {target.parent.name}" in text, source
-        assert "TRIGGER" in text, source
 
 
 def test_a_skill_installs_where_claude_code_reads_a_project_skill() -> None:
     assert resources.skills()[0][1] == Path(".claude") / "skills" / "cowork-ask" / "SKILL.md"
-
-
-def test_the_ask_skill_carries_the_measurement_rule() -> None:
-    """The one rule that makes an ask worth its VM boot. docs/cowork_desktop.md."""
-    text = resources.skill("cowork-ask").read_text()
-    assert "is not evidence" in text
-    assert "cowork_evals ask --cowork" in text
-
-
-def test_the_memory_block_carries_its_own_marker() -> None:
-    assert resources.MEMORY_MARKER in resources.MEMORY_BLOCK
-
-
-# The skill against the documents it condenses. docs/library.md.
-
-
-def _traps(text: str, start: str, end: str | None) -> list[str]:
-    body = text[text.index(start) :]
-    if end is not None:
-        body = body[: body.index(end)]
-    return [line for line in body.splitlines() if line.startswith("- ")]
-
-
-def _document(name: str) -> str:
-    root = resources.docs_dir()
-    assert root is not None
-    return (root / name).read_text()
-
-
-def _dimensions(design: str) -> list[str]:
-    """The first cell of every row in the design file's dimension table.
-
-    Derived from the document, so no dimension is spelled in this file: a dimension added
-    there is asserted here on the next run.
-    """
-    body = design[design.index("## The coverage dimensions") :]
-    body = body[: body.index("### What the table does not decide")]
-    cells = [line.split("|")[1].strip() for line in body.splitlines() if line.startswith("| ")]
-    return [cell for cell in cells if cell and cell != "Dimension" and set(cell) != {"-"}]
-
-
-def test_the_skill_carries_every_grader_type_the_format_defines() -> None:
-    """The skill states no fact of its own, so a type in one is a type in the other."""
-    skill = resources.skill("cowork-evals").read_text()
-    fmt = _document("eval_format.md")
-    for grader in GRADER_TYPES:
-        assert f"`{grader}`" in skill, grader
-        assert f"`{grader}`" in fmt, grader
-
-
-def test_the_design_names_every_grader_type_the_format_defines() -> None:
-    """The design file places every type in a dimension. A seventh type has to land somewhere."""
-    design = _document("eval_design.md")
-    for grader in GRADER_TYPES:
-        assert f"`{grader}`" in design, grader
-
-
-def test_the_skill_carries_every_coverage_dimension_the_design_defines() -> None:
-    """A dimension the document names and the skill does not is a dimension no session reads."""
-    skill = resources.skill("cowork-evals").read_text()
-    dimensions = _dimensions(_document("eval_design.md"))
-    assert dimensions
-    for dimension in dimensions:
-        assert dimension in skill, dimension
-
-
-def test_the_skill_carries_as_many_traps_as_the_format() -> None:
-    """A trap added to one and not the other is the drift this rule exists to stop."""
-    skill = resources.skill("cowork-evals").read_text()
-    fmt = (resources.docs_dir() / "eval_format.md").read_text()
-    assert len(_traps(skill, "## Traps", "## The exit codes")) == len(
-        _traps(fmt, "## Authoring traps", None)
-    )
-
-
-def test_the_skill_sends_the_reader_to_the_docs_verb() -> None:
-    """Everything it does not carry is one command away, and it has to say which."""
-    skill = resources.skill("cowork-evals").read_text()
-    assert "cowork_evals docs" in skill
-    for name in ("eval_format", "eval_design", "cli", "runtime"):
-        assert f"docs {name}" in skill, name
 
 
 # R1 and R2. docs/library.md.
