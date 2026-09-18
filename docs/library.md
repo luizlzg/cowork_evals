@@ -102,12 +102,11 @@ second.
 
 | Skill          | Fires on                                                                                                                          | Holds                                                                             |
 | -------------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `cowork-evals` | Which cases a skill needs, reviewing a suite it already has, writing or fixing a case, a `prompt.md` or a grader, a failing command, the configuration file, plugin code that runs in a session | The order of work and what not to ask, the coverage table, the case tree, the addressability keys, the grader types and idioms, the authoring traps, the exit codes and the runtime constraint |
+| `cowork-evals` | Writing or fixing a case, a `prompt.md` or a grader, a failing command, the configuration file, plugin code that runs in a session | The case tree, the addressability keys, the grader types and idioms, the authoring traps, the exit codes and the runtime constraint |
 | `cowork-ask`   | A question about what a live CoWork session does, a claim that has to be confirmed in the product, a failing `cowork_evals ask`    | The verb, what one ask costs, and the rule that the session is asked to do the thing and what it did is read back |
 
-`cowork-evals` is a condensed [eval_design.md](eval_design.md),
-[eval_format.md](eval_format.md) and [cli.md](cli.md). `cowork-ask` is a condensed
-[cli.md](cli.md), [cowork_driver.md](cowork_driver.md) and
+`cowork-evals` is a condensed [eval_format.md](eval_format.md) and [cli.md](cli.md).
+`cowork-ask` is a condensed [cli.md](cli.md), [cowork_driver.md](cowork_driver.md) and
 [cowork_desktop.md](cowork_desktop.md). Both are condensed because a skill is read into a
 context window every time it fires, and the full documents are one `cowork_evals docs` away.
 
@@ -252,7 +251,7 @@ name that is not there carries nothing.
 | Rule                                                             | Holds because                                                              |
 | ------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
 | A named variable absent or empty on the host fails the preflight | A missing precondition fails. An empty string is not a value               |
-| A name that would carry Claude's own credential is refused       | `docker.credential` is the one route for that, whatever the variable holds |
+| A name that would carry Claude's own credential is refused       | The container login is the one route for that, whatever the variable holds |
 
 It exists so a skill whose whole job is calling an API can be evaluated at all. Without it such
 a skill fails every eval for a reason that has nothing to do with the skill. The setting, the
