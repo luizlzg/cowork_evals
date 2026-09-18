@@ -48,8 +48,7 @@ Evals for the plugins in this repository run through the `cowork_evals` command.
 it does goes through that one executable.
 
 - `cowork_evals docs` prints where its documentation is, and `cowork_evals docs <name>`
-  prints one document's path. `docs eval_format` is the case format, `docs eval_design` is
-  which cases a skill needs, and `docs cli` is the command.
+  prints one document's path. `docs eval_format` is the case format, `docs cli` the command.
 - `cowork_evals run --docker <path>` runs a case tree and decides pass or fail on it.
   `cowork_evals test --docker <path>/tests` runs a plugin's own pytest suite on the CoWork
   runtime, with no model.
@@ -57,10 +56,8 @@ it does goes through that one executable.
 - `cowork_evals ask --cowork "<prompt>"` submits one prompt to a real CoWork session and
   prints the answer. It runs no eval. Use it when the answer is a fact about the live
   product, and read `cowork_evals docs cli` for what one ask costs.
-- The case format, the authoring traps and the conversation that decides which cases a skill
-  needs are the `cowork-evals` skill in `.claude/skills/cowork-evals/`, and asking a live
-  session is `cowork-ask` beside it. Read the skill before writing a case, and talk about
-  what the reading did not settle. Never ask which eval and which grader are wanted.
+- The case format and the authoring traps are the `cowork-evals` skill in
+  `.claude/skills/cowork-evals/`, and asking a live session is `cowork-ask` beside it.
 
 A CoWork session is Python 3.10 with a fixed wheel set. Every skill, command, agent and hook
 under a path passed to `cowork_evals run` imports only what that image carries. Read
