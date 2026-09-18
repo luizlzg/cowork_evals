@@ -15,6 +15,7 @@ import pytest
 
 from cowork_evals.config import Config, DockerSection
 from cowork_evals.docker import (
+    BEDROCK_NAMES,
     CONTAINER_EXTRA_CA,
     CONTAINER_HOME,
     CONTAINER_LOGS,
@@ -467,13 +468,34 @@ def test_the_conditions_reach_the_whole_check(monkeypatch):
     assert Condition.ENVIRONMENT in [condition for condition, _ in unmet]
 
 
-def test_the_login_is_mounted_on_one_route_and_on_neither_path_of_the_other(tmp_path):
-    assert backend(login_dir=tmp_path / "login").credential_argv() != []
-    assert backend(login_dir=tmp_path / "login", credential="bedrock").credential_argv() == []
+def test_each_route_gives_the_container_what_the_other_does_not(tmp_path, monkeypatch):
+    """`login` mounts two paths and forwards nothing. `bedrock` is the reverse, and an unset
+    name is a refusal rather than a container started without it. docs/docker.md."""
+    for name in BEDROCK_NAMES:
+        monkeypatch.setenv(name, "value")
+
+    login = backend(login_dir=tmp_path / "login")
+    assert login.credential_env_argv() == []
+    assert login.credential_argv() == [
+        "-v",
+        f"{login.claude_dir}:{CONTAINER_HOME}/.claude:rw",
+        "-v",
+        f"{login.state_file}:{CONTAINER_HOME}/.claude.json:rw",
+    ]
+
+    bedrock = backend(login_dir=tmp_path / "login", credential="bedrock")
+    assert bedrock.credential_argv() == []
+    assert bedrock.credential_env_argv() == [
+        argument for name in BEDROCK_NAMES for argument in ("--env", f"{name}=value")
+    ]
+
+    monkeypatch.delenv(BEDROCK_NAMES[1])
+    with pytest.raises(DockerError) as raised:
+        bedrock.credential_env_argv()
+    assert BEDROCK_NAMES[1] in str(raised.value)
 
 
 def test_a_login_under_the_bedrock_route_raises_rather_than_opening_a_browser(tmp_path):
-    """`setup --docker` stops before this, and this is the rule held where it would break."""
     with pytest.raises(DockerError) as raised:
         backend(login_dir=tmp_path / "login", credential="bedrock").login()
     assert "no login to make" in str(raised.value)
