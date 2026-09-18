@@ -29,15 +29,7 @@ LINK = re.compile(r"\]\(([^)]+)\)")
 
 # What a document name is checked against. Every document this repository holds is one of
 # these, and a new one that is neither is a new kind of file and not a silent addition.
-EXPECTED_DOCUMENTS = {
-    "README",
-    "cli",
-    "eval_format",
-    "eval_design",
-    "library",
-    "runtime",
-    "approaches",
-}
+EXPECTED_DOCUMENTS = {"README", "cli", "eval_format", "library", "runtime", "approaches"}
 
 
 # The tree.
