@@ -292,10 +292,10 @@ the changes, and nothing else in the document moves.
 | the case's `graders[]`      | one definition per check, `{name, type: check, weight: 1, config: {}}` |
 | the run's `graders[]`       | one result per check, in the shape every grader result has            |
 | the run's `score`, `passed` | recomputed over every scored result, the checks included              |
-| the case's `aggregates`     | `score` and `passRate` over the with-arm runs, `scoreWithout` and `passRateWithout` over the baseline arm's, and `delta` over the two |
+| the case's `aggregates`     | `score` and `passRate` recomputed over the runs                       |
 | the run's `judgeCostUsd`    | plus what a check judge spent                                         |
 | the document's `costUsd`    | the same, so the panel and `eval.max_cost_total_usd` both see it      |
-| the document's `aggregates` | `overallScore` and `overallPassRate` over the cases, and `meanDelta` over the case deltas that are defined |
+| the document's `aggregates` | `overallScore` and `overallPassRate` recomputed over the cases        |
 
 `casesTotal` and `casesPassed` are untouched. `--threshold` is pinned to 0, so every case counts
 as passed there whatever a check said, and this package decides pass and fail. A suite with no
@@ -304,30 +304,20 @@ check anywhere leaves the document exactly as the backend wrote it.
 A `check` grader result is not judged, so a failed one fails the run exactly as a failed `regex`
 grader does, and the line reads `the check grader failed: <explanation>`.
 
-Every arm a case carries is walked. The baseline arm's runs are collected into
-`traces/<case>/without/run-<n>` like any other run, so a check reads what the baseline produced
-and both arms are decided on the same assertions.
-
-The delta is recomputed only where the document already carries one. The harness omits `delta`,
-and `scoreWithout` with it, when the two arms were graded under different rules, and this layer
-leaves both omitted. See [running_evals.md](running_evals.md).
-
-A case carrying `declaredUnrunnable` has no run and produces no check result.
-
-A check that cannot hold without the plugin inflates the delta. The harness makes its own
-`tool_used: Skill` grader an unscored indicator for that reason, and a check has no such marker.
-Assert what the deliverable has to be, never that the plugin produced it.
+Only the `with` arm is walked. The baseline arm runs without the plugin under test, so an
+assertion about what the plugin produced has nothing to read there. A two-arm document's
+`aggregates.delta` and its `meanDelta` are the harness's own and are not recomputed. A case
+carrying `declaredUnrunnable` has no run and produces no check result.
 
 ## What it costs
 
 A check that asserts costs nothing. It is a function call on the host.
 
 A check that calls `run.judge` costs three `claude -p` calls at the judge model, per call per
-run. Each run of every arm runs every check again, so a case at `runs: 3` carrying one judged
-check costs nine on one arm and eighteen under `--ablation with-without`. The harness has already
-finished when a check runs, so `eval.max_cost_usd` does not bind that spend; it is added to the
-document's `costUsd`, which `eval.max_cost_total_usd` reads. The ceilings are
-[running_evals.md](running_evals.md).
+run. Each run of a case runs every check again, so a case at `runs: 3` carrying one judged check
+costs nine. The harness has already finished when a check runs, so `eval.max_cost_usd` does not
+bind that spend; it is added to the document's `costUsd`, which `eval.max_cost_total_usd` reads.
+The ceilings are [running_evals.md](running_evals.md).
 
 ## Common mistakes
 
@@ -338,5 +328,5 @@ document's `costUsd`, which `eval.max_cost_total_usd` reads. The ceilings are
 | Wrote a `checks/` directory whose files have no `@check` | The preflight refuses the tree with exit 3. A directory that asserts nothing looks like one that asserts something               |
 | Imported a helper inside the function body               | `ModuleNotFoundError`. The `checks/` directory is on `sys.path` only while the files load, so import at the top                  |
 | Wrote into `run.workspace`                               | You have edited the record of what the agent produced. Write to `run.scratch`                                                   |
-| Called `run.judge` on a case at `runs: 3`                | Three judge calls per run, nine in total, and eighteen under `--ablation with-without`. Every check runs again for every run of every arm |
-| Wrote a check that asserts the plugin was involved       | It fails the baseline arm by construction, so the case reports a delta it has not earned. Assert the deliverable, not the route to it |
+| Called `run.judge` on a case at `runs: 3`                | Three judge calls per run, nine in total. Every check runs again for every run of the case                                       |
+| Expected a check to run on the `without` arm             | It does not. `--ablation with-without` runs the baseline arm with no plugin loaded, and checks run on the with-arm only          |
