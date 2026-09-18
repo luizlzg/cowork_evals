@@ -51,7 +51,7 @@ not the system's: what is built and usable is
 | 16 | [`done/plan_artifact_checks.20260923.md`](done/plan_artifact_checks.20260923.md) | An assertion an author writes as code, deciding the run beside the harness's graders | implemented | `feat/artifact-checks` |
 | 17 | [`done/plan_eval_design.20260917.md`](done/plan_eval_design.20260917.md) | The document that owns which cases to write, the interview the skill runs, and a second credential route | implemented | `feat/eval-enhancement` |
 | - | [`done/plan_check_arms.20260917.md`](done/plan_check_arms.20260917.md) | Nothing. A check runs on every arm the case carries, so a suite of checks has a delta | implemented | `fix/checks-both-arms` |
-| 18 | [`done/plan_trace_judge.20260917.md`](done/plan_trace_judge.20260917.md) | A judge that returns its reasoning, an advisory check, and the assertion that reads the route a run took | implemented | `feat/trace-judging` |
+| 18 | [`done/plan_trace_judge.20260917.md`](done/plan_trace_judge.20260917.md) | A judge that returns its reasoning, an advisory check, and the assertion that reads the route a run took | implemented | `feat/route-judge` |
 
 | Status        | Means                                                                     |
 | ------------- | --------------------------------------------------------------------------- |
