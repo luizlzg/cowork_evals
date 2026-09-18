@@ -124,6 +124,12 @@ def test_the_check_judge_is_shown_the_paths_and_never_the_material() -> None:
     )
 
 
+def test_the_check_instruction_asks_for_a_read_and_then_both_fields() -> None:
+    assert CHECK_INSTRUCTION.startswith("Read each file named above.")
+    assert "'reasoning'" in CHECK_INSTRUCTION
+    assert "'verdict'" in CHECK_INSTRUCTION
+
+
 def test_the_enablement_variable_is_not_exported() -> None:
     """It enables `claude plugin eval`, and this is `claude -p`."""
     import cowork_evals.judge as module

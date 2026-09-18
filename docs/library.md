@@ -283,7 +283,7 @@ reads it, which is the rule the file is kept to.
 | Section   | Read by                                                                     | Its keys and defaults are in         |
 | --------- | --------------------------------------------------------------------------- | ------------------------------------ |
 | `cowork:` | The CoWork driver                                                           | [cowork_driver.md](cowork_driver.md) |
-| `eval:`   | The `claude plugin eval` argument list, and the judge's model and vote count | [running_evals.md](running_evals.md) |
+| `eval:`   | The `claude plugin eval` argument list, and the CoWork backend's judge model | [running_evals.md](running_evals.md) |
 | `docker:` | The container backend                                                       | [docker.md](docker.md)               |
 | `panel:`  | The case history and the panel over it                                      | [panel.md](panel.md)                 |
 
