@@ -35,7 +35,6 @@ Read them in this order.
 | [`cli.md`](cli.md)                     | The `cowork_evals` command: every verb, its options, what it refuses, exit codes |
 | [`approaches.md`](approaches.md)       | The two backends: what each proves, what each costs, which part of a case each honours |
 | [`eval_format.md`](eval_format.md)     | The authoring contract: the case tree, frontmatter, graders, what the validator refuses |
-| [`eval_design.md`](eval_design.md)     | Which cases a skill needs, which assertion answers what, and what the fixture has to be |
 | [`running_evals.md`](running_evals.md) | What a run does with a case tree: build status, pinned flags, pass and fail, logs, cost |
 | [`cowork_test.md`](cowork_test.md)     | `cowork_evals test`: a consumer's pytest suite on the CoWork runtime, no model |
 
