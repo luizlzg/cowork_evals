@@ -87,14 +87,6 @@ the desktop driver, [`environments.md`](environments.md) the two Python environm
 own Python over what a run produced. A fact measured during a run belongs with the mechanism
 it binds, not with the run.
 
-**The mechanism, or the design.** Does the statement depend on what the skill under test does?
-Yes, and it is in [`eval_design.md`](eval_design.md). No, and it is with the mechanism it is
-about: a grader type is [`eval_format.md`](eval_format.md), and a check is
-[`checks.md`](checks.md). Which of those two an assertion needs depends on the skill, so it is
-the design's. A fixture splits the same way: where the file lives and the key that grants it are
-the format's, and what it has to contain for a dimension to be measurable is the design's. The format is checked by the validator, and the design is checked by nothing, which
-is why it is written down.
-
 **The driver, or the backend over it.** Does the statement need to know what a case is? Yes,
 and it is in [`cowork_backend.md`](cowork_backend.md). No, and it is in
 [`cowork_driver.md`](cowork_driver.md), which holds the transport and nothing else.
