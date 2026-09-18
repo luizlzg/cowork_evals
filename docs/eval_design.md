@@ -7,52 +7,6 @@ contract over [eval_format.md](eval_format.md), which is the file contract, and 
 [checks.md](checks.md), which is the other assertion mechanism. The procedure a session follows
 to apply these rules is in the `cowork-evals` skill, which [library.md](library.md) places.
 
-<<<<<<< HEAD
-- **Claude Code does not invent a suite.** It reads the skill first, and the reading is what
-  produces the draft.
-- **There is no questionnaire, and the proposal is the question.** No fixed set of questions, in
-  no fixed order, and no question whose answer is already in the skill.
-- **Never ask the developer to predict failure.** Where it fails, what must never happen, which
-  part breaks most often: the answer is usually that they do not know, and the design does not
-  need it.
-- **It never asks which eval and which grader the developer wants.** That question hands the
-  design back.
-- **`I do not know` ends the topic.** It is the authorization to design that part alone, and it is
-  never asked a second way.
-- **The dimension table finds gaps, and the default for every row is no case.** A row earns one
-  from the skill's own text. It is not a quota, and it has no ceiling.
-- **The dimension names never reach the developer.** What a case covers is said in the words the
-  skill under test uses.
-- **A suite answers two questions.** Does the skill still work, and is the skill better than no
-  skill. The same case files answer both.
-- **Usefulness is a delta.** A skill earns its place when the agent does better with it than
-  without it, and the baseline arm is what measures that.
-- **The fixture has to need the tool.** An input small enough to reason about unaided measures the
-  model. Claude Code generates every fixture, and never asks the developer for one.
-- **An assertion is tested both ways.** One sample that has to match, and one that has to not
-  match.
-- **An assertion is a discriminator.** It has to fail a wrong answer, pass a right one, and fail an
-  empty one. Most broken assertions do only the first, and all three are decided at design time.
-- **Assert the requirement, not the rendering.** The wording of the output is unknowable when the
-  suite is written, so an assertion resting on it is a guess dressed as a test.
-- **The firing indicator goes on every case.** Without it a case scores full marks while the plugin
-  never loaded, and nothing in the result says so.
-- **A grader, or a check.** Can a grader type read the target, and say what has to be true of
-  it? Yes, and it is a grader. No, and it is a check.
-- **Every case carries a third assertion that reads the trace.** The deliverable does not show the
-  route, so a model is asked three things: was the route right, were the instructions followed, was
-  anything invented.
-- **A judged rubric is advisory until it is calibrated.** It records its verdict and fails nothing,
-  because a model judging how an agent worked is not yet reliable enough to gate a suite.
-- **Show the judge the skill, not a summary of it.** A rubric restating the skill's rules is a
-  snapshot of one reading of them.
-- **The judge is shown the task too.** The trace does not carry the prompt, so the case's own is what
-  the check passes.
-- **A missing access changes the design.** A case that needs access it does not have measures
-  the access and not the skill.
-- **The split against the format is one question**: does the statement depend on what the skill
-  under test does?
-=======
 - The coverage table decides which cases a suite needs. Every row that applies to the skill gets
   at least one case, and a row that does not apply gets none.
 - An assertion has to fail on its own when the skill regresses, and it has to score in both arms
@@ -60,9 +14,13 @@ to apply these rules is in the `cowork-evals` skill, which [library.md](library.
 - The fixture is the real input at its real size. A smaller one measures the model.
 - A grader reads text. An assertion over anything else is a check.
 - Every pattern and every check is tested against one sample that has to pass and one that has to
-  fail, before the first case runs.
+  fail, before the first case runs. An assertion also has to fail an empty answer, and it has to
+  hold whichever way a correct answer is worded.
+- The firing assertion goes on every case that needs the plugin, and the prompt carries a phrase the
+  skill's description declares.
+- Every case carries one advisory assertion over the trace, because the deliverable does not show
+  the route the run took.
 - A case that needs access it does not have measures the access and not the skill.
->>>>>>> fix/checks-both-arms
 
 Pass and fail over what these cases produce is [running_evals.md](running_evals.md). Which
 backend honours which case feature is [approaches.md](approaches.md). No case field and no
@@ -89,91 +47,18 @@ design.
 | What a missing access changes                                   | yes                  | design |
 
 A statement about a case file that any reader can check without opening the skill is the
-<<<<<<< HEAD
-format's. Everything that needs the skill's own instructions, or the input the skill exists to
-process, is here.
-=======
 format's. A statement that needs the skill's own instructions is here.
->>>>>>> fix/checks-both-arms
 
 The no side is two files, because there are two assertion mechanisms. A statement about a grader
 type is [eval_format.md](eval_format.md), and a statement about a check is
 [checks.md](checks.md). Which of the two an assertion needs depends on the skill, so it is here.
 
-<<<<<<< HEAD
-## Read, then propose
-
-Claude Code does not invent a suite, and it does not interview one out of the developer either. It
-reads the skill under test, and the reading is what produces the draft: the skill's own description
-and instructions, the repository around it, and any suite already there.
-
-There is no questionnaire. No fixed set of questions, in no fixed order, and no question asked
-because a document said to ask it. The proposal is the question. A developer reads one line per
-case and strikes one in a sentence, and that turn is worth more than any question asked before the
-draft exists.
-
-**Never ask the developer to predict failure.** Where the skill fails, what must never happen,
-which part breaks most often: the usual answer is that they do not know, and the design does not
-need the answer. The skill's own instructions state what it has to do, so the case that asserts an
-instruction is the case that catches the failure. A developer holding one of those facts volunteers
-it against the proposal, which is where it is cheapest to act on.
-
-A direct question is for what the proposal cannot be written without, and there is one: access the
-repository does not show. That is a credential, a service or an MCP server a case needs and nothing
-under the plugin root records.
-
-**Never ask the developer for a fixture.** Claude Code generates every one, at the size and the
-shape the fixture section below requires. A developer asked for a sample of the real input usually
-has none to hand, and waiting for one stops the design.
-
-Everything else the design needs is read rather than asked.
-
-| The design needs                              | Where it comes from                                       |
-| --------------------------------------------- | ---------------------------------------------------------- |
-| The job the skill exists for                  | its own description and instructions, confirmed in a sentence rather than asked from nothing |
-| Which capabilities are separable              | its instructions, and one case each                        |
-| What it reads and what it writes              | its instructions and its fixtures, which decide the access and whether the target is text |
-| Whether the model would do the job unaided    | the baseline arm, and no conversation settles it            |
-
-It never asks which eval and which grader the developer wants. That question hands the design
-back to the developer, and a developer who could answer it would have written the case already.
-
-**`I do not know` ends the topic.** It is the common reply, it is the authorization to design that
-part alone, and it is never rephrased and asked a second way. The signal is the reply, and nothing
-in `cowork_evals.yaml` selects it.
-
-A reply that does name something names a symptom, not a case, and the work is to turn it into one.
-`The summaries are too long` is a `regex` over `last_message`. `It makes things up about our
-schema` is a fixture and a `not_contains` pattern per invented value. `It ignores the config file`
-is a `tool_used` with an `input_match` naming that file. `The totals in the spreadsheet come out
-wrong` is a check that opens the workbook, because no grader type reads a cell.
-
-Ask again only when a symptom the developer volunteered does not decide the target. One follow-up
-that settles a target is worth more than a case that grades the wrong thing.
-
-## The coverage dimensions
-
-The table is read after the suite is drafted, to find a gap in it. It is never worked through.
-
-**The default for every row is no case.** A row gets a case when the skill's own text carries the
-condition in its applies-when column, and the proposal says which text that is. A case whose only
-justification is a row's name is struck before it is written: it costs a run on every sweep, and
-its pass says nothing about the skill. The table finds gaps, and is not a quota.
-
-One case may answer more than one row, so the check is that no row the skill's text triggers is
-left with none.
-
-**The names in the first column are this file's vocabulary and stay in it.** What a developer is
-told is what a case covers, in the words the skill under test uses. Naming a dimension asks a
-developer to learn a word to read their own coverage.
-=======
 ## The coverage dimensions
 
 The table finds gaps in a suite that is already drafted. It is not a list to work through, and it
 is not a quota. Every row that the skill's own text triggers gets at least one case, and one case
 may answer more than one row. A case written only to fill a row costs a run on every sweep, and
 its pass says nothing about the skill.
->>>>>>> fix/checks-both-arms
 
 Every grader named below is one of the six types [eval_format.md](eval_format.md) defines, and
 every check is [checks.md](checks.md). This file adds neither.
@@ -191,37 +76,11 @@ every check is [checks.md](checks.md). This file adds neither.
 | Answer relevancy | one question, asked once, whose answer has a shape | `regex` over `last_message` with `count:N` or `not_contains` for the padding shape, `llm` over `last_message` for the criteria, `baseline` when a reference answer exists | the product is the message and not a file |
 | PII and confidential information leakage | a fixture carrying a marked value the answer does not need, and a prompt that does not ask for it | `regex` with `match: not_contains` over `last_message`, over `{source: file, path}` for each artefact, over `trace` for the value reaching a tool call, and over `mock_calls` for it reaching an MCP call, and a check per artefact that is not text | the skill reads something the prompt did not name, and an artefact or an answer could carry a value out of it that nothing asked for |
 
-<<<<<<< HEAD
-The applies-when column is read against the skill's own `SKILL.md`. A row the skill's text does not
-trigger gets no case.
-=======
 The applies-when column is read against the skill's own `SKILL.md`. A row the skill's text does
 not trigger gets no case.
->>>>>>> fix/checks-both-arms
 
 Six things the table does not decide.
 
-<<<<<<< HEAD
-- **A row whose only grader is `llm` or `baseline` leaves the exit code silent about it.** Those
-  two are judged, are printed, and carry no verdict. Give every dimension a release must not
-  ship a structural grader as well, or a check, which is judged or not and decides either way.
-  See [running_evals.md](running_evals.md).
-- **Prefer a structural grader.** A judged grader over a non-deterministic agent is a flaky
-  verdict, and a judge is noisy on a long input. Where a structural grader can decide a
-  dimension, it decides it.
-- **A `regex` anchor covers the whole target** unless `flags` carries `m`. The snapshot is
-  [eval_format.md](eval_format.md).
-- **Three dimensions need a staged fixture**: context relevancy, leakage, and the malformed
-  input form of edge cases. A fixture is a `context.*` key, so each of those cases carries
-  `no-cowork`. See [eval_format.md](eval_format.md).
-- **The leakage row's marked value is a fixture the case owns.** It is never the credential
-  `docker.env_passthrough` forwards. `run.log` is captured at the file descriptor level, so a
-  case that makes the agent print a forwarded value puts that value in the log. See
-  [docker.md](docker.md).
-- **Directory coverage is not dimension coverage.** One `evals/<skill>/` per skill is what `run`
-  reports and `--require-coverage` enforces. See [cli.md](cli.md). Nothing enforces the table
-  above, which is why it is written here.
-=======
 | The rule                                                    | Where the detail is                         |
 | ----------------------------------------------------------- | ------------------------------------------- |
 | Prefer a structural grader wherever one can decide a row. A judged grader over a non-deterministic agent is a flaky verdict, and a judge is noisy on a long input | [running_evals.md](running_evals.md)        |
@@ -230,7 +89,6 @@ Six things the table does not decide.
 | Context relevancy, leakage, and the malformed form of edge cases each need a staged fixture, which is a `context.*` key, which makes the case `no-cowork` | [eval_format.md](eval_format.md)            |
 | The leakage row's marked value is a fixture the case owns, never a credential `docker.env_passthrough` forwards. `run.log` is captured at the file descriptor level, so a run that prints a forwarded value puts it in the log | [docker.md](docker.md)                      |
 | Directory coverage is not dimension coverage. `--require-coverage` enforces one `evals/<skill>/` per skill and nothing enforces this table | [cli.md](cli.md)                            |
->>>>>>> fix/checks-both-arms
 
 ## The two questions a suite answers
 
@@ -273,14 +131,8 @@ Realism is also what makes the dimension table decidable. Edge cases, context re
 hallucination each need an input carrying the thing the row asserts, and a fixture written to be
 readable inside the case file carries none of them.
 
-<<<<<<< HEAD
-A fixture at that size is generated rather than typed, generated by Claude Code rather than asked of
-the developer, and committed rather than staged at run time.
-Where the file lives, and the key that grants it, are [eval_format.md](eval_format.md).
-=======
 A fixture at that size is generated rather than typed, and committed rather than staged at run
 time. Where the file lives, and the key that grants it, are [eval_format.md](eval_format.md).
->>>>>>> fix/checks-both-arms
 
 ## A grader or a check
 
@@ -314,91 +166,7 @@ reached its verdict, `run.judge` included, so a row only a model can settle is n
 printed note. Every check of every selected plugin is imported before the first case starts, so a
 check that does not import exits 3 having spent nothing.
 
-<<<<<<< HEAD
-- **A check decides the exit code however it reached its verdict.** `run.judge` included. So a
-  dimension only a model can settle is not condemned to a printed note: an `llm` grader is judged
-  and silent, and a check returning what `run.judge` returned is judged and binding.
-- **A check costs nothing when it cannot run.** Every check of every selected plugin is imported
-  before the first case starts, so a check that does not import exits 3 having spent nothing.
-
-## The deliverable does not show the route
-
-**Every case carries a third assertion that reads the trace, and it is advisory.** It is a check
-returning what `run.judge` returned, shown three things as paths and asking three questions. A case
-without one is decided entirely on what the run delivered, and what the run delivered does not say
-how the run got there.
-
-A grader and a check both read what the run produced. Neither can see how the run reached it. A
-workbook whose totals are right was produced either by the command the skill documents or by a
-script that reimplemented it, and the file is byte-comparable in both cases. So a suite of graders
-and checks passes a run that never used the skill, and passes a run that used it and then wrote over
-its output.
-
-That is the reward-hacking shape, and it is reachable without any intent to hack: measured on a
-spreadsheet suite, a case scored 1.00 on a run that called the skill's own dedup command and then
-saved a Python script's output over the file it had produced. Every assertion on the case passed,
-because the delivered workbook was deduplicated.
-
-The three things the judge is shown are paths and never text, so nothing is truncated.
-
-| Shown                    | Is                                                                              |
-| ------------------------ | ------------------------------------------------------------------------------- |
-| The trace                | `run.trace`, in whichever format the backend that produced the run wrote          |
-| The skill's own document | the `SKILL.md` under test, never a summary of it and never a rubric restating it  |
-| The task                 | the case's own `prompt.md`, frontmatter stripped and the body passed              |
-
-The task is there because the trace does not carry it. A collected trace opens on a `system` record
-and goes straight into the agent's work, so what the agent was asked is nowhere in it, and a judge
-that does not know the task cannot say whether the route suited it. Reading the prompt rather than
-restating it in the rubric is also what moves the assertion when the prompt is edited. `run.judge`
-and `@check(advisory=True)` are both [checks.md](checks.md).
-
-**It is advisory until it is calibrated.** `@check(advisory=True)` runs the check and records its
-verdict, and a failure prints as a note instead of failing the run. A judge asked how an agent worked
-is not yet reliable enough to gate a suite: measured over three runs whose right answer was known, one
-model got two and a slower one got one, both erring towards leniency by reading a skill's escape to a
-script more broadly than it was written. A miss would otherwise turn into a red suite, and a suite
-nobody trusts is worse than one assertion fewer. The verdict still lands in the document, which is what
-a rubric is calibrated against. Drop the argument when the misses stop.
-
-It asks three questions and no more.
-
-| The question                    | The run fails it when                                                      |
-| ------------------------------- | -------------------------------------------------------------------------- |
-| Was the route the right one     | the deliverable came from something other than what the skill documents for it, or from a command that ran and was then superseded |
-| Were the instructions followed  | the skill states a thing to do, or an order to do it in, and the run did not |
-| Was anything invented           | a value in the final message appears in no tool result                      |
-
-Six rules, and the first is what makes the assertion a regression test.
-
-- **Show the judge the skill, not a summary of it.** Name the subject in the rubric and let the judge
-  find the wording: *the document says what this command does when a sheet holds formulas, and
-  elsewhere says what to do about that; find both*. A rubric that restates the rules is a snapshot of
-  one reading of the skill, and it keeps passing a run the skill itself would now fail.
-- **A rubric may not demand a route the skill cannot take.** Read the command list before writing the
-  clause. Measured: a skill's pitfalls section said to convert formulas to values before sorting and
-  none of its forty commands did that, so the skill's own escape to a script was the only route left
-  open. The clause demanding otherwise failed every run for a gap in the skill.
-- **A split vote is a rubric fault before it is a judge fault.** The run above went two to one, and
-  three to nothing on the same trace once the impossible clause was gone.
-- **Judge the route, not the result.** Whether the numbers are right is what the graders and the
-  checks already decide. A rubric doing both spends votes re-deciding that and splits them on the
-  half it was not asked for.
-- **The baseline arm is not held to the route.** The route and the instructions are both the skill's,
-  so a run with no plugin loaded has neither, and asserting them there fails by construction and
-  inflates the delta. This is the rule in [checks.md](checks.md) against a check that cannot hold
-  without the plugin, in the one place it is easiest to break.
-- **It is the layer over the others and not a replacement for them.** A judged rubric is the most
-  expensive assertion in a suite and the least deterministic. What a `regex`, a `file_exists` or a
-  check can settle, it settles.
-
-One judged assertion costs `eval.judge_votes` calls per run per arm, so it is one per case and not
-one per question. [running_evals.md](running_evals.md).
-
-## An assertion is tested both ways
-=======
 ## Testing an assertion before the first case runs
->>>>>>> fix/checks-both-arms
 
 An assertion is not known to measure anything until it has been tested both ways. One that cannot
 fail and one that cannot pass report the same thing on every run, and both read as a working
@@ -416,46 +184,36 @@ Both tests run before the first case does, because neither needs a model. Test a
 engine the harness grades with rather than the one the test is written in, because two regular
 expression engines agree on most patterns and not on all of them.
 
-Both of those samples are ones the author wrote, so passing them says the assertion works against the
-output the author pictured. The next section is what that does not catch.
-
-### An assertion is a discriminator
-
-There is no output to look at when a suite is written, and there will not be one until it runs. So
-the discipline is not to guess the output better. It is to write assertions that do not depend on
-having seen it, and three questions settle that without a run.
+Both samples are written by the same author as the assertion, so passing them proves only that the
+assertion works on the output the author pictured. Three questions cover the rest, and none of them
+needs a run.
 
 | Ask                          | The failure it catches                                                         |
 | ---------------------------- | ------------------------------------------------------------------------------ |
-| Does it fail a wrong answer  | an assertion that cannot fail. This is the one that always gets asked           |
-| Does it pass a right answer  | an assertion the correct answer trips, which scores the skill down for working  |
+| Does it fail a wrong answer  | an assertion that cannot fail                                                   |
+| Does it pass a right answer  | an assertion the correct answer trips, which scores the skill down for working   |
 | Does it fail an empty answer | a case built only from negative assertions, which silence satisfies             |
 
-The second question is what inverts a delta, and a `not_contains` is where it usually happens: the
-vocabulary a wrong answer uses is often the vocabulary a right answer uses. Forbidding a word can
-therefore fail every thorough answer while passing every vague one, and because the plugin is what
-makes answers thorough, the arm with it scores below the arm without. The number then reads as a
-broken skill. Ask it as a question about the correct answer, which needs no run: **would an answer
-that gets this right still contain the string?** If yes, the assertion belongs on what the answer
-concluded, not on which words it used.
+The second question is where a `not_contains` inverts a delta. The vocabulary a wrong answer uses is
+often the vocabulary a right answer uses, so forbidding a word can fail every thorough answer and
+pass every vague one. The plugin is what makes answers thorough, so the arm with it then scores
+below the arm without, and the number reads as a broken skill. Ask whether an answer that gets this
+right would still contain the string. If it would, assert what the answer concluded instead.
 
 The third question is the shape a case takes when its fixture is clean and there is nothing to find.
-Every assertion on it is negative, so an answer that did no work satisfies all of them, and so does
-the baseline arm. Such a case needs something positive to clear as well: evidence in the output that
-the work happened.
+Every assertion on it is negative, so an answer that did no work satisfies all of them. Such a case
+needs something positive to clear as well.
 
 ### Assert the requirement, not the rendering
 
-A requirement is knowable at design time. Its rendering is not. *The review concludes that this item
-fails* is fixed by the fixture; whether that arrives as a table row, a bold bullet, a symbol, or a
-sentence with the verdict before the subject is not, and every one of those is a correct answer.
+A requirement is knowable at design time and its rendering is not. That a review concludes an item
+fails is fixed by the fixture. Whether that arrives as a table row, a bold bullet, a symbol or a
+sentence is not, and every one of those is a correct answer.
 
-One technique makes the difference visible without a run. Before writing the assertion, write down
-the same correct answer two or three times, in deliberately different styles. An assertion that
-passes only one of them is pinned to a rendering, and the fix is usually to move it from a pattern to
-a check, because a check can read a whole line, or a whole file, and decide what it says.
-
-That principle picks the form whenever two would express the same thing.
+Write the same correct answer two or three times in deliberately different styles before writing the
+assertion. One that passes only one of them is pinned to a rendering, and the fix is usually to move
+it from a pattern to a check, because a check can read a whole line or a whole file and decide what
+it says.
 
 | Rather than                                   | Prefer                                                              |
 | --------------------------------------------- | ------------------------------------------------------------------- |
@@ -464,54 +222,82 @@ That principle picks the form whenever two would express the same thing.
 | every expected finding, unanimously            | a floor, since the agent's consistency is not knowable either       |
 | the tool the author would have reached for     | the evidence the tool leaves behind, which any route produces       |
 
-The floor row is the same argument as the rest. An assertion demanding every finding assumes zero
-variance from a non-deterministic agent, and that assumption is not available at design time any more
-than the wording is. Ask what number would prove the skill did the job, rather than what number a
-perfect run would produce.
+Make every assertion say what it saw and not only that it failed. A message naming the expectation
+and the value found is what separates a skill that got it wrong from an assertion that was written
+wrong.
 
-Where a fixture carries something real that no reasonable answer may be required to catch, keep it in
-an advisory check rather than the gate. It records the number without failing the suite, which is how
-a later run shows the skill improving.
+## Firing, and the two halves of it
 
-Finally, make every assertion say what it saw and not only that it failed. A message naming the
-expectation and the value found is what separates a skill that got it wrong from an assertion that
-was written wrong, and without it the two are indistinguishable in a result document.
+Whether the plugin loaded decides how to read every other number in a case.
 
-### Firing is two things, and a case needs both
-
-Whether the plugin loaded is the one fact that decides how to read every other number in a case, and
-it has an assertion side and a prompt side. Getting one without the other leaves the case unreadable.
-
-**The assertion detects firing.** A `tool_used: Skill` grader on the activation case alone leaves
-every other case unable to tell a bad answer from a plugin that never loaded, because both look like a
-low score. Worse, a case can score full marks having never loaded the plugin, whenever its other
-assertions are ones the model satisfies unaided, and the result then reads as success. Under
-`--ablation with-without` the harness stops scoring that grader and reports it as an indicator, so it
-moves no delta and costs nothing; in a one-arm run it gates. Both are wanted, so it goes on every case
-that needs the plugin and not only on the case that exists to test firing.
+**The assertion detects firing.** A `tool_used: Skill` grader goes on every case that needs the
+plugin, not only on the case that exists to test activation. Without it a case can score full marks
+having never loaded the plugin, whenever its other assertions are ones the model satisfies unaided,
+and nothing in the result says so. Under `--ablation with-without` the harness stops scoring that
+grader and reports it as an indicator, so it moves no delta; in a one-arm run it gates. See
+[running_evals.md](running_evals.md).
 
 **The prompt causes firing.** A skill's description declares the phrases it triggers on, so those
-phrases are knowable at design time and are the only part of the output side of this that is. A case
-meant to exercise a capability, whose prompt carries none of them, measures the trigger gap instead:
-its score becomes a fact about the description rather than about the capability, and it will look like
-a capability failure. Read the description's trigger list before writing any prompt, and decide per
-case which of the two the case is for.
+phrases are knowable at design time.
 
 | The case is for      | The prompt                                                                 |
 | -------------------- | -------------------------------------------------------------------------- |
-| a capability         | carries a phrase the description declares, close enough together to read as that phrase |
+| a capability         | carries a phrase the description declares, with its words adjacent          |
 | the trigger boundary | deliberately carries none, and sits near the subject so over-triggering shows |
 
-Asking for the outcome and avoiding the skill's own name are both still the rule, and neither means
-avoiding the subject. The name and the method stay out; the vocabulary the description advertises is
-what a real user says. A phrase whose words end up scattered across a sentence is not the phrase: keep
-them adjacent, or the case is relying on the model to generalise rather than on the trigger the skill
-declares.
+A capability case whose prompt carries none of those phrases measures the trigger gap instead, and
+its score becomes a fact about the description rather than about the capability. Both halves are
+checkable by reading the description and the prompt side by side. A capability the skill documents
+and its description declares no phrase for is a finding about the skill, to report rather than to
+work around in a prompt.
 
-Both halves are checkable with no run, by reading the description and the prompt side by side. A
-capability the skill documents and its description declares no phrase for is a finding about the
-skill, to report rather than to work around in a prompt, because a user asking for it in their own
-words gets nothing either.
+## The deliverable does not show the route
+
+Every case carries one more assertion, over the trace, and it is advisory. It is a check returning
+what `run.judge` returned, shown three paths and asking three questions.
+
+A grader and a check both read what the run produced, and neither can see how the run reached it. A
+workbook whose totals are right was produced either by the command the skill documents or by a
+script that reimplemented it, and the file is byte-comparable in both cases. Measured on a
+spreadsheet suite, a case scored 1.00 on a run that called the skill's own dedup command and then
+saved a Python script's output over the file it had produced.
+
+| Shown                    | Is                                                                              |
+| ------------------------ | ------------------------------------------------------------------------------- |
+| The trace                | `run.trace`, in whichever format the backend that produced the run wrote          |
+| The skill's own document | the `SKILL.md` under test, never a summary of it and never a rubric restating it  |
+| The task                 | the case's own `prompt.md`, frontmatter stripped and the body passed              |
+
+The three are paths and never text, so nothing is truncated. The task is there because the trace
+does not carry it: a collected trace opens on a `system` record and goes straight into the agent's
+work. Reading the prompt rather than restating it in the rubric also moves the assertion when the
+prompt is edited. `run.judge` and `@check(advisory=True)` are both [checks.md](checks.md).
+
+| The question                    | The run fails it when                                                      |
+| ------------------------------- | -------------------------------------------------------------------------- |
+| Was the route the right one     | the deliverable came from something other than what the skill documents for it, or from a command that ran and was then superseded |
+| Were the instructions followed  | the skill states a thing to do, or an order to do it in, and the run did not |
+| Was anything invented           | a value in the final message appears in no tool result                      |
+
+It is advisory until it is calibrated. A judge asked how an agent worked is not yet reliable enough
+to gate a suite: over three runs whose right answer was known, one model got two and a slower one
+got one, both erring towards leniency. The verdict still lands in the document, which is what a
+rubric is calibrated against. Drop the argument when the misses stop.
+
+Six rules for the rubric.
+
+| The rule                                                | Because                                                                      |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Show the judge the skill, not a summary of it           | a rubric that restates the rules is a snapshot of one reading, and it keeps passing a run the skill itself would now fail |
+| Name the subject and let the judge find the wording     | the assertion then moves with the skill on its next edit                      |
+| Never demand a route the skill cannot take              | read the command list first. A clause asking the impossible fails every run for a gap in the skill |
+| A split vote is a rubric fault before a judge fault     | the clause, not the model, is usually what two votes read differently         |
+| Judge the route, not the result                         | the graders and the checks already decide whether the numbers are right       |
+| Do not hold the baseline arm to it                      | the route and the instructions are the skill's, so asserting them with no plugin loaded inflates the delta |
+
+It is the most expensive assertion in a suite and the least deterministic. It costs
+`eval.judge_votes` calls per run per arm, so it is one per case and not one per question, and what a
+`regex`, a `file_exists` or a plain check can settle it does not touch.
 
 ## Access
 
@@ -528,30 +314,5 @@ A case that needs access it does not have measures the access and not the skill.
 | A wheel the skill imports     | an import error inside the session, in every case at once        | `cowork_evals test` catches it before an eval is written over it. See [runtime.md](runtime.md) |
 | The deployed stack            | the container, and not CoWork                                    | the honoured subset in [approaches.md](approaches.md)                       |
 
-<<<<<<< HEAD
-Two rules follow, and the route above decides neither.
-
-- When Claude Code designs the suite, it designs around the access that exists.
-- When the developer proposes a case that needs access that is not there, Claude Code says so
-  before it writes the case, and names the route that would supply it.
-
-## The proposal
-
-The suite is proposed before a file is written: one line per case. A developer reads that list and
-strikes a case in one sentence, and the same list read after the cases exist costs a rewrite.
-
-| The line carries               | Written as                                                                 |
-| ------------------------------ | -------------------------------------------------------------------------- |
-| What the case covers           | plain words, in the vocabulary the skill under test uses, and never a dimension name |
-| How it is decided              | what has to be true of the output for the case to pass, in plain words. Not the grader type and not the mechanism, which are neither the developer's decision nor readable without this file |
-| The access it needs            | and a case is proposed only where that access exists                        |
-| Whether it carries `no-cowork` | which follows from the keys the case writes                                 |
-
-The last two are what a developer objects to, and both are invisible in a case name.
-
-Every case also carries the assertion that reads how the run reached its answer, so the proposal
-states that once rather than on every line.
-=======
 A suite is designed around the access that exists. A case that needs access that is not there is
 named as such before it is written, together with the route above that would supply it.
->>>>>>> fix/checks-both-arms

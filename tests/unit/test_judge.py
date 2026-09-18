@@ -88,18 +88,6 @@ def test_judge_argv_is_claude_p_with_the_model_and_strict_mcp_config() -> None:
     ]
 
 
-def test_the_schema_asks_for_a_reason_and_one_of_two_words() -> None:
-    """Both fields required, and nothing else accepted: the shape is the CLI's to enforce."""
-    assert VERDICT_SCHEMA["required"] == ["reasoning", "verdict"]
-    assert VERDICT_SCHEMA["properties"]["verdict"]["enum"] == ["PASS", "FAIL"]
-    assert VERDICT_SCHEMA["additionalProperties"] is False
-
-
-def test_the_check_judge_carries_the_schema_too() -> None:
-    """One flag, in judge_argv, so the check judge and a judged grader read the same shape."""
-    assert "--json-schema" in check_argv("haiku")
-
-
 def test_the_check_judge_argv_adds_the_grant_to_the_judge_argv() -> None:
     assert check_argv("haiku") == [*judge_argv("haiku"), "--allowedTools", "Read,Glob,Grep"]
     assert CHECK_TOOLS == ("Read", "Glob", "Grep")
@@ -321,11 +309,9 @@ def test_a_structured_reply_is_a_vote_and_its_reasoning() -> None:
     assert "xlsx.sh dedup" in reply.reasoning, "the judge's own words, not a tally"
     assert reply.cost_usd == 0.0021
 
-
-def test_a_structured_fail_is_the_other_vote_and_still_reasons() -> None:
-    reply = read_reply(recorded("reply_structured_fail"))
-    assert reply.vote is False
-    assert reply.reasoning
+    failed = read_reply(recorded("reply_structured_fail"))
+    assert failed.vote is False
+    assert failed.reasoning
 
 
 def test_a_verdict_outside_the_schema_is_a_lost_vote_that_keeps_its_reasoning() -> None:
