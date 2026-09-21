@@ -45,7 +45,7 @@ from . import judge as judging
 from . import results
 from .cases import CHECKS_DIR, Grader, check_files
 from .harness import RESULT_NAME
-from .results import ARM_WITH, DECLARED_UNRUNNABLE
+from .results import ARM_WITH, ARM_WITHOUT, ARMS, DECLARED_UNRUNNABLE
 from .traces import LAST_MESSAGE_NAME, TRACE_NAME, WORKSPACE_NAME
 
 # The attribute `@check` writes, and the grader type a check result carries in the document.
@@ -557,8 +557,11 @@ def run(output_dir: Path | str, root: Path | str, *, judge_model: str) -> list[s
     document in place: each check result into that run's `graders[]`, each definition into
     the case's, and the run's score, the case's aggregates and the spend recomputed after.
 
-    Only the `with` arm is walked. The baseline arm runs without the plugin, so an assertion
-    about what the plugin produced has nothing to read there.
+    Every arm a case carries is walked. Under `--ablation with-without` the baseline arm's runs
+    are collected into `traces/<case>/without/run-<n>` like any other run, so a check reads the
+    artefact the baseline produced and the two arms are compared on the same assertions. A check
+    is the only way to say what is inside a workbook, a deck or a PDF, so a suite whose
+    assertions are checks would otherwise have no delta at all.
 
     A case carrying `declaredUnrunnable` has no run and produces no check result. It is
     counted, exactly as it is today.
@@ -602,13 +605,14 @@ def run(output_dir: Path | str, root: Path | str, *, judge_model: str) -> list[s
 
 
 def _recount(document: dict[str, Any]) -> None:
-    """The suite's two means, over the case aggregates the checks just moved.
+    """The suite's means, over the case aggregates the checks just moved.
 
     `overallScore` is the mean case score and `overallPassRate` the mean case pass rate,
-    which is the reference's rule and `results._aggregates`'s. `casesTotal` and `casesPassed`
-    are untouched: `--threshold` is pinned to 0, so every case counts as passed there whatever
-    a check said, and this package decides pass and fail. `meanDelta` is untouched for the
-    same reason the delta is: a check runs on the with-arm alone. docs/checks.md.
+    which is the reference's rule and `results._aggregates`'s. `meanDelta` is the mean of the
+    case deltas that are defined, which is the same rule, and it moves because a check now
+    scores both arms. `casesTotal` and `casesPassed` are untouched: `--threshold` is pinned to
+    0, so every case counts as passed there whatever a check said, and this package decides
+    pass and fail. docs/checks.md.
     """
     counted = [
         case
@@ -625,6 +629,14 @@ def _recount(document: dict[str, Any]) -> None:
     aggregates["overallScore"] = sum(scores) / len(counted)
     aggregates["overallPassRate"] = sum(rates) / len(counted)
 
+    if "meanDelta" not in aggregates:
+        # The harness writes it only for a two-arm document whose arms are comparable.
+        return
+    deltas = [(case.get("aggregates") or {}).get("delta") for case in counted]
+    defined = [one for one in deltas if isinstance(one, int | float) and not isinstance(one, bool)]
+    if defined:
+        aggregates["meanDelta"] = sum(defined) / len(defined)
+
 
 def _each_case(
     case: dict[str, Any],
@@ -633,24 +645,56 @@ def _each_case(
     judge_model: str,
     warnings: list[str],
 ) -> float:
-    """One case: every run of its with-arm, then the case's own two numbers."""
+    """One case: every run of every arm it carries, then the case's numbers per arm."""
     case_dir = plugin / str(case.get("dir") or "")
     definitions = case.setdefault("graders", [])
     if isinstance(definitions, list):
         definitions += [definition(one.name) for one in checks]
 
     spent = 0.0
-    arm = (case.get("arms") or {}).get(ARM_WITH) or []
-    runs = [entry for entry in arm if isinstance(entry, dict)]
-    for index, entry in enumerate(runs, start=1):
-        spent += _each_run(entry, checks, case_dir, index, judge_model, warnings)
-    if runs:
-        case["aggregates"] = {
-            **(case.get("aggregates") or {}),
-            "score": sum(score(entry) for entry in runs) / len(runs),
-            "passRate": sum(1 for entry in runs if entry.get("passed")) / len(runs),
-        }
+    arms = case.get("arms") or {}
+    checked: dict[str, list[dict[str, Any]]] = {}
+    for name in ARMS:
+        runs = [entry for entry in arms.get(name) or [] if isinstance(entry, dict)]
+        for index, entry in enumerate(runs, start=1):
+            spent += _each_run(entry, checks, case_dir, index, judge_model, warnings)
+        if runs:
+            checked[name] = runs
+    _case_aggregates(case, checked)
     return spent
+
+
+def _case_aggregates(case: dict[str, Any], checked: dict[str, list[dict[str, Any]]]) -> None:
+    """The case's numbers, one pair per arm it carries, and the delta over them.
+
+    The with-arm pair is this layer's own output and is always written. Every baseline number is
+    recomputed only where the document already carries it, and none is introduced: the harness
+    omits `scoreWithout` and `delta` together when the two arms were graded under different
+    rules, and that judgement stays the harness's. A check moving a score is not a reason to
+    resurrect a comparison between arms the document says are not comparable.
+    docs/running_evals.md.
+    """
+    aggregates = dict(case.get("aggregates") or {})
+    with_runs = checked.get(ARM_WITH)
+    if with_runs:
+        aggregates["score"] = sum(score(entry) for entry in with_runs) / len(with_runs)
+        aggregates["passRate"] = sum(1 for entry in with_runs if entry.get("passed")) / len(
+            with_runs
+        )
+    without_runs = checked.get(ARM_WITHOUT)
+    if without_runs:
+        if "scoreWithout" in aggregates:
+            aggregates["scoreWithout"] = sum(score(entry) for entry in without_runs) / len(
+                without_runs
+            )
+        if "passRateWithout" in aggregates:
+            aggregates["passRateWithout"] = sum(
+                1 for entry in without_runs if entry.get("passed")
+            ) / len(without_runs)
+    if "delta" in aggregates and "scoreWithout" in aggregates and with_runs and without_runs:
+        aggregates["delta"] = aggregates["score"] - aggregates["scoreWithout"]
+    if aggregates:
+        case["aggregates"] = aggregates
 
 
 def _each_run(
