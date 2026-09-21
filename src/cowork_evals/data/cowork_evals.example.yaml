@@ -48,6 +48,7 @@ eval:
 docker:
   # platform: linux/arm64
   # claude_code_version: 2.1.265
+  # credential: login
   # login_dir: ~/.cache/cowork_evals/claude
   # An extra root CA, for a host whose network inspects TLS. Unset, or naming a file that
   # is not there, passes nothing. The certificate never enters this repository.
