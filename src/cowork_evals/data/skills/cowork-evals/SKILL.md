@@ -1,6 +1,6 @@
 ---
 name: cowork-evals
-description: Write and run evals for Claude CoWork skills and plugins with the cowork_evals command, and run a plugin's own pytest suite on the CoWork runtime. TRIGGER when writing or fixing an eval case, a prompt.md, a grader or a check under an evals/ directory, when a cowork_evals command fails, when configuring cowork_evals.yaml, or when writing plugin code that has to run inside a CoWork session.
+description: Decide which evals a Claude CoWork skill or plugin needs, write them, review the ones it already has, and run them with the cowork_evals command, and run a plugin's own pytest suite on the CoWork runtime. TRIGGER when a skill or plugin needs evals and has none, when asked to analyse, review, audit or critique the evals a skill already has, when asked whether a suite is complete, robust or covers the whole skill, when asked to redesign a suite, strengthen it, add harder or more realistic cases, or find what it does not cover, when asked what to evaluate or which grader to use, when writing or fixing an eval case, a prompt.md, a grader or a check under an evals/ directory, when a cowork_evals command fails, when configuring cowork_evals.yaml, or when writing plugin code that has to run inside a CoWork session.
 ---
 
 # cowork_evals
@@ -15,6 +15,7 @@ file is the authority for anything below.
 
 | Question                                | Read                     |
 | --------------------------------------- | ------------------------ |
+| Which cases to write, and which assertion answers what | `docs eval_design`   |
 | How to write a case, field by field     | `docs eval_format`       |
 | Every verb, option and exit code        | `docs cli`               |
 | Which backend proves what, and its cost | `docs approaches`        |
@@ -24,6 +25,18 @@ file is the authority for anything below.
 | An assertion no grader type can express | `docs checks`            |
 | Every grader field the format is silent on | `docs claude_code/plugin_eval_reference` |
 | What `panel` shows, and the records behind it | `docs panel`           |
+
+## What to evaluate
+
+**Reading `docs eval_design` is mandatory, not optional.** Open that file and read it before
+designing a suite, before adding a case to one, before running a suite, and before reporting what a
+run produced. Answering any of those from this file is wrong, and a suite designed without that
+document is a guess whatever it scores.
+
+It covers how a suite is designed and what a developer is never asked, which cases a skill needs,
+which assertion answers which question, what the fixture has to be, how an assertion is tested
+before a case runs, what a case measures when it lacks the access it reads, and which of a run's
+failures are defects in the eval rather than findings about the skill. None of it is repeated here.
 
 ## The command
 
@@ -127,7 +140,7 @@ not one.
 
 One grader per file under `graders/`, frontmatter then the rubric or pattern. Structural
 graders are deterministic and decide the exit code. Judged graders call a model and are
-printed. Prefer a structural one.
+printed.
 
 | Type          | Takes                                                                     | Class      |
 | ------------- | ------------------------------------------------------------------------- | ---------- |
@@ -180,7 +193,7 @@ max: 0
 A grader type cannot say what is inside the file the run wrote. A check can: it is your own
 Python, in the case's `checks/` directory, run on the host after the run is graded, on either
 backend. Its verdict is a grader result in the same document, so a failed check fails
-the run like a failed `regex` grader.
+the run like a failed `regex` grader, unless it is marked advisory.
 
 ```python
 # evals/<skill>/<case>/checks/assertions.py
@@ -204,6 +217,12 @@ def the_deck_is_readable(run: Run) -> Result:
     subprocess.run(["soffice", "--convert-to", "png", run.file("deck.pptx")], cwd=run.scratch)
     return run.judge("Every slide carries a title, and no text is clipped.", run.scratch)
 ```
+
+`@check(advisory=True)` runs the check and decides nothing: the verdict is recorded, a failure
+prints as a note, and it is out of the score and out of the exit code. Use it for an assertion
+whose mechanism is not calibrated yet, which is what a judged rubric over a trace is, and return
+the real verdict rather than swallowing it, because the recorded failures are what you calibrate
+against. Drop the argument to make the same check binding.
 
 `None` or `True` passes, `False` fails, a `Result` decides, and any exception fails the check
 carrying its message. The name is `<file stem>.<function name>`. `run` carries `workspace`,
