@@ -34,6 +34,9 @@ cowork:
 eval:
   # model: sonnet
   # judge_model: haiku
+  # How many times a judged assertion is asked. The answer is the majority, so one vote
+  # needs one pass and three need two. One costs a third and reads the reasoning instead.
+  # judge_votes: 3
   # allow_tools: [Bash, Read, Glob, Grep, Write, Edit, WebFetch, Skill]
   # `with-without` runs every case a second time with no plugin loaded, and the verdict
   # then decides on each case's delta rather than on its score. It costs twice as much

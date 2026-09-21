@@ -270,6 +270,32 @@ def test_the_line_one_check_writes(collected: Path) -> None:
     assert "judge" not in line
 
 
+# Advisory checks. docs/checks.md.
+
+
+def test_an_advisory_failure_keeps_its_verdict_and_moves_no_score() -> None:
+    passing = checks.grader_result(checks.Outcome(name="a.one", passed=True, explanation=""))
+    advised = checks.grader_result(
+        checks.Outcome(name="a.two", passed=False, explanation="the judge said FAIL", advisory=True)
+    )
+    assert advised["passed"] is False
+    assert advised["scored"] is False
+    assert checks.score({"graders": [passing, advised]}) == 1.0
+
+
+def test_discovery_reads_the_advisory_marker_off_the_function(tmp_path: Path) -> None:
+    """Both decorator forms mark, and the loader is what puts the flag on the `Check`."""
+    case = tmp_path / "case"
+    (case / "checks").mkdir(parents=True)
+    (case / "checks" / "a.py").write_text(
+        "from cowork_evals.checks import Run, check\n\n"
+        "@check\ndef plain(run: Run) -> None:\n    return None\n\n"
+        "@check(advisory=True)\ndef advised(run: Run) -> None:\n    return None\n"
+    )
+    found = {one.name: one.advisory for one in checks.discover(case)}
+    assert found == {"a.plain": False, "a.advised": True}
+
+
 # The layer: what it appends to the document, and what it writes beside the trace.
 
 

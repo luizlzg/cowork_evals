@@ -30,6 +30,7 @@ a check and a run with no collected files are each a check result carrying the r
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import importlib.util
 import json
@@ -52,7 +53,14 @@ from .traces import LAST_MESSAGE_NAME, TRACE_NAME, WORKSPACE_NAME
 # `check` is not in `cases.JUDGED`, so `verdict._judge_grader` decides a failed one the way it
 # decides a failed structural grader, with no new condition anywhere. docs/checks.md.
 MARKER = "__cowork_evals_check__"
+ADVISORY_MARKER = "__cowork_evals_advisory__"
 CHECK_TYPE = "check"
+
+# The type an advisory check's definition carries, which is what tells the verdict to print a
+# failure and decide nothing on it. A distinct type rather than a flag on the result, because
+# `verdict._judge_grader` learns a result's class from its definition and has no other route.
+# docs/checks.md.
+ADVISORY_TYPE = "check-advisory"
 
 # Every check weighs the same. There is no weight on `@check` and no way to write one.
 WEIGHT = 1
@@ -199,12 +207,12 @@ class Run:
 
         text = judging.compose_paths(prompt, tuple(names))
         argv = judging.check_argv(self.judge_model, tuple(add_dirs))
-        replies = [judging.ask(argv, text, cwd=root) for _ in range(judging.VOTES)]
+        replies = [judging.ask(argv, text, cwd=root) for _ in range(judging.resolve_votes())]
         judged = judging.tally(_judge_grader(prompt), replies, "\n".join(names))
         self.calls.append(
             JudgeCall(
                 prompt=text,
-                replies=tuple(reply.word for reply in replies),
+                replies=tuple(_said(reply) for reply in replies),
                 cost_usd=judged.cost_usd,
             )
         )
@@ -224,6 +232,7 @@ class Check:
     path: Path
     function: Callable[[Run], Any] | None = None
     error: str | None = None
+    advisory: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -239,6 +248,7 @@ class Outcome:
     traceback: str | None = None
     calls: tuple[JudgeCall, ...] = ()
     cost_usd: float = 0.0
+    advisory: bool = False
 
     def document(self) -> dict[str, Any]:
         """One `checks.jsonl` line."""
@@ -260,6 +270,17 @@ class Outcome:
         return entry
 
 
+def _said(reply: judging.Reply) -> str:
+    """One reply, as `checks.jsonl` keeps it: the vote, and what the judge said decided it.
+
+    The word alone is what a reader of a failed judged check does not have. A reply that carried no
+    reasoning, which is the older shape, is the word by itself.
+    """
+    if not reply.reasoning:
+        return reply.word
+    return f"{reply.word}: {reply.reasoning}"
+
+
 def _judge_grader(prompt: str) -> Grader:
     """The `Grader` `judge.tally` counts votes against. It is never written to a document."""
     return Grader(
@@ -272,13 +293,24 @@ def _judge_grader(prompt: str) -> Grader:
     )
 
 
-def check(function: Callable[[Run], Any]) -> Callable[[Run], Any]:
-    """Mark one function as a check. It takes no arguments, and there is no second form.
+def check(
+    function: Callable[[Run], Any] | None = None, *, advisory: bool = False
+) -> Callable[[Run], Any] | Callable[[Callable[[Run], Any]], Callable[[Run], Any]]:
+    """Mark one function as a check. `@check` and `@check(advisory=True)` are the two forms.
 
     A name parameter and a weight parameter are features nobody asked for: the name is the
     file stem and the function name, and every check weighs 1.
+
+    `advisory` is the one option, and it decides nothing rather than deciding wrongly. An
+    advisory check is run, its verdict is recorded, and a failure prints as a note: it is out
+    of the score and out of the exit code. It is for an assertion whose mechanism is not
+    calibrated, a judged rubric over a trace being the case it exists for, where a miss would
+    otherwise turn into a red suite. Everything else about it is a check. docs/checks.md.
     """
+    if function is None:
+        return functools.partial(check, advisory=advisory)  # type: ignore[return-value]
     setattr(function, MARKER, True)
+    setattr(function, ADVISORY_MARKER, advisory)
     return function
 
 
@@ -333,7 +365,12 @@ def _load(path: Path) -> list[Check]:
     except Exception as error:  # the author's own file, and anything it raises at import
         return [Check(name=path.stem, path=path, error=_reason(path, error))]
     return [
-        Check(name=f"{path.stem}.{name}", path=path, function=held)
+        Check(
+            name=f"{path.stem}.{name}",
+            path=path,
+            function=held,
+            advisory=bool(getattr(held, ADVISORY_MARKER, False)),
+        )
         for name, held in vars(module).items()
         if callable(held)
         and getattr(held, MARKER, False)
@@ -411,6 +448,7 @@ def execute(one: Check, run: Run) -> Outcome:
             duration_seconds=time.monotonic() - started,
             calls=tuple(run.calls),
             cost_usd=sum(call.cost_usd for call in run.calls),
+            advisory=one.advisory,
         )
     except Exception as error:  # the author's own code, and any exception it raises
         return Outcome(
@@ -421,6 +459,7 @@ def execute(one: Check, run: Run) -> Outcome:
             traceback=traceback.format_exc(),
             calls=tuple(run.calls),
             cost_usd=sum(call.cost_usd for call in run.calls),
+            advisory=one.advisory,
         )
     passed, explanation = _verdict(returned)
     return Outcome(
@@ -430,6 +469,7 @@ def execute(one: Check, run: Run) -> Outcome:
         duration_seconds=time.monotonic() - started,
         calls=tuple(run.calls),
         cost_usd=sum(call.cost_usd for call in run.calls),
+        advisory=one.advisory,
     )
 
 
@@ -492,9 +532,10 @@ def build_run(directory: Path, case_dir: Path, index: int, judge_model: str) -> 
     )
 
 
-def definition(name: str) -> dict[str, Any]:
+def definition(name: str, advisory: bool = False) -> dict[str, Any]:
     """One check's entry in the case's `graders[]`, so the verdict can join a result to it."""
-    return {"name": name, "type": CHECK_TYPE, "weight": WEIGHT, "config": {}}
+    kind = ADVISORY_TYPE if advisory else CHECK_TYPE
+    return {"name": name, "type": kind, "weight": WEIGHT, "config": {}}
 
 
 def grader_result(outcome: Outcome) -> dict[str, Any]:
@@ -505,7 +546,7 @@ def grader_result(outcome: Outcome) -> dict[str, Any]:
         "weight": WEIGHT,
         "explanation": outcome.explanation,
         "withOnly": False,
-        "scored": not outcome.skipped,
+        "scored": not outcome.skipped and not outcome.advisory,
     }
     if outcome.skipped:
         entry["skipped"] = True
@@ -637,7 +678,7 @@ def _each_case(
     case_dir = plugin / str(case.get("dir") or "")
     definitions = case.setdefault("graders", [])
     if isinstance(definitions, list):
-        definitions += [definition(one.name) for one in checks]
+        definitions += [definition(one.name, one.advisory) for one in checks]
 
     spent = 0.0
     arm = (case.get("arms") or {}).get(ARM_WITH) or []
