@@ -197,7 +197,8 @@ file mounted where a run mounts it and an environment set with `--env`.
 ## Phase 5: verify
 
 - [x] `scripts/lint.sh`.
-- [ ] `scripts/test.sh`.
+- [x] `scripts/test.sh`.
+      Result: 854 passed.
 - [ ] `scripts/image.sh`, then `scripts/parity.sh`, with 0 failures.
 - [ ] `scripts/test.sh -m integration -k docker`.
 - [ ] `cowork_evals run --cowork plugins/smoke --case session-env` passes, which shows one
