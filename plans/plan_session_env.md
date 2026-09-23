@@ -132,7 +132,7 @@ one.
       `keep_env.txt` read-only at `/etc/cowork_evals/keep_env.txt`. `Docker.run` writes that
       file before the container starts, and `--dry-run` writes nothing. Neither value is
       secret, so `--dry-run` prints both unredacted.
-- [ ] `write_env` in `src/cowork_evals/logs.py`: record `session_env` and `keep_env` beside
+- [x] `write_env` in `src/cowork_evals/logs.py`: record `session_env` and `keep_env` beside
       `env_passthrough`, so a result says which list it ran under. Pass them from the caller in
       `cli.py` that already passes `env_passthrough`.
 - [ ] Fixture case `plugins/smoke/evals/plugin/session-env/`, modelled on `checked-file`:
