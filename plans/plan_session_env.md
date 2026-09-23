@@ -203,8 +203,9 @@ file mounted where a run mounts it and an environment set with `--env`.
       Result: 0 failures, 2 notes, the two recorded deltas.
 - [x] `scripts/test.sh -m integration -k docker`.
       Result: 22 passed.
-- [ ] `cowork_evals run --cowork plugins/smoke --case session-env` passes, which shows one
+- [x] `cowork_evals run --cowork plugins/smoke --case session-env` passes, which shows one
       case serves both backends.
+      Result: passes on both backends once the command writes into `$HOME/mnt/outputs` when it exists. The session saw exactly the 16 names in `docs/runtime.md` and `_`.
 - [ ] Manual: a one-case plugin whose skill runs `test -n "$CLAUDE_CODE_SESSION_ID"` and
       reports the exit status. It fails under `run --docker`, and it fails under `run --cowork`.
       Docker half: the skill reports `exit=1` and the case fails under `run --docker`. The
