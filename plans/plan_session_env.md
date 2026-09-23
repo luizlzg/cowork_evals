@@ -157,7 +157,7 @@ file mounted where a run mounts it and an environment set with `--env`.
 - [ ] `tests/integration/test_docker.py`, no model: `CLAUDECODE`, `CLAUDE_CODE_SESSION_ID`
       and an unlisted name are dropped, and a listed name is kept.
 - [x] Same file: a listed name with no incoming value stays unset.
-- [ ] Same file: the five derived values, with `HOME=/x/abc` giving `USER=abc`.
+- [x] Same file: the five derived values, with `HOME=/x/abc` giving `USER=abc`.
 - [ ] `tests/unit/test_config.py`: the defaults load, a name in two lists is refused, and an
       invalid name is refused.
 - [ ] `tests/unit/test_docker.py`: `run_preamble` and its redacted form carry `TZ`, and
