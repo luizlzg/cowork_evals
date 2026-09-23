@@ -190,7 +190,7 @@ file mounted where a run mounts it and an environment set with `--env`.
 - [x] `docs/running_evals.md`: one sentence saying that a skill reading a variable outside the
       lists fails in Docker.
 - [x] `plugins/README.md`: the `session-env` row, and "four cases" changed to five.
-- [ ] `src/cowork_evals/data/skills/cowork-evals/SKILL.md`: code in a session reads only the
+- [x] `src/cowork_evals/data/skills/cowork-evals/SKILL.md`: code in a session reads only the
       variables in `docs/runtime.md`, and never a `CLAUDE_CODE_*` variable.
 - [ ] `plans/README.md`: the status of this plan.
 
