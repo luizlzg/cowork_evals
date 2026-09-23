@@ -164,7 +164,7 @@ file mounted where a run mounts it and an environment set with `--env`.
       `run_argv` mounts the keep file. A `keep_env` addition changes the keep file and not
       `digest`. `cowork_env.sh` is hashed into `digest`. The script reads the path the file
       is mounted at.
-- [ ] `tests/unit/test_logs.py`: `env.txt` carries both new rows.
+- [x] `tests/unit/test_logs.py`: `env.txt` carries both new rows.
 - [ ] `tests/integration/test_docker.py`, no model: the image names `cowork-env` in its managed
       settings, and a line in the keep file that is not a shell name is skipped.
 - [ ] `tests/integration/test_docker.py`, credentialled: the `session-env` case passes through
