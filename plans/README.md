@@ -47,7 +47,7 @@ not the system's: what is built and usable is
 | 14 | [`done/plan_panel.20260913.md`](done/plan_panel.20260913.md) | The per-case run history, the `panel` verb, and `prune --history` | implemented | `feat/panel` |
 | 15 | [`done/plan_consent.20260913.md`](done/plan_consent.20260913.md) | The keyboard consent dialog, shown by the driver rather than by a caller | implemented | `fix/consent` |
 | 16 | [`plan_artifact_checks.md`](plan_artifact_checks.md) | An assertion an author writes as code, deciding the run beside the harness's graders | written | `feat/artifact-checks` |
-| 17 | [`plan_session_env.md`](plan_session_env.md) | A Docker run's `Bash` calls see only the CoWork session environment | written | `feat/session-env` |
+| 17 | [`done/plan_session_env.20260923.md`](done/plan_session_env.20260923.md) | A Docker run's `Bash` calls see only the CoWork session environment | implemented | `feat/session-env` |
 
 | Status        | Means                                                                     |
 | ------------- | --------------------------------------------------------------------------- |
