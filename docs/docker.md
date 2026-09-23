@@ -395,7 +395,7 @@ in CoWork, and its case fails in Docker.
 | 2    | `Docker.run` writes the three lists to `keep_env.txt` in the run's log directory, one name per line           |
 | 3    | `run_argv` mounts that file read-only at `/etc/cowork_evals/keep_env.txt`                                      |
 | 4    | Claude Code runs `cowork-env '<command>'` for each `Bash` call and each hook command                           |
-| 5    | `cowork-env` builds `NAME=value` for each listed name with a value, and runs `env -i <pairs> /bin/bash -c '<command>'` |
+| 5    | `cowork-env` builds `NAME=value` for each listed name with a value and each `EVAL_*` name, and runs `env -i <pairs> /bin/bash -c '<command>'` |
 
 The prefix goes in managed settings, because the harness strips variables it does not know
 from the CLI it starts, and managed settings still apply inside a run. For the same reason the
@@ -428,6 +428,10 @@ A name belongs in exactly one list, by this rule. A name in two lists is refused
 | `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `NO_PROXY` and the four lower-case forms   | The OS sandbox routes the network through a local proxy. Without them `curl` exits 6, `Could not resolve host` |
 
 A `Bash` call does not receive the three hook names, so they are absent from it.
+
+The script also keeps every name matching `EVAL_[A-Z0-9_]*`, unlisted. Those are a case's own
+`env` keys, which the harness restricts to that pattern. A case that writes `env` carries
+`no-cowork` ([eval_format.md](eval_format.md)), so keeping them claims nothing about a session.
 
 ### Derived names
 

@@ -267,6 +267,13 @@ def test_a_line_that_is_no_shell_name_is_skipped(docker, tmp_path):
     assert any(line.startswith("PATH=") for line in output.splitlines()), output
 
 
+def test_a_case_env_name_is_kept_without_being_listed(docker, tmp_path):
+    """The harness restricts a case's `env` keys to `EVAL_[A-Z0-9_]*`. docs/docker.md."""
+    output = session(docker, tmp_path, ["PATH"], EVAL_VARIANT="null-body", EVALX="1")
+    assert "EVAL_VARIANT=null-body" in output.splitlines(), output
+    assert "EVALX" not in output, output
+
+
 def test_the_image_names_the_prefix_in_managed_settings(docker):
     document = json.loads(container(docker, "cat", "/etc/claude-code/managed-settings.json"))
     assert document["env"]["CLAUDE_CODE_SHELL_PREFIX"] == "/usr/local/bin/cowork-env"

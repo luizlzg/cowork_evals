@@ -132,6 +132,9 @@ one.
       `keep_env.txt` read-only at `/etc/cowork_evals/keep_env.txt`. `Docker.run` writes that
       file before the container starts, and `--dry-run` writes nothing. Neither value is
       secret, so `--dry-run` prints both unredacted.
+- [ ] `cowork_env.sh` also keeps every name matching `EVAL_[A-Z0-9_]*`. Added during the work:
+      those are a case's own `env` keys, which reach a `Bash` call on the Docker backend only,
+      and a case carrying them carries `no-cowork`. Dropping them would break every such case.
 - [x] `write_env` in `src/cowork_evals/logs.py`: record `session_env` and `keep_env` beside
       `env_passthrough`, so a result says which list it ran under. Pass them from the caller in
       `cli.py` that already passes `env_passthrough`.
@@ -158,6 +161,7 @@ file mounted where a run mounts it and an environment set with `--env`.
       and an unlisted name are dropped, and a listed name is kept.
 - [x] Same file: a listed name with no incoming value stays unset.
 - [x] Same file: the five derived values, with `HOME=/x/abc` giving `USER=abc`.
+- [ ] Same file: an `EVAL_*` name is kept unlisted, and `EVALX` is not.
 - [x] `tests/unit/test_config.py`: the defaults load, a name in two lists is refused, and an
       invalid name is refused.
 - [x] `tests/unit/test_docker.py`: `run_preamble` and its redacted form carry `TZ`, and
