@@ -56,6 +56,29 @@ def test_a_differing_tool_version_is_printed_and_does_not_fail():
     assert "tool version differs: pandoc 2.9.2.2, expected 2.9.2.1" in notes
 
 
+def test_a_missing_npm_package_fails():
+    failures, _ = probed("probe_npm_missing")
+    assert failures == ["npm package missing: pptxgenjs@4.0.1"]
+
+
+def test_a_moved_npm_package_fails():
+    failures, _ = probed("probe_npm_moved")
+    assert failures == ["npm package moved: docx@9.6.0, expected 9.7.1"]
+
+
+def test_an_extra_npm_package_is_printed_and_does_not_fail():
+    failures, notes = probed("probe_npm_extra")
+    assert failures == []
+    assert "extra npm package: left-pad@1.3.0" in notes
+
+
+def test_a_node_path_that_does_not_name_the_tree_fails():
+    failures, _ = probed("probe_node_path_unset")
+    assert failures == [
+        "NODE_PATH: None, expected /usr/local/lib/node_modules_global/lib/node_modules"
+    ]
+
+
 def test_a_tool_recorded_as_absent_being_present_fails():
     failures, _ = probed("probe_absent_tool_present")
     assert failures == ["tool recorded as absent is present: exiftool"]

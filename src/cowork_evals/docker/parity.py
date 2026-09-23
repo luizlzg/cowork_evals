@@ -1,10 +1,11 @@
 """Compare a probe document against the image inventory. Runs on the host.
 
-The delta table in docs/docker.md is applied exactly, and four things fail: a pin that is
-missing or at another version, one of the five tools recorded as absent turning up present,
-`import uno`, because unoserver and headless conversion are the capability the container exists
-to prove, and a tool probe.py probes that no table here records, whose result would otherwise be
-read by nothing.
+The delta table in docs/docker.md is applied exactly, and six things fail: a pin that is
+missing or at another version, the same for a package of the second global npm tree, a
+`NODE_PATH` that does not name that tree, one of the five tools recorded as absent turning up
+present, `import uno`, because unoserver and headless conversion are the capability the
+container exists to prove, and a tool probe.py probes that no table here records, whose result
+would otherwise be read by nothing.
 
 No file under `docs/` is parsed. The pins come from the shipped `requirements.txt`, read by
 cowork_evals.requirements, and the expected non-Python versions are the table below, which cites
@@ -62,6 +63,24 @@ EXPECTED_VERSIONS = {
     "jq": "1.6",
 }
 
+# docs/runtime.md, the second global npm tree. A missing or moved package fails, as a pin
+# does: it changes what a skill can `require()`.
+NPM_GLOBALS = {
+    "@anthropic-ai/sandbox-runtime": "0.0.76",
+    "docx": "9.7.1",
+    "graphviz": "0.0.9",
+    "markdown-toc": "1.2.0",
+    "marked": "18.0.12",
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "6.3.289",
+    "pptxgenjs": "4.0.1",
+    "sharp": "0.35.4",
+    "ts-node": "10.9.2",
+    "tsx": "4.23.13",
+    "typescript": "7.0.2",
+}
+NODE_PATH = "/usr/local/lib/node_modules_global/lib/node_modules"
+
 # docs/runtime.md, the fonts section. Printed, never failed.
 EXPECTED_FONT_FAMILIES = 118
 EXPECTED_OS_ID = "ubuntu"
@@ -82,6 +101,17 @@ def compare(document: dict, expected: dict[str, str]) -> tuple[list[str], list[s
             failures.append(f"pin moved: {name}=={found[name]}, expected {version}")
     for name in sorted(set(found) - set(expected)):
         notes.append(f"extra package: {name}=={found[name]}")
+
+    modules = document.get("npm_globals", {})
+    for name, version in sorted(NPM_GLOBALS.items()):
+        if name not in modules:
+            failures.append(f"npm package missing: {name}@{version}")
+        elif modules[name] != version:
+            failures.append(f"npm package moved: {name}@{modules[name]}, expected {version}")
+    for name in sorted(set(modules) - set(NPM_GLOBALS)):
+        notes.append(f"extra npm package: {name}@{modules[name]}")
+    if document.get("node_path") != NODE_PATH:
+        failures.append(f"NODE_PATH: {document.get('node_path')}, expected {NODE_PATH}")
 
     tools = document.get("tools", {})
     unlisted = sorted(

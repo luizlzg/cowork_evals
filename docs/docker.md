@@ -231,9 +231,12 @@ sandbox rather than the command's output. The path is inside the sandbox home, w
 creates fresh per run, so nothing on the host or in the image changes it. 2.1.265 creates those
 directories instead of masking a missing one.
 
-The CLI is one deliberate delta against [runtime.md](runtime.md), which records corepack and npm
-as the only npm globals. Parity does not read npm globals and does not fail on it. No other
-global is added.
+The CLI is one deliberate delta against [runtime.md](runtime.md): it is an npm global the CoWork
+image does not carry, installed under the default prefix, `/usr/lib/node_modules`. The second
+global tree runtime.md records is installed at its prefix, `/usr/local/lib/node_modules_global`,
+at the recorded versions, and the image sets `NODE_PATH` and `PATH` to the session's values.
+Parity reads that tree and `NODE_PATH`, and does not read the default prefix. No other global is
+added.
 
 `bubblewrap` and `socat` are the second and third delta, and both are harness infrastructure in
 the same sense as the CLI. The harness refuses to start a granted shell tool unless both are
@@ -467,7 +470,8 @@ There is no `latest` tag. Nothing reads one: `run` and `check` resolve the diges
 
 `scripts/parity.sh` runs one probe inside the container, with the probe bind-mounted read-only,
 then compares what the probe wrote. It checks the OS release, the architecture, every version in
-the runtime tables, `import uno`, the font family count, and the full `pip freeze`.
+the runtime tables, `import uno`, the font family count, the full `pip freeze`, the second
+global npm tree and `NODE_PATH`.
 
 It is a shell script like every other task under `scripts/`, and the comparison runs on the host.
 Nothing from this package is installed into the image to do it.
@@ -480,6 +484,9 @@ that file is carried into the table by hand, in the same commit.
 | ------------------------------------------------- | ---------------------- | -------------------------------------------------------------- |
 | A pin is missing or at a different version        | exit 1                 | It changes what a skill can import                             |
 | A package is installed that is not a pin          | printed, does not fail | A transitive dependency of the tooling is not a fidelity break |
+| A package of the second npm tree is missing or at a different version | exit 1 | It changes what a skill can `require()`               |
+| The second npm tree holds a package not recorded  | printed, does not fail | It is compared against nothing                                 |
+| `NODE_PATH` does not name the second npm tree     | exit 1                 | A bare `require()` of a recorded library fails                 |
 | A tool recorded as not present is present         | exit 1                 | A skill can call it here and not in a session                  |
 | `import uno` fails                                | exit 1                 | unoserver and headless conversion are broken                   |
 | A tool the probe probes that no table records     | exit 1                 | Its result is compared against nothing and read by nobody      |
@@ -516,7 +523,7 @@ container runtime, never as a machine name. A reader on another platform re-runs
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | Host                             | macOS on aarch64, Rancher Desktop, dockerd 29.5.3                                                                                    |
 | Platform built                   | `linux/arm64`, native                                                                                                                |
-| Image size                       | 3.72 GB                                                                                                                              |
+| Image size                       | 4.04 GB                                                                                                                              |
 | Build time, cold                 | 5 min 30 s, `--no-cache`, native, over a proxy                                                                                       |
 | Build time, warm                 | under a second: the digest is present, so nothing runs                                                                               |
 | Python pin mismatches            | 0 of 136                                                                                                                             |

@@ -1,6 +1,21 @@
 {
   "architecture": "aarch64",
   "font_families": 111,
+  "node_path": "/usr/local/lib/node_modules_global/lib/node_modules",
+  "npm_globals": {
+    "@anthropic-ai/sandbox-runtime": "0.0.76",
+    "docx": "9.7.1",
+    "graphviz": "0.0.9",
+    "markdown-toc": "1.2.0",
+    "marked": "18.0.12",
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "6.3.289",
+    "pptxgenjs": "4.0.1",
+    "sharp": "0.35.4",
+    "ts-node": "10.9.2",
+    "tsx": "4.23.13",
+    "typescript": "7.0.2"
+  },
   "os_release": {
     "BUG_REPORT_URL": "https://bugs.launchpad.net/ubuntu/",
     "HOME_URL": "https://www.ubuntu.com/",

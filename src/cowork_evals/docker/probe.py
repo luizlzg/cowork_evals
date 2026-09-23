@@ -10,6 +10,7 @@ docs/runtime.md runs on the host and is parity.py.
 from __future__ import annotations
 
 import json
+import os
 import platform
 import re
 import shutil
@@ -48,6 +49,9 @@ VERSION_COMMANDS = {
     "docker": ["docker", "--version"],
     "sqlite3": ["sqlite3", "--version"],
 }
+
+# The second global npm tree docs/runtime.md records.
+NPM_GLOBAL_MODULES = "/usr/local/lib/node_modules_global/lib/node_modules"
 
 VERSION_PATTERN = re.compile(r"\d+(?:\.\d+)+")
 
@@ -123,6 +127,29 @@ def pip_freeze():
     return [line.strip() for line in output.splitlines() if line.strip()]
 
 
+def npm_globals():
+    """Each package directly under NPM_GLOBAL_MODULES, by the name and version its
+    `package.json` gives. A scope directory is read one level down."""
+    found = {}
+    if not os.path.isdir(NPM_GLOBAL_MODULES):
+        return found
+    directories = []
+    for entry in sorted(os.listdir(NPM_GLOBAL_MODULES)):
+        path = os.path.join(NPM_GLOBAL_MODULES, entry)
+        if entry.startswith("@") and os.path.isdir(path):
+            directories.extend(os.path.join(path, name) for name in sorted(os.listdir(path)))
+        else:
+            directories.append(path)
+    for directory in directories:
+        try:
+            with open(os.path.join(directory, "package.json")) as handle:
+                manifest = json.load(handle)
+        except (OSError, ValueError):
+            continue
+        found[manifest.get("name")] = manifest.get("version")
+    return found
+
+
 def main():
     document = {
         "schema": 1,
@@ -133,6 +160,8 @@ def main():
         "uno": uno_import(),
         "font_families": font_families(),
         "pip_freeze": pip_freeze(),
+        "npm_globals": npm_globals(),
+        "node_path": os.environ.get("NODE_PATH"),
     }
     json.dump(document, sys.stdout, indent=2, sort_keys=True)
     sys.stdout.write("\n")

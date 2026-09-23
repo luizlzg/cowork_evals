@@ -16,7 +16,7 @@ while the work happens.
 
 ## Plans
 
-Eighteen plans. Sixteen build something and are numbered in build order, and one of those
+Nineteen plans. Seventeen build something and are numbered in build order, and one of those
 sixteen is skipped. `plan_fix` builds nothing, so it carries no number: it corrects what the
 others wrote, and it ran before `plan_cowork_backend.md` because it changes what that plan and
 `plan_cli.md` both read. `plan_believable_results` carries no number for the same reason:
@@ -47,6 +47,7 @@ not the system's: what is built and usable is
 | 14 | [`done/plan_panel.20260913.md`](done/plan_panel.20260913.md) | The per-case run history, the `panel` verb, and `prune --history` | implemented | `feat/panel` |
 | 15 | [`done/plan_consent.20260913.md`](done/plan_consent.20260913.md) | The keyboard consent dialog, shown by the driver rather than by a caller | implemented | `fix/consent` |
 | 16 | [`plan_artifact_checks.md`](plan_artifact_checks.md) | An assertion an author writes as code, deciding the run beside the harness's graders | written | `feat/artifact-checks` |
+| 17 | [`plan_session_env.md`](plan_session_env.md) | A Docker run's `Bash` calls see only the CoWork session environment | not started | `feat/session-env` |
 
 | Status        | Means                                                                     |
 | ------------- | --------------------------------------------------------------------------- |

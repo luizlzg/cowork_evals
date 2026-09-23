@@ -52,11 +52,45 @@ and runs after the run is graded. See [library.md](library.md) and [checks.md](c
 
 | Mechanism                                   | Present in a skill Bash call | Evidence                                                                                 |
 | ------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------- |
-| Plugin `bin/` on `PATH`                     | no                           | `PATH` is the OS default, `/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin` |
+| Plugin `bin/` on `PATH`                     | no                           | `PATH` is the OS default with the global npm `bin/` in front. See the table below        |
 | `cwd` set to the skill directory            | no                           | `pwd` is the session root. A bare `python scripts/x.py` fails with ENOENT                |
 | Shell state across Bash calls               | no                           | Each call is a fresh shell. No `cwd` and no exported variable survives                   |
 | `Base directory for this skill: <abs path>` | yes                          | Injected above the `SKILL.md` body at invocation time, not in the file                   |
 | `TMPDIR`                                    | yes                          | `/sessions/<session>/tmp`, honoured by `tempfile.mkdtemp()`. `/tmp` is also writable     |
+| The same environment as a plain Bash call   | yes                          | `env` in a skill's Bash call and in a Bash call with no skill print the same variables   |
+
+A Bash call runs GNU bash 5.1.16, whatever `SHELL` says. The shell is PID 2 in its own PID
+namespace, and PID 1 is `bwrap`.
+
+The complete environment of a session shell is below. `<session>` is the generated session
+name, three words joined by hyphens. It is also the Unix user name. No other variable is set,
+so a skill that reads any other name gets the empty string. `INVOCATION_ID`,
+`JOURNAL_STREAM` and `SYSTEMD_EXEC_PID` are inherited from the systemd unit that starts
+`bwrap`.
+
+| Variable             | Value                                                                                                 |
+| -------------------- | ----------------------------------------------------------------------------------------------------- |
+| `HOME`               | `/sessions/<session>`                                                                                 |
+| `PWD`                | `/sessions/<session>`, the same directory as `HOME`                                                   |
+| `USER`               | `<session>`                                                                                           |
+| `LOGNAME`            | `<session>`                                                                                           |
+| `TMPDIR`             | `/sessions/<session>/tmp`                                                                             |
+| `CLAUDE_TMPDIR`      | `/sessions/<session>/tmp`                                                                             |
+| `CLAUDE_CODE_TMPDIR` | `/sessions/<session>/tmp`                                                                             |
+| `TZ`                 | The host machine's IANA zone, for example `America/New_York`. The image zone is `Etc/UTC`             |
+| `LANG`               | `C.UTF-8`                                                                                             |
+| `PATH`               | `/usr/local/lib/node_modules_global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin` |
+| `NODE_PATH`          | `/usr/local/lib/node_modules_global/lib/node_modules`                                                 |
+| `SHELL`              | `/bin/sh`                                                                                             |
+| `SHLVL`              | `0`                                                                                                   |
+| `INVOCATION_ID`      | 32 hex digits, the systemd unit invocation id                                                         |
+| `JOURNAL_STREAM`     | `<device>:<inode>` of the systemd journal stream                                                      |
+| `SYSTEMD_EXEC_PID`   | The PID systemd started the unit with                                                                 |
+
+A skill that needs the session root, the user or the user's time zone reads `HOME`, `USER` or
+`TZ`. `/etc/localtime` and `/etc/timezone` give `Etc/UTC`, not the user's zone. A skill never hard-codes `/sessions/<session>`, because the name changes every session.
+No variable names the plugin directory, the skill directory or the user's mounted folders.
+No credential and no `ANTHROPIC_*` variable reaches the shell.
 
 A skill names a script it ships by a path relative to the skill directory. The model prefixes
 the announced base directory. The shell never resolves it.
@@ -71,7 +105,8 @@ the path as an argument from its caller.
 ## Session lifetime
 
 The VM stops on application quit, not per session, and its session data image persists.
-Session directories from earlier sessions therefore remain present inside a running VM.
+Session directories from earlier sessions therefore remain present inside a running VM, and
+`ls /sessions` lists every one of them.
 Sessions are separate users and separate directories on a reused VM.
 
 An eval case cannot assume a clean guest filesystem outside its own session directory.
@@ -93,9 +128,29 @@ Exact Python pins: `src/cowork_evals/data/requirements.txt`, the verbatim `pip f
 | uv           | 0.12.3                                                                               |
 | Node.js      | v22.23.2                                                                             |
 | npm          | 10.9.8                                                                               |
-| npm globals  | corepack, npm. No other global npm package                                           |
+| npm globals  | corepack 0.34.6 and npm 10.9.8 under `/usr/lib/node_modules`, and the tree below     |
 | Java         | OpenJDK 11.0.31 (Ubuntu build)                                                       |
 | Git          | 2.34.1                                                                               |
+
+A second global npm tree is at `/usr/local/lib/node_modules_global`. Its `bin/` is first on
+`PATH` and its `lib/node_modules` is `NODE_PATH`, so `require()` resolves these packages from
+any directory. Each library in the table imports with a bare `require()` from the session
+directory.
+
+| Package                         | Version | Command on `PATH`                                                                                |
+| ------------------------------- | ------- | ------------------------------------------------------------------------------------------------ |
+| `@anthropic-ai/sandbox-runtime` | 0.0.76  | `srt`                                                                                            |
+| `docx`                          | 9.7.1   | none                                                                                             |
+| `graphviz`                      | 0.0.9   | none                                                                                             |
+| `markdown-toc`                  | 1.2.0   | `markdown-toc`                                                                                   |
+| `marked`                        | 18.0.12 | `marked`                                                                                         |
+| `pdf-lib`                       | 1.17.1  | none                                                                                             |
+| `pdfjs-dist`                    | 6.3.289 | none                                                                                             |
+| `pptxgenjs`                     | 4.0.1   | none                                                                                             |
+| `sharp`                         | 0.35.4  | none                                                                                             |
+| `ts-node`                       | 10.9.2  | `ts-node`, `ts-node-cwd`, `ts-node-esm`, `ts-node-script`, `ts-node-transpile-only`, `ts-script` |
+| `tsx`                           | 4.23.13 | `tsx`                                                                                            |
+| `typescript`                    | 7.0.2   | `tsc`                                                                                            |
 
 ### Document and office tooling
 

@@ -6,8 +6,8 @@
 
 FROM ubuntu:22.04
 
-# The Claude Code CLI version. The one deliberate delta against docs/runtime.md, which
-# records corepack and npm as the only npm globals.
+# The Claude Code CLI version. An npm global the CoWork image does not carry, and the one
+# npm delta against docs/runtime.md.
 ARG CLAUDE_CODE_VERSION
 # Set by buildx from --platform. The LibreOffice tarball is named by the kernel
 # architecture, so it is mapped below.
@@ -148,6 +148,24 @@ RUN set -eux; \
   apt-get update; \
   apt-get install -y "nodejs=${NODE_VERSION}"; \
   rm -rf /var/lib/apt/lists/*
+
+# The second global npm tree docs/runtime.md records, at its prefix and versions, and the
+# two variables a session sets to expose it.
+RUN npm install -g --no-fund --no-audit --prefix /usr/local/lib/node_modules_global \
+  @anthropic-ai/sandbox-runtime@0.0.76 \
+  docx@9.7.1 \
+  graphviz@0.0.9 \
+  markdown-toc@1.2.0 \
+  marked@18.0.12 \
+  pdf-lib@1.17.1 \
+  pdfjs-dist@6.3.289 \
+  pptxgenjs@4.0.1 \
+  sharp@0.35.4 \
+  ts-node@10.9.2 \
+  tsx@4.23.13 \
+  typescript@7.0.2
+ENV NODE_PATH=/usr/local/lib/node_modules_global/lib/node_modules
+ENV PATH=/usr/local/lib/node_modules_global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # uv, from the Astral installer. Absent from jammy.
 ARG UV_VERSION=0.12.3
