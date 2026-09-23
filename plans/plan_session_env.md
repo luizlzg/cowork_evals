@@ -151,21 +151,22 @@ one.
 
 Match the existing tests: pytest, unit tests under `tests/unit/`, container and model tests
 under `tests/integration/`, marked `integration`. Never mock and never skip (`CLAUDE.md`). The
-script tests run the real script with `subprocess` under the host's `sh`, with a constructed
-environment.
+script reads a fixed container path, so its tests run the real script in the image, over a keep
+file mounted where a run mounts it and an environment set with `--env`.
 
-- [ ] `tests/unit/test_cowork_env.py`: `CLAUDECODE`, `CLAUDE_CODE_SESSION_ID` and an
-      unlisted name are dropped, a listed name is kept, and `COWORK_EVALS_KEEP` is dropped.
+- [ ] `tests/integration/test_docker.py`, no model: `CLAUDECODE`, `CLAUDE_CODE_SESSION_ID`
+      and an unlisted name are dropped, and a listed name is kept.
 - [ ] Same file: a listed name with no incoming value stays unset.
 - [ ] Same file: the five derived values, with `HOME=/x/abc` giving `USER=abc`.
 - [ ] `tests/unit/test_config.py`: the defaults load, a name in two lists is refused, and an
       invalid name is refused.
-- [ ] `tests/unit/test_docker.py`: `run_preamble` and its redacted form carry
-      `COWORK_EVALS_KEEP` and `TZ`. A `keep_env` addition changes `COWORK_EVALS_KEEP` and not
-      `digest`. A change to `cowork_env.sh` changes `digest`.
+- [ ] `tests/unit/test_docker.py`: `run_preamble` and its redacted form carry `TZ`, and
+      `run_argv` mounts the keep file. A `keep_env` addition changes the keep file and not
+      `digest`. `cowork_env.sh` is hashed into `digest`. The script reads the path the file
+      is mounted at.
 - [ ] `tests/unit/test_logs.py`: `env.txt` carries both new rows.
-- [ ] `tests/integration/test_docker.py`, no model: `cowork-env env` in the image, run under a
-      polluted environment, prints only the listed names.
+- [ ] `tests/integration/test_docker.py`, no model: the image names `cowork-env` in its managed
+      settings, and a line in the keep file that is not a shell name is skipped.
 - [ ] `tests/integration/test_docker.py`, credentialled: the `session-env` case passes through
       the Docker backend, beside `test_the_smoke_case_passes_through_the_backend`.
 

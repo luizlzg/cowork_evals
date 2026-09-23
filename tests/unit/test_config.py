@@ -6,6 +6,7 @@ back through the real loader.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -18,6 +19,17 @@ from cowork_evals.config import (
     DockerSection,
     EvalSection,
     PanelSection,
+)
+
+# The variable table in docs/runtime.md, "What the host provides": the complete environment
+# of a CoWork session shell, and the one record `docker.session_env` defaults to.
+RUNTIME = Path(__file__).resolve().parents[2] / "docs" / "runtime.md"
+RUNTIME_VARIABLES = tuple(
+    re.findall(
+        r"^\| `([A-Z_]+)` +\|",
+        RUNTIME.read_text(encoding="utf-8").split("| Variable ", 1)[1].split("\n\n", 1)[0],
+        re.MULTILINE,
+    )
 )
 
 
@@ -77,6 +89,21 @@ def test_missing_file_yields_the_docker_defaults(working_directory, tmp_path: Pa
     assert section.login_dir == Path.home() / ".cache" / "cowork_evals" / "claude"
     assert section.extra_ca_file is None
     assert section.env_passthrough == ()
+    assert section.session_env == RUNTIME_VARIABLES
+    assert section.keep_env == (
+        "NODE_EXTRA_CA_CERTS",
+        "CLAUDE_PLUGIN_ROOT",
+        "CLAUDE_PLUGIN_DATA",
+        "CLAUDE_PROJECT_DIR",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "ALL_PROXY",
+        "NO_PROXY",
+        "http_proxy",
+        "https_proxy",
+        "all_proxy",
+        "no_proxy",
+    )
 
 
 # The file over the defaults.
@@ -139,6 +166,46 @@ def test_a_name_no_shell_would_accept_is_refused_at_load(tmp_path: Path, name: s
         Config.load(file)
     assert raised.value.code == 2
     assert "docker.env_passthrough" in str(raised.value)
+
+
+def test_the_runtime_table_holds_sixteen_names() -> None:
+    assert len(RUNTIME_VARIABLES) == 16
+
+
+def test_the_kept_lists_are_read_as_written(tmp_path: Path) -> None:
+    file = write(tmp_path, "docker:\n  session_env: [HOME, PATH]\n  keep_env: [ACME]\n")
+    section = Config.load(file).docker
+    assert section.session_env == ("HOME", "PATH")
+    assert section.keep_env == ("ACME",)
+    assert section.kept == ("HOME", "PATH", "ACME")
+
+
+@pytest.mark.parametrize("key", ["session_env", "keep_env"])
+def test_a_kept_name_no_shell_would_accept_is_refused_at_load(tmp_path: Path, key: str) -> None:
+    file = write(tmp_path, f"docker:\n  {key}: ['acme-key']\n")
+    with pytest.raises(CoWorkError) as raised:
+        Config.load(file)
+    assert raised.value.code == 2
+    assert f"docker.{key}" in str(raised.value)
+
+
+@pytest.mark.parametrize(
+    ("body", "first", "second"),
+    [
+        ("  keep_env: [HOME]\n", "session_env", "keep_env"),
+        ("  env_passthrough: [PATH]\n", "session_env", "env_passthrough"),
+        ("  env_passthrough: [ACME]\n  keep_env: [ACME]\n", "env_passthrough", "keep_env"),
+    ],
+)
+def test_a_name_in_two_lists_is_refused_naming_both(
+    tmp_path: Path, body: str, first: str, second: str
+) -> None:
+    file = write(tmp_path, "docker:\n" + body)
+    with pytest.raises(CoWorkError) as raised:
+        Config.load(file)
+    assert raised.value.code == 2
+    assert f"docker.{first}" in str(raised.value)
+    assert f"docker.{second}" in str(raised.value)
 
 
 def test_a_widened_allow_tools_replaces_the_default(tmp_path: Path) -> None:

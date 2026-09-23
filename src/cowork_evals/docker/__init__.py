@@ -79,6 +79,10 @@ CREDENTIAL_NAMES = frozenset(
 # is safe to paste into a message. docs/docker.md.
 REDACTED = "<not shown>"
 
+# The names a `Bash` call keeps, written per run into the log directory and mounted read-only
+# where `cowork_env.sh` reads it. Not under the log mount, which a sandboxed call cannot see.
+# `tests/unit/test_docker.py` asserts the script names the same path. docs/docker.md, "The
+# session environment".
 KEEP_FILE = "keep_env.txt"
 CONTAINER_KEEP_FILE = "/etc/cowork_evals/keep_env.txt"
 
@@ -350,8 +354,8 @@ class Docker:
     def run_preamble(self, *, redact: bool = False) -> list[str]:
         """One run's container, up to the mounts, the tag and the command.
 
-        The one place the run's platform, uid, home, enablement variable, sandbox options,
-        forwarded variables and credential mounts are written. `run_argv` adds the two
+        The one place the run's platform, uid, home, enablement variable, zone, sandbox
+        options, forwarded variables and credential mounts are written. `run_argv` adds the two
         mounts and the harness; tests/integration/test_docker.py adds its own mounts and a
         fixed command, so what that tier proves about the sandbox it proves about this list.
 
@@ -419,9 +423,10 @@ class Docker:
     ) -> list[str]:
         """One run, as a container. The harness command line is harness.eval_argv.
 
-        The plugin root goes in read-only and the run's log directory read-write. Nothing
-        else from the host is mounted, and the harness writes its output into the log
-        mount rather than under the plugin. docs/docker.md.
+        The plugin root goes in read-only and the run's log directory read-write, and the
+        keep file `run` writes into that directory goes in read-only at
+        `CONTAINER_KEEP_FILE`. Nothing else from the host is mounted, and the harness writes
+        its output into the log mount rather than under the plugin. docs/docker.md.
 
         A run keeping its trace also moves the harness's `TMPDIR` into the log mount, so
         that the sandbox `--keep-temp` keeps is on the host when the container is gone.
@@ -513,6 +518,7 @@ class Docker:
         itself a failure: the harness exits 1 below threshold and 2 on partial results,
         and the verdict reads the document either way. No document at all is.
 
+        The keep file is written here, and not by `run_argv`, so `--dry-run` writes nothing.
         The sandbox directory is created here rather than by the harness, which makes a
         sandbox inside `TMPDIR` and not `TMPDIR` itself. What is kept out of it afterwards
         is `traces.collect`, which the caller runs: this method starts one container and
@@ -522,7 +528,7 @@ class Docker:
         output_dir = Path(output_dir).resolve()
         if options.keep_traces:
             sandbox_root(output_dir).mkdir(parents=True, exist_ok=True)
-        (output_dir / KEEP_FILE).write_text("".join(f"{n}\n" for n in self.kept))
+        self.write_keep_file(output_dir)
         completed = subprocess.run(self.run_argv(target, output_dir, options))
         result = output_dir / RESULT_NAME
         if not result.is_file():
@@ -531,6 +537,16 @@ class Docker:
                 f"and exited {completed.returncode}"
             )
         return result
+
+    def write_keep_file(self, output_dir: Path | str) -> Path:
+        """The names a `Bash` call in this run keeps, one per line, for `cowork-env` to read.
+
+        `run_argv` mounts it read-only at `CONTAINER_KEEP_FILE`. It holds names and never a
+        value. docs/docker.md, "The session environment".
+        """
+        path = Path(output_dir) / KEEP_FILE
+        path.write_text("".join(f"{name}\n" for name in self.kept), encoding="utf-8")
+        return path
 
     def daemon_is_reachable(self) -> bool:
         try:

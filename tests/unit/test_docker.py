@@ -6,6 +6,7 @@ covered in tests/integration/test_docker.py.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -17,18 +18,22 @@ from cowork_evals.config import Config, DockerSection
 from cowork_evals.docker import (
     CONTAINER_EXTRA_CA,
     CONTAINER_HOME,
+    CONTAINER_KEEP_FILE,
     CONTAINER_LOGS,
     CONTAINER_PLUGIN,
     CONTAINER_TMPDIR,
     CONTAINER_WORK,
+    COWORK_ENV,
     CREDENTIAL_NAMES,
     DATA,
     DOCKERFILE,
     EXTRA_CA_SECRET,
+    KEEP_FILE,
     REDACTED,
     Condition,
     Docker,
     DockerError,
+    host_zone,
     images_argv,
     parse_images,
     plugin_root,
@@ -271,7 +276,7 @@ def test_run_argv_mounts_the_plugin_read_only_and_the_logs_read_write(plugin, tm
     logs.mkdir()
     argv = backend().run_argv(plugin, logs, run_options())
     mounts = [argv[i + 1] for i, value in enumerate(argv) if value == "-v"]
-    assert mounts[-2:] == [
+    assert mounts[-3:-1] == [
         f"{plugin.resolve()}:/work/plugin:ro",
         f"{logs.resolve()}:/work/logs:rw",
     ]
@@ -317,6 +322,7 @@ def test_the_two_login_paths_are_mounted_read_write(plugin, tmp_path):
         f"{docker.state_file}:{CONTAINER_HOME}/.claude.json:rw",
         f"{plugin.resolve()}:/work/plugin:ro",
         f"{logs.resolve()}:/work/logs:rw",
+        f"{logs.resolve() / KEEP_FILE}:{CONTAINER_KEEP_FILE}:ro",
     ]
 
 
@@ -329,9 +335,9 @@ def test_run_argv_ends_with_the_tag_and_the_harness_command(plugin, tmp_path):
 
 
 def test_run_argv_mounts_nothing_else_from_the_host(plugin, tmp_path):
-    """The two login paths, the plugin and the logs. Nothing else."""
+    """The two login paths, the plugin, the logs and the keep file. Nothing else."""
     argv = backend().run_argv(plugin, tmp_path, run_options())
-    assert argv.count("-v") == 4
+    assert argv.count("-v") == 5
 
 
 def test_a_run_keeping_its_traces_puts_the_harness_tmpdir_in_the_log_mount(plugin, tmp_path):
@@ -383,6 +389,8 @@ def test_an_empty_env_passthrough_produces_the_list_it_produces_today():
         f"HOME={CONTAINER_HOME}",
         "--env",
         "CLAUDE_CODE_WALNUT_SPIRE=1",
+        "--env",
+        f"TZ={host_zone()}",
         "--security-opt",
         "seccomp=unconfined",
         "--security-opt",
@@ -627,3 +635,95 @@ def test_the_listing_is_sorted_by_tag():
         "cowork-evals:0b8b9652310f",
         "cowork-evals:ff78131ca4c5",
     ]
+
+
+# The session environment. docs/docker.md, "The session environment".
+
+
+def test_the_host_zone_is_the_localtime_target_after_zoneinfo(tmp_path):
+    localtime = tmp_path / "localtime"
+    localtime.symlink_to("/var/db/timezone/zoneinfo/America/New_York")
+    assert host_zone(localtime) == "America/New_York"
+
+
+def test_a_localtime_that_is_no_symlink_gives_no_zone(tmp_path):
+    localtime = tmp_path / "localtime"
+    localtime.write_text("TZif")
+    assert host_zone(localtime) is None
+
+
+def test_a_symlink_outside_zoneinfo_gives_no_zone(tmp_path):
+    localtime = tmp_path / "localtime"
+    localtime.symlink_to("/etc/elsewhere")
+    assert host_zone(localtime) is None
+
+
+def test_this_host_has_a_zone():
+    """The byte-for-byte preamble above carries `TZ`, so it needs a zone to carry."""
+    assert host_zone() is not None
+
+
+def test_run_preamble_and_its_redacted_form_carry_the_host_zone():
+    docker = backend()
+    for argv in (docker.run_preamble(), docker.run_preamble(redact=True)):
+        assert f"TZ={host_zone()}" in forwarded(argv)
+
+
+def test_run_argv_mounts_the_keep_file_read_only(plugin, tmp_path):
+    argv = backend().run_argv(plugin, tmp_path, run_options())
+    mounts = [argv[i + 1] for i, value in enumerate(argv) if value == "-v"]
+    assert f"{tmp_path.resolve() / KEEP_FILE}:{CONTAINER_KEEP_FILE}:ro" in mounts
+
+
+def test_the_script_reads_the_path_the_keep_file_is_mounted_at():
+    assert f"keep_file={CONTAINER_KEEP_FILE}\n" in COWORK_ENV.read_text()
+
+
+def test_the_dockerfile_installs_the_script_as_the_shell_prefix():
+    dockerfile = DOCKERFILE.read_text()
+    assert f"COPY {COWORK_ENV.name} /usr/local/bin/cowork-env" in dockerfile
+    assert '"CLAUDE_CODE_SHELL_PREFIX": "/usr/local/bin/cowork-env"' in dockerfile
+
+
+def test_the_keep_file_holds_the_three_lists_one_name_per_line(tmp_path):
+    docker = backend(session_env=["HOME", "PATH"], env_passthrough=[], keep_env=["ACME"])
+    written = docker.write_keep_file(tmp_path)
+    assert written == tmp_path / KEEP_FILE
+    assert written.read_text() == "HOME\nPATH\nACME\n"
+
+
+def test_a_forwarded_name_is_kept(tmp_path):
+    docker = backend(env_passthrough=[PROBE])
+    assert PROBE in docker.write_keep_file(tmp_path).read_text().split()
+
+
+def test_a_keep_env_addition_changes_the_keep_file_and_not_the_digest(tmp_path):
+    """The lists are read on every run, so changing one needs no rebuild."""
+    before = backend()
+    after = backend(keep_env=[*DockerSection().keep_env, "ACME"])
+    assert before.digest == after.digest
+    (tmp_path / "before").mkdir()
+    (tmp_path / "after").mkdir()
+    written = after.write_keep_file(tmp_path / "after").read_text()
+    assert written == before.write_keep_file(tmp_path / "before").read_text() + "ACME\n"
+
+
+def digest_over(docker: Docker, *paths) -> str:
+    """`Docker.digest`, recomputed over the given build files."""
+    sha = hashlib.sha256()
+    for path in paths:
+        sha.update(path.read_bytes())
+        sha.update(b"\0")
+    for name, value in docker.build_args.items():
+        sha.update(f"{name}={value}".encode())
+        sha.update(b"\0")
+    sha.update(docker.platform.encode())
+    return sha.hexdigest()[:12]
+
+
+def test_the_script_is_hashed_into_the_digest():
+    """A changed script is a different tag, and never a stale image."""
+    docker = backend()
+    files = (DOCKERFILE, DATA / "requirements.txt", DATA / "requirements_installable.txt")
+    assert docker.digest == digest_over(docker, *files, COWORK_ENV)
+    assert docker.digest != digest_over(docker, *files)
