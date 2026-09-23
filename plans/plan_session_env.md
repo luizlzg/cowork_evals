@@ -162,7 +162,7 @@ file mounted where a run mounts it and an environment set with `--env`.
       and an unlisted name are dropped, and a listed name is kept.
 - [x] Same file: a listed name with no incoming value stays unset.
 - [x] Same file: the five derived values, with `HOME=/x/abc` giving `USER=abc`.
-- [ ] Same file: an `EVAL_*` name is kept unlisted, and `EVALX` is not.
+- [x] Same file: an `EVAL_*` name is kept unlisted, and `EVALX` is not.
 - [x] `tests/unit/test_config.py`: the defaults load, a name in two lists is refused, and an
       invalid name is refused.
 - [x] `tests/unit/test_docker.py`: `run_preamble` and its redacted form carry `TZ`, and
