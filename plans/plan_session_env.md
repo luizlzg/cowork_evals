@@ -192,7 +192,7 @@ file mounted where a run mounts it and an environment set with `--env`.
 - [x] `plugins/README.md`: the `session-env` row, and "four cases" changed to five.
 - [x] `src/cowork_evals/data/skills/cowork-evals/SKILL.md`: code in a session reads only the
       variables in `docs/runtime.md`, and never a `CLAUDE_CODE_*` variable.
-- [ ] `plans/README.md`: the status of this plan.
+- [x] `plans/README.md`: the status of this plan.
 
 ## Phase 5: verify
 
