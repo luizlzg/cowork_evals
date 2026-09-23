@@ -122,7 +122,7 @@ one.
       Docker build context. It reads `/etc/cowork_evals/keep_env.txt`.
 - [x] `Dockerfile`: `COPY cowork_env.sh /usr/local/bin/cowork-env`, `chmod 0755`, and a `RUN`
       step that writes `/etc/claude-code/managed-settings.json`.
-- [ ] `Docker.digest` in `src/cowork_evals/docker/__init__.py`: hash `cowork_env.sh` beside
+- [x] `Docker.digest` in `src/cowork_evals/docker/__init__.py`: hash `cowork_env.sh` beside
       `DOCKERFILE`, `REQUIREMENTS` and `INSTALLABLE`. Without this a changed script reuses a
       stale tag.
 - [ ] `DockerSection`: add `session_env` and `keep_env` as `tuple[str, ...]` with the
