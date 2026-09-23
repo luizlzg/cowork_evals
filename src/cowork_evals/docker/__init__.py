@@ -28,6 +28,8 @@ DOCKERFILE = Path(__file__).parent / "Dockerfile"
 DATA = Path(__file__).parent.parent / "data"
 REQUIREMENTS = DATA / "requirements.txt"
 INSTALLABLE = DATA / "requirements_installable.txt"
+# The shell prefix every `Bash` call runs through. docs/docker.md, "The session environment".
+COWORK_ENV = DATA / "cowork_env.sh"
 
 # The image tag prefix. There is no `latest`: nothing reads one. docs/docker.md.
 REPOSITORY = "cowork-evals"
@@ -76,6 +78,14 @@ CREDENTIAL_NAMES = frozenset(
 # What stands in for a forwarded value in the argument list `--dry-run` prints, so a dry run
 # is safe to paste into a message. docs/docker.md.
 REDACTED = "<not shown>"
+
+KEEP_FILE = "keep_env.txt"
+CONTAINER_KEEP_FILE = "/etc/cowork_evals/keep_env.txt"
+
+# The host's zone is the target of this symlink, after the last `zoneinfo/`. A file, not the
+# process environment. docs/docker.md, "The session environment".
+LOCALTIME = Path("/etc/localtime")
+ZONEINFO = "zoneinfo/"
 
 
 class Condition(Enum):
@@ -184,6 +194,15 @@ def remove_image(tag: str) -> None:
         )
 
 
+def host_zone(localtime: Path = LOCALTIME) -> str | None:
+    """The host's IANA zone, from where `localtime` points, or None when it is no symlink."""
+    if not localtime.is_symlink():
+        return None
+    target = os.readlink(localtime)
+    _, found, zone = target.rpartition(ZONEINFO)
+    return zone if found and zone else None
+
+
 def plugin_root(target: Path | str) -> Path:
     """The nearest directory at or above `target` holding `.claude-plugin/plugin.json`.
 
@@ -218,6 +237,9 @@ class Docker:
             else None
         )
         self.env_passthrough = settings.env_passthrough
+        self.session_env = settings.session_env
+        self.keep_env = settings.keep_env
+        self.kept = settings.kept
         self._environment: dict[str, str | None] | None = None
 
     # The login this package owns. Both paths are mounted read-write, because the CLI
@@ -259,7 +281,7 @@ class Docker:
     def digest(self) -> str:
         """Every build input, hashed. A changed input is a different tag, never a stale hit."""
         sha = hashlib.sha256()
-        for path in (DOCKERFILE, REQUIREMENTS, INSTALLABLE):
+        for path in (DOCKERFILE, REQUIREMENTS, INSTALLABLE, COWORK_ENV):
             sha.update(path.read_bytes())
             sha.update(b"\0")
         for name, value in self.build_args.items():
@@ -350,6 +372,7 @@ class Docker:
             # export the enablement variable. docs/plugin_eval.md.
             "--env",
             ENABLEMENT_ENV,
+            *(["--env", f"TZ={zone}"] if (zone := host_zone()) is not None else []),
             # Granting Bash turns on the OS sandbox, and bubblewrap needs two things the
             # default container profile denies: unprivileged user namespaces unfiltered,
             # and a /proc it can mount over. docs/docker.md.
@@ -417,6 +440,8 @@ class Docker:
             f"{root}:{CONTAINER_PLUGIN}:ro",
             "-v",
             f"{Path(output_dir).resolve()}:{CONTAINER_LOGS}:rw",
+            "-v",
+            f"{Path(output_dir).resolve() / KEEP_FILE}:{CONTAINER_KEEP_FILE}:ro",
             self.tag,
             *eval_argv(container_target, CONTAINER_LOGS, options),
         ]
@@ -497,6 +522,7 @@ class Docker:
         output_dir = Path(output_dir).resolve()
         if options.keep_traces:
             sandbox_root(output_dir).mkdir(parents=True, exist_ok=True)
+        (output_dir / KEEP_FILE).write_text("".join(f"{n}\n" for n in self.kept))
         completed = subprocess.run(self.run_argv(target, output_dir, options))
         result = output_dir / RESULT_NAME
         if not result.is_file():

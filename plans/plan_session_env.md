@@ -39,24 +39,27 @@ name belongs in exactly one list, by this rule:
 | ----------------- | --------------------------------------------------------- | -------------------------------------------------------------- |
 | `session_env`     | a CoWork session shell has it                             | the 16 names in `docs/runtime.md`                              |
 | `env_passthrough` | the developer forwards it from the host. It exists today, and a forwarded name is now also kept in `Bash` | empty |
-| `keep_env`        | it is already in the container, and a Docker run fails without it | `NODE_EXTRA_CA_CERTS`, plus what phase 1 finds. Without the CA, Node in a skill cannot reach the network on a host whose proxy inspects TLS |
+| `keep_env`        | it is already in the container, and a Docker run fails without it | `NODE_EXTRA_CA_CERTS`, the three hook names and the eight HTTP proxy names phase 1 found. Without the CA, Node in a skill cannot reach the network on a host whose proxy inspects TLS |
 
-How the names reach the script:
+How the names reach the script. Phase 1 replaced the environment variable route this plan
+first named: the harness strips `COWORK_EVALS_KEEP` from the CLI it starts, and a sandboxed
+`Bash` call cannot see the log mount.
 
-1. `cowork_evals` reads the three lists and joins them with commas.
-2. `run_preamble` adds `--env COWORK_EVALS_KEEP=<names>` to `docker run`. It also adds
-   `--env TZ=<zone>`. The zone is the `/etc/localtime` symlink target after `zoneinfo/`, and
-   `TZ` is omitted when `/etc/localtime` is not a symlink. This reads a file, not the process
-   environment, so the one-config-file rule in `CLAUDE.md` holds.
-3. The harness starts Claude Code, and Claude Code runs `cowork-env <command>` for each `Bash`
-   call. Each process passes its environment down, so the script receives
-   `COWORK_EVALS_KEEP`.
-4. The script splits `COWORK_EVALS_KEEP` on commas. For each name with a value, it adds
-   `NAME=value` to an argument list. It then runs `env -i <list>` followed by the command. Only
-   the listed names exist in the result, and `COWORK_EVALS_KEEP` is not one of them.
+1. `cowork_evals` reads the three lists, in the order `session_env`, `env_passthrough`,
+   `keep_env`.
+2. `Docker.run` writes them to `keep_env.txt` in the run's log directory, one name per line.
+   `run_argv` mounts that file read-only at `/etc/cowork_evals/keep_env.txt`.
+   `run_preamble` adds `--env TZ=<zone>`. The zone is the `/etc/localtime` symlink target
+   after `zoneinfo/`, and `TZ` is omitted when `/etc/localtime` is not a symlink. This reads a
+   file, not the process environment, so the one-config-file rule in `CLAUDE.md` holds.
+3. The harness starts Claude Code, and Claude Code runs `cowork-env '<command>'` for each
+   `Bash` call and each hook command.
+4. The script reads the keep file. For each name with a value, it adds `NAME=value` to an
+   argument list. It then runs `env -i <list> /bin/bash -c "$1"`. Only the listed names exist
+   in the result.
 
 The names are read on every run, so changing a list needs no image rebuild. The script names
-no variable except `COWORK_EVALS_KEEP` and five derived ones. Their CoWork values are
+no variable except five derived ones. Their CoWork values are
 functions of another variable, so the script sets them when they are listed: `USER` and
 `LOGNAME` to `basename "$HOME"`, `CLAUDE_TMPDIR` and `CLAUDE_CODE_TMPDIR` to `$TMPDIR`, and
 `SHELL` to `/bin/sh`. `PATH`, `NODE_PATH` and `LANG` already hold the CoWork values through the
@@ -65,6 +68,7 @@ names are absent in Docker: the container has no systemd. This is a recorded Doc
 
 The names reach `eval` in the script, so each one must be a valid shell name. `_env_names` in
 `config.py` already enforces that for `env_passthrough`, and it is used for the new keys too.
+The script also skips a line that is not a shell name.
 
 Out of scope:
 - A static scan of plugin source. It misses names built at run time, and it flags names that
