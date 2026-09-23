@@ -76,7 +76,7 @@ consumer runs and never a script under `scripts/`.
 
 The CoWork image is Ubuntu 22.04.5 (jammy), and every recorded non-Python version is the
 version jammy ships: pandoc 2.9.2.1, tesseract 4.1.1, ImageMagick 6.9.11-60, ffmpeg 4.4.2,
-poppler-utils 22.02.0, ghostscript 9.55.0, qpdf 10.6.3, git 2.34.1, OpenJDK 11.0.31,
+poppler-utils 22.02.0, ghostscript 9.55.0, qpdf 10.6.3, git 2.34.1, OpenJDK 11.0.32,
 Python 3.10.12. `apt-get install` from jammy reproduces them, up to the point releases jammy
 has taken since the inventory was captured.
 
@@ -242,21 +242,24 @@ at the recorded versions, and the image sets `NODE_PATH` and `PATH` to the sessi
 Parity reads that tree and `NODE_PATH`, and does not read the default prefix. No other global is
 added.
 
-`bubblewrap` and `socat` are the second and third delta, and both are harness infrastructure in
-the same sense as the CLI. The harness refuses to start a granted shell tool unless both are
-installed, and the pinned grant names `Bash`. Without `socat` a run exits 1 with `sandbox is
-enabled but dependencies are missing: socat not installed`, and the case is scored 0 rather than
-errored, so the failure reads as a bad answer unless the notes column is read. `probe.py` reports
-both versions and parity fails on neither.
+`bubblewrap` and `socat` are on the CoWork image, and the harness needs both as well: it
+refuses to start a granted shell tool unless both are installed, and the pinned grant names
+`Bash`. Without `socat` a run exits 1 with `sandbox is enabled but dependencies are missing:
+socat not installed`, and the case is scored 0 rather than errored, so the failure reads as a
+bad answer unless the notes column is read. `probe.py` reports both and parity fails on
+neither.
 
-[runtime.md](runtime.md) records neither. CoWork starts a fresh VM per session, so the VM is the
-isolation boundary and Claude Code inside it has no shell to confine. This backend has no VM:
-the harness confines the shell inside the container, so it requires a backend to do it with. On
-the CoWork backend the harness does not run at all.
+## Which CoWork packages the image installs
 
-Both are therefore container-backend-only, and neither is a fidelity claim about the CoWork
-image. The one consequence for a consumer: a skill that shells out to `bubblewrap` or `socat`
-runs in this container and should not be assumed to run on CoWork.
+The CoWork image carries 1108 Debian packages, measured with `dpkg-query -W` in a live
+session. The image installs one of them when a skill can call it: the package supplies an
+executable on the session `PATH`, a library a session command loads, or a font. It does not install the VM's own plumbing: the kernel, the boot chain,
+cloud-init, udev, firmware, the ssh server, networking and terminal tools such as `tmux`. Those
+are in a session and no skill calls them.
+
+A package goes in the Dockerfile's apt layer when it passes that rule and jammy ships it. The
+four that jammy does not ship are the table in "Why the image can be close". `probe.py` probes
+one command per package the rule added, and `parity.py` records its version.
 
 ## Credentials
 
@@ -596,9 +599,8 @@ that file is carried into the table by hand, in the same commit.
 | The font family count, the OS or the architecture differs | printed, does not fail | Each is a condition of the run and is reported with it |
 
 The tools recorded as not present are `wkhtmltopdf`, `weasyprint`, `exiftool`, `docker` and the
-`sqlite3` CLI. The three recorded present with no version are `ssh`, which
-[runtime.md](runtime.md) lists without one, and `bwrap` and `socat`, the two deltas above, which
-it does not record at all.
+`sqlite3` CLI. The four recorded present with no version are `ssh`, `bwrap`, `socat` and
+`xvfb-run`.
 
 Every tool `probe.py` probes is in exactly one of the three tables in `parity.py`. Which table a
 new one goes in is decided by what is recorded for it: a version, presence alone, or absence.
@@ -623,20 +625,19 @@ container runtime, never as a machine name. A reader on another platform re-runs
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | Host                             | macOS on aarch64, Rancher Desktop, dockerd 29.5.3                                                                                    |
 | Platform built                   | `linux/arm64`, native                                                                                                                |
-| Image size                       | 4.04 GB                                                                                                                              |
-| Build time, cold                 | 5 min 30 s, `--no-cache`, native, over a proxy                                                                                       |
+| Image size                       | 4.59 GB                                                                                                                              |
+| Build time, cold                 | 4 min 15 s, `--no-cache`, native, over a proxy                                                                                       |
 | Build time, warm                 | under a second: the digest is present, so nothing runs                                                                               |
 | Python pin mismatches            | 0 of 136                                                                                                                             |
 | Extra Python packages            | 0                                                                                                                                    |
-| Non-Python deltas                | Java 11.0.32 against the recorded 11.0.31, a jammy point release. `socat`, which the inventory does not record, for the shell sandbox |
-| Font families in the image       | 111 against the recorded 118                                                                                                         |
+| Non-Python deltas                | none: every probed tool reports the recorded version                                                                                 |
+| Font families in the image       | 114 against the recorded 118                                                                                                         |
 | `import uno` from system python3 | yes                                                                                                                                  |
 | Extra root CA needed             | yes on this host. Three upstream hosts inspect TLS                                                                                   |
 
 All 136 pins are present at the recorded version, the nine from apt included, so the fidelity
-gain over the mirror is real. Both non-Python deltas are printed by `scripts/parity.sh` and
-neither fails it.
+gain over the mirror is real.
 
-The font count is 7 families short. The image installs the Noto fallback faces rather than
+The font count is 4 families short. The image installs the Noto fallback faces rather than
 `fonts-noto-core`, which alone adds 192 families over the record, so the remaining gap is between
 one jammy font package and another rather than between two font stacks.

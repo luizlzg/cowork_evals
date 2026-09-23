@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from cowork_evals import resources
+from cowork_evals import cli, resources
 from cowork_evals.cli import OK, USAGE, build_parser, main
 from cowork_evals.config import Config
 
@@ -93,20 +93,52 @@ def test_init_writes_the_config_the_memory_block_and_every_skill(
     assert (tmp_path / resources.CONFIG_NAME).is_file()
     assert (tmp_path / resources.MEMORY_NAME).is_file()
     for _, target in resources.skills():
-        assert (tmp_path / target).is_file(), target
+        assert (tmp_path / target / resources.SKILL_FILE).is_file(), target
+
+
+def _tree(root: Path) -> dict[Path, bytes]:
+    """Every file under a skill directory, bytecode excepted, which `init` does not copy."""
+    return {
+        path.relative_to(root): path.read_bytes()
+        for path in root.rglob("*")
+        if path.is_file() and "__pycache__" not in path.parts
+    }
 
 
 def test_every_skill_lands_where_claude_code_reads_it(
     tmp_path: Path, working_directory: Callable
 ) -> None:
-    """One directory per skill under `.claude/skills/`, and the copy is byte for byte."""
+    """One directory per skill under `.claude/skills/`, and the copy is the whole directory,
+    byte for byte."""
     _init_in(tmp_path, working_directory)
     installed = resources.skills()
-    assert len(installed) == 2
+    assert len(installed) == 3
     for source, target in installed:
         written = tmp_path / target
-        assert written.parent.parent == tmp_path / ".claude" / "skills"
-        assert written.read_text() == source.read_text()
+        assert written.parent == tmp_path / ".claude" / "skills"
+        assert _tree(written) == _tree(source)
+
+
+def test_a_skill_directory_is_installed_with_every_file_in_it(tmp_path: Path) -> None:
+    """A skill's references, scripts and assets travel with its `SKILL.md`."""
+    source = tmp_path / "source" / "greeter"
+    (source / "references").mkdir(parents=True)
+    (source / "scripts").mkdir()
+    (source / "SKILL.md").write_text("---\nname: greeter\n---\n")
+    (source / "references" / "format.md").write_text("# Format\n")
+    (source / "scripts" / "run.py").write_text("print('hi')\n")
+    (source / "scripts" / "__pycache__").mkdir()
+    (source / "scripts" / "__pycache__" / "run.cpython-310.pyc").write_bytes(b"bytecode")
+    target = tmp_path / "consumer" / ".claude" / "skills" / "greeter"
+
+    cli._install(source, target)
+
+    assert not (target / "scripts" / "__pycache__").exists()
+    assert set(_tree(target)) == {
+        Path("SKILL.md"),
+        Path("references/format.md"),
+        Path("scripts/run.py"),
+    }
 
 
 def test_the_configuration_it_writes_loads(tmp_path: Path, working_directory: Callable) -> None:

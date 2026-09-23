@@ -58,10 +58,13 @@ it does goes through that one executable.
   product, and read `cowork_evals docs cli` for what one ask costs.
 - The case format and the authoring traps are the `cowork-evals` skill in
   `.claude/skills/cowork-evals/`, and asking a live session is `cowork-ask` beside it.
+  Writing or reviewing a skill is `cowork-skill-author`.
 
 A CoWork session is Python 3.10 with a fixed wheel set. Every skill, command, agent and hook
-under a path passed to `cowork_evals run` imports only what that image carries. Read
-`cowork_evals docs runtime` before adding an import to plugin code.
+under a path passed to `cowork_evals run` imports only what that image carries, runs only the
+commands on its `PATH`, and reads only the environment variables it sets. Read
+`cowork_evals docs runtime` before adding an import to plugin code, and run
+`cowork_evals test --docker <plugin>/tests` before calling plugin code done.
 
 `cowork_evals.yaml` holds every setting and is the only route: nothing is read from the
 process environment except the variables `docker.env_passthrough` names, which are forwarded
@@ -79,18 +82,19 @@ SUFFIX = ".md"
 
 
 def skills() -> list[tuple[Path, Path]]:
-    """Every shipped skill, as `(source, target)`, sorted by name.
+    """Every shipped skill directory, as `(source, target)`, sorted by name.
 
-    The target is `.claude/skills/<directory name>/SKILL.md`, relative to the working
-    directory, which is where a Claude Code session picks up a project skill. The directory
-    name is the skill name, so the two cannot drift.
+    The target is `.claude/skills/<directory name>/`, relative to the working directory,
+    which is where a Claude Code session picks up a project skill. A skill is the whole
+    directory, `SKILL.md` and every file beside it. The directory name is the skill name, so
+    the two cannot drift.
 
     A directory under `skills/` with no `SKILL.md` is not a skill and is not listed.
     """
     if not SKILLS.is_dir():
         return []
     return sorted(
-        (directory / SKILL_FILE, SKILLS_TARGET / directory.name / SKILL_FILE)
+        (directory, SKILLS_TARGET / directory.name)
         for directory in SKILLS.iterdir()
         if (directory / SKILL_FILE).is_file()
     )

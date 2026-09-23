@@ -62,10 +62,11 @@ SDIST_DOCS="$(grep -c "/docs/" <<< "$SDIST_FILES" || true)"
 [ "$WHEEL_DOCS" = "$SDIST_DOCS" ] ||
   die "the wheel carries $WHEEL_DOCS documents and the sdist $SDIST_DOCS"
 
-# No development directory ships. The sdist include list in pyproject.toml is the rule.
+# No development directory ships. The sdist include list in pyproject.toml is the rule. A
+# directory is matched at the top of the sdist only: a shipped skill has a `scripts/` of its own.
 # `docs/` is not one: it is the consumer's reference and ships. docs/library.md.
 for directory in scripts tests plans plugins; do
-  if grep -q "/$directory/" <<< "$SDIST_FILES"; then
+  if grep -q "^[^/]*/$directory/" <<< "$SDIST_FILES"; then
     die "$directory/ is in the sdist"
   fi
 done

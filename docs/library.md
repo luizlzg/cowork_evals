@@ -67,7 +67,7 @@ own.
 | `src/cowork_evals/`                               | yes   | The CoWork driver, the CLI, both backends, the graders, the judge, the verdict, the validator |
 | `src/cowork_evals/data/requirements*.txt`         | yes   | The pins the mirror and the image are built from                         |
 | `src/cowork_evals/data/cowork_evals.example.yaml` | yes   | Every key and every default, and what `init` writes                      |
-| `src/cowork_evals/data/skills/<name>/SKILL.md`    | yes   | Every shipped skill, one directory each, and what `init` installs        |
+| `src/cowork_evals/data/skills/<name>/`            | yes   | Every shipped skill, one directory each, and what `init` installs        |
 | `src/cowork_evals/data/cowork_env.sh`             | yes   | The shell prefix the image installs for every `Bash` call                |
 | `src/cowork_evals/docker/Dockerfile`              | yes   | What `setup --docker` builds                                             |
 | `src/cowork_evals/docker/Dockerfile.pytest`       | yes   | One layer over it, carrying pytest                                       |
@@ -93,28 +93,44 @@ once. What they hold, and how they differ, is [environments.md](environments.md)
 
 `src/cowork_evals/data/skills/` holds the shipped Claude Code skills, one directory per skill.
 They are the shipped files whose reader is a model rather than a person. `cowork_evals init`
-copies each of them to `.claude/skills/<name>/SKILL.md` in the consumer's repository, which is
-where a Claude Code session picks up a project skill. The directory name is the skill name, so
+copies each directory whole to `.claude/skills/<name>/` in the consumer's repository, which is
+where a Claude Code session picks up a project skill. A skill is its `SKILL.md` and every file
+beside it. The directory name is the skill name, so
 the two cannot drift, and adding a skill is adding a directory: nothing in the verb names one.
 
-There are two, and the rule that separates them is which question fires them. A question about
-a file this repository ships is the first. A question only a running session can settle is the
-second.
+There are three, and the rule that separates them is which question fires them. A question
+about a case, a grader or the command is the first. A question only a running session can
+settle is the second. A question about the consumer's own skill, its layout or whether its code
+runs in a session, is the third.
 
 | Skill          | Fires on                                                                                                                          | Holds                                                                             |
 | -------------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | `cowork-evals` | Writing or fixing a case, a `prompt.md` or a grader, a failing command, the configuration file, plugin code that runs in a session | The case tree, the addressability keys, the grader types and idioms, the authoring traps, the exit codes and the runtime constraint |
 | `cowork-ask`   | A question about what a live CoWork session does, a claim that has to be confirmed in the product, a failing `cowork_evals ask`    | The verb, what one ask costs, and the rule that the session is asked to do the thing and what it did is read back |
+| `cowork-skill-author` | Creating, reviewing or validating a skill, and whether plugin code runs in a session | The plugin and skill layout, the frontmatter and wrapper conventions, the review checklist, a condensed [runtime.md](runtime.md) and the session's `pip freeze` |
 
 `cowork-evals` is a condensed [eval_format.md](eval_format.md) and [cli.md](cli.md).
 `cowork-ask` is a condensed [cli.md](cli.md), [cowork_driver.md](cowork_driver.md) and
-[cowork_desktop.md](cowork_desktop.md). Both are condensed because a skill is read into a
+[cowork_desktop.md](cowork_desktop.md). `cowork-skill-author`'s runtime references are a
+condensed [runtime.md](runtime.md). All three are condensed because a skill is read into a
 context window every time it fires, and the full documents are one `cowork_evals docs` away.
 
 These files and the documents they condense are the one place in this repository where the
 same fact is written twice. The rule that keeps them in step is that a skill states no fact of
-its own: every rule in it is in a document, the skill carries the short form, and a change to
-a rule is made in the document first. A rule that exists only in a skill is a defect.
+its own about this package or about CoWork: every such rule is in a document, the skill carries
+the short form, and a change to a rule is made in the document first. A rule of that kind that
+exists only in a skill is a defect.
+
+The split has one other side. A convention for the consumer's own plugin, one this package
+neither implements nor measures, lives in the skill that teaches it and in no document: the
+Agent Skills frontmatter, the plugin and skill layout, the shell wrapper and package form, and
+the review checklist in `cowork-skill-author`. `docs/` describes this package and what it
+measured, and a consumer's code conventions are neither.
+
+A data file a skill carries is a symlink to the one file the package already holds, never a
+copy. `cowork-skill-author`'s `references/pip_freeze.txt` links to
+`src/cowork_evals/data/requirements.txt`, so re-capturing the pins changes the skill with no
+second edit. The wheel build and `init` both write the file the link names.
 
 Where the verb writes the skills, and why upgrading the package does not refresh them, is
 [cli.md](cli.md). This repository is not a consumer, so its own `.claude/skills/` is generated

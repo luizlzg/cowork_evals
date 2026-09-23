@@ -535,15 +535,18 @@ that follow from it, are in [library.md](library.md).
 `init` writes what a consumer repository needs to use this command, into the working
 directory. It takes no backend and no option.
 
-| Target                                 | Is                                                                                |
-| -------------------------------------- | --------------------------------------------------------------------------------- |
-| `cowork_evals.yaml`                    | Every key and every default, and a placeholder for `cowork.profile`               |
-| `.claude/skills/cowork-evals/SKILL.md` | The eval-authoring skill: the tree, the keys, the graders, the traps              |
-| `.claude/skills/cowork-ask/SKILL.md`   | The ask skill: when to ask a live session, what it costs, what counts as evidence |
-| `CLAUDE.md`                            | A block naming the command, the `docs` verb and the runtime constraint            |
+| Target                          | Is                                                                                |
+| ------------------------------- | --------------------------------------------------------------------------------- |
+| `cowork_evals.yaml`             | Every key and every default, and a placeholder for `cowork.profile`               |
+| `.claude/skills/cowork-evals/`  | The eval-authoring skill: the tree, the keys, the graders, the traps              |
+| `.claude/skills/cowork-ask/`    | The ask skill: when to ask a live session, what it costs, what counts as evidence |
+| `.claude/skills/cowork-skill-author/` | The skill-authoring skill: the layout, the checklist, what a session provides |
+| `CLAUDE.md`                     | A block naming the command, the `docs` verb and the runtime constraint            |
 
 The skills are whatever the package ships, one directory each under
-`src/cowork_evals/data/skills/`, installed at `.claude/skills/<directory name>/SKILL.md`.
+`src/cowork_evals/data/skills/`. Each directory is copied whole, with every file in it except
+`__pycache__`, to `.claude/skills/<directory name>/`. A skill directory that exists is one target: it is kept
+whole, and no file is added to it.
 Which skill fires on what, and why they are two files and not one, is
 [library.md](library.md).
 
@@ -574,7 +577,7 @@ nothing warns about it.
 After upgrading `cowork-evals`, take the new skills:
 
 ```sh
-rm -r .claude/skills/cowork-evals .claude/skills/cowork-ask
+rm -r .claude/skills/cowork-evals .claude/skills/cowork-ask .claude/skills/cowork-skill-author
 cowork_evals init
 ```
 

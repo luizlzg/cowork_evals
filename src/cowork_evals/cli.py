@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -1213,7 +1214,8 @@ def _init() -> int:
     working directory.
 
     The skills are whatever `src/cowork_evals/data/skills/` holds, one directory each, so
-    adding one is adding a directory and is no change here. docs/library.md.
+    adding one is adding a directory and is no change here. Each is copied whole, with every
+    file beside its `SKILL.md`. docs/library.md.
 
     It never overwrites. A target that exists is left exactly as it is and reported, so a
     second run changes nothing and a consumer's own edits survive. Regenerating one means
@@ -1228,10 +1230,9 @@ def _init() -> int:
         if target.exists():
             print(f"kept {target}")
             continue
-        if not source.is_file():
+        if not source.exists():
             return _refuse([f"{source.name} is missing from this installation"], PREFLIGHT_FAILED)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(source.read_text())
+        _install(source, target)
         print(f"wrote {target}")
         written += 1
 
@@ -1239,6 +1240,19 @@ def _init() -> int:
     if written == 0:
         print("nothing to do: every target was already there")
     return OK
+
+
+def _install(source: Path, target: Path) -> None:
+    """Copy one `init` source to its target: a directory with everything under it, a file
+    as it is. The target's parent is created.
+
+    Bytecode is left behind. The installer compiles a shipped script, and a `__pycache__`
+    is not part of the skill."""
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if source.is_dir():
+        shutil.copytree(source, target, ignore=shutil.ignore_patterns("__pycache__"))
+    else:
+        shutil.copyfile(source, target)
 
 
 def _init_memory() -> int:

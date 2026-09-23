@@ -9,8 +9,8 @@ a skill at invocation time, and the rules that follow for the code under test. E
 below was read from a real session by direct probe: it is what one session held, not a
 contract the product offers. Re-capture it when the base image changes.
 
-- **Every session starts a fresh VM.** Nothing installed during a session survives it, and
-  every session pays the install cost again.
+- **A session cannot count on an earlier one.** Each session is a new user with a new home
+  directory, so anything installed during a session is paid for again in the next.
 - **The code under test is bound to Python 3.10 and the image wheel set.** No runtime install,
   no virtualenv, no package that is not already there.
 - **The host gives a skill less than a laptop does.** No plugin `bin/` on `PATH`, no working
@@ -63,8 +63,9 @@ A Bash call runs GNU bash 5.1.16, whatever `SHELL` says. The shell is PID 2 in i
 namespace, and PID 1 is `bwrap`.
 
 The complete environment of a session shell is below. `<session>` is the generated session
-name, three words joined by hyphens. It is also the Unix user name. No other variable is set,
-so a skill that reads any other name gets the empty string. `INVOCATION_ID`,
+name, three words joined by hyphens. It is also the Unix user name. bash itself sets `_` and
+its own shell variables. No other variable is set, so a skill that reads any other name gets
+the empty string. `INVOCATION_ID`,
 `JOURNAL_STREAM` and `SYSTEMD_EXEC_PID` are inherited from the systemd unit that starts
 `bwrap`.
 
@@ -132,13 +133,15 @@ Exact Python pins: `src/cowork_evals/data/requirements.txt`, the verbatim `pip f
 | Node.js      | v22.23.2                                                                             |
 | npm          | 10.9.8                                                                               |
 | npm globals  | corepack 0.34.6 and npm 10.9.8 under `/usr/lib/node_modules`, and the tree below     |
-| Java         | OpenJDK 11.0.31 (Ubuntu build)                                                       |
+| Java         | OpenJDK 11.0.32 (Ubuntu build)                                                       |
 | Git          | 2.34.1                                                                               |
 
 A second global npm tree is at `/usr/local/lib/node_modules_global`. Its `bin/` is first on
 `PATH` and its `lib/node_modules` is `NODE_PATH`, so `require()` resolves these packages from
 any directory. Each library in the table imports with a bare `require()` from the session
-directory.
+directory. An ES module `import` of one fails, because ES module resolution does not read
+`NODE_PATH`. `createRequire(import.meta.url)` from `node:module` loads it from an ES module.
+`tsx` runs a `.ts` file with no build step.
 
 | Package                         | Version | Command on `PATH`                                                                                |
 | ------------------------------- | ------- | ------------------------------------------------------------------------------------------------ |
@@ -167,7 +170,12 @@ directory.
 | qpdf                            | 10.6.3                                                       |
 | tesseract-ocr                   | 4.1.1 (leptonica 1.82.0)                                     |
 
-**Not** present: `wkhtmltopdf`, `weasyprint`, `exiftool`, `docker`.
+| TeX Live (`pdflatex`, `xelatex`) | 2021, pdfTeX 3.141592653: latex-base, latex-recommended, fonts-recommended, xetex. `latexmk` 4.76 |
+| Graphviz (`dot`)                | package 2.42.2, and `dot -V` reports 2.43.0                  |
+| Xvfb (`xvfb-run`)               | 21.1.4                                                       |
+
+**Not** present: `wkhtmltopdf`, `weasyprint`, `exiftool`, `docker`, `magick`, `mutool`,
+`inkscape`, `rsvg-convert`, `chromium`, `google-chrome`, `gh`, `yq`, `aws`, `gcloud`, `az`.
 
 ### Image and media tooling
 
@@ -191,9 +199,10 @@ and Caladea. This matters to a skill that needs pixel-exact Office rendering.
 
 ### Misc CLI utilities
 
-`git`, `curl` 7.81.0, `wget` 1.21.2, `jq` 1.6, `ssh`, standard coreutils and the
-build-essential toolchain. There is no `sqlite3` CLI binary on `PATH`; the Python `sqlite3`
-module is available.
+`git`, `curl` 7.81.0, `wget` 1.21.2, `jq` 1.6, `ssh`, `rg` 13.0.0, `zip` 3.0, `unzip` 6.00,
+`rsync` 3.2.7, `bc` 1.07.1, `file` 5.41, `xmllint`, `nc`, `lsof`, `bwrap` (bubblewrap 0.6.1),
+`socat` 1.7.4.1, `sudo`, standard coreutils and the build-essential toolchain. There is no
+`sqlite3` CLI binary on `PATH`; the Python `sqlite3` module is available.
 
 ### Notable pre-installed Python packages
 

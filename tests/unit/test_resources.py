@@ -138,16 +138,23 @@ def test_every_commented_default_in_the_example_is_the_built_in_default(
 def test_every_shipped_skill_is_a_directory_named_for_it() -> None:
     """One directory per skill, and its name is the skill's name. docs/library.md."""
     installed = resources.skills()
-    assert [target.parent.name for _, target in installed] == ["cowork-ask", "cowork-evals"]
+    assert [target.name for _, target in installed] == [
+        "cowork-ask",
+        "cowork-evals",
+        "cowork-skill-author",
+    ]
     for source, target in installed:
-        text = source.read_text()
+        text = (source / resources.SKILL_FILE).read_text()
         assert text.startswith("---\n"), source
-        assert f"name: {target.parent.name}" in text, source
+        assert f"name: {target.name}" in text, source
         assert "TRIGGER" in text, source
 
 
 def test_a_skill_installs_where_claude_code_reads_a_project_skill() -> None:
-    assert resources.skills()[0][1] == Path(".claude") / "skills" / "cowork-ask" / "SKILL.md"
+    assert resources.skills()[0] == (
+        resources.SKILLS / "cowork-ask",
+        Path(".claude") / "skills" / "cowork-ask",
+    )
 
 
 def test_the_ask_skill_carries_the_measurement_rule() -> None:

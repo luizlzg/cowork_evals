@@ -2,7 +2,7 @@
 #
 # Copy every shipped skill into this repository's own .claude/skills/.
 #
-#   (no args)  copy each skill, overwriting what is there
+#   (no args)  copy each skill directory whole, replacing what is there
 #
 # A consumer gets these from `cowork_evals init`, which never overwrites. This
 # repository is not a consumer, so it takes them the other way: the shipped copy
@@ -26,7 +26,9 @@ TARGET="$ROOT/.claude/skills"
 for skill in "$SOURCE"/*/; do
   name="$(basename "$skill")"
   [ -f "$skill/SKILL.md" ] || die "$name carries no SKILL.md"
-  mkdir -p "$TARGET/$name"
-  cp "$skill/SKILL.md" "$TARGET/$name/SKILL.md"
-  echo "wrote $TARGET/$name/SKILL.md"
+  rm -rf "${TARGET:?}/$name"
+  mkdir -p "$TARGET"
+  cp -RL "${skill%/}" "$TARGET/$name"
+  find "$TARGET/$name" -name __pycache__ -type d -prune -exec rm -rf {} +
+  echo "wrote $TARGET/$name"
 done

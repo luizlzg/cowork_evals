@@ -34,10 +34,10 @@ REQUIREMENTS = Path(__file__).parent.parent / "data" / "requirements.txt"
 # session, so finding one is a failure.
 ABSENT = ("wkhtmltopdf", "weasyprint", "exiftool", "docker", "sqlite3")
 
-# Recorded present with no version to compare. docs/runtime.md lists `ssh` without one, and
-# `bwrap` and `socat` are the two harness deltas docs/docker.md records: neither is a
-# fidelity claim about the CoWork image, and neither fails.
-PRESENT = ("ssh", "bwrap", "socat")
+# Recorded present with no version to compare. docs/runtime.md lists `ssh`, `bwrap`, `socat`
+# and `xvfb-run` without one. The harness needs `bwrap` and `socat` to start a granted `Bash`
+# tool.
+PRESENT = ("ssh", "bwrap", "socat", "xvfb-run")
 
 # What docs/runtime.md records for each tool, for the report. A difference is printed and
 # does not fail: a jammy point release moves a patch version and must not block.
@@ -47,7 +47,7 @@ EXPECTED_VERSIONS = {
     "uv": "0.12.3",
     "node": "22.23.2",
     "npm": "10.9.8",
-    "java": "11.0.31",
+    "java": "11.0.32",
     "git": "2.34.1",
     "soffice": "26.2.5.2",
     "unoserver": "3.7",
@@ -61,6 +61,17 @@ EXPECTED_VERSIONS = {
     "curl": "7.81.0",
     "wget": "1.21.2",
     "jq": "1.6",
+    "dot": "2.43.0",
+    "pdflatex": "3.141592653",
+    "xelatex": "3.141592653",
+    "latexmk": "4.76",
+    "rg": "13.0.0",
+    "zip": "3.0",
+    "unzip": "6.00",
+    "rsync": "3.2.7",
+    "bc": "1.07.1",
+    "file": "5.41",
+    "xmllint": "20913",
 }
 
 # docs/runtime.md, the second global npm tree. A missing or moved package fails, as a pin

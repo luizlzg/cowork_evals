@@ -17,14 +17,17 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8
 
 # One apt layer: the document, image, media and CLI tooling jammy already carries at the
-# recorded versions, the Java 11 the tabula-py pin needs, the nine suppliers of
-# /usr/lib/python3/dist-packages, the Ubuntu font stack, bubblewrap and socat for the Bash
-# sandbox, and the headers the sdist-only pins compile against.
+# recorded versions, TeX Live and Graphviz, the Java 11 the tabula-py pin needs, the nine
+# suppliers of /usr/lib/python3/dist-packages, the Ubuntu font stack, bubblewrap and socat,
+# and the headers the sdist-only pins compile against.
 #
-# socat is a deliberate delta from the CoWork inventory, which does not record it. The
-# harness refuses to start a granted Bash tool without both bubblewrap and socat, and every
-# case here is pinned --allow-tools Bash. Without it the run exits 1 with `sandbox is
-# enabled but dependencies are missing: socat not installed`.
+# A package the CoWork image carries is installed here when a skill can call it: it supplies
+# an executable or a library a session command uses. The VM's own plumbing, the kernel, the
+# boot chain, cloud-init, udev, firmware and the ssh server, is not. docs/docker.md.
+#
+# bubblewrap and socat are on the CoWork image, and the harness also needs both: it refuses
+# to start a granted Bash tool without them, and every case here is pinned --allow-tools
+# Bash.
 #
 # The font list carries the Noto fallback faces and not fonts-noto-core, which alone adds
 # 192 families over what docs/runtime.md records.
@@ -36,6 +39,22 @@ RUN apt-get update \
     wget \
     jq \
     git \
+    bc \
+    file \
+    lsof \
+    netcat-openbsd \
+    ripgrep \
+    rsync \
+    unzip \
+    zip \
+    libxml2-utils \
+    xvfb \
+    graphviz \
+    latexmk \
+    texlive-fonts-recommended \
+    texlive-latex-base \
+    texlive-latex-recommended \
+    texlive-xetex \
     openssh-client \
     build-essential \
     pkg-config \

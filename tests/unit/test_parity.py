@@ -36,7 +36,7 @@ def test_a_clean_probe_has_no_failures():
 
 def test_a_missing_pin_fails():
     failures, _ = probed("probe_pin_missing")
-    assert failures == ["pin missing: pypdf==6.15.0"]
+    assert failures == ["pin missing: pypdf==6.18.0"]
 
 
 def test_a_moved_pin_fails():

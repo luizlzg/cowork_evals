@@ -59,7 +59,7 @@ The distribution is `cowork-evals`. The command it installs is `cowork_evals`.
 Then, in the repository that owns the plugins:
 
 ```bash
-cowork_evals init    # cowork_evals.yaml, the two skills, and a CLAUDE.md block
+cowork_evals init    # cowork_evals.yaml, the three skills, and a CLAUDE.md block
 cowork_evals docs    # where the documentation went, and every document name
 ```
 
@@ -70,7 +70,7 @@ where that matters, because the eval-authoring one carries the case format and a
 teaches an out-of-date one. After an upgrade, delete them and run `init` again:
 
 ```bash
-rm -r .claude/skills/cowork-evals .claude/skills/cowork-ask && cowork_evals init
+rm -r .claude/skills/cowork-evals .claude/skills/cowork-ask .claude/skills/cowork-skill-author && cowork_evals init
 ```
 
 ## What you need
@@ -289,20 +289,24 @@ working directory.
 
 ## The skills
 
-`cowork_evals init` installs two Claude Code skills under `.claude/skills/`, and a session in
+`cowork_evals init` installs three Claude Code skills under `.claude/skills/`, and a session in
 your repository picks them up from there. They fire on different questions.
 
 | Skill          | Fires on                                                                   |
 | -------------- | ---------------------------------------------------------------------------- |
 | `cowork-evals` | Writing or fixing a case, a `prompt.md`, a grader or a check; a failing `cowork_evals` command; the configuration file; plugin code that has to run inside a session |
 | `cowork-ask`   | A question about what a live CoWork session actually does; a claim that has to be confirmed in the product; a failing `cowork_evals ask` |
+| `cowork-skill-author` | Creating, reviewing or validating a skill; asking whether plugin code runs in a CoWork session |
 
 `cowork-evals` carries the case tree, the two required frontmatter keys, the six grader types,
 three copy-paste grader idioms, two copy-paste checks, the eleven authoring traps, the exit
 codes and the 3.10 runtime constraint. `cowork-ask` carries the verb, what one ask costs, and the rule that makes an
 answer evidence: ask the session to do the thing and read what it did, because what a session
 says about its own configuration is not evidence. Both send a reader to `cowork_evals docs`
-for everything they do not carry.
+for everything they do not carry. `cowork-skill-author` carries the plugin and skill layout,
+the frontmatter and wrapper conventions, a review checklist, what a session provides (Python
+and its packages, the installed commands, Node packages, environment variables), and the
+session's `pip freeze`.
 
 The files are yours once `init` writes them. Edit them, commit them, and refresh them after an
 upgrade with the two commands above. What they hold and why they are copies is
