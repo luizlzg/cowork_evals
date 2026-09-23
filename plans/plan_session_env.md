@@ -87,9 +87,10 @@ sandbox and the log stay in the run directory (`docs/docker.md`). Record each an
 `docs/docker.md`, in the new section. Phase 2 then replaces the logging script with the real
 one.
 
-- [ ] Does the prefix fire in a harness run? If not, the managed settings carry a
+- [x] Does the prefix fire in a harness run? If not, the managed settings carry a
       `PreToolUse` hook on `Bash` instead. It rewrites `tool_input.command` to
       `cowork-env /bin/bash -c '<command>'`. Everything else is unchanged.
+      Result: yes. No hook is needed.
 - [ ] Does the command arrive as one string or as an argv? For one string, the script
       execs `env -i <pairs> /bin/bash -c "$1"`, where `/bin/bash` matches the CoWork Bash
       tool (bash 5.1.16). For an argv, it execs `env -i <pairs> "$@"`. Either way the pairs
