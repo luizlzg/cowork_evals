@@ -91,10 +91,11 @@ one.
       `PreToolUse` hook on `Bash` instead. It rewrites `tool_input.command` to
       `cowork-env /bin/bash -c '<command>'`. Everything else is unchanged.
       Result: yes. No hook is needed.
-- [ ] Does the command arrive as one string or as an argv? For one string, the script
+- [x] Does the command arrive as one string or as an argv? For one string, the script
       execs `env -i <pairs> /bin/bash -c "$1"`, where `/bin/bash` matches the CoWork Bash
       tool (bash 5.1.16). For an argv, it execs `env -i <pairs> "$@"`. Either way the pairs
       are built before the exec, from `COWORK_EVALS_KEEP`.
+      Result: one string, for a Bash call and for a hook. The script runs `/bin/bash -c "$1"`.
 - [ ] Does `COWORK_EVALS_KEEP` reach the script? If not, `run_preamble` writes the names to
       `keep_env.txt` in the log mount, and the script reads that file.
 - [ ] Does the prefix wrap plugin hooks? Add a `SessionStart` hook to the throwaway plugin to
