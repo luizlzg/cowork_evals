@@ -185,7 +185,7 @@ file mounted where a run mounts it and an environment set with `--env`.
       enforces this set and that `docker.session_env` holds it, with a link to `docker.md`.
 - [x] `docs/library.md`: `session_env` and `keep_env` hold names and never values, the same
       as `env_passthrough`.
-- [ ] `src/cowork_evals/data/cowork_evals.example.yaml`: both keys, commented, with their
+- [x] `src/cowork_evals/data/cowork_evals.example.yaml`: both keys, commented, with their
       defaults and the one-line rule for each.
 - [ ] `docs/running_evals.md`: one sentence saying that a skill reading a variable outside the
       lists fails in Docker.
