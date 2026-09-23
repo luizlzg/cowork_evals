@@ -128,7 +128,7 @@ one.
 - [x] `DockerSection`: add `session_env` and `keep_env` as `tuple[str, ...]` with the
       defaults above, validated by `_env_names`. Refuse, at load, a name that is in two lists,
       and name the name and both keys.
-- [ ] `run_preamble`: add `TZ`, after `ENABLEMENT_ENV`. `run_argv`: mount the run's
+- [x] `run_preamble`: add `TZ`, after `ENABLEMENT_ENV`. `run_argv`: mount the run's
       `keep_env.txt` read-only at `/etc/cowork_evals/keep_env.txt`. `Docker.run` writes that
       file before the container starts, and `--dry-run` writes nothing. Neither value is
       secret, so `--dry-run` prints both unredacted.
