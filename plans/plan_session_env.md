@@ -107,10 +107,11 @@ one.
       `curl -sI https://example.com` with that domain granted, and `python3 -c 'import tempfile;
       tempfile.mkdtemp()'`. A name whose removal breaks either goes in the `keep_env` default.
       Result: the HTTP proxy the sandbox sets. Without it curl exits 6. `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `NO_PROXY` and the lower-case forms are in the `keep_env` default. `tempfile.mkdtemp()` needs only `TMPDIR`.
-- [ ] Does the command string Claude Code passes export any variable itself, for example from
+- [x] Does the command string Claude Code passes export any variable itself, for example from
       its shell snapshot? A name it exports that is outside the lists reaches the command after
       `env -i`, and the script cannot remove it. If one appears, record it as a Docker delta
       in `docs/docker.md`, and allow it in the fixture check by name.
+      Result: no. A Bash call sees the listed names, `PWD`, `SHLVL` and `_`.
 - [ ] Does `TZ` reach the script? If not, drop it from `run_preamble`, and record its absence
       as a Docker delta.
 
