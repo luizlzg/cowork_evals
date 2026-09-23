@@ -206,3 +206,5 @@ file mounted where a run mounts it and an environment set with `--env`.
       case serves both backends.
 - [ ] Manual: a one-case plugin whose skill runs `test -n "$CLAUDE_CODE_SESSION_ID"` and
       reports the exit status. It fails under `run --docker`, and it fails under `run --cowork`.
+      Docker half: the skill reports `exit=1` and the case fails under `run --docker`. The
+      `run --cowork` half is not run yet.
