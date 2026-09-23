@@ -96,8 +96,9 @@ one.
       tool (bash 5.1.16). For an argv, it execs `env -i <pairs> "$@"`. Either way the pairs
       are built before the exec, from `COWORK_EVALS_KEEP`.
       Result: one string, for a Bash call and for a hook. The script runs `/bin/bash -c "$1"`.
-- [ ] Does `COWORK_EVALS_KEEP` reach the script? If not, `run_preamble` writes the names to
+- [x] Does `COWORK_EVALS_KEEP` reach the script? If not, `run_preamble` writes the names to
       `keep_env.txt` in the log mount, and the script reads that file.
+      Result: no, and the log mount is not visible to a sandboxed call either. The names go in `keep_env.txt` in the run's log directory, mounted read-only at `/etc/cowork_evals/keep_env.txt`. The prefix setting cannot carry an argument, so the path is fixed in the script.
 - [ ] Does the prefix wrap plugin hooks? Add a `SessionStart` hook to the throwaway plugin to
       find out. If it does, add `CLAUDE_PLUGIN_ROOT`, `CLAUDE_PLUGIN_DATA` and
       `CLAUDE_PROJECT_DIR` to the `keep_env` default, because hooks rely on them.
