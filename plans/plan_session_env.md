@@ -118,8 +118,8 @@ one.
 
 ## Phase 2: build
 
-- [ ] `src/cowork_evals/data/cowork_env.sh`: POSIX sh, as designed above. The directory is the
-      Docker build context.
+- [x] `src/cowork_evals/data/cowork_env.sh`: POSIX sh, as designed above. The directory is the
+      Docker build context. It reads `/etc/cowork_evals/keep_env.txt`.
 - [ ] `Dockerfile`: `COPY cowork_env.sh /usr/local/bin/cowork-env`, `chmod 0755`, and a `RUN`
       step that writes `/etc/claude-code/managed-settings.json`.
 - [ ] `Docker.digest` in `src/cowork_evals/docker/__init__.py`: hash `cowork_env.sh` beside
@@ -128,8 +128,10 @@ one.
 - [ ] `DockerSection`: add `session_env` and `keep_env` as `tuple[str, ...]` with the
       defaults above, validated by `_env_names`. Refuse, at load, a name that is in two lists,
       and name the name and both keys.
-- [ ] `run_preamble`: add `COWORK_EVALS_KEEP` and `TZ`, after `ENABLEMENT_ENV`. Neither value
-      is secret, so `--dry-run` prints both unredacted.
+- [ ] `run_preamble`: add `TZ`, after `ENABLEMENT_ENV`. `run_argv`: mount the run's
+      `keep_env.txt` read-only at `/etc/cowork_evals/keep_env.txt`. `Docker.run` writes that
+      file before the container starts, and `--dry-run` writes nothing. Neither value is
+      secret, so `--dry-run` prints both unredacted.
 - [ ] `write_env` in `src/cowork_evals/logs.py`: record `session_env` and `keep_env` beside
       `env_passthrough`, so a result says which list it ran under. Pass them from the caller in
       `cli.py` that already passes `env_passthrough`.

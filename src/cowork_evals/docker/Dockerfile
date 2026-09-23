@@ -205,10 +205,11 @@ RUN mkdir -p "${CONTAINER_HOME}" "${CONTAINER_PLUGIN}" "${CONTAINER_LOGS}" \
 # bwrap without that mount does not reach the failure.
 RUN rm -f /run/shm && mkdir -p /run/shm && chmod 1777 /run/shm
 
-# Every Bash call Claude Code makes runs through cowork-env, which gives the command the
+# Every Bash call and hook command Claude Code runs goes through cowork-env, which gives it the
 # CoWork session environment and nothing else. Managed settings rather than `docker run --env`,
-# because the harness strips session-scoped variables from the CLI it starts and managed
-# settings still apply inside a run. docs/docker.md, "The session environment".
+# because the harness strips variables it does not know from the CLI it starts, and managed
+# settings still apply inside a run. The names it keeps arrive per run in a file mounted
+# read-only. docs/docker.md, "The session environment".
 COPY cowork_env.sh /usr/local/bin/cowork-env
 RUN chmod 0755 /usr/local/bin/cowork-env \
   && mkdir -p /etc/claude-code \
