@@ -181,7 +181,7 @@ file mounted where a run mounts it and an environment set with `--env`.
       the three lists and their rule, the derived names, the phase 1 results, and the Docker
       deltas: the systemd names, and `TZ` if phase 1 dropped it. Add two rows for
       `session_env` and `keep_env` to the configuration table near the top.
-- [ ] `docs/runtime.md`: one sentence after the variable table saying that a Docker run
+- [x] `docs/runtime.md`: one sentence after the variable table saying that a Docker run
       enforces this set and that `docker.session_env` holds it, with a link to `docker.md`.
 - [x] `docs/library.md`: `session_env` and `keep_env` hold names and never values, the same
       as `env_passthrough`.
