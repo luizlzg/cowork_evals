@@ -187,7 +187,7 @@ file mounted where a run mounts it and an environment set with `--env`.
       as `env_passthrough`.
 - [x] `src/cowork_evals/data/cowork_evals.example.yaml`: both keys, commented, with their
       defaults and the one-line rule for each.
-- [ ] `docs/running_evals.md`: one sentence saying that a skill reading a variable outside the
+- [x] `docs/running_evals.md`: one sentence saying that a skill reading a variable outside the
       lists fails in Docker.
 - [ ] `plugins/README.md`: the `session-env` row, and "four cases" changed to five.
 - [ ] `src/cowork_evals/data/skills/cowork-evals/SKILL.md`: code in a session reads only the
