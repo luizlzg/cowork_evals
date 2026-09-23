@@ -206,7 +206,7 @@ file mounted where a run mounts it and an environment set with `--env`.
 - [x] `cowork_evals run --cowork plugins/smoke --case session-env` passes, which shows one
       case serves both backends.
       Result: passes on both backends once the command writes into `$HOME/mnt/outputs` when it exists. The session saw exactly the 16 names in `docs/runtime.md` and `_`.
-- [ ] Manual: a one-case plugin whose skill runs `test -n "$CLAUDE_CODE_SESSION_ID"` and
+- [x] Manual: a one-case plugin whose skill runs `test -n "$CLAUDE_CODE_SESSION_ID"` and
       reports the exit status. It fails under `run --docker`, and it fails under `run --cowork`.
-      Docker half: the skill reports `exit=1` and the case fails under `run --docker`. The
-      `run --cowork` half is not run yet.
+      Docker half: the skill reports `exit=1` and the case fails under `run --docker`.
+      Result: the CoWork backend loads no plugin, so the skill cannot reach a session. The CoWork half is the `session-env` run on `--cowork`: its `Bash` call saw no `CLAUDE_CODE_SESSION_ID`, so `test -n` exits 1 there, as it does under `run --docker`.
