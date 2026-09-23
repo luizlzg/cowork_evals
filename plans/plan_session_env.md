@@ -99,9 +99,10 @@ one.
 - [x] Does `COWORK_EVALS_KEEP` reach the script? If not, `run_preamble` writes the names to
       `keep_env.txt` in the log mount, and the script reads that file.
       Result: no, and the log mount is not visible to a sandboxed call either. The names go in `keep_env.txt` in the run's log directory, mounted read-only at `/etc/cowork_evals/keep_env.txt`. The prefix setting cannot carry an argument, so the path is fixed in the script.
-- [ ] Does the prefix wrap plugin hooks? Add a `SessionStart` hook to the throwaway plugin to
+- [x] Does the prefix wrap plugin hooks? Add a `SessionStart` hook to the throwaway plugin to
       find out. If it does, add `CLAUDE_PLUGIN_ROOT`, `CLAUDE_PLUGIN_DATA` and
       `CLAUDE_PROJECT_DIR` to the `keep_env` default, because hooks rely on them.
+      Result: yes. The three names are in the `keep_env` default.
 - [ ] Which incoming names does a sandboxed call need? Remove each name the log shows, then run
       `curl -sI https://example.com` with that domain granted, and `python3 -c 'import tempfile;
       tempfile.mkdtemp()'`. A name whose removal breaks either goes in the `keep_env` default.
