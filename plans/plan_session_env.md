@@ -135,8 +135,9 @@ one.
 - [x] `write_env` in `src/cowork_evals/logs.py`: record `session_env` and `keep_env` beside
       `env_passthrough`, so a result says which list it ran under. Pass them from the caller in
       `cli.py` that already passes `env_passthrough`.
-- [ ] Fixture case `plugins/smoke/evals/plugin/session-env/`, modelled on `checked-file`:
-      - `prompt.md` asks the model to run `env | sort > env.txt` and reply `DONE`.
+- [x] Fixture case `plugins/smoke/evals/plugin/session-env/`, modelled on `checked-file`:
+      - `prompt.md` asks the model to run `env | cut -d= -f1 | sort > env.txt` and reply
+        `DONE`. Names only: a model declined to write a full environment dump to disk.
       - `graders/writes-env-txt.md` is a `file_exists` grader on `env.txt`.
       - `checks/assertions.py` reads `env.txt` through `run.file` (`docs/checks.md`). It fails
         on any name outside `DockerSection().session_env`, `DockerSection().keep_env` and `_`,
@@ -144,6 +145,7 @@ one.
         repository sets none of the three keys. It also fails when `HOME`, `PATH` or `TMPDIR` is missing.
         The same case passes on the CoWork backend, because a session has only
         `session_env` names.
+      Result: passes under `run --docker`. With `CLAUDECODE` added to `keep_env` it fails on `assertions.only_kept_names`.
 
 ## Phase 3: test
 
