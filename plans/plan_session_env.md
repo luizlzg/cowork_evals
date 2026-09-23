@@ -196,7 +196,7 @@ file mounted where a run mounts it and an environment set with `--env`.
 
 ## Phase 5: verify
 
-- [ ] `scripts/lint.sh`.
+- [x] `scripts/lint.sh`.
 - [ ] `scripts/test.sh`.
 - [ ] `scripts/image.sh`, then `scripts/parity.sh`, with 0 failures.
 - [ ] `scripts/test.sh -m integration -k docker`.
