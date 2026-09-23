@@ -112,8 +112,9 @@ one.
       `env -i`, and the script cannot remove it. If one appears, record it as a Docker delta
       in `docs/docker.md`, and allow it in the fixture check by name.
       Result: no. A Bash call sees the listed names, `PWD`, `SHLVL` and `_`.
-- [ ] Does `TZ` reach the script? If not, drop it from `run_preamble`, and record its absence
+- [x] Does `TZ` reach the script? If not, drop it from `run_preamble`, and record its absence
       as a Docker delta.
+      Result: yes. It stays in `run_preamble`.
 
 ## Phase 2: build
 
