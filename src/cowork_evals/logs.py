@@ -156,6 +156,8 @@ def write_env(
     backend: str,
     image: str | None = None,
     env_passthrough: Sequence[str] = (),
+    session_env: Sequence[str] = (),
+    keep_env: Sequence[str] = (),
 ) -> Path:
     """`env.txt`: one `name: value` line per row, in a fixed order.
 
@@ -166,6 +168,9 @@ def write_env(
     `env_passthrough` is the container backend's too, and is the names the run forwarded into
     the container. The names and never a value: what each one held is the host's, and it
     reaches the container's environment and no artefact. docs/docker.md.
+
+    `session_env` and `keep_env` are the container backend's as well, and are the other two
+    lists of names a `Bash` call in the run kept. docs/docker.md, "The session environment".
     """
     rows = [
         ("cowork_evals", distribution_version()),
@@ -177,6 +182,10 @@ def write_env(
         rows.append(("image", image))
     if env_passthrough:
         rows.append(("env_passthrough", " ".join(env_passthrough)))
+    if session_env:
+        rows.append(("session_env", " ".join(session_env)))
+    if keep_env:
+        rows.append(("keep_env", " ".join(keep_env)))
     path = Path(run_directory) / ENV_FILE
     path.write_text("".join(f"{name}: {value}\n" for name, value in rows), encoding="utf-8")
     return path

@@ -389,9 +389,9 @@ def test_a_run_writes_a_record_the_panel_then_shows(credentialled, tmp_path, mon
     assert "pass 0d" in row
     assert "never run" in row
     assert verdict.display(Path(entry["tracePath"]).parent) in row
-    # The three cases this run did not select have no record and say so. `python-version`
+    # The four cases this run did not select have no record and say so. `python-version`
     # has a record on Docker and none on CoWork, so it carries one `never run` of its own.
-    assert sum(1 for line in printed.out.splitlines() if "never run" in line) == 4
+    assert sum(1 for line in printed.out.splitlines() if "never run" in line) == 5
 
 
 # ask.

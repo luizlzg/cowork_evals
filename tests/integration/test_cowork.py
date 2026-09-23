@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import subprocess
 import uuid
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -62,22 +63,31 @@ def test_the_reader_handles_every_session_in_a_real_profile(
 # Neither can be reached without the desktop, because both read and drive it.
 
 
-def activate(application: str) -> None:
-    """Bring one application forward and wait for the activation to land."""
-    subprocess.run(
-        [
-            "osascript",
-            "-e",
-            f'tell application "{application}" to activate',
-            "-e",
-            "delay 0.8",
-        ],
-        check=True,
-    )
+@pytest.fixture
+def activate(keyboard: None) -> Callable[[str], None]:
+    """Bring one application forward and wait for the activation to land.
+
+    A fixture and not a helper, so the one route to `osascript` here asks for the keyboard
+    first. ../conftest.py.
+    """
+
+    def _activate(application: str) -> None:
+        subprocess.run(
+            [
+                "osascript",
+                "-e",
+                f'tell application "{application}" to activate',
+                "-e",
+                "delay 0.8",
+            ],
+            check=True,
+        )
+
+    return _activate
 
 
 @pytest.mark.integration
-def test_focus_frontmost_names_this_machines_frontmost_process() -> None:
+def test_focus_frontmost_names_this_machines_frontmost_process(activate) -> None:
     """A missing Accessibility grant raises code 3 here and fails the test. It never skips."""
     activate(NOT_COWORK)
     name = driver_module.frontmost()
@@ -86,7 +96,7 @@ def test_focus_frontmost_names_this_machines_frontmost_process() -> None:
 
 
 @pytest.mark.integration
-def test_focus_the_guard_refuses_with_code_9_when_cowork_is_not_frontmost() -> None:
+def test_focus_the_guard_refuses_with_code_9_when_cowork_is_not_frontmost(activate) -> None:
     """Nothing is typed. The guard runs before every keystroke the driver sends."""
     activate(NOT_COWORK)
     with pytest.raises(CoWorkError) as raised:
@@ -99,7 +109,7 @@ def test_focus_the_guard_refuses_with_code_9_when_cowork_is_not_frontmost() -> N
 @pytest.mark.integration
 @pytest.mark.live
 @pytest.mark.timeout(1800)
-def test_focus_a_primed_composer_is_cleared_before_the_prompt(attended: Path) -> None:
+def test_focus_a_primed_composer_is_cleared_before_the_prompt(attended: Path, activate) -> None:
     """The composer contamination, reproduced and then not reproduced.
 
     The composer is primed by typing into it, which is what a developer working in another
@@ -147,8 +157,8 @@ def test_a_live_run_returns_the_marker(attended: Path, session_document_keys: se
     above it to ask first, so the submission succeeding is the assertion. A dialog cannot be
     asserted without a person, and this is its effect.
 
-    It asserts the flag is set afterwards and not that it was clear before: the autouse
-    `keyboard` fixture has already asked by then, which is what that fixture is for.
+    It asserts the flag is set afterwards and not that it was clear before: the
+    `keyboard` fixture `attended` requests has already asked by then.
     """
     real_profile()
     driver = CoWork.from_file(attended)

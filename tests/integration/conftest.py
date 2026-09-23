@@ -6,7 +6,7 @@ The marker is applied here so it cannot be forgotten on a new file. Selection st
 pytest_collection_modifyitems in a subdirectory conftest still receives every collected
 item, so the hook filters by path.
 
-It also asks for the keyboard once per run, and holds the one configuration file every
+It also asks for the keyboard once per run that takes it, and holds the one configuration file every
 CoWork test that fires reads. See ../README.md.
 """
 
@@ -31,21 +31,17 @@ def pytest_collection_modifyitems(items) -> None:
             item.add_marker("integration")
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def keyboard() -> None:
-    """Ask for the keyboard once, before any integration test runs.
+    """Ask for the keyboard once, before the first test that takes it.
 
-    Autouse, because a test that takes the keyboard without going through the driver is
-    covered by nothing else, and a new one cannot remember to opt in. Three tests activate
-    another application through `osascript` themselves, so the driver's own ask at step 2a
-    reaches them too late or not at all.
+    A test takes the keyboard in one of two ways, and each goes through a fixture that
+    requests this one: `attended`, which every test that submits through the driver reads,
+    and `activate` in test_cowork.py, which drives another application through `osascript`.
+    A run that selects neither, a Docker-only one for example, shows no dialog.
 
     Session-scoped, so one run asks once: `cowork.consent` sets a module flag, and the
     driver's ask is a no-op after this one.
-
-    It asks on every integration run, including one that would take no keyboard. Gating on
-    a marker was rejected: a marker is what a new test omits. One dialog per run is the
-    cheaper mistake.
 
     `consent` is forced to `dialog` rather than copied from this machine's file, so a
     developer whose own file carries `none` is still warned by a test run. It reads
@@ -61,7 +57,7 @@ def keyboard() -> None:
 
 
 @pytest.fixture
-def attended(tmp_path: Path) -> Path:
+def attended(keyboard: None, tmp_path: Path) -> Path:
     """This machine's configuration with `cowork.consent` set to `dialog`, in a new file.
 
     `dialog` is forced rather than copied, so a developer whose own file carries `none` is

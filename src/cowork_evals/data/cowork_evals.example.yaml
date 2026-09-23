@@ -59,6 +59,14 @@ docker:
   # preflight, and a name that would carry Claude's own credential is refused.
   # docs/docker.md.
   # env_passthrough: []
+  # What a Bash call in a run keeps of its environment, with env_passthrough. Every other
+  # name is removed, as in a CoWork session. The names alone, never a value. A name belongs
+  # in one list, and a name in two is refused. docs/docker.md, "The session environment".
+  # A name goes in session_env when a CoWork session shell has it.
+  # session_env: [HOME, PWD, USER, LOGNAME, TMPDIR, CLAUDE_TMPDIR, CLAUDE_CODE_TMPDIR, TZ, LANG, PATH, NODE_PATH, SHELL, SHLVL, INVOCATION_ID, JOURNAL_STREAM, SYSTEMD_EXEC_PID]
+  # A name goes in keep_env when the container already holds it and a Docker run fails
+  # without it.
+  # keep_env: [NODE_EXTRA_CA_CERTS, CLAUDE_PLUGIN_ROOT, CLAUDE_PLUGIN_DATA, CLAUDE_PROJECT_DIR, HTTP_PROXY, HTTPS_PROXY, ALL_PROXY, NO_PROXY, http_proxy, https_proxy, all_proxy, no_proxy]
 
 # The eval panel. docs/panel.md.
 panel:

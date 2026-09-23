@@ -56,8 +56,8 @@ metadata, and every run records that version in `env.txt`, so a log says which v
 produced it.
 
 `scripts/build.sh` builds the sdist and the wheel into `dist/`, and checks that the wheel
-carries the requirements files, the example configuration, the skills, the two Dockerfiles and
-the documentation. `uv publish` sends them, and this repository runs no publishing step of its
+carries the requirements files, the example configuration, the shell prefix, the skills, the
+two Dockerfiles and the documentation. `uv publish` sends them, and this repository runs no publishing step of its
 own.
 
 ## What ships
@@ -68,6 +68,7 @@ own.
 | `src/cowork_evals/data/requirements*.txt`         | yes   | The pins the mirror and the image are built from                         |
 | `src/cowork_evals/data/cowork_evals.example.yaml` | yes   | Every key and every default, and what `init` writes                      |
 | `src/cowork_evals/data/skills/<name>/SKILL.md`    | yes   | Every shipped skill, one directory each, and what `init` installs        |
+| `src/cowork_evals/data/cowork_env.sh`             | yes   | The shell prefix the image installs for every `Bash` call                |
 | `src/cowork_evals/docker/Dockerfile`              | yes   | What `setup --docker` builds                                             |
 | `src/cowork_evals/docker/Dockerfile.pytest`       | yes   | One layer over it, carrying pytest                                       |
 | `docs/`                                           | yes   | Every document in this tree, at `cowork_evals/docs/` in the wheel        |
@@ -256,6 +257,11 @@ name that is not there carries nothing.
 It exists so a skill whose whole job is calling an API can be evaluated at all. Without it such
 a skill fails every eval for a reason that has nothing to do with the skill. The setting, the
 two conditions and what a forwarded value reaches are [docker.md](docker.md).
+
+`docker.session_env` and `docker.keep_env` hold names and never values, the same as
+`docker.env_passthrough`. They read nothing from the host: they name what a `Bash` call in the
+container keeps of the environment it already has. See [docker.md](docker.md), "The session
+environment".
 
 ### The precedence ladder
 

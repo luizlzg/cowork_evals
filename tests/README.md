@@ -197,11 +197,13 @@ and do not skip, when no profile is configured. Nothing steals focus while one r
 are in the two CoWork files and the fifth is `ask`, in `integration/test_cli.py`. The eight
 container ones need a credential route, and fail without one.
 
-The integration tier asks for the keyboard once before any of its tests run, through the
-session-scoped autouse `keyboard` fixture in `integration/conftest.py`. It asks on every
-integration run, including a Docker-only one that takes no keyboard, because a marker is what
-a new test omits. It needs no CoWork profile. Cancel raises code 2 and every integration test
-then errors.
+The integration tier asks for the keyboard once, before the first test that takes it, through
+the session-scoped `keyboard` fixture in `integration/conftest.py`. Two fixtures request it:
+`attended`, which every test that submits through the driver reads, and `activate` in
+`integration/test_cowork.py`, the one route to `osascript` in a test. A test that takes the
+keyboard goes through one of them. A run that selects neither, a Docker-only one for example,
+shows no dialog. It needs no CoWork profile. Cancel raises code 2, and every test that takes the
+keyboard then errors.
 
 `-m "integration and not live"` takes the keyboard too: two focus tests in
 `integration/test_cowork.py` activate Finder, and `live` does not select them.

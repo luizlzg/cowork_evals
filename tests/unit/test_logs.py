@@ -155,6 +155,28 @@ def test_the_forwarded_line_is_absent_when_none_is_forwarded(tmp_path: Path) -> 
     assert "env_passthrough" not in logs.write_env(tmp_path, "docker").read_text()
 
 
+def test_the_kept_names_are_two_lines_after_the_forwarded_one(tmp_path: Path) -> None:
+    """Which lists a run's `Bash` calls ran under. docs/docker.md."""
+    written = logs.write_env(
+        tmp_path,
+        "docker",
+        env_passthrough=("ACME_API_KEY",),
+        session_env=("HOME", "PATH"),
+        keep_env=("NODE_EXTRA_CA_CERTS",),
+    )
+    assert written.read_text().splitlines()[-3:] == [
+        "env_passthrough: ACME_API_KEY",
+        "session_env: HOME PATH",
+        "keep_env: NODE_EXTRA_CA_CERTS",
+    ]
+
+
+def test_the_kept_lines_are_absent_on_the_cowork_backend(tmp_path: Path) -> None:
+    text = logs.write_env(tmp_path, "cowork").read_text()
+    assert "session_env" not in text
+    assert "keep_env" not in text
+
+
 def test_the_python_line_records_the_interpreter(tmp_path: Path) -> None:
     written = logs.write_env(tmp_path, "docker")
     assert f"python3: Python {sys.version_info.major}.{sys.version_info.minor}" in (

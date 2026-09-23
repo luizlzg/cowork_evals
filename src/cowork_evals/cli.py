@@ -743,6 +743,8 @@ def _sweep(
             args.backend,
             image=None if image is None else image.tag,
             env_passthrough=() if image is None else image.env_passthrough,
+            session_env=() if image is None else image.session_env,
+            keep_env=() if image is None else image.keep_env,
         )
         swept = _each_plugin(args, config, directory, targets, tags, image)
         decided = verdict.decide(

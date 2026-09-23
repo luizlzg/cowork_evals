@@ -34,6 +34,46 @@ CONFIG_FILENAME = "cowork_evals.yaml"
 # docs/library.md, and what the container backend does with the names is docs/docker.md.
 ENV_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
+# The complete environment of a CoWork session shell, docs/runtime.md, "What the host
+# provides". The default of `docker.session_env`.
+SESSION_ENV = (
+    "HOME",
+    "PWD",
+    "USER",
+    "LOGNAME",
+    "TMPDIR",
+    "CLAUDE_TMPDIR",
+    "CLAUDE_CODE_TMPDIR",
+    "TZ",
+    "LANG",
+    "PATH",
+    "NODE_PATH",
+    "SHELL",
+    "SHLVL",
+    "INVOCATION_ID",
+    "JOURNAL_STREAM",
+    "SYSTEMD_EXEC_PID",
+)
+
+# What the container holds that a Docker run fails without, and a CoWork session shell does
+# not have: the CA Node trusts, the three a plugin hook reads, and the proxy the OS sandbox
+# routes the network through. The default of `docker.keep_env`. docs/docker.md, "The session
+# environment".
+KEEP_ENV = (
+    "NODE_EXTRA_CA_CERTS",
+    "CLAUDE_PLUGIN_ROOT",
+    "CLAUDE_PLUGIN_DATA",
+    "CLAUDE_PROJECT_DIR",
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "ALL_PROXY",
+    "NO_PROXY",
+    "http_proxy",
+    "https_proxy",
+    "all_proxy",
+    "no_proxy",
+)
+
 # The deep link prompt cap. docs/cowork_desktop.md.
 PROMPT_LIMIT = 14336
 
@@ -310,6 +350,11 @@ class DockerSection:
     # The one route from the process environment into a run. Empty by default, so a
     # repository that names none is unaffected. docs/docker.md.
     env_passthrough: tuple[str, ...] = ()
+    # The names a `Bash` call in a run keeps, with `env_passthrough`. A name a CoWork session
+    # shell has goes in `session_env`, and one the container already holds and a run fails
+    # without goes in `keep_env`. docs/docker.md, "The session environment".
+    session_env: tuple[str, ...] = SESSION_ENV
+    keep_env: tuple[str, ...] = KEEP_ENV
 
     _FIELDS: ClassVar[dict[str, Callable[[str, Any], Any]]] = {
         "platform": _text,
@@ -317,10 +362,30 @@ class DockerSection:
         "login_dir": _path,
         "extra_ca_file": _optional_path,
         "env_passthrough": _env_names,
+        "session_env": _env_names,
+        "keep_env": _env_names,
     }
+
+    # The three lists above, which one `Bash` call keeps between them.
+    _KEPT: ClassVar[tuple[str, ...]] = ("session_env", "env_passthrough", "keep_env")
 
     def __post_init__(self) -> None:
         _convert(self)
+        seen: dict[str, str] = {}
+        for key in self._KEPT:
+            for name in getattr(self, key):
+                if name in seen and seen[name] != key:
+                    raise CoWorkError(
+                        2,
+                        f"docker: {name} is in both docker.{seen[name]} and docker.{key}, "
+                        "and a name belongs in one list",
+                    )
+                seen[name] = key
+
+    @property
+    def kept(self) -> tuple[str, ...]:
+        """Every name a `Bash` call keeps, in list order."""
+        return tuple(name for key in self._KEPT for name in getattr(self, key))
 
 
 @dataclass(frozen=True, slots=True)

@@ -18,6 +18,8 @@ exercises the same versions a session does. The inventory it has to match is
   developer's own `~/.claude`, and never an API key.
 - **Named host variables are forwarded**, and their values reach the container's environment
   and no artefact.
+- **A `Bash` call sees the CoWork session environment**, and the few names a Docker run needs
+  besides. A skill that reads anything else gets the empty string, as in a session.
 - **Read-only everywhere except the log directory** and the two credential paths.
 - **Granting `Bash` turns on the OS sandbox**, so the container needs bubblewrap, socat and
   two `--security-opt` values.
@@ -41,6 +43,8 @@ The `docker:` section of `cowork_evals.yaml`. The file, and the ladder over it, 
 | `login_dir`            | `~/.cache/cowork_evals/claude` | Where the login this package owns is kept              |
 | `extra_ca_file`        | none                           | An extra root CA for a host whose network inspects TLS |
 | `env_passthrough`      | empty                          | Host variable names forwarded into the run container   |
+| `session_env`          | the 16 names in [runtime.md](runtime.md) | Names a `Bash` call keeps because a CoWork session shell has them |
+| `keep_env`             | 12 names, below                | Names a `Bash` call keeps because a Docker run fails without them |
 
 ## Usage
 
@@ -163,9 +167,9 @@ NodeSource and the uv installer detect the architecture themselves and need no m
 
 The build context is the package's data directory, `src/cowork_evals/data/`, and the Dockerfile
 is passed with `-f`. That directory holds the three requirements files, the example
-configuration file and the shipped skills, and nothing else. This image copies one file out of
-it, `requirements_installable.txt`; the layer in [cowork_test.md](cowork_test.md) builds from
-the same context and copies `requirements_test.txt`.
+configuration file, the shipped skills and `cowork_env.sh`, and nothing else. This image copies
+two files out of it, `requirements_installable.txt` and `cowork_env.sh`; the layer in
+[cowork_test.md](cowork_test.md) builds from the same context and copies `requirements_test.txt`.
 
 No source tree is in the context, so no `.dockerignore` is needed and a working tree cannot
 reach a public image layer. See [library.md](library.md). The plugin and the logs are mounts,
@@ -356,6 +360,7 @@ reads it, and is not read a second time at container start.
 | --------------------------- | ---------------- | ----------------- |
 | `cowork_evals.yaml`         | yes              | no                |
 | `env.txt`                   | yes              | no                |
+| `keep_env.txt`              | yes              | no                |
 | `run.log`                   | no               | no                |
 | `debug.txt`                 | no               | no                |
 | `report.html`               | no               | no                |
@@ -372,6 +377,100 @@ descriptor level, so whatever the container prints reaches it, and a case whose 
 agent print a forwarded value puts that value in the log. The limit is stated rather than closed:
 the alternative is filtering the log, which would rewrite what a run actually produced.
 
+## The session environment
+
+A `Bash` call in a CoWork session sees the 16 variables in [runtime.md](runtime.md), and no
+other. In a Docker run the same call runs under Claude Code and the `claude plugin eval`
+harness, which add their own: `CLAUDECODE`, `CLAUDE_CODE_SESSION_ID`, `CLAUDE_CONFIG_DIR`, the
+sandbox proxy and others. A skill that read one of them would pass in Docker and fail in
+CoWork. So every `Bash` call and every hook command in a Docker run sees only the names three
+lists in `cowork_evals.yaml` hold. A skill that reads any other name gets the empty string, as
+in CoWork, and its case fails in Docker.
+
+### The mechanism
+
+| Step | What happens                                                                                                  |
+| ---- | ------------------------------------------------------------------------------------------------------------- |
+| 1    | The image sets `CLAUDE_CODE_SHELL_PREFIX=/usr/local/bin/cowork-env` in the `env` block of `/etc/claude-code/managed-settings.json` |
+| 2    | `Docker.run` writes the three lists to `keep_env.txt` in the run's log directory, one name per line           |
+| 3    | `run_argv` mounts that file read-only at `/etc/cowork_evals/keep_env.txt`                                      |
+| 4    | Claude Code runs `cowork-env '<command>'` for each `Bash` call and each hook command                           |
+| 5    | `cowork-env` builds `NAME=value` for each listed name with a value and each `EVAL_*` name, and runs `env -i <pairs> /bin/bash -c '<command>'` |
+
+The prefix goes in managed settings, because the harness strips variables it does not know
+from the CLI it starts, and managed settings still apply inside a run. For the same reason the
+names travel in a file and not in a variable. The file is not in the log mount at
+`/work/logs`, because a sandboxed `Bash` call cannot see that directory.
+
+The script is `src/cowork_evals/data/cowork_env.sh`, and it is in the image digest. The lists
+are read on every run, so changing one needs no rebuild. `--dry-run` prints the mount and
+writes no file.
+
+`run_preamble` also passes `--env TZ=<zone>`, the host's zone, as a CoWork session has it. The
+zone is the target of the `/etc/localtime` symlink after `zoneinfo/`. It is a file and not the
+process environment, so [library.md](library.md) holds. A host whose `/etc/localtime` is not a
+symlink gets no `TZ`.
+
+### The three lists
+
+A name belongs in exactly one list, by this rule. A name in two lists is refused at load.
+
+| Key               | A name goes here when                                               | Default                                  |
+| ----------------- | ------------------------------------------------------------------- | ---------------------------------------- |
+| `session_env`     | a CoWork session shell has it                                       | the 16 names in [runtime.md](runtime.md) |
+| `env_passthrough` | the developer forwards it from the host                             | empty                                    |
+| `keep_env`        | it is already in the container, and a Docker run fails without it   | the 12 names below                       |
+
+| `keep_env` default                                                                   | A run fails without it because                                                            |
+| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| `NODE_EXTRA_CA_CERTS`                                                                | Node in a skill cannot reach the network on a host whose proxy inspects TLS               |
+| `CLAUDE_PLUGIN_ROOT`, `CLAUDE_PLUGIN_DATA`, `CLAUDE_PROJECT_DIR`                     | A plugin hook runs through the prefix too, and reads them                                 |
+| `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `NO_PROXY` and the four lower-case forms   | The OS sandbox routes the network through a local proxy. Without them `curl` exits 6, `Could not resolve host` |
+
+A `Bash` call does not receive the three hook names, so they are absent from it.
+
+The script also keeps every name matching `EVAL_[A-Z0-9_]*`, unlisted. Those are a case's own
+`env` keys, which the harness restricts to that pattern. A case that writes `env` carries
+`no-cowork` ([eval_format.md](eval_format.md)), so keeping them claims nothing about a session.
+
+### Derived names
+
+The script names five variables. Their CoWork values are functions of another variable, so it
+sets each one when it is listed.
+
+| Name                                  | Value               |
+| ------------------------------------- | ------------------- |
+| `USER`, `LOGNAME`                     | `basename "$HOME"`  |
+| `CLAUDE_TMPDIR`, `CLAUDE_CODE_TMPDIR` | `$TMPDIR`           |
+| `SHELL`                               | `/bin/sh`           |
+
+`PATH`, `NODE_PATH` and `LANG` hold the CoWork values through the image's `ENV` lines. `PWD`,
+`SHLVL` and `_` are set by bash.
+
+### What the prefix sees
+
+| Question                                               | Answer                                                                                          |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| Does the prefix fire in a harness run                  | Yes                                                                                             |
+| Does it wrap hook commands                             | Yes. A `SessionStart` hook goes through it                                                      |
+| How does the command arrive                            | As one string. For a `Bash` call it sources the shell snapshot, `eval`s the command and writes `pwd -P` to a file |
+| Can the prefix setting carry an argument               | No. The whole value is taken as one program path                                                |
+| Does a variable set on `docker run` reach the prefix   | Only one the harness knows. `TZ` does. An unknown name such as `COWORK_EVALS_KEEP` does not     |
+| Does the shell snapshot export a variable              | No. A `Bash` call sees the listed names, `PWD`, `SHLVL` and `_`                                 |
+
+### Docker deltas
+
+| Name                                                    | In CoWork                   | In a Docker run                                                    |
+| ------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------ |
+| `INVOCATION_ID`, `JOURNAL_STREAM`, `SYSTEMD_EXEC_PID`    | set by the systemd unit     | absent. The container has no systemd                               |
+| `SHLVL`                                                  | `0`                         | `2`. bash increments the harness's `1`                             |
+| `USER`, `LOGNAME`                                        | the session name            | `home`, because the harness's `HOME` ends in `/home`               |
+| `HOME`, `PWD`, `TMPDIR`                                  | under `/sessions/<session>` | under the harness sandbox                                          |
+
+A `Bash` call prints `/bin/bash: <home>/.bashrc: Permission denied` twice under
+`--keep-traces`, with or without the prefix. It comes from the harness's sealed home and
+changes no result.
+
 ## Mounts
 
 | Host path                  | Container path       | Mode | Why                                            |
@@ -380,6 +479,7 @@ the alternative is filtering the log, which would rewrite what a run actually pr
 | the run's log dir          | `/work/logs`         | rw   | The only path the run may write outside `/tmp` |
 | `<login_dir>/.claude/`     | `$HOME/.claude`      | rw   | The login, above                               |
 | `<login_dir>/.claude.json` | `$HOME/.claude.json` | rw   | The login, above                               |
+| the run's `keep_env.txt`   | `/etc/cowork_evals/keep_env.txt` | ro | The names a `Bash` call keeps. See "The session environment" |
 
 There is no mount for the traces. A run keeping them sets `TMPDIR=/work/logs/tmp` instead, so the
 sandbox the harness makes is already inside the log mount. The harness creates each run's sandbox
@@ -453,8 +553,8 @@ A container that cannot grant `Bash` cannot run a case that shells out, which is
 ## Image tagging
 
 The image is tagged `cowork-evals:<digest>`, where `<digest>` is the first 12 characters of the
-sha256 of the Dockerfile, `requirements.txt`, `requirements_installable.txt`, every build
-argument and the resolved `docker.platform`. Without the platform an `arm64` and an `amd64` image
+sha256 of the Dockerfile, `requirements.txt`, `requirements_installable.txt`, `cowork_env.sh`,
+every build argument and the resolved `docker.platform`. Without the platform an `arm64` and an `amd64` image
 share one tag.
 
 The build arguments are `Docker.build_args`: the resolved `docker.claude_code_version` and the

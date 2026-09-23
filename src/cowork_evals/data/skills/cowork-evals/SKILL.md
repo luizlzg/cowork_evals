@@ -312,6 +312,10 @@ A CoWork session is Python 3.10 with a fixed wheel set. Every file under the pat
 `cowork_evals run`, meaning each skill, command, agent and hook, imports only what that image
 carries. Read `cowork_evals docs runtime` before adding an import to plugin code.
 
+Code in a session reads only the environment variables `cowork_evals docs runtime` lists, and
+never a `CLAUDE_CODE_*` variable. A session sets no other, so a skill that reads one gets the
+empty string. A Docker run gives a `Bash` call the same set, so that skill fails there too.
+
 A plugin's own pytest suite is the other half, and it is not an eval:
 
 ```bash

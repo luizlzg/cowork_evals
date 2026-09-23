@@ -19,8 +19,9 @@ from pathlib import Path
 
 import pytest
 
-from cowork_evals import traces, verdict
-from cowork_evals.docker import Condition, Docker, probe, remedy
+from cowork_evals import logs, traces, verdict
+from cowork_evals.cli import main
+from cowork_evals.docker import CONTAINER_KEEP_FILE, KEEP_FILE, Condition, Docker, probe, remedy
 from cowork_evals.docker.parity import EXPECTED_VERSIONS, REQUIREMENTS, compare
 from cowork_evals.harness import RunOptions
 from cowork_evals.requirements import pins
@@ -197,6 +198,87 @@ def test_the_plugin_mount_refuses_a_write_and_the_log_mount_accepts_one(docker, 
     assert written.stat().st_gid == reference.stat().st_gid
 
 
+# The session environment. `cowork-env` in the image, over a keep file mounted where a run
+# mounts it, under an environment polluted with what the harness adds. docs/docker.md, "The
+# session environment".
+
+
+def session(docker: Docker, tmp_path: Path, names: list[str], **environment: str) -> str:
+    """What `env` prints through the prefix, with `names` kept and `environment` set."""
+    keep = tmp_path / KEEP_FILE
+    keep.write_text("".join(f"{name}\n" for name in names))
+    variables = [
+        value for name, set_to in environment.items() for value in ("--env", f"{name}={set_to}")
+    ]
+    return container(
+        docker,
+        "cowork-env",
+        "env | sort",
+        mounts=(*variables, "-v", f"{keep}:{CONTAINER_KEEP_FILE}:ro"),
+    )
+
+
+def test_the_prefix_keeps_the_listed_names_and_drops_the_rest(docker, tmp_path):
+    output = session(
+        docker,
+        tmp_path,
+        ["ACME_KEPT", "PATH"],
+        ACME_KEPT="yes",
+        ACME_DROPPED="no",
+        CLAUDECODE="1",
+        CLAUDE_CODE_SESSION_ID="0",
+    )
+    names = {line.split("=", 1)[0] for line in output.splitlines()}
+    assert names == {"ACME_KEPT", "PATH", "PWD", "SHLVL", "_"}, output
+    assert "ACME_KEPT=yes" in output.splitlines()
+
+
+def test_a_listed_name_with_no_value_stays_unset(docker, tmp_path):
+    output = session(docker, tmp_path, ["ACME_ABSENT", "ACME_EMPTY"], ACME_EMPTY="")
+    assert "ACME_" not in output, output
+
+
+def test_the_five_derived_names_take_their_session_values(docker, tmp_path):
+    output = session(
+        docker,
+        tmp_path,
+        ["HOME", "TMPDIR", "USER", "LOGNAME", "CLAUDE_TMPDIR", "CLAUDE_CODE_TMPDIR", "SHELL"],
+        HOME="/x/abc",
+        TMPDIR="/x/abc/tmp",
+        USER="root",
+        CLAUDE_CODE_TMPDIR="/elsewhere",
+        SHELL="/bin/bash",
+    )
+    lines = set(output.splitlines())
+    assert {
+        "HOME=/x/abc",
+        "USER=abc",
+        "LOGNAME=abc",
+        "TMPDIR=/x/abc/tmp",
+        "CLAUDE_TMPDIR=/x/abc/tmp",
+        "CLAUDE_CODE_TMPDIR=/x/abc/tmp",
+        "SHELL=/bin/sh",
+    } <= lines, output
+
+
+def test_a_line_that_is_no_shell_name_is_skipped(docker, tmp_path):
+    output = session(docker, tmp_path, ["ACME-KEY", "PATH"])
+    assert "ACME" not in output, output
+    assert any(line.startswith("PATH=") for line in output.splitlines()), output
+
+
+def test_a_case_env_name_is_kept_without_being_listed(docker, tmp_path):
+    """The harness restricts a case's `env` keys to `EVAL_[A-Z0-9_]*`. docs/docker.md."""
+    output = session(docker, tmp_path, ["PATH"], EVAL_VARIANT="null-body", EVALX="1")
+    assert "EVAL_VARIANT=null-body" in output.splitlines(), output
+    assert "EVALX" not in output, output
+
+
+def test_the_image_names_the_prefix_in_managed_settings(docker):
+    document = json.loads(container(docker, "cat", "/etc/claude-code/managed-settings.json"))
+    assert document["env"]["CLAUDE_CODE_SHELL_PREFIX"] == "/usr/local/bin/cowork-env"
+
+
 def test_the_harness_is_enabled_for_this_credential(credentialled, tmp_path):
     """It reads the credential and the enablement variable, runs no case and spends nothing."""
     docker = credentialled
@@ -253,6 +335,23 @@ def test_the_smoke_case_passes_through_the_backend(credentialled, tmp_path):
     runs = cases[0]["arms"]["with"]
     assert runs, "the case produced no run"
     assert all(run["passed"] for run in runs), [run.get("error") for run in runs]
+
+
+@pytest.mark.live
+def test_the_session_env_case_passes_through_the_backend(credentialled, tmp_path):
+    """A real `Bash` call sees only the kept names, decided by the case's own checks.
+
+    Through the command and not `Docker.run`, because the checks that read `env.txt` run on
+    the host after the backend returns. ../../plugins/README.md.
+    """
+    root = tmp_path / "logs"
+    code = main(
+        ["run", "--docker", str(SMOKE), "--out", str(root), "--runs", "1", "--case", "session-env"]
+    )
+    run = (root / logs.LATEST).resolve()
+    decided = (run / logs.VERDICT_FILE).read_text()
+    assert code == 0, decided
+    assert (run / "smoke" / KEEP_FILE).read_text().split() == list(credentialled.kept)
 
 
 @pytest.mark.live

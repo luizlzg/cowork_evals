@@ -19,7 +19,7 @@ The layout is the standard one, because a fixture that does not look like a real
 proves nothing about discovery. The case format is
 [../docs/eval_format.md](../docs/eval_format.md).
 
-`smoke` holds four cases, all under `evals/plugin/`.
+`smoke` holds five cases, all under `evals/plugin/`.
 
 | Case            | Asks for                              | Graded by                                    |
 | --------------- | ------------------------------------- | -------------------------------------------- |
@@ -27,6 +27,7 @@ proves nothing about discovery. The case format is
 | `writes-a-file` | one word written to `written.txt`     | a `file_exists` grader over the created file |
 | `capped-turns`  | one word in the reply                 | a `regex` grader over the last message       |
 | `checked-file`  | one word written to `written.txt`     | a `file_exists` grader, and two checks over the file's contents |
+| `session-env`   | the variable names a `Bash` call sees, in `env.txt` | a `file_exists` grader, and two checks over the names |
 
 `python-version` matches the exact string [../docs/runtime.md](../docs/runtime.md) records, so
 it proves a case reaches a running command on the interpreter the backend put there. See
@@ -58,6 +59,14 @@ what `smoke/tests/test_fails.py` is for the test image. It carries no `no-cowork
 runs on the host after the run is graded, and needs nothing a session cannot do. See
 [../docs/checks.md](../docs/checks.md).
 
+`session-env` is the fixture for the session environment. Its checks fail on any name outside
+the defaults of `docker.session_env` and `docker.keep_env`, and on a missing `HOME`, `PATH` or
+`TMPDIR`. A CoWork session has only `session_env` names, so the same case passes on both
+backends, and it carries no `no-cowork` tag. Its command writes into `$HOME/mnt/outputs` when
+that directory exists, which is `outputs/` in a session and the one place the CoWork backend
+reads a produced file from, and into the working directory otherwise. See [../docs/docker.md](../docs/docker.md), "The
+session environment".
+
 `capped-turns` is the fixture for the `no-cowork` tag. It writes `max_turns`, which no CoWork
 session honours, so it carries the tag and satisfies both directions the validator checks. On
 the container backend it runs like any other case and passes. On CoWork it is not submitted
@@ -65,11 +74,11 @@ and is counted, which is what makes it the one case here that an integration tes
 through that backend without a VM boot, a ceiling entry or a session. The tag is
 [../docs/eval_format.md](../docs/eval_format.md).
 
-Four cases, and each integration test that fires one names it with a case glob. A test about
+Five cases, and each integration test that fires one names it with a case glob. A test about
 one mechanism pays for one case, and a CoWork test that submits pays for one VM boot.
 
 None carries a skill. Whether a model activates a skill is an eval question, and this
-fixture answers a mechanism question. All four cases are therefore `plugin` ones: a directory
+fixture answers a mechanism question. All five cases are therefore `plugin` ones: a directory
 under `evals/` is a skill name, `plugin` or `mocks`, and there is no skill to name. See
 [../docs/eval_format.md](../docs/eval_format.md).
 
