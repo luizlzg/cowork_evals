@@ -199,7 +199,8 @@ file mounted where a run mounts it and an environment set with `--env`.
 - [x] `scripts/lint.sh`.
 - [x] `scripts/test.sh`.
       Result: 854 passed.
-- [ ] `scripts/image.sh`, then `scripts/parity.sh`, with 0 failures.
+- [x] `scripts/image.sh`, then `scripts/parity.sh`, with 0 failures.
+      Result: 0 failures, 2 notes, the two recorded deltas.
 - [ ] `scripts/test.sh -m integration -k docker`.
 - [ ] `cowork_evals run --cowork plugins/smoke --case session-env` passes, which shows one
       case serves both backends.
