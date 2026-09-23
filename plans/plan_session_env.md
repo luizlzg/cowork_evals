@@ -120,7 +120,7 @@ one.
 
 - [x] `src/cowork_evals/data/cowork_env.sh`: POSIX sh, as designed above. The directory is the
       Docker build context. It reads `/etc/cowork_evals/keep_env.txt`.
-- [ ] `Dockerfile`: `COPY cowork_env.sh /usr/local/bin/cowork-env`, `chmod 0755`, and a `RUN`
+- [x] `Dockerfile`: `COPY cowork_env.sh /usr/local/bin/cowork-env`, `chmod 0755`, and a `RUN`
       step that writes `/etc/claude-code/managed-settings.json`.
 - [ ] `Docker.digest` in `src/cowork_evals/docker/__init__.py`: hash `cowork_env.sh` beside
       `DOCKERFILE`, `REQUIREMENTS` and `INSTALLABLE`. Without this a changed script reuses a
