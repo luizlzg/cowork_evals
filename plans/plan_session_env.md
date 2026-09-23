@@ -178,7 +178,7 @@ file mounted where a run mounts it and an environment set with `--env`.
       `session_env` and `keep_env` to the configuration table near the top.
 - [ ] `docs/runtime.md`: one sentence after the variable table saying that a Docker run
       enforces this set and that `docker.session_env` holds it, with a link to `docker.md`.
-- [ ] `docs/library.md`: `session_env` and `keep_env` hold names and never values, the same
+- [x] `docs/library.md`: `session_env` and `keep_env` hold names and never values, the same
       as `env_passthrough`.
 - [ ] `src/cowork_evals/data/cowork_evals.example.yaml`: both keys, commented, with their
       defaults and the one-line rule for each.
