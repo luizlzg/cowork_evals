@@ -222,14 +222,15 @@ def log(path: Path, submissions: int) -> None:
     )
 
 
-def test_the_smoke_fixture_is_found_and_three_of_its_cases_are_submitted(tmp_path: Path) -> None:
-    """Four cases, one of which declares that a session cannot run it."""
+def test_the_smoke_fixture_is_found_and_four_of_its_cases_are_submitted(tmp_path: Path) -> None:
+    """Five cases, one of which declares that a session cannot run it."""
     prepared = plan(SMOKE, config=settings(tmp_path))
     assert prepared.root == SMOKE.resolve()
     assert sorted(entry.name for entry in prepared.entries) == [
         "capped-turns",
         "checked-file",
         "python-version",
+        "session-env",
         "writes-a-file",
     ]
     for entry in prepared.entries:
@@ -239,10 +240,11 @@ def test_the_smoke_fixture_is_found_and_three_of_its_cases_are_submitted(tmp_pat
     assert declared_here["python-version"] is None
     assert declared_here["writes-a-file"] is None
     assert declared_here["checked-file"] is None, "a check runs on the host, not in a session"
+    assert declared_here["session-env"] is None, "a session has only session_env names"
     assert declared_here["capped-turns"] == (
         "no-cowork: max_turns: no turn cap reaches a CoWork session"
     )
-    assert prepared.submissions == 3
+    assert prepared.submissions == 4
 
 
 def test_a_case_that_writes_no_runs_key_runs_once(tmp_path: Path) -> None:

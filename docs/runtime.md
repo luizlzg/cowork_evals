@@ -87,6 +87,9 @@ so a skill that reads any other name gets the empty string. `INVOCATION_ID`,
 | `JOURNAL_STREAM`     | `<device>:<inode>` of the systemd journal stream                                                      |
 | `SYSTEMD_EXEC_PID`   | The PID systemd started the unit with                                                                 |
 
+A Docker run gives every `Bash` call this set of names and no other, and `docker.session_env`
+holds it. See [docker.md](docker.md), "The session environment".
+
 A skill that needs the session root, the user or the user's time zone reads `HOME`, `USER` or
 `TZ`. `/etc/localtime` and `/etc/timezone` give `Etc/UTC`, not the user's zone. A skill never hard-codes `/sessions/<session>`, because the name changes every session.
 No variable names the plugin directory, the skill directory or the user's mounted folders.

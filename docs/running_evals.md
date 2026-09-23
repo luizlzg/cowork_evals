@@ -406,6 +406,11 @@ whole invocation, so a sweep is decided once and not once per plugin.
 | A document whose `aggregates.casesTotal` is 0                        | exit 0       |
 | Otherwise                                                            | exit 0       |
 
+A skill that reads an environment variable outside `docker.session_env`,
+`docker.env_passthrough` and `docker.keep_env` gets the empty string in a Docker run, as in a
+CoWork session, and its case fails in Docker. See [docker.md](docker.md), "The session
+environment".
+
 Structural graders decide because a judged grader over a non-deterministic agent is a flaky
 verdict. A `check` grader is this package's own, not the harness's, and it decides for the same
 reason: it is an author's Python over what the run produced, deterministic unless the author
