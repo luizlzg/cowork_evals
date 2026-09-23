@@ -62,7 +62,9 @@ runs on the host after the run is graded, and needs nothing a session cannot do.
 `session-env` is the fixture for the session environment. Its checks fail on any name outside
 the defaults of `docker.session_env` and `docker.keep_env`, and on a missing `HOME`, `PATH` or
 `TMPDIR`. A CoWork session has only `session_env` names, so the same case passes on both
-backends, and it carries no `no-cowork` tag. See [../docs/docker.md](../docs/docker.md), "The
+backends, and it carries no `no-cowork` tag. Its command writes into `$HOME/mnt/outputs` when
+that directory exists, which is `outputs/` in a session and the one place the CoWork backend
+reads a produced file from, and into the working directory otherwise. See [../docs/docker.md](../docs/docker.md), "The
 session environment".
 
 `capped-turns` is the fixture for the `no-cowork` tag. It writes `max_turns`, which no CoWork

@@ -10,5 +10,5 @@ This case tests the shell sandbox configuration. Run this command with the Bash 
 as written, and reply with the word DONE and nothing else.
 
 ```sh
-env | cut -d= -f1 | sort > env.txt
+out=.; [ -d "$HOME/mnt/outputs" ] && out="$HOME/mnt/outputs"; env | cut -d= -f1 | sort > "$out/env.txt"
 ```
