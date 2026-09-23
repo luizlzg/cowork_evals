@@ -125,7 +125,7 @@ one.
 - [x] `Docker.digest` in `src/cowork_evals/docker/__init__.py`: hash `cowork_env.sh` beside
       `DOCKERFILE`, `REQUIREMENTS` and `INSTALLABLE`. Without this a changed script reuses a
       stale tag.
-- [ ] `DockerSection`: add `session_env` and `keep_env` as `tuple[str, ...]` with the
+- [x] `DockerSection`: add `session_env` and `keep_env` as `tuple[str, ...]` with the
       defaults above, validated by `_env_names`. Refuse, at load, a name that is in two lists,
       and name the name and both keys.
 - [ ] `run_preamble`: add `TZ`, after `ENABLEMENT_ENV`. `run_argv`: mount the run's
