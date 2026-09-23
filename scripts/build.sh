@@ -4,8 +4,9 @@
 #
 #   (no args)  build sdist and wheel into dist/, then verify both
 #
-# The wheel carries files that are not Python: the two Dockerfiles and the three
-# requirements files, which the package reads at run time from beside its own modules. A
+# The wheel carries files that are not Python: the two Dockerfiles, the three requirements
+# files and the shell prefix the image installs, which the package reads at run time from
+# beside its own modules. A
 # packaging change that drops one of them breaks `setup --docker` on a machine with no
 # checkout, and nothing else here catches it. The verification below installs the wheel
 # into a throwaway environment and runs the command out of it.
@@ -44,6 +45,7 @@ for member in \
   cowork_evals/data/requirements_installable.txt \
   cowork_evals/data/requirements_test.txt \
   cowork_evals/data/cowork_evals.example.yaml \
+  cowork_evals/data/cowork_env.sh \
   cowork_evals/data/skills/cowork-evals/SKILL.md \
   cowork_evals/data/skills/cowork-ask/SKILL.md \
   cowork_evals/docker/Dockerfile \

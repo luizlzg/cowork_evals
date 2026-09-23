@@ -172,7 +172,7 @@ file mounted where a run mounts it and an environment set with `--env`.
 
 ## Phase 4: documentation
 
-- [ ] `docs/docker.md`: a new section, "The session environment". It covers the mechanism,
+- [x] `docs/docker.md`: a new section, "The session environment". It covers the mechanism,
       the three lists and their rule, the derived names, the phase 1 results, and the Docker
       deltas: the systemd names, and `TZ` if phase 1 dropped it. Add two rows for
       `session_env` and `keep_env` to the configuration table near the top.

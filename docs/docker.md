@@ -18,6 +18,8 @@ exercises the same versions a session does. The inventory it has to match is
   developer's own `~/.claude`, and never an API key.
 - **Named host variables are forwarded**, and their values reach the container's environment
   and no artefact.
+- **A `Bash` call sees the CoWork session environment**, and the few names a Docker run needs
+  besides. A skill that reads anything else gets the empty string, as in a session.
 - **Read-only everywhere except the log directory** and the two credential paths.
 - **Granting `Bash` turns on the OS sandbox**, so the container needs bubblewrap, socat and
   two `--security-opt` values.
@@ -165,9 +167,9 @@ NodeSource and the uv installer detect the architecture themselves and need no m
 
 The build context is the package's data directory, `src/cowork_evals/data/`, and the Dockerfile
 is passed with `-f`. That directory holds the three requirements files, the example
-configuration file and the shipped skills, and nothing else. This image copies one file out of
-it, `requirements_installable.txt`; the layer in [cowork_test.md](cowork_test.md) builds from
-the same context and copies `requirements_test.txt`.
+configuration file, the shipped skills and `cowork_env.sh`, and nothing else. This image copies
+two files out of it, `requirements_installable.txt` and `cowork_env.sh`; the layer in
+[cowork_test.md](cowork_test.md) builds from the same context and copies `requirements_test.txt`.
 
 No source tree is in the context, so no `.dockerignore` is needed and a working tree cannot
 reach a public image layer. See [library.md](library.md). The plugin and the logs are mounts,
@@ -358,6 +360,7 @@ reads it, and is not read a second time at container start.
 | --------------------------- | ---------------- | ----------------- |
 | `cowork_evals.yaml`         | yes              | no                |
 | `env.txt`                   | yes              | no                |
+| `keep_env.txt`              | yes              | no                |
 | `run.log`                   | no               | no                |
 | `debug.txt`                 | no               | no                |
 | `report.html`               | no               | no                |
@@ -546,8 +549,8 @@ A container that cannot grant `Bash` cannot run a case that shells out, which is
 ## Image tagging
 
 The image is tagged `cowork-evals:<digest>`, where `<digest>` is the first 12 characters of the
-sha256 of the Dockerfile, `requirements.txt`, `requirements_installable.txt`, every build
-argument and the resolved `docker.platform`. Without the platform an `arm64` and an `amd64` image
+sha256 of the Dockerfile, `requirements.txt`, `requirements_installable.txt`, `cowork_env.sh`,
+every build argument and the resolved `docker.platform`. Without the platform an `arm64` and an `amd64` image
 share one tag.
 
 The build arguments are `Docker.build_args`: the resolved `docker.claude_code_version` and the

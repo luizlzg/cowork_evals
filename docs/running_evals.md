@@ -559,7 +559,9 @@ logs/evals/<yyyymmdd-hhmmss>-<scope>/
   verdict.txt                    # the verdict
   env.txt                        # cowork_evals --version, claude --version, python3 -V,
                                  #   the backend, the image on the container backend, and
-                                 #   the forwarded variable names, never a value
+                                 #   the forwarded variable names, never a value, and
+                                 #   the two other lists of names a Bash call keeps
+  <plugin>/keep_env.txt          # on the container backend, the names a Bash call keeps
   <plugin>/aggregate-result.json # the v1 result document
   <plugin>/report.html           # the self-contained HTML report
   <plugin>/debug.txt             # claude --debug-file output
