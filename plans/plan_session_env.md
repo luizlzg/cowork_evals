@@ -103,9 +103,10 @@ one.
       find out. If it does, add `CLAUDE_PLUGIN_ROOT`, `CLAUDE_PLUGIN_DATA` and
       `CLAUDE_PROJECT_DIR` to the `keep_env` default, because hooks rely on them.
       Result: yes. The three names are in the `keep_env` default.
-- [ ] Which incoming names does a sandboxed call need? Remove each name the log shows, then run
+- [x] Which incoming names does a sandboxed call need? Remove each name the log shows, then run
       `curl -sI https://example.com` with that domain granted, and `python3 -c 'import tempfile;
       tempfile.mkdtemp()'`. A name whose removal breaks either goes in the `keep_env` default.
+      Result: the HTTP proxy the sandbox sets. Without it curl exits 6. `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `NO_PROXY` and the lower-case forms are in the `keep_env` default. `tempfile.mkdtemp()` needs only `TMPDIR`.
 - [ ] Does the command string Claude Code passes export any variable itself, for example from
       its shell snapshot? A name it exports that is outside the lists reaches the command after
       `env -i`, and the script cannot remove it. If one appears, record it as a Docker delta
