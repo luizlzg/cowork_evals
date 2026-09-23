@@ -160,7 +160,7 @@ file mounted where a run mounts it and an environment set with `--env`.
 - [x] Same file: the five derived values, with `HOME=/x/abc` giving `USER=abc`.
 - [x] `tests/unit/test_config.py`: the defaults load, a name in two lists is refused, and an
       invalid name is refused.
-- [ ] `tests/unit/test_docker.py`: `run_preamble` and its redacted form carry `TZ`, and
+- [x] `tests/unit/test_docker.py`: `run_preamble` and its redacted form carry `TZ`, and
       `run_argv` mounts the keep file. A `keep_env` addition changes the keep file and not
       `digest`. `cowork_env.sh` is hashed into `digest`. The script reads the path the file
       is mounted at.
