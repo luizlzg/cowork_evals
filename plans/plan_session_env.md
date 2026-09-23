@@ -167,7 +167,7 @@ file mounted where a run mounts it and an environment set with `--env`.
 - [x] `tests/unit/test_logs.py`: `env.txt` carries both new rows.
 - [x] `tests/integration/test_docker.py`, no model: the image names `cowork-env` in its managed
       settings, and a line in the keep file that is not a shell name is skipped.
-- [ ] `tests/integration/test_docker.py`, credentialled: the `session-env` case passes through
+- [x] `tests/integration/test_docker.py`, credentialled: the `session-env` case passes through
       the Docker backend, beside `test_the_smoke_case_passes_through_the_backend`.
 
 ## Phase 4: documentation
