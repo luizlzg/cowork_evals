@@ -158,7 +158,7 @@ file mounted where a run mounts it and an environment set with `--env`.
       and an unlisted name are dropped, and a listed name is kept.
 - [x] Same file: a listed name with no incoming value stays unset.
 - [x] Same file: the five derived values, with `HOME=/x/abc` giving `USER=abc`.
-- [ ] `tests/unit/test_config.py`: the defaults load, a name in two lists is refused, and an
+- [x] `tests/unit/test_config.py`: the defaults load, a name in two lists is refused, and an
       invalid name is refused.
 - [ ] `tests/unit/test_docker.py`: `run_preamble` and its redacted form carry `TZ`, and
       `run_argv` mounts the keep file. A `keep_env` addition changes the keep file and not
