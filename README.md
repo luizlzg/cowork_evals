@@ -303,7 +303,8 @@ and its packages, the installed commands, Node packages, environment variables),
 session's `pip freeze`.
 
 The skills belong to the package. `init` replaces them whole, so an edit to one is lost on the
-next run. Commit them or ignore them, as you prefer. What they hold and why they are copies is
+next run. Your own skills under `.claude/skills/` are not touched, unless one uses the name of a
+shipped skill. Commit them or ignore them, as you prefer. What they hold and why they are copies is
 [`docs/library.md`](docs/library.md); where `init` puts them is [`docs/cli.md`](docs/cli.md).
 
 ## Documentation

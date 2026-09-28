@@ -559,8 +559,9 @@ values is written only when it is absent.
 | `CLAUDE.md`         | consumer | kept when it carries the block, and appended to when it does not   |
 
 The block's own heading is the marker, so an edited block is recognised and never appended
-twice. An edit to a shipped skill does not survive the next run. A skill directory the package
-does not ship is never touched.
+twice. An edit to a shipped skill does not survive the next run. A skill directory is matched
+by name: one the package does not ship is never touched, and a consumer skill that carries the
+name of a shipped skill is replaced by it.
 
 | Condition                                 | Prints                                                     | Exit |
 | ----------------------------------------- | ---------------------------------------------------------- | ---- |
