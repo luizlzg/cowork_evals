@@ -4,10 +4,10 @@
 #
 #   (no args)  copy each skill directory whole, replacing what is there
 #
-# A consumer gets these from `cowork_evals init`, which never overwrites. This
-# repository is not a consumer, so it takes them the other way: the shipped copy
-# under src/cowork_evals/data/skills/ is the one source, .claude/skills/ is
-# generated and git-ignored, and this script regenerates it. A committed second
+# A consumer gets these from `cowork_evals init`, which also writes a config and
+# a CLAUDE.md block. This repository is not a consumer, so it takes the skills
+# alone: the shipped copy under src/cowork_evals/data/skills/ is the one source,
+# .claude/skills/ is generated and git-ignored, and this script regenerates it. A committed second
 # copy would be a duplicate with no rule. See docs/library.md.
 set -euo pipefail
 # shellcheck source=lib.sh

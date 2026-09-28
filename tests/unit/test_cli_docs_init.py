@@ -157,15 +157,47 @@ def test_a_second_run_changes_nothing(tmp_path: Path, working_directory: Callabl
     assert after == before
 
 
-def test_a_second_run_reports_every_target_as_kept(
+def test_a_second_run_keeps_the_config_and_the_block_and_replaces_every_skill(
     tmp_path: Path, working_directory: Callable, capsys: pytest.CaptureFixture
 ) -> None:
     _init_in(tmp_path, working_directory)
     capsys.readouterr()
     _init_in(tmp_path, working_directory)
     printed = capsys.readouterr().out
-    assert printed.count("kept") == 2 + len(resources.skills())
+    assert printed.count("kept") == 2
+    assert printed.count("replaced") == len(resources.skills())
     assert "wrote" not in printed
+
+
+def test_an_upgrade_replaces_a_stale_skill_whole(
+    tmp_path: Path, working_directory: Callable
+) -> None:
+    """A skill written by an older version, edited, and carrying a file the package no longer
+    ships, is the shipped skill byte for byte after `init`."""
+    _init_in(tmp_path, working_directory)
+    for _, target in resources.skills():
+        written = tmp_path / target
+        (written / resources.SKILL_FILE).write_text("---\nname: stale\n---\n")
+        (written / "retired.md").write_text("# Gone from the package\n")
+    _init_in(tmp_path, working_directory)
+    for source, target in resources.skills():
+        assert _tree(tmp_path / target) == _tree(source)
+
+
+def test_a_skill_target_that_is_a_link_is_replaced_by_the_copy(
+    tmp_path: Path, working_directory: Callable
+) -> None:
+    """The link goes, and what it pointed at is untouched."""
+    pointed = tmp_path / "elsewhere"
+    pointed.mkdir()
+    (pointed / "mine.md").write_text("# Mine\n")
+    source, target = resources.skills()[0]
+    (tmp_path / target).parent.mkdir(parents=True)
+    (tmp_path / target).symlink_to(pointed, target_is_directory=True)
+    _init_in(tmp_path, working_directory)
+    assert not (tmp_path / target).is_symlink()
+    assert _tree(tmp_path / target) == _tree(source)
+    assert (pointed / "mine.md").read_text() == "# Mine\n"
 
 
 def test_an_existing_memory_file_is_appended_to(

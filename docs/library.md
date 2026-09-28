@@ -132,7 +132,7 @@ copy. `cowork-skill-author`'s `references/pip_freeze.txt` links to
 `src/cowork_evals/data/requirements.txt`, so re-capturing the pins changes the skill with no
 second edit. The wheel build and `init` both write the file the link names.
 
-Where the verb writes the skills, and why upgrading the package does not refresh them, is
+Where the verb writes the skills, and how it replaces them after an upgrade, is
 [cli.md](cli.md). This repository is not a consumer, so its own `.claude/skills/` is generated
 by `scripts/dev_skills.sh` and git-ignored. The shipped copy is the one source.
 

@@ -545,47 +545,38 @@ directory. It takes no backend and no option.
 
 The skills are whatever the package ships, one directory each under
 `src/cowork_evals/data/skills/`. Each directory is copied whole, with every file in it except
-`__pycache__`, to `.claude/skills/<directory name>/`. A skill directory that exists is one target: it is kept
-whole, and no file is added to it.
+`__pycache__`, to `.claude/skills/<directory name>/`.
 Which skill fires on what, and why they are two files and not one, is
 [library.md](library.md).
 
-It never overwrites. A target that exists is reported as kept and is left exactly as it is, so
-a second run changes nothing and a consumer's own edits survive. `CLAUDE.md` is appended to
-when it exists and does not carry the block, and created when it is absent; the block's own
-heading is the marker, so an edited block is recognised and never appended twice.
+A target the package owns is replaced on every run. A target that holds the consumer's own
+values is written only when it is absent.
 
-Regenerating a target means deleting it first. That is the operator's act, and there is no
-option here that overwrites a file.
+| Target              | Owner    | When it exists                                                     |
+| ------------------- | -------- | ------------------------------------------------------------------ |
+| a skill directory   | package  | deleted whole, then copied again. A link is removed, not followed |
+| `cowork_evals.yaml` | consumer | kept exactly as it is                                              |
+| `CLAUDE.md`         | consumer | kept when it carries the block, and appended to when it does not   |
 
-| Condition                                | Prints                                     | Exit |
-| ---------------------------------------- | ------------------------------------------ | ---- |
-| a target was written                     | one `wrote` line per target                | 0    |
-| every target was already there           | one `kept` line per target, then a summary | 0    |
-| a source is missing from the installation | one line saying so, on stderr             | 3    |
+The block's own heading is the marker, so an edited block is recognised and never appended
+twice. An edit to a shipped skill does not survive the next run. A skill directory the package
+does not ship is never touched.
+
+| Condition                                 | Prints                                                     | Exit |
+| ----------------------------------------- | ---------------------------------------------------------- | ---- |
+| any run                                   | one `wrote`, `replaced`, `kept` or `appended` line per target | 0    |
+| a source is missing from the installation | one line saying so, on stderr, and nothing is written      | 3    |
 
 `cowork_evals.yaml` names a profile, which is an identifier. Add it to the repository's ignore
 list. See [library.md](library.md).
 
-### Upgrading the package does not refresh what init wrote
+### Upgrading
 
-`init` overwrites nothing, so a target written by an older version stays as it is. The skills
-are where that matters: the eval-authoring one carries the case format, and a stale copy
-teaches an out-of-date one to every session that reads it. Nothing detects the drift and
-nothing warns about it.
-
-After upgrading `cowork-evals`, take the new skills:
-
-```sh
-rm -r .claude/skills/cowork-evals .claude/skills/cowork-ask .claude/skills/cowork-skill-author
-cowork_evals init
-```
-
-The other two targets hold a consumer's own values, so leaving them alone is right.
-`cowork_evals.yaml` gains a key only when a release adds one, and every key has a built-in
-default, so an old file keeps working. The `CLAUDE.md` block is prose a consumer edits. A
-skill is a copy and not a link, so deleting it is the only way it changes: a refresh that
-overwrote would destroy a consumer's edits without asking.
+After upgrading `cowork-evals`, run `cowork_evals init` again. It replaces every shipped skill
+with the upgraded one, including files a skill no longer carries. `cowork_evals.yaml` gains a
+key only when a release adds one, and every key has a built-in default, so an old file keeps
+working. A skill a release removes from the package stays in `.claude/skills/` until it is
+deleted.
 
 ## Exit codes
 
