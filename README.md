@@ -63,15 +63,9 @@ cowork_evals init    # cowork_evals.yaml, the three skills, and a CLAUDE.md bloc
 cowork_evals docs    # where the documentation went, and every document name
 ```
 
-`init` overwrites nothing. It reports every target it kept.
-
-That means upgrading this package does not refresh what `init` already wrote. The skills are
-where that matters, because the eval-authoring one carries the case format and a stale copy
-teaches an out-of-date one. After an upgrade, delete them and run `init` again:
-
-```bash
-rm -r .claude/skills/cowork-evals .claude/skills/cowork-ask .claude/skills/cowork-skill-author && cowork_evals init
-```
+`init` replaces the three skills on every run, and writes `cowork_evals.yaml` and the
+`CLAUDE.md` block only when they are absent. After an upgrade, run `cowork_evals init` again
+to install the new skills. Your configuration and your `CLAUDE.md` are kept.
 
 ## What you need
 
@@ -308,8 +302,8 @@ the frontmatter and wrapper conventions, a review checklist, what a session prov
 and its packages, the installed commands, Node packages, environment variables), and the
 session's `pip freeze`.
 
-The files are yours once `init` writes them. Edit them, commit them, and refresh them after an
-upgrade with the two commands above. What they hold and why they are copies is
+The skills belong to the package. `init` replaces them whole, so an edit to one is lost on the
+next run. Commit them or ignore them, as you prefer. What they hold and why they are copies is
 [`docs/library.md`](docs/library.md); where `init` puts them is [`docs/cli.md`](docs/cli.md).
 
 ## Documentation

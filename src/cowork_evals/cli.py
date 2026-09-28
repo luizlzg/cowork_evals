@@ -345,7 +345,7 @@ def _prune_parser(verbs: Any) -> None:
 
 
 def _init_parser(verbs: Any) -> None:
-    """`init` takes no backend and no option. It writes four targets and overwrites none."""
+    """`init` takes no backend and no option. It replaces the skills and keeps the rest."""
     verbs.add_parser("init", help="write the config, the skills and a CLAUDE.md block")
 
 
@@ -1217,28 +1217,35 @@ def _init() -> int:
     adding one is adding a directory and is no change here. Each is copied whole, with every
     file beside its `SKILL.md`. docs/library.md.
 
-    It never overwrites. A target that exists is left exactly as it is and reported, so a
-    second run changes nothing and a consumer's own edits survive. Regenerating one means
-    deleting it first, which is the operator's act and not this verb's. docs/cli.md.
+    A target the package owns is replaced on every run, and a target that holds the
+    consumer's own values is written only when it is absent. The skills are the first kind,
+    so running `init` after an upgrade installs the upgraded skills. The configuration file
+    and the `CLAUDE.md` block are the second kind. docs/cli.md.
     """
-    targets = [(resources.EXAMPLE_CONFIG, Path(resources.CONFIG_NAME)), *resources.skills()]
-    if len(targets) == 1:
+    skills = resources.skills()
+    if not skills:
         return _refuse(["no skill in this installation"], PREFLIGHT_FAILED)
-
-    written = 0
-    for source, target in targets:
-        if target.exists():
-            print(f"kept {target}")
-            continue
+    for source in [resources.EXAMPLE_CONFIG, *(source for source, _ in skills)]:
         if not source.exists():
             return _refuse([f"{source.name} is missing from this installation"], PREFLIGHT_FAILED)
-        _install(source, target)
-        print(f"wrote {target}")
-        written += 1
 
-    written += _init_memory()
-    if written == 0:
-        print("nothing to do: every target was already there")
+    config = Path(resources.CONFIG_NAME)
+    if config.exists():
+        print(f"kept {config}")
+    else:
+        _install(resources.EXAMPLE_CONFIG, config)
+        print(f"wrote {config}")
+
+    for source, target in skills:
+        existed = target.exists() or target.is_symlink()
+        if target.is_dir() and not target.is_symlink():
+            shutil.rmtree(target)
+        elif existed:
+            target.unlink()
+        _install(source, target)
+        print(f"{'replaced' if existed else 'wrote'} {target}")
+
+    _init_memory()
     return OK
 
 
@@ -1255,7 +1262,7 @@ def _install(source: Path, target: Path) -> None:
         shutil.copyfile(source, target)
 
 
-def _init_memory() -> int:
+def _init_memory() -> None:
     """Append the pointer block to `CLAUDE.md`, creating the file when it is absent.
 
     The marker is the block's own heading. A file already carrying it is left alone, whatever
@@ -1266,14 +1273,13 @@ def _init_memory() -> int:
         existing = target.read_text()
         if resources.MEMORY_MARKER in existing:
             print(f"kept {target}: it already carries the block")
-            return 0
+            return
         separator = "" if existing.endswith("\n") else "\n"
         target.write_text(existing + separator + resources.MEMORY_BLOCK)
         print(f"appended to {target}")
-        return 1
+        return
     target.write_text(resources.MEMORY_BLOCK.lstrip("\n"))
     print(f"wrote {target}")
-    return 1
 
 
 def _prune(args: argparse.Namespace, config: Config) -> int:
