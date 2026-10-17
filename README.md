@@ -6,9 +6,9 @@
 
 </div>
 
-https://github.com/user-attachments/assets/5dbb621c-2e68-40b1-8b87-be42ccfedee0
+https://github.com/user-attachments/assets/17c6bdba-8ef4-43fb-a3a0-c8283e8c6dc4
 
-Narrated walkthrough, 4 minutes. Also on [YouTube](https://youtu.be/ZJ3USHzUn8w).
+Also on [YouTube](https://youtu.be/ZJ3USHzUn8w).
 
 Run evals for Claude CoWork skills and plugins, and run a plugin's own Python tests on the
 CoWork runtime.
