@@ -9,8 +9,9 @@ held, not a contract the product offers.
 
 - A session cannot count on an earlier one. Each session is a new user with a new home
   directory, so anything installed during a session is paid for again in the next.
-- Plugin code is bound to Python 3.10 and the installed package set. No install at run time,
-  no virtualenv, no package that is not already there.
+- Plugin code uses Python 3.10 and the installed package set. It installs nothing at run
+  time and builds no virtualenv, because an install is repeated in every session of every
+  user.
 - The host gives a skill less than a laptop does. No plugin `bin/` on `PATH`, no working
   directory at the skill, no shell state between `Bash` calls.
 

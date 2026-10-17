@@ -4,7 +4,7 @@ The images the repository's `README.md` shows. This directory does not ship.
 
 | File                     | Shows                                                                      | Used in `README.md`              |
 | ------------------------ | -------------------------------------------------------------------------- | -------------------------------- |
-| `images/logo.webp`       | The name, and an agent under test in a glass booth                         | The top                          |
+| `images/logo.webp`       | The name, and a laptop with a VM inside it matched to a container copy     | The top                          |
 | `images/case_flow.webp`  | A case from `prompt.md` through a backend, graders and checks to the exit code | Summary                       |
 | `images/backends.webp`   | The CoWork backend taking the keyboard, the container, and the verdict     | What you need                    |
 | `images/ablation.webp`   | The same case with and without the plugin, and the delta between them      | Quickstart, after "Then widen it" |

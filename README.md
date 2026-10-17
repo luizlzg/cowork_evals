@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/images/logo.webp" alt="CoWork Evals: an agent at a desk in a glass booth, watched by a scientist with a PASS and FAIL stamp" width="360">
+<img src="assets/images/logo.webp" alt="A blueprint of a laptop with a VM inside it, matched part by part to a container copy, over the name CoWork Evals" width="360">
 
 # CoWork Evals
 
@@ -11,15 +11,14 @@ CoWork runtime.
 
 ## Summary
 
-Four problems stand between a CoWork skill and a test suite. This is what this package does
-about each.
+This package addresses four problems with testing a CoWork skill.
 
 | Problem                                                                                   | How this solves it                                                                        |
 | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| CoWork has no scriptable entry point, so a skill can only be exercised by a person clicking | Two backends execute a case from the command line: Claude Code inside a container that reproduces the CoWork image, and the real desktop application driven directly |
-| A container is not the product, and the product cannot be run on every commit             | Both. Docker is the iteration loop and the pre-release check. CoWork is the confirmation on the real stack, run by a person on purpose, and never run on a commit |
-| Two backends would mean two eval formats and two sets of results                          | One format, `claude plugin eval`'s own. The same case tree runs on both, both write the same result document, and one verdict reads it |
-| A CoWork session is Python 3.10 with a fixed wheel set, so a plugin's tests passing on a laptop prove nothing about the session | `cowork_evals test` runs the plugin's own pytest suite inside that runtime, with no model in the loop |
+| CoWork has no command-line or API entry point, so a skill runs only when a person types a prompt into the application | Two backends execute a case from the command line: Claude Code inside a container that reproduces the CoWork image, and the real desktop application driven directly |
+| A container that copies the CoWork image can run on every commit but does not test the deployed plugins, the enterprise prompt, the model routing or the MCP servers. The real application tests those, but each run boots a VM and takes over the keyboard | Two backends. Docker runs on every change and before a release. CoWork runs the case in the real application, started by a person before a release and never on a commit |
+| With a different case format per backend, every case would be written twice and results would come in two file formats | One format, `claude plugin eval`'s own. The same case tree runs on both, both write the same result document, and one verdict reads it |
+| A CoWork session runs Python 3.10 with a fixed set of installed packages and starts fresh every time, so a package a plugin installs is installed again in every session. Plugins use only the image's packages, so a plugin's tests can pass on a laptop and fail with `ImportError` in the session | `cowork_evals test` runs the plugin's own pytest suite inside that runtime, with no model in the loop |
 
 A case asserts what a unit test cannot reach: the answer text, which tools ran and in what
 order, which files the agent created, and a rubric a judge model votes on. The four structural
@@ -30,7 +29,7 @@ the host over what the run produced, which is how a case says what is inside the
 than only that it appeared. See [`docs/checks.md`](docs/checks.md).
 
 <p align="center">
-  <img src="assets/images/case_flow.webp" alt="How a case runs: prompt.md, the docker or cowork backend, the trace and the files the agent created, the graders, the checks, and exit 0 or exit 1" width="520">
+  <img src="assets/images/case_flow.webp" alt="How a case runs: prompt.md, the --docker or --cowork backend, trace.jsonl, last_message.txt and workspace/, the graders, checks/*.py, and exit 0 or exit 1" width="520">
 </p>
 
 The CoWork backend honours a subset of the format, because it drives a live session rather
@@ -96,7 +95,7 @@ the code in your checkout rather than the code deployed to the account. The whol
 is [`docs/approaches.md`](docs/approaches.md).
 
 <p align="center">
-  <img src="assets/images/backends.webp" alt="A robot arm presses Return on the CoWork laptop, an agent runs in a Docker container, and a judge stamps verdict.txt" width="760">
+  <img src="assets/images/backends.webp" alt="Two backends, one verdict: --cowork sends Return to the real application, --docker runs Claude Code headless in a container, and both write aggregate-result.json read into verdict.txt" width="760">
 </p>
 
 ## Quickstart
@@ -247,7 +246,7 @@ Then widen it:
 | Run the same cases on the real product | `--cowork`, after `cowork.profile` is set in `cowork_evals.yaml`    |
 
 <p align="center">
-  <img src="assets/images/ablation.webp" alt="The same agent on two benches, with the plugin and without it, and a scientist measuring the delta" width="520">
+  <img src="assets/images/ablation.webp" alt="Ablation on --docker: the same prompt.md with the plugin and with no plugin, scored as score and scoreWithout, and delta = score - scoreWithout per case" width="520">
 </p>
 
 ### 3. Tests
@@ -258,7 +257,7 @@ grader and no verdict. That is what says a plugin's Python behaves in a session,
 passing against a laptop's own wheels does not.
 
 <p align="center">
-  <img src="assets/images/runtime.webp" alt="A developer holds a passing test report beside a laptop full of packages, while the plugin fails with ImportError inside the Python 3.10 CoWork session" width="520">
+  <img src="assets/images/runtime.webp" alt="A developer whose plugin tests pass on the laptop, while the CoWork session on Python 3.10.12 fails with ModuleNotFoundError for pydantic; cowork_evals test --docker runs the suite in the CoWork image" width="760">
 </p>
 
 ```bash
