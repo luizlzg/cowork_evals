@@ -53,7 +53,7 @@ SCENARIOS = {
     "folder": (
         "Connect my Downloads folder (~/Downloads) to this chat, then tell me how many files are "
         "at its top level. Do not open or change any file.",
-        "return",
+        "click_return",
     ),
 }
 
@@ -61,7 +61,7 @@ SCENARIOS = {
 # approval box and Cmd+Return allowed it; Ctrl+Enter is the Windows guess for `approve`.
 # `key code 36 using command down` did not allow the box on macOS 26, so `approve` holds Command
 # down around the Return explicitly, and a1 to a3 are the other forms to try one after another.
-KEYS = ("esc", "approve", "a1", "a2", "a3", "return", "tab", "click", *"123456789")
+KEYS = ("esc", "approve", "a1", "a2", "a3", "return", "tab", "click", "click_return", *"123456789")
 SYSTEM_EVENTS = 'tell application "System Events" to '
 MAC_KEYS = {
     "esc": [SYSTEM_EVENTS + "key code 53"],
@@ -87,6 +87,8 @@ MAC_KEYS = {
         'tell application "System Events" to click at {x + w div 2, y + h * 3 div 10}',
     ],
 }
+# The two at once: the click, a pause for focus to move, then Return.
+MAC_KEYS["click_return"] = [*MAC_KEYS["click"], "delay 0.3", SYSTEM_EVENTS + "key code 36"]
 VK_ESCAPE, VK_CONTROL, VK_RETURN = 0x1B, 0x11, 0x0D
 WIN_KEYS = {
     "esc": [(VK_ESCAPE, False), (VK_ESCAPE, True)],
@@ -284,9 +286,12 @@ def _press(probe: CoWork, key: str, *, activate: bool = True) -> None:
             probe._native(windows.activate)
             probe._settle_front()
         probe._guard()
-        if key == "click":
+        if key in ("click", "click_return"):
             probe._native(_click_windows)
-            return
+            if key == "click":
+                return
+            time.sleep(0.3)
+            key = "return"
         vk = VK_DIGIT_0 + int(key) if key.isdigit() else None
         events = WIN_KEYS.get(key) or [(vk, False), (vk, True)]
         probe._native(windows._send, events)
@@ -393,7 +398,7 @@ def main() -> int:
                 want = _ask(
                     log,
                     f"Press which key in Claude? Enter for {key}; or esc, approve, a1, a2, "
-                    "a3, return, tab, click, a digit, or none to stop",
+                    "a3, return, tab, click, click_return, a digit, or none to stop",
                 )
                 if want == "none":
                     break
