@@ -77,18 +77,17 @@ MAC_KEYS = {
     "a3": [SYSTEM_EVENTS + "key code 36 using {command down}"],
     "return": [SYSTEM_EVENTS + "key code 36"],
     "tab": [SYSTEM_EVENTS + "key code 48"],
-    # A click in the conversation, centred and 30% down Claude's front window, takes the keyboard
-    # off the composer, so a Return reaches the folder box.
-    "click": [
-        'tell application "System Events" to tell process "Claude"',
-        "set {x, y} to position of front window",
-        "set {w, h} to size of front window",
-        "end tell",
-        'tell application "System Events" to click at {x + w div 2, y + h * 3 div 10}',
-    ],
 }
-# The two at once: the click, a pause for focus to move, then Return.
-MAC_KEYS["click_return"] = [*MAC_KEYS["click"], "delay 0.3", SYSTEM_EVENTS + "key code 36"]
+# `click` and `click_return` click the conversation, centred and 30% down Claude's front window,
+# which takes the keyboard off the composer so a Return reaches the folder box. They go through
+# `_click_mac` and `_click_windows`, not a key list.
+WINDOW_BOUNDS = (
+    'tell application "System Events" to tell process "Claude"',
+    "set {x, y} to position of front window",
+    "set {w, h} to size of front window",
+    "end tell",
+    'return (x as text) & " " & (y as text) & " " & (w as text) & " " & (h as text)',
+)
 VK_ESCAPE, VK_CONTROL, VK_RETURN = 0x1B, 0x11, 0x0D
 WIN_KEYS = {
     "esc": [(VK_ESCAPE, False), (VK_ESCAPE, True)],
@@ -300,8 +299,44 @@ def _press(probe: CoWork, key: str, *, activate: bool = True) -> None:
             probe._fire(list(driver.ACTIVATE))
             probe._settle_front()
         probe._guard()
+        if key in ("click", "click_return"):
+            _click_mac()
+            if key == "click":
+                return
+            time.sleep(0.3)
+            key = "return"
         lines = MAC_KEYS.get(key) or [f'{SYSTEM_EVENTS}keystroke "{key}"']
         probe._fire(["osascript", *(part for line in lines for part in ("-e", line))])
+
+
+def _click_mac() -> None:
+    """The `click` key on macOS: a left click posted through CoreGraphics, at the same point."""
+    import ctypes
+    import subprocess
+
+    argv = ["osascript", *(part for line in WINDOW_BOUNDS for part in ("-e", line))]
+    out = subprocess.run(argv, capture_output=True, text=True, timeout=10, check=True).stdout
+    x, y, w, h = (float(part) for part in out.split())
+
+    class CGPoint(ctypes.Structure):
+        _fields_ = [("x", ctypes.c_double), ("y", ctypes.c_double)]
+
+    cg = ctypes.CDLL("/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices")
+    cg.CGEventCreateMouseEvent.restype = ctypes.c_void_p
+    cg.CGEventCreateMouseEvent.argtypes = [
+        ctypes.c_void_p,
+        ctypes.c_uint32,
+        CGPoint,
+        ctypes.c_uint32,
+    ]
+    cg.CGEventPost.argtypes = [ctypes.c_uint32, ctypes.c_void_p]
+    cg.CFRelease.argtypes = [ctypes.c_void_p]
+    point = CGPoint(x + w / 2, y + h * 0.3)
+    for kind in (5, 1, 2):  # mouse moved, left mouse down, left mouse up
+        event = cg.CGEventCreateMouseEvent(None, kind, point, 0)
+        cg.CGEventPost(0, event)  # the HID event tap
+        cg.CFRelease(event)
+        time.sleep(0.05)
 
 
 def _click_windows() -> None:
