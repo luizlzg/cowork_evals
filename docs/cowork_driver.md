@@ -54,7 +54,8 @@ While one stands, quiescence does not count.
 | Approval box | Presses the case's next answer from `interactions.yaml` after 2 seconds, when it matches. With none, leaves it `waiting_seconds` for a person, then stops the run as waiting |
 
 A question's first option is the key `1`, behind the frontmost check and with no activation:
-activating CoWork moves the keyboard to the composer. On macOS an approval box, the folder box
+activating CoWork moves the keyboard to the composer. A multi-choice question is then sent with
+its Submit button, pressed as below. On macOS an approval box, the folder box
 included, is answered by pressing its own button through the Accessibility API, by label
 (`Allow once` or `Allow`, `Deny`), so the keyboard focus and the frontmost application do not
 matter. The press is repeated every 3 seconds while the box stands, four times at most. Windows

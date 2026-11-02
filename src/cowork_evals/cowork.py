@@ -115,6 +115,9 @@ RETURN = (
 # through the Accessibility API (macos.py), which types nothing.
 FIRST_OPTION_KEYS = ("osascript", "-e", 'tell application "System Events" to keystroke "1"')
 APPROVAL_LABELS = {"allow": ("Allow once", "Allow"), "deny": ("Deny",)}
+# A multi-choice question waits for its send button after the digit ticks an option.
+SUBMIT_LABELS = ("Submit",)
+SUBMIT = "submit"
 
 # A question or an approval box writes a permission_request, its answer a permission_response.
 PERMISSION_REQUEST = "permission_request"
@@ -480,21 +483,24 @@ class CoWork:
         else:
             self._fire(list(CLEAR))
 
-    def _answer(self, request: AuditRecord, approval: Approval | None) -> None:
-        """Press a question's first option, once per question, or an approval box's button."""
+    def _answer(
+        self, request: AuditRecord, approval: Approval | None, *, submit_only: bool = False
+    ) -> None:
+        """Press an approval box's button, or a question's first option once per question.
+
+        A multi-choice question is ticked by its digit and sent by its Submit button on macOS.
+        `submit_only` presses that button alone: the digit again would untick the option.
+        """
         if approval is not None and not WINDOWS:
-            labels = APPROVAL_LABELS[approval.answer]
-            try:
-                macos.press_button(COWORK_PROCESS, labels)
-            except OSError as error:
-                raise CoWorkError(3, f"press_button: {error}") from error
+            self._press_button(APPROVAL_LABELS[approval.answer])
             return
         if approval is not None:
             self._guard()
             self._native(windows.press_allow if approval.answer == "allow" else windows.press_deny)
             return
         questions = (request.tool_input or {}).get("questions")
-        for position in range(len(questions) if isinstance(questions, list) and questions else 1):
+        count = len(questions) if isinstance(questions, list) and questions else 1
+        for position in range(0 if submit_only else count):
             if position:
                 time.sleep(0.5)
             self._guard()
@@ -502,6 +508,16 @@ class CoWork:
                 self._native(windows.press_first_option)
             else:
                 self._fire(list(FIRST_OPTION_KEYS))
+        if _multi_select(request) and not WINDOWS:
+            time.sleep(0 if submit_only else 0.5)
+            self._press_button(SUBMIT_LABELS)
+
+    def _press_button(self, labels: tuple[str, ...]) -> None:
+        """Press a CoWork button through the Accessibility API. Not running is code 3."""
+        try:
+            macos.press_button(COWORK_PROCESS, labels)
+        except OSError as error:
+            raise CoWorkError(3, f"press_button: {error}") from error
 
     def _settle_front(self) -> None:
         """Wait up to `FRONT_SECONDS` for an activation to land. Types nothing.
@@ -620,8 +636,9 @@ class CoWork:
         signature: object = None
         idle_since = time.monotonic()
         standing: dict[int, float] = {}
-        # Per request: the answer pressed (None for a question), how often, and when last.
-        pressed: dict[int, tuple[Approval | None, int, float]] = {}
+        # Per request: what is pressed again while it stands (an approval, SUBMIT for a
+        # multi-choice question, None for nothing), how often, and when last.
+        pressed: dict[int, tuple[Approval | str | None, int, float]] = {}
         used = 0
         while True:
             audit = _read_jsonl(session_dir / AUDIT, AuditRecord)
@@ -648,7 +665,10 @@ class CoWork:
                 if index in pressed:
                     answer, count, last = pressed[index]
                     if answer is not None and count < PRESSES and now - last >= RETRY_SECONDS:
-                        self._answer(request, answer)
+                        if isinstance(answer, Approval):
+                            self._answer(request, answer)
+                        else:
+                            self._answer(request, None, submit_only=True)
                         pressed[index] = (answer, count + 1, now)
                     elif now - last >= self._config.waiting_seconds:
                         return session_dir
@@ -660,7 +680,8 @@ class CoWork:
                     if request.tool_name != QUESTION_TOOL:
                         return session_dir
                     self._answer(request, None)
-                    pressed[index] = (None, 1, now)
+                    multi = _multi_select(request) and not WINDOWS
+                    pressed[index] = (SUBMIT if multi else None, 1, now)
 
             elif _started(audit, session_dir) and (
                 time.monotonic() - idle_since >= self._config.idle_seconds
@@ -951,6 +972,14 @@ def _tool_calls(records: list[SessionRecord]) -> list[ToolCall]:
                 )
             )
     return calls
+
+
+def _multi_select(request: AuditRecord) -> bool:
+    """Whether any question of an AskUserQuestion request lets several options be chosen."""
+    questions = (request.tool_input or {}).get("questions")
+    return isinstance(questions, list) and any(
+        isinstance(question, dict) and question.get("multiSelect") is True for question in questions
+    )
 
 
 def _requests(audit: list[AuditRecord]) -> list[tuple[AuditRecord, bool]]:

@@ -326,6 +326,7 @@ an approval box stopped.
 | Focus               | After `activate`, a digit or Cmd+Return lands in the composer and the box stays |
 | Folder box          | `mcp__cowork__request_cowork_directory` asks to connect a folder. With the keyboard in the composer no key answers it |
 | Buttons             | With `AXManualAccessibility` set, the tree holds the box's buttons: `Deny 1` and `Allow once 2` for a tool, `Deny` and `Allow` for a folder. `AXPress` on one answers the box, whatever is frontmost |
+| Multi-choice        | `1` ticks the first option and sends nothing. The question's `Submit` button sends it |
 | Press timing        | A press 2.2 s after the request did nothing; the next, at 5.3 s, answered it          |
 | Denied tool result  | Starts `User rejected using`                                                         |
 
