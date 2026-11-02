@@ -58,18 +58,20 @@ SCENARIOS = {
         "write my two answers to answers.txt in the outputs folder and reply with one sentence.",
         "1_each",
     ),
-    # One question where several options can be chosen. 1 ticks the first: does it submit?
+    # One question where several options can be chosen. 1 ticks the first and does not submit,
+    # so 1_submit then presses the box's submit button, and logs the labels it saw.
     "multiselect": (
         "Use the AskUserQuestion tool to ask me one question with multiSelect set to true: which "
         "colours do I like? Options Red, Blue, Green. After I answer, reply with only my answer.",
-        "1_each",
+        "1_submit",
     ),
-    # A box for another tool: deleting a file the session made. Only that file is deleted.
-    "delete": (
-        "Create a file named probe_delete_me.txt in the outputs folder, then delete it. If "
-        "deleting is refused, request permission to delete that one file and try again. Delete "
-        "nothing else.",
-        "ax_allow",
+    # A box for another tool: a Microsoft 365 connector call that the second-brain send gate
+    # asks before. It is denied, so no event is created.
+    "connector": (
+        "This is a test of the permission box. Call the Microsoft 365 create_event tool directly, "
+        "not through a skill, to create an event titled 'probe test' tomorrow at 09:00 for 15 "
+        "minutes with no attendees.",
+        "ax_deny",
     ),
     # The folder box (request_cowork_directory) is allowed with Return, not Cmd+Return.
     "folder": (
@@ -97,6 +99,7 @@ KEYS = (
     "ax_deny",
     "ax_first",
     "1_each",
+    "1_submit",
     *"123456789",
 )
 SYSTEM_EVENTS = 'tell application "System Events" to '
@@ -121,6 +124,8 @@ MAC_KEYS = {
 # title or description is one of the labels, and returns every button label it saw. One walk of
 # the tree takes under a second; the same walk through AppleScript took 23 s.
 AX_LABELS = {"ax_allow": ["Allow", "Allow once"], "ax_deny": ["Deny", "Don't allow"]}
+# What a multi-choice question's send button may be labelled.
+SUBMIT_LABELS = ["Submit", "Send", "Continue", "Done", "Next", "Submit answers"]
 # `ax_first` presses the button labelled with the first option of the standing question.
 AX_FIRST = "ax_first"
 
@@ -330,6 +335,12 @@ def _press(
     Activating CoWork moves the keyboard to the composer, away from an approval box, so
     `activate=False` presses into whatever in CoWork has the keyboard.
     """
+    if key == "1_submit":
+        _press(probe, "1_each", activate=activate, request=request)
+        time.sleep(0.5)
+        pressed, seen = _ax_press(SUBMIT_LABELS)
+        AX_RESULT.append(f"pressed={pressed} last_buttons={' | '.join(seen[-8:])}")
+        return
     if key == "1_each":
         questions = (request or {}).get("questions")
         for position in range(len(questions) if isinstance(questions, list) and questions else 1):
