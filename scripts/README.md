@@ -22,6 +22,7 @@ its own header. `lib.sh` is sourced, never executed.
 | `build.sh`       | Build the distribution into `dist/`, and verify the wheel |
 | `dev_skills.sh`  | Copy the shipped skills into this repository's `.claude/skills/` |
 | `lib.sh`         | Shared `ROOT`, `VENV`, `COWORK`, `die`, `need`, `usage` |
+| `interaction_probe.py` | Log what a CoWork session writes while it waits for a question or an Allow/Deny answer. See `interaction_probe.md` |
 
 `image.sh` and `parity.sh` are the image's half of what `cowork_venv.sh` is for the mirror.
 Run `image.sh` and then `login.sh` before the integration tier: those tests need the image
