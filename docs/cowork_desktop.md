@@ -311,6 +311,24 @@ git-ignored:
 }
 ```
 
+## 6. Questions and approval boxes
+
+Measured by the interaction probe (branch `feat/interaction-probe`) on macOS 26.7.1 with the Claude-3p application,
+2 November 2026: a question through `AskUserQuestion`, and a `curl` POST to Microsoft Graph that
+an approval box stopped.
+
+| Fact                | Value                                                                               |
+| ------------------- | ----------------------------------------------------------------------------------- |
+| Waiting             | One `system` record, `subtype: permission_request`, with `tool_name` and `tool_input`. Nothing else is written until the answer |
+| Answer              | `subtype: permission_response`, with `decision` (`once` or `deny`) and `granted`    |
+| Question keys       | The option's digit: `1` chose the first                                             |
+| Approval keys       | `1` or Escape denied. `2` or Cmd+Return allowed once                                |
+| Focus               | After `activate`, a digit or Cmd+Return lands in the composer and the box stays. The keys reach the box when CoWork was not activated first |
+| Denied tool result  | Starts `User rejected using`                                                         |
+
+Windows numbers the buttons differently (Allow once is `3` in a screenshot), so the driver
+allows with Cmd+Return and denies with Escape rather than by number.
+
 ## Windows
 
 Measured by a probe run on Windows 11 (10.0.26200) with the Claude-3p application, 19 October

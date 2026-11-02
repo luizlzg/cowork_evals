@@ -42,6 +42,22 @@ appears, the session is complete when no file under the session directory has ch
 first assistant turn. The fallback logs a warning when it fires, and it can fire during a
 long pause in a run. Raise `idle_seconds` if it does.
 
+## Questions and approval boxes
+
+A question (`AskUserQuestion`) or an approval box writes a `permission_request` record to
+`audit.jsonl`, and its answer a `permission_response` ([cowork_desktop.md](cowork_desktop.md)).
+While one stands, quiescence does not count.
+
+| Request      | What the driver does                                                                   |
+| ------------ | -------------------------------------------------------------------------------------- |
+| Question     | Leaves it `waiting_seconds` for a person to answer, then presses its first option      |
+| Approval box | Presses the case's next answer from `interactions.yaml` after 2 seconds, when it matches. With none, leaves it `waiting_seconds` for a person, then stops the run as waiting |
+
+Keys are pressed behind the frontmost check, with no activation: activating CoWork moves the
+keyboard to the composer. macOS: `1`, Cmd+Return to allow once, Escape to deny. Windows: `1`,
+Ctrl+Enter and Escape, unprobed. A run that stopped as waiting names the tool in the session
+document's `waiting`, and is not code 8 when it has no assistant text.
+
 ## What it refuses
 
 | Refusal                                                          | Code |
@@ -78,6 +94,7 @@ cowork:
   settle_seconds: 3
   session_timeout: 120
   idle_seconds: 20
+  waiting_seconds: 60
   run_timeout: 1800
   max_runs: 50
   consent: dialog
@@ -93,6 +110,7 @@ cowork:
 | `settle_seconds`  | 3                      | Wait after the deep link, before the Return                           |
 | `session_timeout` | 120                    | Wait for a session directory to appear, and for its audit record      |
 | `idle_seconds`    | 20                     | Quiescence window of the fallback completion signal                   |
+| `waiting_seconds` | 60                     | How long a question or an unanswered approval box is left for a person |
 | `run_timeout`     | 1800                   | Wait for the run to finish. `ask --timeout-seconds` replaces it       |
 | `max_runs`        | 50                     | Submissions allowed in the trailing 24 hours                          |
 | `consent`         | `dialog`               | `dialog` shows the modal once per process. `none` fires without asking |
@@ -166,6 +184,7 @@ One JSON object, and it holds exactly these keys.
 | `final_text`           | The last assistant text turn                                           |
 | `outputs`              | Files under `outputs/`, relative to the session directory              |
 | `log_file`             | The diagnostic log of the call that produced it, or `null`             |
+| `waiting`              | The tool of the request the run stopped on unanswered, or `null`       |
 
 Each entry of `tool_calls`:
 

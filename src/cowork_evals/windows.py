@@ -29,6 +29,7 @@ SW_RESTORE = 9
 INPUT_KEYBOARD = 1
 KEYEVENTF_KEYUP = 0x2
 VK_CONTROL, VK_A, VK_DELETE, VK_RETURN = 0x11, 0x41, 0x2E, 0x0D
+VK_ESCAPE, VK_1 = 0x1B, 0x31
 
 # MessageBoxTimeoutW: OK and Cancel, Cancel the default so a stray Return refuses, in front of
 # everything. It returns IDOK, IDCANCEL, or MB_TIMEDOUT when nobody answered.
@@ -174,6 +175,19 @@ def clear() -> None:
 
 def press_return() -> None:
     _send([(VK_RETURN, False), (VK_RETURN, True)])
+
+
+# The answers to a request: the macOS keys' counterparts, unprobed. docs/cowork_desktop.md.
+def press_first_option() -> None:
+    _send([(VK_1, False), (VK_1, True)])
+
+
+def press_allow() -> None:
+    _send([(VK_CONTROL, False), (VK_RETURN, False), (VK_RETURN, True), (VK_CONTROL, True)])
+
+
+def press_deny() -> None:
+    _send([(VK_ESCAPE, False), (VK_ESCAPE, True)])
 
 
 def consent(message: str, title: str, timeout: float) -> bool:

@@ -40,6 +40,7 @@ from .config import (
     CoWorkSection,
     _override,
 )
+from .interactions import Approval
 
 # The driver runs `open` and `osascript` on macOS and the Win32 calls in `windows` on Windows.
 WINDOWS = sys.platform == "win32"
@@ -107,6 +108,29 @@ RETURN = (
     "-e",
     'tell application "System Events" to key code 36',
 )
+
+# Answers to a request, measured on macOS 26. docs/cowork_desktop.md. They run behind the guard
+# and with no activation: activating CoWork moves the keyboard to the composer, away from the
+# box. Allow once is Cmd+Return, deny is Escape (key code 53), a question's first option is 1.
+ALLOW_KEYS = (
+    "osascript",
+    "-e",
+    'tell application "System Events" to key down command',
+    "-e",
+    'tell application "System Events" to key code 36',
+    "-e",
+    'tell application "System Events" to key up command',
+)
+DENY_KEYS = ("osascript", "-e", 'tell application "System Events" to key code 53')
+FIRST_OPTION_KEYS = ("osascript", "-e", 'tell application "System Events" to keystroke "1"')
+
+# A question or an approval box writes a permission_request, its answer a permission_response.
+PERMISSION_REQUEST = "permission_request"
+PERMISSION_RESPONSE = "permission_response"
+QUESTION_TOOL = "AskUserQuestion"
+
+# How long an approval box stands before the case's answer is pressed.
+ANSWER_DELAY_SECONDS = 2.0
 
 # Step 2a. `tell me to activate` is what forces the modal in front of the editor the
 # developer is working in. There is no `default button`, so a Return typed into that editor
@@ -200,6 +224,9 @@ class AuditRecord(BaseModel):
     timestamp: str | None = None
     message: Message | None = None
     state: str | None = None
+    subtype: str | None = None
+    tool_name: str | None = None
+    tool_input: dict[str, Any] | None = None
 
 
 # What the driver returns. Every key is written, and a field that is `None` is written as null,
@@ -250,6 +277,9 @@ class SessionDocument(BaseModel):
     final_text: str
     outputs: list[str]
     log_file: str | None
+    # The tool of the question or approval box the run stopped on unanswered. A default, so a
+    # document written before the key existed still reads.
+    waiting: str | None = None
 
     @model_validator(mode="after")
     def _names(self) -> SessionDocument:
@@ -326,7 +356,9 @@ class CoWork:
 
         turns = _turns(records)
         final_text = _final_text(turns)
-        if final_text is None:
+        requests = _requests(audit)
+        waiting = requests[-1][0].tool_name if requests and not requests[-1][1] else None
+        if final_text is None and waiting is None:
             raise CoWorkError(8, f"{directory}: the run produced no assistant text", directory)
 
         audit_prompt = _audit_prompt(audit)
@@ -346,9 +378,10 @@ class CoWork:
             turns=turns,
             tool_calls=calls,
             tool_names=[call.name for call in calls],
-            final_text=final_text,
+            final_text=final_text or "",
             outputs=_outputs(directory),
             log_file=None if self._log_file is None else str(self._log_file),
+            waiting=waiting,
         )
 
     # Firing. The nine steps and the code each failure produces are in
@@ -361,11 +394,14 @@ class CoWork:
             query["surface"] = self._config.surface
         return f"{DEEP_LINK}?{urlencode(query, quote_via=quote, safe='')}"
 
-    def run(self, prompt: str) -> SessionDocument:
-        """Submit, wait for the run to finish, and collect the session document."""
+    def run(self, prompt: str, approvals: list[Approval] | None = None) -> SessionDocument:
+        """Submit, wait for the run to finish, and collect the session document.
+
+        `approvals` answer the session's approval boxes, in order. docs/cowork_driver.md.
+        """
         with self._diagnostics():
             session_dir = self._submit(prompt)
-            self._wait(session_dir)
+            self._wait(session_dir, approvals or [])
             return self.collect(session_dir, prompt=prompt)
 
     def submit(self, prompt: str) -> Path:
@@ -373,9 +409,9 @@ class CoWork:
         with self._diagnostics():
             return self._submit(prompt)
 
-    def wait(self, session_dir: Path | str) -> Path:
-        """Step 8: block until the completion signal fires."""
-        return self._wait(Path(session_dir))
+    def wait(self, session_dir: Path | str, approvals: list[Approval] | None = None) -> Path:
+        """Step 8: block until the completion signal fires, or the run waits unanswered."""
+        return self._wait(Path(session_dir), approvals or [])
 
     def _submit(self, prompt: str) -> Path:
         self._check(prompt)
@@ -448,6 +484,25 @@ class CoWork:
         else:
             self._fire(list(CLEAR))
 
+    def _answer(self, request: AuditRecord, approval: Approval | None) -> None:
+        """Press an approval's answer, or the first option of each of a request's questions."""
+        if approval is None:
+            questions = (request.tool_input or {}).get("questions")
+            count = len(questions) if isinstance(questions, list) and questions else 1
+            native, keys = windows.press_first_option, FIRST_OPTION_KEYS
+        elif approval.answer == "allow":
+            count, native, keys = 1, windows.press_allow, ALLOW_KEYS
+        else:
+            count, native, keys = 1, windows.press_deny, DENY_KEYS
+        for position in range(count):
+            if position:
+                time.sleep(0.5)
+            self._guard()
+            if WINDOWS:
+                self._native(native)
+            else:
+                self._fire(list(keys))
+
     def _settle_front(self) -> None:
         """Wait up to `FRONT_SECONDS` for an activation to land. Types nothing.
 
@@ -464,7 +519,6 @@ class CoWork:
                 # Some terminals cannot activate another application through AppleScript.
                 # Launch Services can, and `open -a` on a running application only brings
                 # it to the front.
-                LOGGER.info("activation did not land, reopening %s", COWORK_PROCESS)
                 self._fire(["open", "-a", COWORK_PROCESS])
                 reopened = True
             time.sleep(FRONT_POLL_SECONDS)
@@ -548,8 +602,14 @@ class CoWork:
                 )
             time.sleep(POLL_SECONDS)
 
-    def _wait(self, session_dir: Path) -> Path:
-        """Block until the terminal lifecycle state, or until quiescence.
+    def _wait(self, session_dir: Path, approvals: list[Approval]) -> Path:
+        """Block until the terminal lifecycle state, a request left unanswered, or quiescence.
+
+        A standing request is the session waiting for the user, so quiescence does not count
+        while one stands. A question is left `waiting_seconds` for a person to answer, then
+        its first option is pressed. An approval box takes the next of `approvals` when it
+        matches, after `ANSWER_DELAY_SECONDS`. With none for it, or when what was pressed
+        did not land, the run returns as waiting once `waiting_seconds` have passed.
 
         Quiescence is a heuristic. It counts only after the run has demonstrably started,
         because the idle window would otherwise accrue during VM boot and an empty session
@@ -558,6 +618,9 @@ class CoWork:
         deadline = time.monotonic() + self._config.run_timeout
         signature: object = None
         idle_since = time.monotonic()
+        standing: dict[int, float] = {}
+        pressed: dict[int, float] = {}
+        used = 0
         while True:
             audit = _read_jsonl(session_dir / AUDIT, AuditRecord)
             if TERMINAL_STATE in _lifecycle(audit):
@@ -569,7 +632,31 @@ class CoWork:
                 signature = current
                 idle_since = time.monotonic()
 
-            if _started(audit, session_dir) and (
+            requests = _requests(audit)
+            if requests and not requests[-1][1]:
+                index, request = len(requests) - 1, requests[-1][0]
+                now = time.monotonic()
+                since = standing.setdefault(index, now)
+                idle_since = now
+                approval = None
+                if request.tool_name != QUESTION_TOOL and used < len(approvals):
+                    candidate = approvals[used]
+                    if candidate.matches(request.tool_name or "", request.tool_input or {}):
+                        approval = candidate
+                if index in pressed:
+                    if now - pressed[index] >= self._config.waiting_seconds:
+                        return session_dir
+                elif approval is not None and now - since >= ANSWER_DELAY_SECONDS:
+                    self._answer(request, approval)
+                    pressed[index] = now
+                    used += 1
+                elif now - since >= self._config.waiting_seconds:
+                    if request.tool_name != QUESTION_TOOL:
+                        return session_dir
+                    self._answer(request, None)
+                    pressed[index] = now
+
+            elif _started(audit, session_dir) and (
                 time.monotonic() - idle_since >= self._config.idle_seconds
             ):
                 LOGGER.warning(
@@ -858,6 +945,25 @@ def _tool_calls(records: list[SessionRecord]) -> list[ToolCall]:
                 )
             )
     return calls
+
+
+def _requests(audit: list[AuditRecord]) -> list[tuple[AuditRecord, bool]]:
+    """Each permission request, oldest first, and whether a response answered it.
+
+    A response answers the oldest unanswered request for the same tool.
+    """
+    pairs: list[tuple[AuditRecord, bool]] = []
+    for record in audit:
+        if record.type != "system":
+            continue
+        if record.subtype == PERMISSION_REQUEST:
+            pairs.append((record, False))
+        elif record.subtype == PERMISSION_RESPONSE:
+            for position, (request, answered) in enumerate(pairs):
+                if not answered and request.tool_name == record.tool_name:
+                    pairs[position] = (request, True)
+                    break
+    return pairs
 
 
 def _lifecycle(audit: list[AuditRecord]) -> list[str]:
