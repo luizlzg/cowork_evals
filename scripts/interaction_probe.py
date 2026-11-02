@@ -46,7 +46,7 @@ SCENARIOS = {
         "Use the AskUserQuestion tool to ask me one question: do I prefer red or blue? Offer "
         "exactly two options, Red and Blue. After I answer, write only my answer to colour.txt "
         "in the outputs folder and reply with one sentence.",
-        "ax_first",
+        "1",
     ),
     "deny": (GATED_PROMPT, "ax_deny"),
     "allow": (GATED_PROMPT, "ax_allow"),

@@ -27,7 +27,7 @@ Add `--config <path>` if your `cowork_evals.yaml` is in another folder.
 
 | Scenario   | What Cowork is asked                                           | Key it offers to press |
 | ---------- | -------------------------------------------------------------- | ---------------------- |
-| `question` | Ask you red or blue with its question tool, then write a file  | `ax_first`: the first option's button |
+| `question` | Ask you red or blue with its question tool, then write a file  | `1`, the first option  |
 | `deny`     | Run a `curl` POST to Microsoft Graph, which an approval box stops | `ax_deny`: the Deny button |
 | `allow`    | The same command                                               | `ax_allow`: the Allow button |
 | `folder`   | Connect your Downloads folder and count its files              | `ax_allow`: presses the box's Allow button through accessibility, macOS |
