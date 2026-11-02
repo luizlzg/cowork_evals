@@ -61,7 +61,7 @@ SCENARIOS = {
 # approval box and Cmd+Return allowed it; Ctrl+Enter is the Windows guess for `approve`.
 # `key code 36 using command down` did not allow the box on macOS 26, so `approve` holds Command
 # down around the Return explicitly, and a1 to a3 are the other forms to try one after another.
-KEYS = ("esc", "approve", "a1", "a2", "a3", "return", *"123456789")
+KEYS = ("esc", "approve", "a1", "a2", "a3", "return", "tab", *"123456789")
 SYSTEM_EVENTS = 'tell application "System Events" to '
 MAC_KEYS = {
     "esc": [SYSTEM_EVENTS + "key code 53"],
@@ -76,12 +76,14 @@ MAC_KEYS = {
     "a2": [SYSTEM_EVENTS + "key code 76 using {command down}"],
     "a3": [SYSTEM_EVENTS + "key code 36 using {command down}"],
     "return": [SYSTEM_EVENTS + "key code 36"],
+    "tab": [SYSTEM_EVENTS + "key code 48"],
 }
 VK_ESCAPE, VK_CONTROL, VK_RETURN = 0x1B, 0x11, 0x0D
 WIN_KEYS = {
     "esc": [(VK_ESCAPE, False), (VK_ESCAPE, True)],
     "approve": [(VK_CONTROL, False), (VK_RETURN, False), (VK_RETURN, True), (VK_CONTROL, True)],
     "return": [(VK_RETURN, False), (VK_RETURN, True)],
+    "tab": [(0x09, False), (0x09, True)],
 }
 # a1 to a3 are macOS forms of one chord. Windows has one form, so they are `approve` there.
 WIN_KEYS |= {name: WIN_KEYS["approve"] for name in ("a1", "a2", "a3")}
@@ -361,7 +363,7 @@ def main() -> int:
                 want = _ask(
                     log,
                     f"Press which key in Claude? Enter for {key}; or esc, approve, a1, a2, "
-                    "a3, return, a digit, or none to stop",
+                    "a3, return, tab, a digit, or none to stop",
                 )
                 if want == "none":
                     break
