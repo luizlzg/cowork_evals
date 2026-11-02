@@ -53,7 +53,7 @@ SCENARIOS = {
     "folder": (
         "Connect my Downloads folder (~/Downloads) to this chat, then tell me how many files are "
         "at its top level. Do not open or change any file.",
-        "click_return",
+        "ax_allow",
     ),
 }
 
@@ -61,7 +61,20 @@ SCENARIOS = {
 # approval box and Cmd+Return allowed it; Ctrl+Enter is the Windows guess for `approve`.
 # `key code 36 using command down` did not allow the box on macOS 26, so `approve` holds Command
 # down around the Return explicitly, and a1 to a3 are the other forms to try one after another.
-KEYS = ("esc", "approve", "a1", "a2", "a3", "return", "tab", "click", "click_return", *"123456789")
+KEYS = (
+    "esc",
+    "approve",
+    "a1",
+    "a2",
+    "a3",
+    "return",
+    "tab",
+    "click",
+    "click_return",
+    "ax_allow",
+    "ax_deny",
+    *"123456789",
+)
 SYSTEM_EVENTS = 'tell application "System Events" to '
 MAC_KEYS = {
     "esc": [SYSTEM_EVENTS + "key code 53"],
@@ -78,6 +91,62 @@ MAC_KEYS = {
     "return": [SYSTEM_EVENTS + "key code 36"],
     "tab": [SYSTEM_EVENTS + "key code 48"],
 }
+# `ax_allow` and `ax_deny` press the box's button through the accessibility tree, with no mouse
+# and no key, so the layout and the keyboard focus do not matter. macOS only. The script turns on
+# Electron's tree (AXManualAccessibility), presses the first button whose title or description
+# is one of the labels, and returns every button label it saw, which the log keeps.
+AX_LABELS = {"ax_allow": ["Allow", "Allow once"], "ax_deny": ["Deny", "Don't allow"]}
+AX_PRESS = """
+on walk(e, depth, wanted, found)
+    tell application "System Events"
+        if depth > 30 then return found
+        try
+            set r to role of e
+        on error
+            return found
+        end try
+        if r is "AXButton" then
+            set label to ""
+            try
+                set label to title of e
+            end try
+            if label is missing value or label is "" then
+                try
+                    set label to description of e
+                end try
+            end if
+            if label is not missing value and label is not "" then
+                set end of item 2 of found to label
+                if item 1 of found is "" and wanted contains label then
+                    perform action "AXPress" of e
+                    set item 1 of found to label
+                end if
+            end if
+        end if
+        try
+            repeat with c in UI elements of e
+                set found to my walk(c, depth + 1, wanted, found)
+            end repeat
+        end try
+    end tell
+    return found
+end walk
+
+on run wanted
+    tell application "System Events"
+        set p to application process "Claude"
+        try
+            set value of attribute "AXManualAccessibility" of p to true
+        end try
+        delay 0.5
+        set w to front window of p
+    end tell
+    set found to walk(w, 0, wanted, {"", {}})
+    set AppleScript's text item delimiters to " | "
+    return "pressed=" & (item 1 of found) & linefeed & "buttons=" & ((item 2 of found) as text)
+end run
+"""
+
 # `click` and `click_return` click the conversation, centred and 30% down Claude's front window,
 # which takes the keyboard off the composer so a Return reaches the folder box. They go through
 # `_click_mac` and `_click_windows`, not a key list.
@@ -299,6 +368,13 @@ def _press(probe: CoWork, key: str, *, activate: bool = True) -> None:
             probe._fire(list(driver.ACTIVATE))
             probe._settle_front()
         probe._guard()
+        if key in AX_LABELS:
+            import subprocess
+
+            argv = ["osascript", "-e", AX_PRESS, *AX_LABELS[key]]
+            out = subprocess.run(argv, capture_output=True, text=True, timeout=60, check=False)
+            AX_RESULT.append(out.stdout.strip() or out.stderr.strip())
+            return
         if key in ("click", "click_return"):
             _click_mac()
             if key == "click":
@@ -307,6 +383,10 @@ def _press(probe: CoWork, key: str, *, activate: bool = True) -> None:
             key = "return"
         lines = MAC_KEYS.get(key) or [f'{SYSTEM_EVENTS}keystroke "{key}"']
         probe._fire(["osascript", *(part for line in lines for part in ("-e", line))])
+
+
+# What the last ax_* press found, for the log.
+AX_RESULT: list[str] = []
 
 
 def _click_mac() -> None:
@@ -420,7 +500,9 @@ def main() -> int:
                 elif not pressed and time.monotonic() - watcher.waiting_since >= AUTO_SECONDS:
                     _press(probe, key, activate=False)
                     pressed, pressed_at = 1, time.monotonic()
-                    log.write("pressed", key=key, tool=watcher.waiting, activated=False)
+                    log.write(
+                        "pressed", key=key, tool=watcher.waiting, activated=False, ax=AX_RESULT[-1:]
+                    )
             elif time.monotonic() - quiet_since >= QUIET_SECONDS:
                 log.write("quiet", seconds=QUIET_SECONDS, pending=sorted(watcher.pending.values()))
                 seen = _ask(
@@ -444,7 +526,7 @@ def main() -> int:
                 print(f">>> pressing {pressed_key} in Claude now: hands off the keyboard and mouse")
                 _press(probe, pressed_key)
                 pressed += 1
-                log.write("pressed", key=pressed_key, count=pressed)
+                log.write("pressed", key=pressed_key, count=pressed, ax=AX_RESULT[-1:])
                 quiet_since = time.monotonic()
             time.sleep(driver.POLL_SECONDS)
         else:
