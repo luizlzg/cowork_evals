@@ -22,6 +22,7 @@ import getpass
 import json
 import os
 import platform
+import re
 import socket
 import sys
 import time
@@ -388,8 +389,17 @@ def _ax_press(labels: list[str]) -> tuple[str, list[str]]:
     def name(text: str) -> int:
         return cf.CFStringCreateWithCString(None, text.encode(), utf8)
 
-    role, title, description, children, press = (
-        name(n) for n in ("AXRole", "AXTitle", "AXDescription", "AXChildren", "AXPress")
+    role, title, description, value, children, parent, press = (
+        name(n)
+        for n in (
+            "AXRole",
+            "AXTitle",
+            "AXDescription",
+            "AXValue",
+            "AXChildren",
+            "AXParent",
+            "AXPress",
+        )
     )
     owned: list[int] = []  # every copied value, released at the end
 
@@ -419,13 +429,20 @@ def _ax_press(labels: list[str]) -> tuple[str, list[str]]:
     try:
         while stack and not pressed:
             element, depth = stack.pop()
-            if text(element, role) == "AXButton":
-                label = text(element, title) or text(element, description)
-                if label:
-                    seen.append(label)
-                    if label in labels:
-                        ax.AXUIElementPerformAction(element, press)
-                        pressed = label
+            kind = text(element, role)
+            label = text(element, title) or text(element, description) or text(element, value)
+            # A button carries its shortcut digit: "Deny 1", "Allow once 2".
+            plain = re.sub(r"\s+\d$", "", label.strip())
+            if kind == "AXButton" and label:
+                seen.append(label)
+            if plain and plain in labels:
+                # An option's label can sit on text inside the element that takes the press.
+                target, up = element, 0
+                while target and up <= 3:
+                    if ax.AXUIElementPerformAction(target, press) == 0:
+                        pressed = f"{label} ({kind}, pressed {up} up)"
+                        break
+                    target, up = copy(target, parent), up + 1
             kids = copy(element, children) if depth < 40 else None
             if kids and cf.CFGetTypeID(kids) == cf.CFArrayGetTypeID():
                 for index in reversed(range(cf.CFArrayGetCount(kids))):
