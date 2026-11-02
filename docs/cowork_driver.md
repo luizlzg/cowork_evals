@@ -53,10 +53,12 @@ While one stands, quiescence does not count.
 | Question     | Leaves it `waiting_seconds` for a person to answer, then presses its first option      |
 | Approval box | Presses the case's next answer from `interactions.yaml` after 2 seconds, when it matches. With none, leaves it `waiting_seconds` for a person, then stops the run as waiting |
 
-Keys are pressed behind the frontmost check, with no activation: activating CoWork moves the
-keyboard to the composer. macOS: `1`, Cmd+Return to allow once, Return to allow a folder
-(`mcp__cowork__request_cowork_directory`), Escape to deny. Windows: `1`, Ctrl+Enter, Enter and
-Escape, unprobed. A run that stopped as waiting names the tool in the session
+A question's first option is the key `1`, behind the frontmost check and with no activation:
+activating CoWork moves the keyboard to the composer. On macOS an approval box, the folder box
+included, is answered by pressing its own button through the Accessibility API, by label
+(`Allow once` or `Allow`, `Deny`), so the keyboard focus and the frontmost application do not
+matter. The press is repeated every 3 seconds while the box stands, four times at most. Windows
+sends `1`, Ctrl+Enter and Escape, unprobed. A run that stopped as waiting names the tool in the session
 document's `waiting`, and is not code 8 when it has no assistant text.
 
 ## What it refuses

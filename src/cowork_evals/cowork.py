@@ -31,7 +31,7 @@ from pydantic import (
     model_validator,
 )
 
-from . import windows
+from . import macos, windows
 from .config import (
     CONSENT_NONE,
     PROMPT_LIMIT,
@@ -109,30 +109,24 @@ RETURN = (
     'tell application "System Events" to key code 36',
 )
 
-# Answers to a request, measured on macOS 26. docs/cowork_desktop.md. They run behind the guard
-# and with no activation: activating CoWork moves the keyboard to the composer, away from the
-# box. Allow once is Cmd+Return, deny is Escape (key code 53), a question's first option is 1.
-ALLOW_KEYS = (
-    "osascript",
-    "-e",
-    'tell application "System Events" to key down command',
-    "-e",
-    'tell application "System Events" to key code 36',
-    "-e",
-    'tell application "System Events" to key up command',
-)
-DENY_KEYS = ("osascript", "-e", 'tell application "System Events" to key code 53')
+# Answers to a request, measured on macOS 26. docs/cowork_desktop.md. A question's first option
+# is the key 1, behind the guard and with no activation: activating CoWork moves the keyboard to
+# the composer. An approval box, the folder box included, is answered by pressing its button
+# through the Accessibility API (macos.py), which types nothing.
 FIRST_OPTION_KEYS = ("osascript", "-e", 'tell application "System Events" to keystroke "1"')
+APPROVAL_LABELS = {"allow": ("Allow once", "Allow"), "deny": ("Deny",)}
 
 # A question or an approval box writes a permission_request, its answer a permission_response.
 PERMISSION_REQUEST = "permission_request"
 PERMISSION_RESPONSE = "permission_response"
 QUESTION_TOOL = "AskUserQuestion"
-# The box that asks to connect a folder is allowed with Return, not Cmd+Return.
-FOLDER_TOOL = "mcp__cowork__request_cowork_directory"
 
-# How long an approval box stands before the case's answer is pressed.
+# How long an approval box stands before its answer is pressed. A box shows its buttons before
+# they take a press (one 2 s after the request did nothing, one at 5 s landed), so the press is
+# repeated every RETRY_SECONDS while the request stands, PRESSES times in all.
 ANSWER_DELAY_SECONDS = 2.0
+RETRY_SECONDS = 3.0
+PRESSES = 4
 
 # Step 2a. `tell me to activate` is what forces the modal in front of the editor the
 # developer is working in. There is no `default button`, so a Return typed into that editor
@@ -487,25 +481,27 @@ class CoWork:
             self._fire(list(CLEAR))
 
     def _answer(self, request: AuditRecord, approval: Approval | None) -> None:
-        """Press an approval's answer, or the first option of each of a request's questions."""
-        if approval is None:
-            questions = (request.tool_input or {}).get("questions")
-            count = len(questions) if isinstance(questions, list) and questions else 1
-            native, keys = windows.press_first_option, FIRST_OPTION_KEYS
-        elif approval.answer == "allow" and request.tool_name == FOLDER_TOOL:
-            count, native, keys = 1, windows.press_return, RETURN
-        elif approval.answer == "allow":
-            count, native, keys = 1, windows.press_allow, ALLOW_KEYS
-        else:
-            count, native, keys = 1, windows.press_deny, DENY_KEYS
-        for position in range(count):
+        """Press a question's first option, once per question, or an approval box's button."""
+        if approval is not None and not WINDOWS:
+            labels = APPROVAL_LABELS[approval.answer]
+            try:
+                macos.press_button(COWORK_PROCESS, labels)
+            except OSError as error:
+                raise CoWorkError(3, f"press_button: {error}") from error
+            return
+        if approval is not None:
+            self._guard()
+            self._native(windows.press_allow if approval.answer == "allow" else windows.press_deny)
+            return
+        questions = (request.tool_input or {}).get("questions")
+        for position in range(len(questions) if isinstance(questions, list) and questions else 1):
             if position:
                 time.sleep(0.5)
             self._guard()
             if WINDOWS:
-                self._native(native)
+                self._native(windows.press_first_option)
             else:
-                self._fire(list(keys))
+                self._fire(list(FIRST_OPTION_KEYS))
 
     def _settle_front(self) -> None:
         """Wait up to `FRONT_SECONDS` for an activation to land. Types nothing.
@@ -612,8 +608,9 @@ class CoWork:
         A standing request is the session waiting for the user, so quiescence does not count
         while one stands. A question is left `waiting_seconds` for a person to answer, then
         its first option is pressed. An approval box takes the next of `approvals` when it
-        matches, after `ANSWER_DELAY_SECONDS`. With none for it, or when what was pressed
-        did not land, the run returns as waiting once `waiting_seconds` have passed.
+        matches, after `ANSWER_DELAY_SECONDS`, pressed again every `RETRY_SECONDS` while it
+        stands. With none for it, or when what was pressed did not land, the run returns as
+        waiting once `waiting_seconds` have passed.
 
         Quiescence is a heuristic. It counts only after the run has demonstrably started,
         because the idle window would otherwise accrue during VM boot and an empty session
@@ -623,7 +620,8 @@ class CoWork:
         signature: object = None
         idle_since = time.monotonic()
         standing: dict[int, float] = {}
-        pressed: dict[int, float] = {}
+        # Per request: the answer pressed (None for a question), how often, and when last.
+        pressed: dict[int, tuple[Approval | None, int, float]] = {}
         used = 0
         while True:
             audit = _read_jsonl(session_dir / AUDIT, AuditRecord)
@@ -648,17 +646,21 @@ class CoWork:
                     if candidate.matches(request.tool_name or "", request.tool_input or {}):
                         approval = candidate
                 if index in pressed:
-                    if now - pressed[index] >= self._config.waiting_seconds:
+                    answer, count, last = pressed[index]
+                    if answer is not None and count < PRESSES and now - last >= RETRY_SECONDS:
+                        self._answer(request, answer)
+                        pressed[index] = (answer, count + 1, now)
+                    elif now - last >= self._config.waiting_seconds:
                         return session_dir
                 elif approval is not None and now - since >= ANSWER_DELAY_SECONDS:
                     self._answer(request, approval)
-                    pressed[index] = now
+                    pressed[index] = (approval, 1, now)
                     used += 1
                 elif now - since >= self._config.waiting_seconds:
                     if request.tool_name != QUESTION_TOOL:
                         return session_dir
                     self._answer(request, None)
-                    pressed[index] = now
+                    pressed[index] = (None, 1, now)
 
             elif _started(audit, session_dir) and (
                 time.monotonic() - idle_since >= self._config.idle_seconds
