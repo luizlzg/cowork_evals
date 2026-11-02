@@ -100,6 +100,7 @@ KEYS = (
     "ax_first",
     "1_each",
     "1_submit",
+    "submit",
     *"123456789",
 )
 SYSTEM_EVENTS = 'tell application "System Events" to '
@@ -123,9 +124,11 @@ MAC_KEYS = {
 # `_ax_press` turns on Electron's tree (AXManualAccessibility), presses the first button whose
 # title or description is one of the labels, and returns every button label it saw. One walk of
 # the tree takes under a second; the same walk through AppleScript took 23 s.
-AX_LABELS = {"ax_allow": ["Allow", "Allow once"], "ax_deny": ["Deny", "Don't allow"]}
-# What a multi-choice question's send button may be labelled.
-SUBMIT_LABELS = ["Submit", "Send", "Continue", "Done", "Next", "Submit answers"]
+AX_LABELS = {
+    "ax_allow": ["Allow", "Allow once"],
+    "ax_deny": ["Deny", "Don't allow"],
+    "submit": ["Submit", "Send", "Continue", "Done", "Next", "Submit answers"],
+}
 # `ax_first` presses the button labelled with the first option of the standing question.
 AX_FIRST = "ax_first"
 
@@ -338,8 +341,7 @@ def _press(
     if key == "1_submit":
         _press(probe, "1_each", activate=activate, request=request)
         time.sleep(0.5)
-        pressed, seen = _ax_press(SUBMIT_LABELS)
-        AX_RESULT.append(f"pressed={pressed} last_buttons={' | '.join(seen[-8:])}")
+        _press(probe, "submit", activate=activate)
         return
     if key == "1_each":
         questions = (request or {}).get("questions")
@@ -350,7 +352,7 @@ def _press(
         return
     if key in AX_LABELS or key == AX_FIRST:
         labels = AX_LABELS.get(key) or _first_options(request or {})
-        pressed, seen = _ax_press(labels)
+        pressed, seen = _ax_press(labels, any_role=key == AX_FIRST)
         # The labels just before the one pressed: the box's own buttons, not the sidebar.
         AX_RESULT.append(f"pressed={pressed} last_buttons={' | '.join(seen[-8:])}")
         return
@@ -400,7 +402,7 @@ def _first_options(request: dict[str, Any]) -> list[str]:
 AX_RESULT: list[str] = []
 
 
-def _ax_press(labels: list[str]) -> tuple[str, list[str]]:
+def _ax_press(labels: list[str], *, any_role: bool = False) -> tuple[str, list[str]]:
     """Press the first Claude button labelled one of `labels`. It, or "", and every label seen."""
     import ctypes
     import subprocess
@@ -475,7 +477,7 @@ def _ax_press(labels: list[str]) -> tuple[str, list[str]]:
             plain = re.sub(r"\s+\d$", "", label.strip())
             if kind == "AXButton" and label:
                 seen.append(label)
-            if plain and plain in labels:
+            if plain and plain in labels and (any_role or kind == "AXButton"):
                 # An option's label can sit on text inside the element that takes the press.
                 target, up = element, 0
                 while target and up <= 3:
@@ -598,20 +600,22 @@ def main() -> int:
             if args.auto:
                 if watcher.waiting is None:
                     pressed = 0
-                elif (pressed >= PRESSES or (pressed and key not in AX_LABELS)) and (
-                    time.monotonic() - pressed_at >= RETRY_SECONDS * 3
-                ):
+                elif (
+                    pressed >= PRESSES or (pressed and key not in AX_LABELS and key != "1_submit")
+                ) and (time.monotonic() - pressed_at >= RETRY_SECONDS * 3):
                     log.write("still_waiting", tool=watcher.waiting, presses=pressed)
                     break
                 elif (not pressed and time.monotonic() - watcher.waiting_since >= AUTO_SECONDS) or (
                     # Only a button press is repeated: a digit again unticks a multi-choice option.
-                    key in AX_LABELS
+                    (key in AX_LABELS or key == "1_submit")
                     and 0 < pressed < PRESSES
                     and time.monotonic() - pressed_at >= RETRY_SECONDS
                 ):
                     # Pressed again while the request stands: a box can show its button before
                     # it takes a press.
-                    _press(probe, key, activate=False, request=watcher.waiting_input)
+                    # A retry of 1_submit presses only the send button: 1 again would untick.
+                    again = "submit" if key == "1_submit" and pressed else key
+                    _press(probe, again, activate=False, request=watcher.waiting_input)
                     pressed, pressed_at = pressed + 1, time.monotonic()
                     log.write(
                         "pressed",
