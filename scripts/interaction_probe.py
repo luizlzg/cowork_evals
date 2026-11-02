@@ -61,7 +61,7 @@ SCENARIOS = {
 # approval box and Cmd+Return allowed it; Ctrl+Enter is the Windows guess for `approve`.
 # `key code 36 using command down` did not allow the box on macOS 26, so `approve` holds Command
 # down around the Return explicitly, and a1 to a3 are the other forms to try one after another.
-KEYS = ("esc", "approve", "a1", "a2", "a3", "return", "tab", *"123456789")
+KEYS = ("esc", "approve", "a1", "a2", "a3", "return", "tab", "click", *"123456789")
 SYSTEM_EVENTS = 'tell application "System Events" to '
 MAC_KEYS = {
     "esc": [SYSTEM_EVENTS + "key code 53"],
@@ -77,6 +77,15 @@ MAC_KEYS = {
     "a3": [SYSTEM_EVENTS + "key code 36 using {command down}"],
     "return": [SYSTEM_EVENTS + "key code 36"],
     "tab": [SYSTEM_EVENTS + "key code 48"],
+    # A click in the conversation, centred and 30% down Claude's front window, takes the keyboard
+    # off the composer, so a Return reaches the folder box.
+    "click": [
+        'tell application "System Events" to tell process "Claude"',
+        "set {x, y} to position of front window",
+        "set {w, h} to size of front window",
+        "end tell",
+        'tell application "System Events" to click at {x + w div 2, y + h * 3 div 10}',
+    ],
 }
 VK_ESCAPE, VK_CONTROL, VK_RETURN = 0x1B, 0x11, 0x0D
 WIN_KEYS = {
@@ -85,6 +94,7 @@ WIN_KEYS = {
     "return": [(VK_RETURN, False), (VK_RETURN, True)],
     "tab": [(0x09, False), (0x09, True)],
 }
+# Windows clicks through `_click_windows`, not a key list.
 # a1 to a3 are macOS forms of one chord. Windows has one form, so they are `approve` there.
 WIN_KEYS |= {name: WIN_KEYS["approve"] for name in ("a1", "a2", "a3")}
 
@@ -274,6 +284,9 @@ def _press(probe: CoWork, key: str, *, activate: bool = True) -> None:
             probe._native(windows.activate)
             probe._settle_front()
         probe._guard()
+        if key == "click":
+            probe._native(_click_windows)
+            return
         vk = VK_DIGIT_0 + int(key) if key.isdigit() else None
         events = WIN_KEYS.get(key) or [(vk, False), (vk, True)]
         probe._native(windows._send, events)
@@ -284,6 +297,23 @@ def _press(probe: CoWork, key: str, *, activate: bool = True) -> None:
         probe._guard()
         lines = MAC_KEYS.get(key) or [f'{SYSTEM_EVENTS}keystroke "{key}"']
         probe._fire(["osascript", *(part for line in lines for part in ("-e", line))])
+
+
+def _click_windows() -> None:
+    """The `click` key on Windows: the same point of the Claude window, by SetCursorPos."""
+    import ctypes
+    from ctypes import wintypes
+
+    from cowork_evals import windows
+
+    user32 = ctypes.WinDLL("user32", use_last_error=True)  # type: ignore[attr-defined]
+    rect = wintypes.RECT()
+    user32.GetWindowRect(windows._cowork_window(), ctypes.byref(rect))
+    x = (rect.left + rect.right) // 2
+    y = rect.top + (rect.bottom - rect.top) * 3 // 10
+    user32.SetCursorPos(x, y)
+    for flag in (0x0002, 0x0004):  # MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP
+        user32.mouse_event(flag, 0, 0, 0, 0)
 
 
 def _ask(log: Log, question: str) -> str:
@@ -363,7 +393,7 @@ def main() -> int:
                 want = _ask(
                     log,
                     f"Press which key in Claude? Enter for {key}; or esc, approve, a1, a2, "
-                    "a3, return, tab, a digit, or none to stop",
+                    "a3, return, tab, click, a digit, or none to stop",
                 )
                 if want == "none":
                     break
