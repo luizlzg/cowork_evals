@@ -129,6 +129,10 @@ _CONSENTED = False
 # How often a poll looks at the filesystem. Not configurable: the timeouts are.
 POLL_SECONDS = 1.0
 
+# How long an activation may take to land before the guard reads, and how often it is read.
+FRONT_SECONDS = 3.0
+FRONT_POLL_SECONDS = 0.25
+
 
 # The records the driver reads. Their shapes are docs/cowork_desktop.md. A record carries keys
 # nothing here reads, and ignores them. A content block keeps them, because a tool result is
@@ -436,12 +440,34 @@ class CoWork:
             self._native(windows.activate)
         else:
             self._fire(list(ACTIVATE))
+        self._settle_front()
         self._guard()
         LOGGER.info("clearing the composer")
         if WINDOWS:
             self._native(windows.clear)
         else:
             self._fire(list(CLEAR))
+
+    def _settle_front(self) -> None:
+        """Wait up to `FRONT_SECONDS` for an activation to land. Types nothing.
+
+        Activation is asynchronous: when CoWork is on another desktop, full screen or
+        minimized, the switch takes longer than the delay in `ACTIVATE`. This only reads the
+        frontmost process. `_guard` still decides, once, after it.
+        """
+        deadline = time.monotonic() + FRONT_SECONDS
+        reopened = WINDOWS
+        while frontmost().casefold() != COWORK_PROCESS.casefold():
+            if time.monotonic() >= deadline:
+                return
+            if not reopened:
+                # Some terminals cannot activate another application through AppleScript.
+                # Launch Services can, and `open -a` on a running application only brings
+                # it to the front.
+                LOGGER.info("activation did not land, reopening %s", COWORK_PROCESS)
+                self._fire(["open", "-a", COWORK_PROCESS])
+                reopened = True
+            time.sleep(FRONT_POLL_SECONDS)
 
     def _guard(self) -> None:
         """Code 9 when CoWork is not frontmost. Nothing is typed.
