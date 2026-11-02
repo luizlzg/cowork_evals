@@ -128,9 +128,11 @@ TEXT_RECORDS = {"user", "assistant"}
 # The audit records written while the session waits for the user, and the answer to them.
 PERMISSION_REQUEST, PERMISSION_RESPONSE = "permission_request", "permission_response"
 PERMISSION_FIELDS = ("tool_name", "tool_input", "decision", "granted")
-# --auto: how long a request stands before the key, and how long after it for the answer.
+# --auto: how long a request stands before the first press.
 AUTO_SECONDS = 2.0
-ANSWER_SECONDS = 10.0
+# --auto presses again every RETRY_SECONDS while the request stands, PRESSES times in all.
+RETRY_SECONDS = 3.0
+PRESSES = 4
 # Win32 virtual keys for the digits 0 to 9 are 0x30 to 0x39.
 VK_DIGIT_0 = 0x30
 
@@ -300,7 +302,8 @@ def _press(probe: CoWork, key: str, *, activate: bool = True) -> None:
     """
     if key in AX_LABELS:
         pressed, seen = _ax_press(AX_LABELS[key])
-        AX_RESULT.append(f"pressed={pressed} buttons={' | '.join(seen)}")
+        # The labels just before the one pressed: the box's own buttons, not the sidebar.
+        AX_RESULT.append(f"pressed={pressed} last_buttons={' | '.join(seen[-8:])}")
         return
     if driver.WINDOWS:
         from cowork_evals import windows
@@ -518,15 +521,24 @@ def main() -> int:
                 break
             if args.auto:
                 if watcher.waiting is None:
-                    pass
-                elif pressed and time.monotonic() - pressed_at >= ANSWER_SECONDS:
-                    log.write("still_waiting", tool=watcher.waiting, seconds=ANSWER_SECONDS)
+                    pressed = 0
+                elif pressed >= PRESSES and time.monotonic() - pressed_at >= RETRY_SECONDS:
+                    log.write("still_waiting", tool=watcher.waiting, presses=pressed)
                     break
-                elif not pressed and time.monotonic() - watcher.waiting_since >= AUTO_SECONDS:
+                elif (not pressed and time.monotonic() - watcher.waiting_since >= AUTO_SECONDS) or (
+                    0 < pressed < PRESSES and time.monotonic() - pressed_at >= RETRY_SECONDS
+                ):
+                    # Pressed again while the request stands: a box can show its button before
+                    # it takes a press.
                     _press(probe, key, activate=False)
-                    pressed, pressed_at = 1, time.monotonic()
+                    pressed, pressed_at = pressed + 1, time.monotonic()
                     log.write(
-                        "pressed", key=key, tool=watcher.waiting, activated=False, ax=AX_RESULT[-1:]
+                        "pressed",
+                        key=key,
+                        tool=watcher.waiting,
+                        count=pressed,
+                        since_request=round(pressed_at - watcher.waiting_since, 1),
+                        ax=AX_RESULT[-1:],
                     )
             elif time.monotonic() - quiet_since >= QUIET_SECONDS:
                 log.write("quiet", seconds=QUIET_SECONDS, pending=sorted(watcher.pending.values()))
