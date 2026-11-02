@@ -20,6 +20,7 @@ Run each scenario from the repository folder, in a terminal (PowerShell on Windo
 uv run python scripts/interaction_probe.py question
 uv run python scripts/interaction_probe.py deny
 uv run python scripts/interaction_probe.py allow
+uv run python scripts/interaction_probe.py folder
 ```
 
 Add `--config <path>` if your `cowork_evals.yaml` is in another folder.
@@ -29,6 +30,7 @@ Add `--config <path>` if your `cowork_evals.yaml` is in another folder.
 | `question` | Ask you red or blue with its question tool, then write a file  | `1`, the first option  |
 | `deny`     | Run a `curl` POST to Microsoft Graph, which an approval box stops | `esc`, Deny         |
 | `allow`    | The same command                                               | `approve`, Allow       |
+| `folder`   | Connect your Downloads folder and count its files              | `return`, Allow        |
 
 `approve` is Cmd+Return on macOS (measured) and Ctrl+Enter on Windows (a guess: if it does not
 allow, try another key and say which one worked). The `curl` carries no token, so even after Allow

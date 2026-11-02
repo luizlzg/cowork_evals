@@ -49,6 +49,12 @@ SCENARIOS = {
     ),
     "deny": (GATED_PROMPT, "esc"),
     "allow": (GATED_PROMPT, "approve"),
+    # The folder box (request_cowork_directory) is allowed with Return, not Cmd+Return.
+    "folder": (
+        "Connect my Downloads folder (~/Downloads) to this chat, then tell me how many files are "
+        "at its top level. Do not open or change any file.",
+        "return",
+    ),
 }
 
 # The keys the probe can press. A digit picks a numbered option. On macOS `esc` denied an
