@@ -91,61 +91,12 @@ MAC_KEYS = {
     "return": [SYSTEM_EVENTS + "key code 36"],
     "tab": [SYSTEM_EVENTS + "key code 48"],
 }
-# `ax_allow` and `ax_deny` press the box's button through the accessibility tree, with no mouse
-# and no key, so the layout and the keyboard focus do not matter. macOS only. The script turns on
-# Electron's tree (AXManualAccessibility), presses the first button whose title or description
-# is one of the labels, and returns every button label it saw, which the log keeps.
+# `ax_allow` and `ax_deny` press the box's button through the macOS Accessibility API, with no
+# mouse and no key, so the layout, the keyboard focus and the frontmost application do not matter.
+# `_ax_press` turns on Electron's tree (AXManualAccessibility), presses the first button whose
+# title or description is one of the labels, and returns every button label it saw. One walk of
+# the tree takes under a second; the same walk through AppleScript took 23 s.
 AX_LABELS = {"ax_allow": ["Allow", "Allow once"], "ax_deny": ["Deny", "Don't allow"]}
-AX_PRESS = """
-on walk(e, depth, wanted, found)
-    tell application "System Events"
-        if depth > 30 then return found
-        try
-            set r to role of e
-        on error
-            return found
-        end try
-        if r is "AXButton" then
-            set label to ""
-            try
-                set label to title of e
-            end try
-            if label is missing value or label is "" then
-                try
-                    set label to description of e
-                end try
-            end if
-            if label is not missing value and label is not "" then
-                set end of item 2 of found to label
-                if item 1 of found is "" and wanted contains label then
-                    perform action "AXPress" of e
-                    set item 1 of found to label
-                end if
-            end if
-        end if
-        try
-            repeat with c in UI elements of e
-                set found to my walk(c, depth + 1, wanted, found)
-            end repeat
-        end try
-    end tell
-    return found
-end walk
-
-on run wanted
-    tell application "System Events"
-        set p to application process "Claude"
-        try
-            set value of attribute "AXManualAccessibility" of p to true
-        end try
-        delay 0.5
-        set w to front window of p
-    end tell
-    set found to walk(w, 0, wanted, {"", {}})
-    set AppleScript's text item delimiters to " | "
-    return "pressed=" & (item 1 of found) & linefeed & "buttons=" & ((item 2 of found) as text)
-end run
-"""
 
 # `click` and `click_return` click the conversation, centred and 30% down Claude's front window,
 # which takes the keyboard off the composer so a Return reaches the folder box. They go through
@@ -347,6 +298,10 @@ def _press(probe: CoWork, key: str, *, activate: bool = True) -> None:
     Activating CoWork moves the keyboard to the composer, away from an approval box, so
     `activate=False` presses into whatever in CoWork has the keyboard.
     """
+    if key in AX_LABELS:
+        pressed, seen = _ax_press(AX_LABELS[key])
+        AX_RESULT.append(f"pressed={pressed} buttons={' | '.join(seen)}")
+        return
     if driver.WINDOWS:
         from cowork_evals import windows
 
@@ -368,13 +323,6 @@ def _press(probe: CoWork, key: str, *, activate: bool = True) -> None:
             probe._fire(list(driver.ACTIVATE))
             probe._settle_front()
         probe._guard()
-        if key in AX_LABELS:
-            import subprocess
-
-            argv = ["osascript", "-e", AX_PRESS, *AX_LABELS[key]]
-            out = subprocess.run(argv, capture_output=True, text=True, timeout=60, check=False)
-            AX_RESULT.append(out.stdout.strip() or out.stderr.strip())
-            return
         if key in ("click", "click_return"):
             _click_mac()
             if key == "click":
@@ -387,6 +335,83 @@ def _press(probe: CoWork, key: str, *, activate: bool = True) -> None:
 
 # What the last ax_* press found, for the log.
 AX_RESULT: list[str] = []
+
+
+def _ax_press(labels: list[str]) -> tuple[str, list[str]]:
+    """Press the first Claude button labelled one of `labels`. It, or "", and every label seen."""
+    import ctypes
+    import subprocess
+
+    ax = ctypes.CDLL("/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices")
+    cf = ctypes.CDLL("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")
+    p, utf8 = ctypes.c_void_p, 0x08000100
+    cf.CFStringCreateWithCString.restype = p
+    cf.CFStringCreateWithCString.argtypes = [p, ctypes.c_char_p, ctypes.c_uint32]
+    cf.CFStringGetCString.argtypes = [p, ctypes.c_char_p, ctypes.c_long, ctypes.c_uint32]
+    cf.CFGetTypeID.argtypes = [p]
+    cf.CFGetTypeID.restype = ctypes.c_ulong
+    cf.CFStringGetTypeID.restype = ctypes.c_ulong
+    cf.CFArrayGetTypeID.restype = ctypes.c_ulong
+    cf.CFArrayGetCount.argtypes = [p]
+    cf.CFArrayGetCount.restype = ctypes.c_long
+    cf.CFArrayGetValueAtIndex.argtypes = [p, ctypes.c_long]
+    cf.CFArrayGetValueAtIndex.restype = p
+    cf.CFRelease.argtypes = [p]
+    ax.AXUIElementCreateApplication.argtypes = [ctypes.c_int]
+    ax.AXUIElementCreateApplication.restype = p
+    ax.AXUIElementCopyAttributeValue.argtypes = [p, p, ctypes.POINTER(p)]
+    ax.AXUIElementSetAttributeValue.argtypes = [p, p, p]
+    ax.AXUIElementPerformAction.argtypes = [p, p]
+
+    def name(text: str) -> int:
+        return cf.CFStringCreateWithCString(None, text.encode(), utf8)
+
+    role, title, description, children, press = (
+        name(n) for n in ("AXRole", "AXTitle", "AXDescription", "AXChildren", "AXPress")
+    )
+    owned: list[int] = []  # every copied value, released at the end
+
+    def copy(element: int, attribute: int) -> int | None:
+        value = p()
+        if ax.AXUIElementCopyAttributeValue(element, attribute, ctypes.byref(value)) != 0:
+            return None
+        owned.append(value.value)
+        return value.value
+
+    def text(element: int, attribute: int) -> str:
+        value = copy(element, attribute)
+        if not value or cf.CFGetTypeID(value) != cf.CFStringGetTypeID():
+            return ""
+        buffer = ctypes.create_string_buffer(1024)
+        cf.CFStringGetCString(value, buffer, 1024, utf8)
+        return buffer.value.decode(errors="replace")
+
+    found = subprocess.run(["pgrep", "-x", driver.COWORK_PROCESS], capture_output=True, text=True)
+    app = ax.AXUIElementCreateApplication(int(found.stdout.split()[0]))
+    ax.AXUIElementSetAttributeValue(
+        app, name("AXManualAccessibility"), p.in_dll(cf, "kCFBooleanTrue")
+    )
+    seen: list[str] = []
+    pressed = ""
+    stack = [(app, 0)]
+    try:
+        while stack and not pressed:
+            element, depth = stack.pop()
+            if text(element, role) == "AXButton":
+                label = text(element, title) or text(element, description)
+                if label:
+                    seen.append(label)
+                    if label in labels:
+                        ax.AXUIElementPerformAction(element, press)
+                        pressed = label
+            kids = copy(element, children) if depth < 40 else None
+            if kids and cf.CFGetTypeID(kids) == cf.CFArrayGetTypeID():
+                for index in reversed(range(cf.CFArrayGetCount(kids))):
+                    stack.append((cf.CFArrayGetValueAtIndex(kids, index), depth + 1))
+    finally:
+        for value in owned:
+            cf.CFRelease(value)
+    return pressed, seen
 
 
 def _click_mac() -> None:
