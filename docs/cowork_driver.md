@@ -54,8 +54,9 @@ While one stands, quiescence does not count.
 | Approval box | Presses the case's next answer from `interactions.yaml` after 2 seconds, when it matches. With none, leaves it `waiting_seconds` for a person, then stops the run as waiting |
 
 Keys are pressed behind the frontmost check, with no activation: activating CoWork moves the
-keyboard to the composer. macOS: `1`, Cmd+Return to allow once, Escape to deny. Windows: `1`,
-Ctrl+Enter and Escape, unprobed. A run that stopped as waiting names the tool in the session
+keyboard to the composer. macOS: `1`, Cmd+Return to allow once, Return to allow a folder
+(`mcp__cowork__request_cowork_directory`), Escape to deny. Windows: `1`, Ctrl+Enter, Enter and
+Escape, unprobed. A run that stopped as waiting names the tool in the session
 document's `waiting`, and is not code 8 when it has no assistant text.
 
 ## What it refuses

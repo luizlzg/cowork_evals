@@ -128,6 +128,8 @@ FIRST_OPTION_KEYS = ("osascript", "-e", 'tell application "System Events" to key
 PERMISSION_REQUEST = "permission_request"
 PERMISSION_RESPONSE = "permission_response"
 QUESTION_TOOL = "AskUserQuestion"
+# The box that asks to connect a folder is allowed with Return, not Cmd+Return.
+FOLDER_TOOL = "mcp__cowork__request_cowork_directory"
 
 # How long an approval box stands before the case's answer is pressed.
 ANSWER_DELAY_SECONDS = 2.0
@@ -490,6 +492,8 @@ class CoWork:
             questions = (request.tool_input or {}).get("questions")
             count = len(questions) if isinstance(questions, list) and questions else 1
             native, keys = windows.press_first_option, FIRST_OPTION_KEYS
+        elif approval.answer == "allow" and request.tool_name == FOLDER_TOOL:
+            count, native, keys = 1, windows.press_return, RETURN
         elif approval.answer == "allow":
             count, native, keys = 1, windows.press_allow, ALLOW_KEYS
         else:

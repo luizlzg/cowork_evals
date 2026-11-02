@@ -325,6 +325,7 @@ an approval box stopped.
 | Approval keys       | `1` or Escape denied. `2` or Cmd+Return allowed once                                |
 | Focus               | After `activate`, a digit or Cmd+Return lands in the composer and the box stays. The keys reach the box when CoWork was not activated first |
 | Denied tool result  | Starts `User rejected using`                                                         |
+| Folder box          | `mcp__cowork__request_cowork_directory` asks to connect a folder. Return allows it, Cmd+Return does not |
 
 Windows numbers the buttons differently (Allow once is `3` in a screenshot), so the driver
 allows with Cmd+Return and denies with Escape rather than by number.
