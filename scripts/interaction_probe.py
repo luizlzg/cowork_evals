@@ -50,6 +50,27 @@ SCENARIOS = {
     ),
     "deny": (GATED_PROMPT, "ax_deny"),
     "allow": (GATED_PROMPT, "ax_allow"),
+    # Two questions in one AskUserQuestion call. 1_each presses 1 once per question, as the
+    # driver does.
+    "questions": (
+        "Use the AskUserQuestion tool once, with two questions in that one call: do I prefer red "
+        "or blue (options Red, Blue), and small or large (options Small, Large). After I answer, "
+        "write my two answers to answers.txt in the outputs folder and reply with one sentence.",
+        "1_each",
+    ),
+    # One question where several options can be chosen. 1 ticks the first: does it submit?
+    "multiselect": (
+        "Use the AskUserQuestion tool to ask me one question with multiSelect set to true: which "
+        "colours do I like? Options Red, Blue, Green. After I answer, reply with only my answer.",
+        "1_each",
+    ),
+    # A box for another tool: deleting a file the session made. Only that file is deleted.
+    "delete": (
+        "Create a file named probe_delete_me.txt in the outputs folder, then delete it. If "
+        "deleting is refused, request permission to delete that one file and try again. Delete "
+        "nothing else.",
+        "ax_allow",
+    ),
     # The folder box (request_cowork_directory) is allowed with Return, not Cmd+Return.
     "folder": (
         "Connect my Downloads folder (~/Downloads) to this chat, then tell me how many files are "
@@ -75,6 +96,7 @@ KEYS = (
     "ax_allow",
     "ax_deny",
     "ax_first",
+    "1_each",
     *"123456789",
 )
 SYSTEM_EVENTS = 'tell application "System Events" to '
@@ -308,6 +330,13 @@ def _press(
     Activating CoWork moves the keyboard to the composer, away from an approval box, so
     `activate=False` presses into whatever in CoWork has the keyboard.
     """
+    if key == "1_each":
+        questions = (request or {}).get("questions")
+        for position in range(len(questions) if isinstance(questions, list) and questions else 1):
+            if position:
+                time.sleep(0.5)
+            _press(probe, "1", activate=activate)
+        return
     if key in AX_LABELS or key == AX_FIRST:
         labels = AX_LABELS.get(key) or _first_options(request or {})
         pressed, seen = _ax_press(labels)
@@ -558,11 +587,16 @@ def main() -> int:
             if args.auto:
                 if watcher.waiting is None:
                     pressed = 0
-                elif pressed >= PRESSES and time.monotonic() - pressed_at >= RETRY_SECONDS:
+                elif (pressed >= PRESSES or (pressed and key not in AX_LABELS)) and (
+                    time.monotonic() - pressed_at >= RETRY_SECONDS * 3
+                ):
                     log.write("still_waiting", tool=watcher.waiting, presses=pressed)
                     break
                 elif (not pressed and time.monotonic() - watcher.waiting_since >= AUTO_SECONDS) or (
-                    0 < pressed < PRESSES and time.monotonic() - pressed_at >= RETRY_SECONDS
+                    # Only a button press is repeated: a digit again unticks a multi-choice option.
+                    key in AX_LABELS
+                    and 0 < pressed < PRESSES
+                    and time.monotonic() - pressed_at >= RETRY_SECONDS
                 ):
                     # Pressed again while the request stands: a box can show its button before
                     # it takes a press.

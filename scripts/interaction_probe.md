@@ -31,6 +31,9 @@ Add `--config <path>` if your `cowork_evals.yaml` is in another folder.
 | `deny`     | Run a `curl` POST to Microsoft Graph, which an approval box stops | `ax_deny`: the Deny button |
 | `allow`    | The same command                                               | `ax_allow`: the Allow button |
 | `folder`   | Connect your Downloads folder and count its files              | `ax_allow`: presses the box's Allow button through accessibility, macOS |
+| `questions` | Two questions in one question call, colour and size           | `1_each`: `1` once per question |
+| `multiselect` | One question where several colours can be chosen            | `1_each`: `1`, does it submit? |
+| `delete`   | Create a file in outputs, then delete it, asking permission if refused | `ax_allow`: the Allow button |
 
 `approve` is Cmd+Return on macOS (measured) and Ctrl+Enter on Windows (a guess: if it does not
 allow, try another key and say which one worked). The `curl` carries no token, so even after Allow
