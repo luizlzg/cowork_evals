@@ -45,10 +45,10 @@ SCENARIOS = {
         "Use the AskUserQuestion tool to ask me one question: do I prefer red or blue? Offer "
         "exactly two options, Red and Blue. After I answer, write only my answer to colour.txt "
         "in the outputs folder and reply with one sentence.",
-        "1",
+        "ax_first",
     ),
-    "deny": (GATED_PROMPT, "esc"),
-    "allow": (GATED_PROMPT, "approve"),
+    "deny": (GATED_PROMPT, "ax_deny"),
+    "allow": (GATED_PROMPT, "ax_allow"),
     # The folder box (request_cowork_directory) is allowed with Return, not Cmd+Return.
     "folder": (
         "Connect my Downloads folder (~/Downloads) to this chat, then tell me how many files are "
@@ -73,6 +73,7 @@ KEYS = (
     "click_return",
     "ax_allow",
     "ax_deny",
+    "ax_first",
     *"123456789",
 )
 SYSTEM_EVENTS = 'tell application "System Events" to '
@@ -97,6 +98,8 @@ MAC_KEYS = {
 # title or description is one of the labels, and returns every button label it saw. One walk of
 # the tree takes under a second; the same walk through AppleScript took 23 s.
 AX_LABELS = {"ax_allow": ["Allow", "Allow once"], "ax_deny": ["Deny", "Don't allow"]}
+# `ax_first` presses the button labelled with the first option of the standing question.
+AX_FIRST = "ax_first"
 
 # `click` and `click_return` click the conversation, centred and 30% down Claude's front window,
 # which takes the keyboard off the composer so a Return reaches the folder box. They go through
@@ -240,6 +243,7 @@ class Watcher:
         self._sizes: dict[Path, int] = {}
         self.pending: dict[str, str] = {}
         self.waiting: str | None = None
+        self.waiting_input: dict[str, Any] = {}
         self.waiting_since = 0.0
 
     def poll(self, log: Log) -> bool:
@@ -281,6 +285,7 @@ class Watcher:
         """Tool calls with no result yet, by id, and the permission request not yet answered."""
         if record.get("type") == "system" and record.get("subtype") == PERMISSION_REQUEST:
             self.waiting = str(record.get("tool_name"))
+            self.waiting_input = record.get("tool_input") or {}
             self.waiting_since = time.monotonic()
         elif record.get("type") == "system" and record.get("subtype") == PERMISSION_RESPONSE:
             self.waiting = None
@@ -294,14 +299,17 @@ class Watcher:
                 self.pending.pop(block.get("tool_use_id"), None)
 
 
-def _press(probe: CoWork, key: str, *, activate: bool = True) -> None:
+def _press(
+    probe: CoWork, key: str, *, activate: bool = True, request: dict[str, Any] | None = None
+) -> None:
     """Check CoWork is in front and press one key. Code 9 types nothing.
 
     Activating CoWork moves the keyboard to the composer, away from an approval box, so
     `activate=False` presses into whatever in CoWork has the keyboard.
     """
-    if key in AX_LABELS:
-        pressed, seen = _ax_press(AX_LABELS[key])
+    if key in AX_LABELS or key == AX_FIRST:
+        labels = AX_LABELS.get(key) or _first_options(request or {})
+        pressed, seen = _ax_press(labels)
         # The labels just before the one pressed: the box's own buttons, not the sidebar.
         AX_RESULT.append(f"pressed={pressed} last_buttons={' | '.join(seen[-8:])}")
         return
@@ -334,6 +342,17 @@ def _press(probe: CoWork, key: str, *, activate: bool = True) -> None:
             key = "return"
         lines = MAC_KEYS.get(key) or [f'{SYSTEM_EVENTS}keystroke "{key}"']
         probe._fire(["osascript", *(part for line in lines for part in ("-e", line))])
+
+
+def _first_options(request: dict[str, Any]) -> list[str]:
+    """The label of each question's first option, in a request's `tool_input`."""
+    questions = request.get("questions")
+    labels = []
+    for question in questions if isinstance(questions, list) else []:
+        options = question.get("options") if isinstance(question, dict) else None
+        if isinstance(options, list) and options and isinstance(options[0], dict):
+            labels.append(str(options[0].get("label", "")))
+    return [label for label in labels if label]
 
 
 # What the last ax_* press found, for the log.
@@ -530,7 +549,7 @@ def main() -> int:
                 ):
                     # Pressed again while the request stands: a box can show its button before
                     # it takes a press.
-                    _press(probe, key, activate=False)
+                    _press(probe, key, activate=False, request=watcher.waiting_input)
                     pressed, pressed_at = pressed + 1, time.monotonic()
                     log.write(
                         "pressed",
