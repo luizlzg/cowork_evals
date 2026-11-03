@@ -623,8 +623,8 @@ class CoWork:
 
         A standing request is the session waiting for the user, so quiescence does not count
         while one stands. A question is left `waiting_seconds` for a person to answer, then
-        its first option is pressed. An approval box takes the next of `approvals` when it
-        matches, after `ANSWER_DELAY_SECONDS`, pressed again every `RETRY_SECONDS` while it
+        its first option is pressed. An approval box takes the first unused of `approvals` that
+        matches it, after `ANSWER_DELAY_SECONDS`, pressed again every `RETRY_SECONDS` while it
         stands. With none for it, or when what was pressed did not land, the run returns as
         waiting once `waiting_seconds` have passed.
 
@@ -639,7 +639,7 @@ class CoWork:
         # Per request: what is pressed again while it stands (an approval, SUBMIT for a
         # multi-choice question, None for nothing), how often, and when last.
         pressed: dict[int, tuple[Approval | str | None, int, float]] = {}
-        used = 0
+        used: set[int] = set()
         while True:
             audit = _read_jsonl(session_dir / AUDIT, AuditRecord)
             if TERMINAL_STATE in _lifecycle(audit):
@@ -658,10 +658,17 @@ class CoWork:
                 since = standing.setdefault(index, now)
                 idle_since = now
                 approval = None
-                if request.tool_name != QUESTION_TOOL and used < len(approvals):
-                    candidate = approvals[used]
-                    if candidate.matches(request.tool_name or "", request.tool_input or {}):
-                        approval = candidate
+                if request.tool_name != QUESTION_TOOL:
+                    # The first answer not yet used that matches: boxes come in no fixed order.
+                    approval = next(
+                        (
+                            a
+                            for i, a in enumerate(approvals)
+                            if i not in used
+                            and a.matches(request.tool_name or "", request.tool_input or {})
+                        ),
+                        None,
+                    )
                 if index in pressed:
                     answer, count, last = pressed[index]
                     if answer is not None and count < PRESSES and now - last >= RETRY_SECONDS:
@@ -675,7 +682,9 @@ class CoWork:
                 elif approval is not None and now - since >= ANSWER_DELAY_SECONDS:
                     self._answer(request, approval)
                     pressed[index] = (approval, 1, now)
-                    used += 1
+                    used.add(
+                        next(i for i, a in enumerate(approvals) if a is approval and i not in used)
+                    )
                 elif now - since >= self._config.waiting_seconds:
                     if request.tool_name != QUESTION_TOOL:
                         return session_dir

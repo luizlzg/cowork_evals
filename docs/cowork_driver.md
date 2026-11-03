@@ -51,7 +51,7 @@ While one stands, quiescence does not count.
 | Request      | What the driver does                                                                   |
 | ------------ | -------------------------------------------------------------------------------------- |
 | Question     | Leaves it `waiting_seconds` for a person to answer, then presses its first option      |
-| Approval box | Presses the case's next answer from `interactions.yaml` after 2 seconds, when it matches. With none, leaves it `waiting_seconds` for a person, then stops the run as waiting |
+| Approval box | Presses the first unused answer from `interactions.yaml` that matches it, after 2 seconds. With none, leaves it `waiting_seconds` for a person, then stops the run as waiting |
 
 A question's first option is the key `1`, behind the frontmost check and with no activation:
 activating CoWork moves the keyboard to the composer. A multi-choice question is then sent with

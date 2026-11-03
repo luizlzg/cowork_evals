@@ -285,9 +285,9 @@ dependencies. See [checks.md](checks.md#where-a-check-runs-and-what-it-may-impor
 
 ## interactions.yaml
 
-Optional, read by the CoWork backend only. Each approval box the session shows takes the next
-answer, when its `match`, a regular expression over the tool name and its input as JSON,
-finds the box's tool. A box with no answer for it stops the run as waiting, graded on what it
+Optional, read by the CoWork backend only. Each approval box the session shows takes the first
+answer not yet used whose `match`, a regular expression over the tool name and its input as
+JSON, finds the box's tool. Each answer is used once. A box with no answer for it stops the run as waiting, graded on what it
 did. Questions take no answer here: the driver presses their first option.
 [cowork_driver.md](cowork_driver.md#questions-and-approval-boxes).
 
