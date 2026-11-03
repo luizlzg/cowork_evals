@@ -57,14 +57,39 @@ SCENARIOS = {
         "colours do I like? Options Red, Blue, Green. After I answer, reply with only my answer.",
         "1_approve",
     ),
-    "folder_allow": (FOLDER_PROMPT, "approve"),
+    # No key allows the folder box while the keyboard is in the message field, on macOS or
+    # Windows: its Allow button is pressed through accessibility instead.
+    "folder_allow": (FOLDER_PROMPT, "ax_allow"),
     "folder_deny": (FOLDER_PROMPT, "esc"),
+    # The deep link's folder parameter, unmeasured: does it connect the folder before the prompt,
+    # so that no box appears? If one does, its Allow button is pressed.
+    "folder_link": (
+        "How many files are at the top level of my Downloads folder? Do not open or change any "
+        "file.",
+        "ax_allow",
+    ),
 }
+# The scenarios whose deep link also carries folder=<this folder>.
+LINK_FOLDERS = {"folder_link": Path.home() / "Downloads"}
 
 # A key, or a digit for each question then a key. `approve` is Cmd+Return on macOS and Ctrl+Enter
 # on Windows: allow once on every approval box (on Windows the connector box's 2 is "allow for
 # this task", so digits are not used to approve).
-KEYS = ("esc", "enter", "approve", "1_each", "1_approve", "1_enter", *"123456789")
+KEYS = (
+    "esc",
+    "enter",
+    "approve",
+    "1_each",
+    "1_approve",
+    "1_enter",
+    "ax_allow",
+    "ax_focus_enter",
+    *"123456789",
+)
+# ax_allow presses the box's Allow button: through the Accessibility API on macOS, through UI
+# Automation on Windows (Windows PowerShell, nothing to install). ax_focus_enter, Windows only,
+# gives that button the keyboard and presses Enter: the box's Allow is its default button.
+AX_ALLOW = ("Allow once", "Allow")
 SYSTEM_EVENTS = 'tell application "System Events" to '
 MAC_KEYS = {
     "esc": [SYSTEM_EVENTS + "key code 53"],
@@ -84,6 +109,39 @@ WIN_KEYS = {
     "approve": [(VK_CONTROL, False), (VK_RETURN, False), (VK_RETURN, True), (VK_CONTROL, True)],
 }
 
+UIA_SCRIPT = r"""
+Add-Type -AssemblyName UIAutomationClient
+Add-Type -AssemblyName UIAutomationTypes
+$A = [System.Windows.Automation.AutomationElement]
+$labels = $env:PROBE_LABELS -split '\|'
+$button = New-Object System.Windows.Automation.PropertyCondition(
+  $A::ControlTypeProperty, [System.Windows.Automation.ControlType]::Button)
+$found = $null; $seen = @()
+foreach ($id in (Get-Process -Name claude -ErrorAction SilentlyContinue).Id) {
+  $mine = New-Object System.Windows.Automation.PropertyCondition($A::ProcessIdProperty, $id)
+  $scope = [System.Windows.Automation.TreeScope]
+  foreach ($window in $A::RootElement.FindAll($scope::Children, $mine)) {
+    foreach ($b in $window.FindAll($scope::Descendants, $button)) {
+      $name = $b.Current.Name
+      if (-not $name) { continue }
+      $seen += $name
+      # A label can carry its shortcut: a digit, or the Enter symbol.
+      $plain = ($name -replace '[^A-Za-z ]+$', '').Trim()
+      if (-not $found -and $labels -contains $plain) { $found = $b }
+    }
+  }
+}
+if (-not $found) { "pressed=" }
+elseif ($env:PROBE_MODE -eq 'focus') { $found.SetFocus(); "pressed=focus:" + $found.Current.Name }
+else {
+  $p = $null
+  if ($found.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$p)) {
+    $p.Invoke(); "pressed=invoke:" + $found.Current.Name
+  } else { $found.SetFocus(); "pressed=focus (no invoke):" + $found.Current.Name }
+}
+"buttons=" + ($seen[-10..-1] -join ' | ')
+"""
+
 RUN_SECONDS = 600.0
 TEXT_CHARS = 200
 # Record types whose text is the probe's own prompt and the model's reply. Every other record
@@ -95,8 +153,29 @@ PERMISSION_FIELDS = ("tool_name", "tool_input", "decision", "granted")
 # stands (a box can show before it takes a key), and how many presses in all. A digit is pressed
 # once: a second 1 unticks a multi-choice option.
 FIRST_SECONDS = 2.0
+# A run whose box was answered and that then writes nothing for this long is over: a denied
+# folder box ends the turn without a completed record.
+QUIET_SECONDS = 10.0
 RETRY_SECONDS = 3.0
 PRESSES = 4
+
+
+class LinkedCoWork(CoWork):
+    """The driver, with folder=<path> added to its deep link."""
+
+    folder: Path | None = None
+
+    def deep_link(self, prompt: str) -> str:
+        link = super().deep_link(prompt)
+        if self.folder is None:
+            return link
+        from urllib.parse import quote
+
+        return f"{link}&folder={quote(str(self.folder), safe='')}"
+
+
+# The driver of this run, for ax_focus_enter's Enter.
+PROBE: CoWork | None = None
 
 
 class Log:
@@ -203,10 +282,11 @@ class Watcher:
         self.waiting_input: dict[str, Any] = {}
         self.waiting_since = 0.0
 
-    def poll(self, log: Log) -> None:
+    def poll(self, log: Log) -> bool:
         # CoWork writes while this reads: a temporary file (.claude.json.tmp.<n>) is renamed and
         # a lock directory removed between the listing and the read. os.walk skips a directory
         # that is gone, a temporary file is not looked at, and a file gone by its stat is skipped.
+        changed = False
         for directory, _, names in os.walk(self.session_dir):
             for name in sorted(names):
                 if ".tmp." in name:
@@ -220,8 +300,10 @@ class Watcher:
                 if self._sizes.get(path) != size:
                     log.write("file", path=relative, size=size, new=path not in self._sizes)
                     self._sizes[path] = size
+                    changed = True
                 if name.endswith(".jsonl"):
                     self._lines(path, relative, log)
+        return changed
 
     def _lines(self, path: str, relative: str, log: Log) -> None:
         try:
@@ -252,6 +334,109 @@ class Watcher:
             self.waiting_since = time.monotonic()
         elif record.get("subtype") == PERMISSION_RESPONSE:
             self.waiting = None
+
+
+def _ax(key: str) -> str:
+    """Press the box's Allow button. Types nothing, so no frontmost check. What it found."""
+    if driver.WINDOWS:
+        import subprocess
+
+        env = {**os.environ, "PROBE_LABELS": "|".join(AX_ALLOW)}
+        env["PROBE_MODE"] = "focus" if key == "ax_focus_enter" else "invoke"
+        argv = ["powershell", "-NoProfile", "-NonInteractive", "-Command", UIA_SCRIPT]
+        done = subprocess.run(
+            argv, capture_output=True, text=True, env=env, timeout=60, check=False
+        )
+        found = " ".join((done.stdout + done.stderr).split())[:600]
+        if key == "ax_focus_enter" and "pressed=focus" in found:
+            time.sleep(0.3)
+            _press_one(PROBE, "enter")
+        return found
+    if key == "ax_focus_enter":
+        return "ax_focus_enter is Windows only"
+    pressed, seen = _ax_press(list(AX_ALLOW))
+    return f"pressed={pressed} buttons={' | '.join(seen[-10:])}"
+
+
+def _ax_press(labels: list[str]) -> tuple[str, list[str]]:
+    """macOS: press the first Claude button labelled one of `labels`, its shortcut digit dropped.
+    The button pressed, or "", and every label seen."""
+    import ctypes
+    import re
+    import subprocess
+
+    ax = ctypes.CDLL("/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices")
+    cf = ctypes.CDLL("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")
+    p, utf8 = ctypes.c_void_p, 0x08000100
+    cf.CFStringCreateWithCString.restype = p
+    cf.CFStringCreateWithCString.argtypes = [p, ctypes.c_char_p, ctypes.c_uint32]
+    cf.CFStringGetCString.argtypes = [p, ctypes.c_char_p, ctypes.c_long, ctypes.c_uint32]
+    cf.CFGetTypeID.argtypes = [p]
+    cf.CFGetTypeID.restype = ctypes.c_ulong
+    cf.CFStringGetTypeID.restype = ctypes.c_ulong
+    cf.CFArrayGetTypeID.restype = ctypes.c_ulong
+    cf.CFArrayGetCount.argtypes = [p]
+    cf.CFArrayGetCount.restype = ctypes.c_long
+    cf.CFArrayGetValueAtIndex.argtypes = [p, ctypes.c_long]
+    cf.CFArrayGetValueAtIndex.restype = p
+    cf.CFRelease.argtypes = [p]
+    ax.AXUIElementCreateApplication.argtypes = [ctypes.c_int]
+    ax.AXUIElementCreateApplication.restype = p
+    ax.AXUIElementCopyAttributeValue.argtypes = [p, p, ctypes.POINTER(p)]
+    ax.AXUIElementSetAttributeValue.argtypes = [p, p, p]
+    ax.AXUIElementPerformAction.argtypes = [p, p]
+    owned: list[int] = []
+
+    def name(text: str) -> int:
+        value = cf.CFStringCreateWithCString(None, text.encode(), utf8)
+        owned.append(value)
+        return value
+
+    def copy(element: int, attribute: int) -> int | None:
+        value = p()
+        if ax.AXUIElementCopyAttributeValue(element, attribute, ctypes.byref(value)) != 0:
+            return None
+        owned.append(value.value)
+        return value.value
+
+    def text(element: int, attribute: int) -> str:
+        value = copy(element, attribute)
+        if not value or cf.CFGetTypeID(value) != cf.CFStringGetTypeID():
+            return ""
+        buffer = ctypes.create_string_buffer(1024)
+        cf.CFStringGetCString(value, buffer, 1024, utf8)
+        return buffer.value.decode(errors="replace")
+
+    role, title, description, children = (
+        name(n) for n in ("AXRole", "AXTitle", "AXDescription", "AXChildren")
+    )
+    press = name("AXPress")
+    found = subprocess.run(["pgrep", "-x", driver.COWORK_PROCESS], capture_output=True, text=True)
+    app = ax.AXUIElementCreateApplication(int(found.stdout.split()[0]))
+    owned.append(app)
+    ax.AXUIElementSetAttributeValue(
+        app, name("AXManualAccessibility"), p.in_dll(cf, "kCFBooleanTrue")
+    )
+    seen: list[str] = []
+    stack = [(app, 0)]
+    try:
+        while stack:
+            element, depth = stack.pop()
+            if text(element, role) == "AXButton":
+                label = text(element, title) or text(element, description)
+                if label:
+                    seen.append(label)
+                    if re.sub(r"\s+\d$", "", label.strip()) in labels:
+                        ok = ax.AXUIElementPerformAction(element, press) == 0
+                        return (label if ok else f"{label} (refused)"), seen
+            kids = copy(element, children) if depth < 40 else None
+            if kids and cf.CFGetTypeID(kids) == cf.CFArrayGetTypeID():
+                for index in reversed(range(cf.CFArrayGetCount(kids))):
+                    stack.append((cf.CFArrayGetValueAtIndex(kids, index), depth + 1))
+        return "", seen
+    finally:
+        for value in owned:
+            cf.CFRelease(value)
 
 
 def _press_one(probe: CoWork, key: str) -> None:
@@ -293,6 +478,8 @@ def _press(probe: CoWork, key: str, request: dict[str, Any], *, again: bool) -> 
             time.sleep(0.5)
             _press_one(probe, last)
         return key
+    if key in ("ax_allow", "ax_focus_enter"):
+        return f"{key}: {_ax(key)}"
     _press_one(probe, key)
     return key
 
@@ -315,7 +502,10 @@ def main() -> int:
 
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     log = Log(Path(f"interaction_probe_{args.scenario}_{stamp}.log").resolve())
-    probe = CoWork.from_file(args.config) if args.config else CoWork()
+    global PROBE
+    probe = LinkedCoWork.from_file(args.config) if args.config else LinkedCoWork()
+    probe.folder = LINK_FOLDERS.get(args.scenario)
+    PROBE = probe
     log.write(
         "start",
         scenario=args.scenario,
@@ -324,6 +514,7 @@ def main() -> int:
         python=platform.python_version(),
         prompt=prompt,
         key=key,
+        link_folder=None if probe.folder is None else str(probe.folder),
     )
     try:
         session_dir = probe.submit(prompt)
@@ -336,14 +527,20 @@ def main() -> int:
     watcher = Watcher(session_dir)
     deadline = time.monotonic() + RUN_SECONDS
     presses, last_press = 0, 0.0
+    answered, last_change = False, time.monotonic()
     try:
         while time.monotonic() < deadline:
-            watcher.poll(log)
+            if watcher.poll(log):
+                last_change = time.monotonic()
             if driver.TERMINAL_STATE in _states(session_dir):
                 log.write("completed")
                 break
             now = time.monotonic()
+            if watcher.waiting is None and answered and now - last_change >= QUIET_SECONDS:
+                log.write("ended_quiet", seconds=QUIET_SECONDS)
+                break
             if watcher.waiting is None:
+                answered = answered or presses > 0
                 presses = 0
             elif presses == 0 and now - watcher.waiting_since >= FIRST_SECONDS:
                 pressed = _press(probe, key, watcher.waiting_input, again=False)

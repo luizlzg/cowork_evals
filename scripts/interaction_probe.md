@@ -24,6 +24,7 @@ uv run python scripts/interaction_probe.py questions
 uv run python scripts/interaction_probe.py multiselect
 uv run python scripts/interaction_probe.py folder_allow
 uv run python scripts/interaction_probe.py folder_deny
+uv run python scripts/interaction_probe.py folder_link
 ```
 
 Add `--config <path>` if your `cowork_evals.yaml` is in another folder, and `--key <key>` to try
@@ -34,8 +35,9 @@ another key than the scenario's.
 | `question`     | Ask you red or blue with its question tool, then write a file | `1`         |
 | `questions`    | Two questions in one question call, colour and size           | `1_each`: `1` once per question |
 | `multiselect`  | One question where several colours can be chosen              | `1_approve`: `1`, then `approve` to send |
-| `folder_allow` | Connect your Downloads folder and count its files             | `approve`   |
+| `folder_allow` | Connect your Downloads folder and count its files             | `ax_allow`  |
 | `folder_deny`  | The same                                                      | `esc`       |
+| `folder_link`  | Count the files in Downloads, with the folder in the chat's link | `ax_allow`, if a box appears |
 
 | Key        | macOS      | Windows    |
 | ---------- | ---------- | ---------- |
@@ -43,10 +45,18 @@ another key than the scenario's.
 | `esc`      | Escape     | Escape     |
 | `enter`    | Return     | Enter      |
 | `1` to `9` | the digit  | the digit  |
+| `ax_allow` | presses the box's Allow button through the Accessibility API | presses it through UI Automation (Windows PowerShell) |
+| `ax_focus_enter` | not available | gives the Allow button the keyboard through UI Automation, then Enter |
 
-`approve` allows once on every box measured so far. A digit is not used to approve: on the
-Windows connector box `2` is "Allow for this task", which skips later checks in the same chat.
-Other keys to try with `--key`: `enter`, `1_enter` (`1`, then Return).
+`approve` allows once on the tool boxes (bash, Microsoft 365 connector). A digit is not used to
+approve: on the Windows connector box `2` is "Allow for this task", which skips later checks in
+the same chat. The folder box has no shortcut: no key allows it while the keyboard is in the
+message field (measured on macOS and Windows), so `folder_allow` presses its Allow button
+instead. On Windows, if `ax_allow` does not allow it, try `--key ax_focus_enter`.
+
+`folder_link` measures whether Cowork connects a folder named in the chat's link
+(`claude://claude.ai/new?…&folder=<path>`) before the prompt arrives. Note in your answer at the
+end whether a folder box appeared.
 
 ## What happens
 
@@ -57,8 +67,11 @@ Other keys to try with `--key`: `enter`, `1_enter` (`1`, then Return).
 2. Two seconds after Cowork asks, the probe presses the key, without bringing Claude to the front
    again (that would move the keyboard to the message field, away from the box). While the box
    still stands it presses again every 3 seconds, four times at most; a lone digit is pressed
-   once, since a second `1` unticks a multi-choice option.
-3. When the run ends, the terminal asks what Claude shows. Type a few words and press Enter. It
+   once, since a second `1` unticks a multi-choice option. A button press through accessibility
+   types nothing, so it does not need Claude in front.
+3. The run ends when Cowork records it as completed, or 10 seconds after the box was answered
+   with nothing more written (a denied folder box ends the turn that way). Then the terminal
+   asks what Claude shows. Type a few words and press Enter. It
    prints the log path.
 
 ## What the log contains
