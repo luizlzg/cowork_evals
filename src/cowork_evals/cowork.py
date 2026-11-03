@@ -1056,15 +1056,21 @@ def _started(audit: list[AuditRecord], session_dir: Path) -> bool:
 
 
 def _signature(session_dir: Path) -> tuple[tuple[str, int, float], ...]:
-    """What quiescence compares: every file under the session, with its size and mtime."""
+    """What quiescence compares: every file under the session, with its size and mtime.
+
+    The session writes while this reads, and creates and removes a lock directory
+    (`.claude/.claude.json.lock`) in between. `os.walk` skips a directory that is gone by the
+    time it is listed, where `Path.rglob` raised `FileNotFoundError` and ended the run.
+    """
     entries = []
-    for path in session_dir.rglob("*"):
-        try:
-            stat = path.stat()
-        except OSError:
-            continue
-        if path.is_file():
-            entries.append((str(path), stat.st_size, stat.st_mtime))
+    for directory, _, names in os.walk(session_dir):
+        for name in names:
+            path = os.path.join(directory, name)
+            try:
+                stat = os.stat(path)
+            except OSError:
+                continue
+            entries.append((path, stat.st_size, stat.st_mtime))
     return tuple(sorted(entries))
 
 
