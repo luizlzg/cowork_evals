@@ -24,7 +24,6 @@ uv run python scripts/interaction_probe.py questions
 uv run python scripts/interaction_probe.py multiselect
 uv run python scripts/interaction_probe.py folder_allow
 uv run python scripts/interaction_probe.py folder_deny
-uv run python scripts/interaction_probe.py folder_link
 ```
 
 Add `--config <path>` if your `cowork_evals.yaml` is in another folder, and `--key <key>` to try
@@ -37,7 +36,6 @@ another key than the scenario's.
 | `multiselect`  | One question where several colours can be chosen              | `1_approve`: `1`, then `approve` to send |
 | `folder_allow` | Connect your Downloads folder and count its files             | `ax_allow`  |
 | `folder_deny`  | The same                                                      | `esc`       |
-| `folder_link`  | Count the files in Downloads, with the folder in the chat's link | `ax_allow`, if a box appears |
 
 | Key        | macOS      | Windows    |
 | ---------- | ---------- | ---------- |
@@ -53,10 +51,6 @@ approve: on the Windows connector box `2` is "Allow for this task", which skips 
 the same chat. The folder box has no shortcut: no key allows it while the keyboard is in the
 message field (measured on macOS and Windows), so `folder_allow` presses its Allow button
 instead. On Windows, if `ax_allow` does not allow it, try `--key ax_focus_enter`.
-
-`folder_link` measures whether Cowork connects a folder named in the chat's link
-(`claude://claude.ai/new?…&folder=<path>`) before the prompt arrives. Note in your answer at the
-end whether a folder box appeared.
 
 ## What happens
 

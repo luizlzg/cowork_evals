@@ -61,16 +61,7 @@ SCENARIOS = {
     # Windows: its Allow button is pressed through accessibility instead.
     "folder_allow": (FOLDER_PROMPT, "ax_allow"),
     "folder_deny": (FOLDER_PROMPT, "esc"),
-    # The deep link's folder parameter, unmeasured: does it connect the folder before the prompt,
-    # so that no box appears? If one does, its Allow button is pressed.
-    "folder_link": (
-        "How many files are at the top level of my Downloads folder? Do not open or change any "
-        "file.",
-        "ax_allow",
-    ),
 }
-# The scenarios whose deep link also carries folder=<this folder>.
-LINK_FOLDERS = {"folder_link": Path.home() / "Downloads"}
 
 # A key, or a digit for each question then a key. `approve` is Cmd+Return on macOS and Ctrl+Enter
 # on Windows: allow once on every approval box (on Windows the connector box's 2 is "allow for
@@ -158,20 +149,6 @@ FIRST_SECONDS = 2.0
 QUIET_SECONDS = 10.0
 RETRY_SECONDS = 3.0
 PRESSES = 4
-
-
-class LinkedCoWork(CoWork):
-    """The driver, with folder=<path> added to its deep link."""
-
-    folder: Path | None = None
-
-    def deep_link(self, prompt: str) -> str:
-        link = super().deep_link(prompt)
-        if self.folder is None:
-            return link
-        from urllib.parse import quote
-
-        return f"{link}&folder={quote(str(self.folder), safe='')}"
 
 
 # The driver of this run, for ax_focus_enter's Enter.
@@ -503,8 +480,7 @@ def main() -> int:
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     log = Log(Path(f"interaction_probe_{args.scenario}_{stamp}.log").resolve())
     global PROBE
-    probe = LinkedCoWork.from_file(args.config) if args.config else LinkedCoWork()
-    probe.folder = LINK_FOLDERS.get(args.scenario)
+    probe = CoWork.from_file(args.config) if args.config else CoWork()
     PROBE = probe
     log.write(
         "start",
@@ -514,7 +490,6 @@ def main() -> int:
         python=platform.python_version(),
         prompt=prompt,
         key=key,
-        link_folder=None if probe.folder is None else str(probe.folder),
     )
     try:
         session_dir = probe.submit(prompt)
