@@ -109,13 +109,16 @@ RETURN = (
     'tell application "System Events" to key code 36',
 )
 
-# Answers to a request, measured on macOS 26. docs/cowork_desktop.md. A question's first option
-# is the key 1, behind the guard and with no activation: activating CoWork moves the keyboard to
-# the composer. An approval box, the folder box included, is answered by pressing its button
-# through the Accessibility API (macos.py), which types nothing.
+# Answers to a request, measured on macOS 26 and Windows 11. docs/cowork_desktop.md. A question's
+# first option is the key 1, behind the guard and with no activation: activating CoWork moves the
+# keyboard to the composer. On macOS an approval box, the folder box included, is answered by
+# pressing its button through the Accessibility API (macos.py), which types nothing. On Windows
+# a tool box takes Ctrl+Enter or Escape, and the folder box's Allow button is pressed through UI
+# Automation (windows.press_button), since no key reaches it.
 FIRST_OPTION_KEYS = ("osascript", "-e", 'tell application "System Events" to keystroke "1"')
 APPROVAL_LABELS = {"allow": ("Allow once", "Allow"), "deny": ("Deny",)}
-# A multi-choice question waits for its send button after the digit ticks an option.
+# A multi-choice question waits for its send button after the digit ticks an option: Submit on
+# macOS, Ctrl+Enter on Windows.
 SUBMIT_LABELS = ("Submit",)
 SUBMIT = "submit"
 
@@ -123,6 +126,7 @@ SUBMIT = "submit"
 PERMISSION_REQUEST = "permission_request"
 PERMISSION_RESPONSE = "permission_response"
 QUESTION_TOOL = "AskUserQuestion"
+FOLDER_TOOL = "mcp__cowork__request_cowork_directory"
 
 # How long an approval box stands before its answer is pressed. A box shows its buttons before
 # they take a press (one 2 s after the request did nothing, one at 5 s landed), so the press is
@@ -226,6 +230,7 @@ class AuditRecord(BaseModel):
     subtype: str | None = None
     tool_name: str | None = None
     tool_input: dict[str, Any] | None = None
+    decision: str | None = None
 
 
 # What the driver returns. Every key is written, and a field that is `None` is written as null,
@@ -357,7 +362,9 @@ class CoWork:
         final_text = _final_text(turns)
         requests = _requests(audit)
         waiting = requests[-1][0].tool_name if requests and not requests[-1][1] else None
-        if final_text is None and waiting is None:
+        # A denied box can end the turn with no reply (a denied folder box does, on macOS and
+        # Windows): the run did what it was answered, so it is collected with an empty text.
+        if final_text is None and waiting is None and not _ended_on_deny(audit):
             raise CoWorkError(8, f"{directory}: the run produced no assistant text", directory)
 
         audit_prompt = _audit_prompt(audit)
@@ -488,11 +495,14 @@ class CoWork:
     ) -> None:
         """Press an approval box's button, or a question's first option once per question.
 
-        A multi-choice question is ticked by its digit and sent by its Submit button on macOS.
-        `submit_only` presses that button alone: the digit again would untick the option.
+        A multi-choice question is ticked by its digit and sent by its Submit button on macOS, by
+        Ctrl+Enter on Windows. `submit_only` sends alone: the digit again would untick the option.
         """
         if approval is not None and not WINDOWS:
             self._press_button(APPROVAL_LABELS[approval.answer])
+            return
+        if approval is not None and approval.answer == "allow" and request.tool_name == FOLDER_TOOL:
+            self._native(windows.press_button, APPROVAL_LABELS["allow"])
             return
         if approval is not None:
             self._guard()
@@ -508,9 +518,13 @@ class CoWork:
                 self._native(windows.press_first_option)
             else:
                 self._fire(list(FIRST_OPTION_KEYS))
-        if _multi_select(request) and not WINDOWS:
+        if _multi_select(request):
             time.sleep(0 if submit_only else 0.5)
-            self._press_button(SUBMIT_LABELS)
+            if WINDOWS:
+                self._guard()
+                self._native(windows.press_allow)
+            else:
+                self._press_button(SUBMIT_LABELS)
 
     def _press_button(self, labels: tuple[str, ...]) -> None:
         """Press a CoWork button through the Accessibility API. Not running is code 3."""
@@ -689,8 +703,7 @@ class CoWork:
                     if request.tool_name != QUESTION_TOOL:
                         return session_dir
                     self._answer(request, None)
-                    multi = _multi_select(request) and not WINDOWS
-                    pressed[index] = (SUBMIT if multi else None, 1, now)
+                    pressed[index] = (SUBMIT if _multi_select(request) else None, 1, now)
 
             elif _started(audit, session_dir) and (
                 time.monotonic() - idle_since >= self._config.idle_seconds
@@ -989,6 +1002,12 @@ def _multi_select(request: AuditRecord) -> bool:
     return isinstance(questions, list) and any(
         isinstance(question, dict) and question.get("multiSelect") is True for question in questions
     )
+
+
+def _ended_on_deny(audit: list[AuditRecord]) -> bool:
+    """Whether the last permission response of the session was a deny."""
+    responses = [r for r in audit if r.type == "system" and r.subtype == PERMISSION_RESPONSE]
+    return bool(responses) and responses[-1].decision == "deny"
 
 
 def _requests(audit: list[AuditRecord]) -> list[tuple[AuditRecord, bool]]:

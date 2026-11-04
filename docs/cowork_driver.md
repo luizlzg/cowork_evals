@@ -58,9 +58,13 @@ activating CoWork moves the keyboard to the composer. A multi-choice question is
 its Submit button, pressed as below. On macOS an approval box, the folder box
 included, is answered by pressing its own button through the Accessibility API, by label
 (`Allow once` or `Allow`, `Deny`), so the keyboard focus and the frontmost application do not
-matter. The press is repeated every 3 seconds while the box stands, four times at most. Windows
-sends `1`, Ctrl+Enter and Escape, unprobed. A run that stopped as waiting names the tool in the session
-document's `waiting`, and is not code 8 when it has no assistant text.
+matter. The press is repeated every 3 seconds while the box stands, four times at most. On
+Windows a question takes `1` and a multi-choice question is sent with Ctrl+Enter; a tool box is
+allowed once with Ctrl+Enter and denied with Escape; the folder box, which takes no key, is
+denied with Escape and allowed by invoking its Allow button through UI Automation (Windows
+PowerShell), repeated the same way. A run that stopped as waiting names the tool in the session
+document's `waiting`, and is not code 8 when it has no assistant text. Nor is a run whose turn
+ended right after a deny: a denied folder box ends the turn with no reply.
 
 ## What it refuses
 

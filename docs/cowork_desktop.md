@@ -345,4 +345,8 @@ calls are in `src/cowork_evals/windows.py`.
 | Clear, submit | `SendInput`: Ctrl+A, Delete reached the composer. Return goes the same way, unprobed   |
 | Grant         | None. Windows has no counterpart of the Accessibility grant                            |
 | Consent       | `MessageBoxTimeoutW`, Cancel the default button, unprobed                              |
+| Question      | `1` answers it; a multi-choice question is sent with Ctrl+Enter. 4 Nov 2026, Windows 11 |
+| Tool box      | Ctrl+Enter allows once, Escape denies, from the composer. The Microsoft 365 connector box's `2` is "Allow for this task" and `3` "Allow once", so digits are not used |
+| Folder box    | `Deny` and `Allow`, no shortcut: Escape denies it, no key allows it from the composer. Invoking `Allow` through UI Automation (`InvokePattern`) allows it; the first try 3 s after the request found only the window's buttons, the next at 7 s found and invoked it |
+| After a deny  | One request. Claude retries the call and Cowork refuses it at once, with no box, and the turn ends with no reply and no `completed` record (also on macOS) |
 

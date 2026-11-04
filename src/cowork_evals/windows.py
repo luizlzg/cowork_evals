@@ -177,7 +177,10 @@ def press_return() -> None:
     _send([(VK_RETURN, False), (VK_RETURN, True)])
 
 
-# The answers to a request: the macOS keys' counterparts, unprobed. docs/cowork_desktop.md.
+# The answers to a request, measured on Windows 11 with the interaction probe.
+# docs/cowork_desktop.md. Ctrl+Enter allows once and Escape denies on a tool box from anywhere;
+# the folder box takes no key while the composer holds the keyboard, so its Allow button is
+# pressed through UI Automation (press_button).
 def press_first_option() -> None:
     _send([(VK_1, False), (VK_1, True)])
 
@@ -188,6 +191,52 @@ def press_allow() -> None:
 
 def press_deny() -> None:
     _send([(VK_ESCAPE, False), (VK_ESCAPE, True)])
+
+
+# UI Automation from Windows PowerShell's .NET assemblies: no package to install. It searches the
+# buttons of the claude.exe windows for a label (its shortcut, a digit or the Enter symbol,
+# dropped) and invokes the first that matches.
+_UIA_SCRIPT = r"""
+Add-Type -AssemblyName UIAutomationClient
+Add-Type -AssemblyName UIAutomationTypes
+$A = [System.Windows.Automation.AutomationElement]
+$scope = [System.Windows.Automation.TreeScope]
+$labels = $env:COWORK_EVALS_LABELS -split '\|'
+$button = New-Object System.Windows.Automation.PropertyCondition(
+  $A::ControlTypeProperty, [System.Windows.Automation.ControlType]::Button)
+foreach ($id in (Get-Process -Name claude -ErrorAction SilentlyContinue).Id) {
+  $mine = New-Object System.Windows.Automation.PropertyCondition($A::ProcessIdProperty, $id)
+  foreach ($window in $A::RootElement.FindAll($scope::Children, $mine)) {
+    foreach ($b in $window.FindAll($scope::Descendants, $button)) {
+      $name = $b.Current.Name
+      if (-not $name) { continue }
+      if ($labels -contains ($name -replace '[^A-Za-z ]+$', '').Trim()) {
+        $p = $null
+        if ($b.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$p)) {
+          $p.Invoke(); "pressed"; exit 0
+        }
+      }
+    }
+  }
+}
+"none"
+"""
+
+
+def press_button(labels: tuple[str, ...]) -> bool:
+    """Invoke the first claude.exe button labelled one of `labels`. False when there is none yet:
+    a box can be in the records before its buttons are drawn, and the caller presses again."""
+    import subprocess
+
+    env = {**os.environ, "COWORK_EVALS_LABELS": "|".join(labels)}
+    argv = ["powershell", "-NoProfile", "-NonInteractive", "-Command", _UIA_SCRIPT]
+    try:
+        done = subprocess.run(argv, capture_output=True, text=True, env=env, timeout=60)
+    except subprocess.TimeoutExpired as error:
+        raise OSError(f"UI Automation did not answer within {error.timeout:g} s") from error
+    if done.returncode != 0:
+        raise OSError(f"powershell returned {done.returncode}: {done.stderr.strip()[:200]}")
+    return done.stdout.strip().endswith("pressed")
 
 
 def consent(message: str, title: str, timeout: float) -> bool:
