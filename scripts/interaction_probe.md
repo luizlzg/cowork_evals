@@ -63,8 +63,8 @@ instead. On Windows, if `ax_allow` does not allow it, try `--key ax_focus_enter`
    still stands it presses again every 3 seconds, four times at most; a lone digit is pressed
    once, since a second `1` unticks a multi-choice option. A button press through accessibility
    types nothing, so it does not need Claude in front.
-3. The run ends when Cowork records it as completed, or 10 seconds after the box was answered
-   with nothing more written (a denied folder box ends the turn that way). Then the terminal
+3. The run ends when Cowork records it as completed, or 20 seconds after a deny with nothing
+   more written (a denied folder box ends the turn that way, with no reply). Then the terminal
    asks what Claude shows. Type a few words and press Enter. It
    prints the log path.
 

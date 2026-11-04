@@ -144,9 +144,10 @@ PERMISSION_FIELDS = ("tool_name", "tool_input", "decision", "granted")
 # stands (a box can show before it takes a key), and how many presses in all. A digit is pressed
 # once: a second 1 unticks a multi-choice option.
 FIRST_SECONDS = 2.0
-# A run whose box was answered and that then writes nothing for this long is over: a denied
-# folder box ends the turn without a completed record.
-QUIET_SECONDS = 10.0
+# A run whose last answer was a deny and that then writes nothing for this long is over: a denied
+# folder box ends the turn with no reply and no completed record. After an allow, Claude can
+# think longer than this before it writes, so only a deny ends a run this way.
+QUIET_SECONDS = 20.0
 RETRY_SECONDS = 3.0
 PRESSES = 4
 
@@ -258,6 +259,7 @@ class Watcher:
         self.waiting: str | None = None
         self.waiting_input: dict[str, Any] = {}
         self.waiting_since = 0.0
+        self.last_decision: str | None = None
 
     def poll(self, log: Log) -> bool:
         # CoWork writes while this reads: a temporary file (.claude.json.tmp.<n>) is renamed and
@@ -311,6 +313,7 @@ class Watcher:
             self.waiting_since = time.monotonic()
         elif record.get("subtype") == PERMISSION_RESPONSE:
             self.waiting = None
+            self.last_decision = record.get("decision")
 
 
 def _ax(key: str) -> str:
@@ -502,7 +505,7 @@ def main() -> int:
     watcher = Watcher(session_dir)
     deadline = time.monotonic() + RUN_SECONDS
     presses, last_press = 0, 0.0
-    answered, last_change = False, time.monotonic()
+    last_change = time.monotonic()
     try:
         while time.monotonic() < deadline:
             if watcher.poll(log):
@@ -511,11 +514,14 @@ def main() -> int:
                 log.write("completed")
                 break
             now = time.monotonic()
-            if watcher.waiting is None and answered and now - last_change >= QUIET_SECONDS:
-                log.write("ended_quiet", seconds=QUIET_SECONDS)
+            if (
+                watcher.waiting is None
+                and watcher.last_decision == "deny"
+                and now - last_change >= QUIET_SECONDS
+            ):
+                log.write("ended_after_deny", seconds=QUIET_SECONDS)
                 break
             if watcher.waiting is None:
-                answered = answered or presses > 0
                 presses = 0
             elif presses == 0 and now - watcher.waiting_since >= FIRST_SECONDS:
                 pressed = _press(probe, key, watcher.waiting_input, again=False)
