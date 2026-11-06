@@ -40,7 +40,10 @@ The session is complete when `audit.jsonl` records the `completed` state. If tha
 appears, the session is complete when no file under the session directory has changed for
 `idle_seconds` after the run started. A run has started at a `started` lifecycle state or a
 first assistant turn. The fallback logs a warning when it fires, and it can fire during a
-long pause in a run. Raise `idle_seconds` if it does.
+long pause in a run. Raise `idle_seconds` if it does. It applies only to a run in which no box
+was answered or the last one was denied: a denied box can end the turn with no `completed`,
+while after an allow or an answered question Claude can think longer than the window before it
+writes, so such a run ends at `completed` or at `run_timeout`.
 
 ## Questions and approval boxes
 
@@ -51,20 +54,26 @@ While one stands, quiescence does not count.
 | Request      | What the driver does                                                                   |
 | ------------ | -------------------------------------------------------------------------------------- |
 | Question     | Leaves it `waiting_seconds` for a person to answer, then presses its first option      |
-| Approval box | Presses the first unused answer from `interactions.yaml` that matches it, after 2 seconds. With none, leaves it `waiting_seconds` for a person, then stops the run as waiting |
+| Approval box | Presses the first answer from `interactions.yaml` that matches it and is not a spent allow, after 2 seconds. With none, leaves it `waiting_seconds` for a person, then stops the run as waiting |
 
 A question's first option is the key `1`, behind the frontmost check and with no activation:
 activating CoWork moves the keyboard to the composer. A multi-choice question is then sent with
 its Submit button, pressed as below. On macOS an approval box, the folder box
 included, is answered by pressing its own button through the Accessibility API, by label
 (`Allow once` or `Allow`, `Deny`), so the keyboard focus and the frontmost application do not
-matter. The press is repeated every 3 seconds while the box stands, four times at most. On
-Windows a question takes `1` and a multi-choice question is sent with Ctrl+Enter; a tool box is
-allowed once with Ctrl+Enter and denied with Escape; the folder box, which takes no key, is
-denied with Escape and allowed by invoking its Allow button through UI Automation (Windows
-PowerShell), repeated the same way. A run that stopped as waiting names the tool in the session
+matter. The press is repeated every 3 seconds while the box stands, four times at most: an
+AXPress that succeeds has been measured to leave the box open. On Windows a question takes `1`
+and a multi-choice question is sent with Ctrl+Enter; a tool box is allowed once with Ctrl+Enter
+and denied with Escape; the folder box, which takes no key, is denied with Escape and allowed by
+invoking its Allow button through UI Automation (Windows PowerShell). That search takes only a
+button whose parent or grandparent also holds a Deny button, so a chat or a banner called
+"Allow" is never pressed. On Windows a press that was sent is not repeated, since a second one
+could land on the next box; only "no button yet" is, as above. Every press is logged: what, for
+which request, and whether it was sent. A run that stopped as waiting names the tool in the session
 document's `waiting`, and is not code 8 when it has no assistant text. Nor is a run whose turn
-ended right after a deny: a denied folder box ends the turn with no reply.
+ended right after a deny: a denied folder box ends the turn with no reply. That means the
+last answer was a deny and Claude then did no more than retry the denied call: a new box, text,
+or a call to another tool after it is a run that went on.
 
 ## What it refuses
 

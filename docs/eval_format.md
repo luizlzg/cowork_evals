@@ -287,8 +287,9 @@ dependencies. See [checks.md](checks.md#where-a-check-runs-and-what-it-may-impor
 
 Optional, read by the CoWork backend only. Each approval box the session shows takes the first
 answer not yet used whose `match`, a regular expression over the tool name and its input as
-JSON, finds the box's tool. Each answer is used once. A box with no answer for it stops the run as waiting, graded on what it
-did. Questions take no answer here: the driver presses their first option.
+JSON, finds the box's tool. An allow is used once; a deny is not spent, so a retried call that
+raises the same box again is denied again. A box with no answer for it stops the run as waiting,
+graded on what it did. Questions take no answer here: the driver presses their first option.
 [cowork_driver.md](cowork_driver.md#questions-and-approval-boxes).
 
 ```yaml

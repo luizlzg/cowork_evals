@@ -195,22 +195,40 @@ def press_deny() -> None:
 
 # UI Automation from Windows PowerShell's .NET assemblies: no package to install. It searches the
 # buttons of the claude.exe windows for a label (its shortcut, a digit or the Enter symbol,
-# dropped) and invokes the first that matches.
+# dropped) and invokes the first that matches, but only a button of an approval box: one whose
+# parent, or grandparent, also holds a button labelled like COWORK_EVALS_WITH ("Deny"). A chat in
+# the sidebar or a banner called "Allow" has no Deny beside it.
 _UIA_SCRIPT = r"""
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 $A = [System.Windows.Automation.AutomationElement]
 $scope = [System.Windows.Automation.TreeScope]
+$walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
 $labels = $env:COWORK_EVALS_LABELS -split '\|'
+$with = $env:COWORK_EVALS_WITH
 $button = New-Object System.Windows.Automation.PropertyCondition(
   $A::ControlTypeProperty, [System.Windows.Automation.ControlType]::Button)
+
+function Plain($name) { ($name -replace '[^A-Za-z ]+$', '').Trim() }
+
+function InBox($b) {
+  $node = $walker.GetParent($b)
+  for ($i = 0; $i -lt 2 -and $node; $i++) {
+    foreach ($c in $node.FindAll($scope::Descendants, $button)) {
+      if ((Plain $c.Current.Name) -eq $with) { return $true }
+    }
+    $node = $walker.GetParent($node)
+  }
+  return $false
+}
+
 foreach ($id in (Get-Process -Name claude -ErrorAction SilentlyContinue).Id) {
   $mine = New-Object System.Windows.Automation.PropertyCondition($A::ProcessIdProperty, $id)
   foreach ($window in $A::RootElement.FindAll($scope::Children, $mine)) {
     foreach ($b in $window.FindAll($scope::Descendants, $button)) {
       $name = $b.Current.Name
       if (-not $name) { continue }
-      if ($labels -contains ($name -replace '[^A-Za-z ]+$', '').Trim()) {
+      if (($labels -contains (Plain $name)) -and (InBox $b)) {
         $p = $null
         if ($b.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$p)) {
           $p.Invoke(); "pressed"; exit 0
@@ -223,12 +241,18 @@ foreach ($id in (Get-Process -Name claude -ErrorAction SilentlyContinue).Id) {
 """
 
 
-def press_button(labels: tuple[str, ...]) -> bool:
-    """Invoke the first claude.exe button labelled one of `labels`. False when there is none yet:
-    a box can be in the records before its buttons are drawn, and the caller presses again."""
+def press_button(labels: tuple[str, ...], with_button: str = "Deny") -> bool:
+    """Invoke the first claude.exe button labelled one of `labels` that sits in a box with a
+    `with_button` button. True when it was invoked, and then the press is done: Invoke returns
+    once the application has run the button's handler. False when there is none yet: a box can be
+    in the records before its buttons are drawn, and the caller presses again."""
     import subprocess
 
-    env = {**os.environ, "COWORK_EVALS_LABELS": "|".join(labels)}
+    env = {
+        **os.environ,
+        "COWORK_EVALS_LABELS": "|".join(labels),
+        "COWORK_EVALS_WITH": with_button,
+    }
     argv = ["powershell", "-NoProfile", "-NonInteractive", "-Command", _UIA_SCRIPT]
     try:
         done = subprocess.run(argv, capture_output=True, text=True, env=env, timeout=60)
@@ -237,10 +261,3 @@ def press_button(labels: tuple[str, ...]) -> bool:
     if done.returncode != 0:
         raise OSError(f"powershell returned {done.returncode}: {done.stderr.strip()[:200]}")
     return done.stdout.strip().endswith("pressed")
-
-
-def consent(message: str, title: str, timeout: float) -> bool:
-    """Ask for the keyboard. OK or no answer within the timeout is yes, Cancel is no."""
-    user32, _ = _load()
-    answer = user32.MessageBoxTimeoutW(None, message, title, MB_FLAGS, 0, int(timeout * 1000))
-    return answer in (IDOK, MB_TIMEDOUT)

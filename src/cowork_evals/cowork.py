@@ -126,6 +126,7 @@ SUBMIT = "submit"
 PERMISSION_REQUEST = "permission_request"
 PERMISSION_RESPONSE = "permission_response"
 QUESTION_TOOL = "AskUserQuestion"
+DENY_DECISION = "deny"
 FOLDER_TOOL = "mcp__cowork__request_cowork_directory"
 
 # How long an approval box stands before its answer is pressed. A box shows its buttons before
@@ -492,22 +493,25 @@ class CoWork:
 
     def _answer(
         self, request: AuditRecord, approval: Approval | None, *, submit_only: bool = False
-    ) -> None:
+    ) -> bool:
         """Press an approval box's button, or a question's first option once per question.
+        True when the press was sent, False when there was nothing to press yet.
 
         A multi-choice question is ticked by its digit and sent by its Submit button on macOS, by
         Ctrl+Enter on Windows. `submit_only` sends alone: the digit again would untick the option.
         """
         if approval is not None and not WINDOWS:
-            self._press_button(APPROVAL_LABELS[approval.answer])
-            return
+            sent = self._press_button(APPROVAL_LABELS[approval.answer])
+            return self._pressed(request, f"{approval.answer} button", sent)
         if approval is not None and approval.answer == "allow" and request.tool_name == FOLDER_TOOL:
-            self._native(windows.press_button, APPROVAL_LABELS["allow"])
-            return
+            sent = self._native(windows.press_button, APPROVAL_LABELS["allow"])
+            return self._pressed(request, "Allow button", bool(sent))
         if approval is not None:
             self._guard()
             self._native(windows.press_allow if approval.answer == "allow" else windows.press_deny)
-            return
+            return self._pressed(
+                request, "Ctrl+Enter" if approval.answer == "allow" else "Esc", True
+            )
         questions = (request.tool_input or {}).get("questions")
         count = len(questions) if isinstance(questions, list) and questions else 1
         for position in range(0 if submit_only else count):
@@ -518,18 +522,33 @@ class CoWork:
                 self._native(windows.press_first_option)
             else:
                 self._fire(list(FIRST_OPTION_KEYS))
+            self._pressed(request, "first option (1)", True)
+        sent = True
         if _multi_select(request):
             time.sleep(0 if submit_only else 0.5)
             if WINDOWS:
                 self._guard()
                 self._native(windows.press_allow)
             else:
-                self._press_button(SUBMIT_LABELS)
+                sent = self._press_button(SUBMIT_LABELS)
+            self._pressed(request, "send", sent)
+        return sent
 
-    def _press_button(self, labels: tuple[str, ...]) -> None:
+    def _pressed(self, request: AuditRecord, what: str, sent: bool) -> bool:
+        """One log line per press: what, for which request, and whether it was sent."""
+        LOGGER.info(
+            "pressed %s for %s (request %s): %s",
+            what,
+            request.tool_name,
+            (request.uuid or "")[:8],
+            "sent" if sent else "nothing to press yet",
+        )
+        return sent
+
+    def _press_button(self, labels: tuple[str, ...]) -> bool:
         """Press a CoWork button through the Accessibility API. Not running is code 3."""
         try:
-            macos.press_button(COWORK_PROCESS, labels)
+            return macos.press_button(COWORK_PROCESS, labels)
         except OSError as error:
             raise CoWorkError(3, f"press_button: {error}") from error
 
@@ -577,10 +596,11 @@ class CoWork:
         if code != 0:
             raise CoWorkError(3, f"{argv[0]} returned {code}")
 
-    def _native(self, call: Any, *args: Any) -> None:
-        """Run one Win32 step. An `OSError` is code 3, as a non-zero `osascript` is."""
+    def _native(self, call: Any, *args: Any) -> Any:
+        """Run one Win32 step and return what it returned. An `OSError` is code 3, as a non-zero
+        `osascript` is."""
         try:
-            call(*args)
+            return call(*args)
         except OSError as error:
             raise CoWorkError(3, f"{call.__name__}: {error}") from error
 
@@ -637,23 +657,30 @@ class CoWork:
 
         A standing request is the session waiting for the user, so quiescence does not count
         while one stands. A question is left `waiting_seconds` for a person to answer, then
-        its first option is pressed. An approval box takes the first unused of `approvals` that
-        matches it, after `ANSWER_DELAY_SECONDS`, pressed again every `RETRY_SECONDS` while it
-        stands. With none for it, or when what was pressed did not land, the run returns as
-        waiting once `waiting_seconds` have passed.
+        its first option is pressed. An approval box takes the first of `approvals` that matches
+        it and is not a spent allow, after `ANSWER_DELAY_SECONDS`. A press is repeated every
+        `RETRY_SECONDS` while the box stands, up to `PRESSES` times, except on Windows once a
+        press was sent: there a button that was invoked or a key that was delivered is not
+        pressed again, since a second press could land on the next box. On macOS an AXPress that
+        succeeds has been measured to leave the box open, so it is repeated. With no answer for
+        a box, or when what was pressed did not land, the run returns as waiting once
+        `waiting_seconds` have passed.
 
         Quiescence is a heuristic. It counts only after the run has demonstrably started,
         because the idle window would otherwise accrue during VM boot and an empty session
-        would be reported as a finished run.
+        would be reported as a finished run. It ends a run only when no box was answered, or the
+        last one was denied: a denied box can end the turn with no `completed`, while after an
+        allow or an answer Claude can think longer than the window before it writes.
         """
         deadline = time.monotonic() + self._config.run_timeout
         signature: object = None
         idle_since = time.monotonic()
         standing: dict[int, float] = {}
         # Per request: what is pressed again while it stands (an approval, SUBMIT for a
-        # multi-choice question, None for nothing), how often, and when last.
-        pressed: dict[int, tuple[Approval | str | None, int, float]] = {}
-        used: set[int] = set()
+        # multi-choice question, None for nothing), how often, when last, and whether the
+        # press is done (sent, on Windows) and must not be repeated.
+        pressed: dict[int, tuple[Approval | str | None, int, float, bool]] = {}
+        used: set[int] = set()  # the allows already pressed
         while True:
             audit = _read_jsonl(session_dir / AUDIT, AuditRecord)
             if TERMINAL_STATE in _lifecycle(audit):
@@ -673,7 +700,9 @@ class CoWork:
                 idle_since = now
                 approval = None
                 if request.tool_name != QUESTION_TOOL:
-                    # The first answer not yet used that matches: boxes come in no fixed order.
+                    # The first answer that matches and is not a spent allow: boxes come in no
+                    # fixed order. A deny is never spent, since it writes nothing and a retried
+                    # call can raise the same box again.
                     approval = next(
                         (
                             a
@@ -684,29 +713,42 @@ class CoWork:
                         None,
                     )
                 if index in pressed:
-                    answer, count, last = pressed[index]
-                    if answer is not None and count < PRESSES and now - last >= RETRY_SECONDS:
+                    answer, count, last, done = pressed[index]
+                    if (
+                        answer is not None
+                        and not done
+                        and count < PRESSES
+                        and now - last >= RETRY_SECONDS
+                    ):
                         if isinstance(answer, Approval):
-                            self._answer(request, answer)
+                            sent = self._answer(request, answer)
                         else:
-                            self._answer(request, None, submit_only=True)
-                        pressed[index] = (answer, count + 1, now)
+                            sent = self._answer(request, None, submit_only=True)
+                        pressed[index] = (answer, count + 1, now, sent and WINDOWS)
                     elif now - last >= self._config.waiting_seconds:
                         return session_dir
                 elif approval is not None and now - since >= ANSWER_DELAY_SECONDS:
-                    self._answer(request, approval)
-                    pressed[index] = (approval, 1, now)
-                    used.add(
-                        next(i for i, a in enumerate(approvals) if a is approval and i not in used)
-                    )
+                    sent = self._answer(request, approval)
+                    pressed[index] = (approval, 1, now, sent and WINDOWS)
+                    if approval.answer == "allow":
+                        used.add(
+                            next(
+                                i
+                                for i, a in enumerate(approvals)
+                                if a is approval and i not in used
+                            )
+                        )
                 elif now - since >= self._config.waiting_seconds:
                     if request.tool_name != QUESTION_TOOL:
                         return session_dir
-                    self._answer(request, None)
-                    pressed[index] = (SUBMIT if _multi_select(request) else None, 1, now)
+                    sent = self._answer(request, None)
+                    multi = _multi_select(request)
+                    pressed[index] = (SUBMIT if multi else None, 1, now, sent and WINDOWS)
 
-            elif _started(audit, session_dir) and (
-                time.monotonic() - idle_since >= self._config.idle_seconds
+            elif (
+                _started(audit, session_dir)
+                and _last_decision(audit) in (None, DENY_DECISION)
+                and time.monotonic() - idle_since >= self._config.idle_seconds
             ):
                 LOGGER.warning(
                     "the completion signal fired: quiescence, which is a heuristic and can "
@@ -1004,10 +1046,34 @@ def _multi_select(request: AuditRecord) -> bool:
     )
 
 
+def _last_decision(audit: list[AuditRecord]) -> str | None:
+    """The decision of the last permission response, or None when no box was answered."""
+    decisions = [
+        r.decision for r in audit if r.type == "system" and r.subtype == PERMISSION_RESPONSE
+    ]
+    return decisions[-1] if decisions else None
+
+
 def _ended_on_deny(audit: list[AuditRecord]) -> bool:
-    """Whether the last permission response of the session was a deny."""
-    responses = [r for r in audit if r.type == "system" and r.subtype == PERMISSION_RESPONSE]
-    return bool(responses) and responses[-1].decision == "deny"
+    """Whether the session ended on a deny: the last permission response denied, and after it
+    Claude did no more than retry the denied call. A new request, text, or a call to another
+    tool after it means the run went on, and is not this."""
+    last = max(
+        (i for i, r in enumerate(audit) if r.type == "system" and r.subtype == PERMISSION_RESPONSE),
+        default=None,
+    )
+    if last is None or audit[last].decision != DENY_DECISION:
+        return False
+    for record in audit[last + 1 :]:
+        if record.type == "system" and record.subtype == PERMISSION_REQUEST:
+            return False
+        if record.type == "assistant" and record.message is not None:
+            for block in record.message.blocks():
+                if block.type == "text" and block.text:
+                    return False
+                if block.type == "tool_use" and block.name != audit[last].tool_name:
+                    return False
+    return True
 
 
 def _requests(audit: list[AuditRecord]) -> list[tuple[AuditRecord, bool]]:
