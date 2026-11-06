@@ -104,21 +104,37 @@ UIA_SCRIPT = r"""
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 $A = [System.Windows.Automation.AutomationElement]
+$scope = [System.Windows.Automation.TreeScope]
+$walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
 $labels = $env:PROBE_LABELS -split '\|'
 $button = New-Object System.Windows.Automation.PropertyCondition(
   $A::ControlTypeProperty, [System.Windows.Automation.ControlType]::Button)
+
+function Plain($name) { ($name -replace '[^A-Za-z ]+$', '').Trim() }
+
+# The driver's rule: only a button of an approval box, one whose parent or grandparent also holds
+# a Deny button. A chat in the sidebar or a banner called Allow has none.
+function InBox($b) {
+  $node = $walker.GetParent($b)
+  for ($i = 0; $i -lt 2 -and $node; $i++) {
+    foreach ($c in $node.FindAll($scope::Descendants, $button)) {
+      if ((Plain $c.Current.Name) -eq 'Deny') { return $true }
+    }
+    $node = $walker.GetParent($node)
+  }
+  return $false
+}
+
 $found = $null; $seen = @()
 foreach ($id in (Get-Process -Name claude -ErrorAction SilentlyContinue).Id) {
   $mine = New-Object System.Windows.Automation.PropertyCondition($A::ProcessIdProperty, $id)
-  $scope = [System.Windows.Automation.TreeScope]
   foreach ($window in $A::RootElement.FindAll($scope::Children, $mine)) {
     foreach ($b in $window.FindAll($scope::Descendants, $button)) {
       $name = $b.Current.Name
       if (-not $name) { continue }
       $seen += $name
       # A label can carry its shortcut: a digit, or the Enter symbol.
-      $plain = ($name -replace '[^A-Za-z ]+$', '').Trim()
-      if (-not $found -and $labels -contains $plain) { $found = $b }
+      if (-not $found -and ($labels -contains (Plain $name)) -and (InBox $b)) { $found = $b }
     }
   }
 }
@@ -316,6 +332,31 @@ class Watcher:
             self.last_decision = record.get("decision")
 
 
+def _window_details() -> dict[str, str]:
+    """Windows: the executable and the window class of the CoWork window. The driver's frontmost
+    guard compares only the process name, `claude`, which Claude Code's CLI shares; this is what
+    would tell the two apart."""
+    import ctypes
+    from ctypes import wintypes
+
+    from cowork_evals import windows
+
+    user32, kernel32 = windows._load()
+    user32.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+    hwnd = windows._cowork_window()
+    pid = ctypes.c_ulong()
+    user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+    path, handle = "", kernel32.OpenProcess(0x1000, False, pid.value)
+    if handle:
+        size, buffer = ctypes.c_ulong(1024), ctypes.create_unicode_buffer(1024)
+        if kernel32.QueryFullProcessImageNameW(handle, 0, buffer, ctypes.byref(size)):
+            path = buffer.value
+        kernel32.CloseHandle(handle)
+    name = ctypes.create_unicode_buffer(256)
+    user32.GetClassNameW(hwnd, name, 256)
+    return {"exe": path, "window_class": name.value}
+
+
 def _ax(key: str) -> str:
     """Press the box's Allow button. Types nothing, so no frontmost check. What it found."""
     if driver.WINDOWS:
@@ -494,6 +535,11 @@ def main() -> int:
         prompt=prompt,
         key=key,
     )
+    if driver.WINDOWS:
+        try:
+            log.write("window", **_window_details())
+        except Exception as error:  # a diagnostic: it never stops the run
+            log.write("window", error=str(error)[:200])
     try:
         session_dir = probe.submit(prompt)
     except CoWorkError as error:

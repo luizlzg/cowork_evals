@@ -50,7 +50,8 @@ another key than the scenario's.
 approve: on the Windows connector box `2` is "Allow for this task", which skips later checks in
 the same chat. The folder box has no shortcut: no key allows it while the keyboard is in the
 message field (measured on macOS and Windows), so `folder_allow` presses its Allow button
-instead. On Windows, if `ax_allow` does not allow it, try `--key ax_focus_enter`.
+instead. On Windows it invokes only an Allow button that has a Deny button beside it, so a chat
+or a banner called "Allow" is not pressed. If it does not allow the box, try `--key ax_focus_enter`.
 
 ## What happens
 
@@ -70,7 +71,8 @@ instead. On Windows, if `ax_allow` does not allow it, try `--key ax_focus_enter`
 
 ## What the log contains
 
-- The OS and Python versions, the scenario, its prompt and key.
+- The OS and Python versions, the scenario, its prompt and key. On Windows also the executable
+  path and the window class of the Claude window.
 - Each new line of the session's files: the record type, its field names, and for messages the
   first 200 characters of text, the tool name and input, and tool results.
 - Field names only for other records, such as a plugin's injected context.
