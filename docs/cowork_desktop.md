@@ -311,6 +311,25 @@ git-ignored:
 }
 ```
 
+## 6. Questions and approval boxes
+
+Measured by the interaction probe (branch `feat/interaction-probe`) on macOS 26.7.1 with the Claude-3p application,
+2 November 2026: a question through `AskUserQuestion`, and a `curl` POST to Microsoft Graph that
+an approval box stopped.
+
+| Fact                | Value                                                                               |
+| ------------------- | ----------------------------------------------------------------------------------- |
+| Waiting             | One `system` record, `subtype: permission_request`, with `tool_name` and `tool_input`. Nothing else is written until the answer |
+| Answer              | `subtype: permission_response`, with `decision` (`once` or `deny`) and `granted`    |
+| Question keys       | The option's digit: `1` chose the first. The options are not buttons in the accessibility tree |
+| Approval keys       | `1` or Escape denied. `2` or Cmd+Return allowed once, when the composer did not hold the keyboard |
+| Focus               | After `activate`, a digit or Cmd+Return lands in the composer and the box stays |
+| Folder box          | `mcp__cowork__request_cowork_directory` asks to connect a folder. With the keyboard in the composer no key answers it |
+| Buttons             | With `AXManualAccessibility` set, the tree holds the box's buttons: `Deny 1` and `Allow once 2` for a tool, `Deny` and `Allow` for a folder. `AXPress` on one answers the box, whatever is frontmost |
+| Multi-choice        | `1` ticks the first option and sends nothing. The question's `Submit` button sends it |
+| Press timing        | A press 2.2 s after the request did nothing; the next, at 5.3 s, answered it          |
+| Denied tool result  | Starts `User rejected using`                                                         |
+
 ## Windows
 
 Measured by a probe run on Windows 11 (10.0.26200) with the Claude-3p application, 19 October
@@ -326,4 +345,8 @@ calls are in `src/cowork_evals/windows.py`.
 | Clear, submit | `SendInput`: Ctrl+A, Delete reached the composer. Return goes the same way, unprobed   |
 | Grant         | None. Windows has no counterpart of the Accessibility grant                            |
 | Consent       | `MessageBoxTimeoutW`, Cancel the default button, unprobed                              |
+| Question      | `1` answers it; a multi-choice question is sent with Ctrl+Enter. 4 Nov 2026, Windows 11 |
+| Tool box      | Ctrl+Enter allows once, Escape denies, from the composer. The Microsoft 365 connector box's `2` is "Allow for this task" and `3` "Allow once", so digits are not used |
+| Folder box    | `Deny` and `Allow`, no shortcut: Escape denies it, no key allows it from the composer. Invoking `Allow` through UI Automation (`InvokePattern`) allows it; the first try 3 s after the request found only the window's buttons, the next at 7 s found and invoked it |
+| After a deny  | One request. Claude retries the call and Cowork refuses it at once, with no box, and the turn ends with no reply and no `completed` record (also on macOS) |
 
