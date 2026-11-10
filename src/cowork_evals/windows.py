@@ -261,3 +261,10 @@ def press_button(labels: tuple[str, ...], with_button: str = "Deny") -> bool:
     if done.returncode != 0:
         raise OSError(f"powershell returned {done.returncode}: {done.stderr.strip()[:200]}")
     return done.stdout.strip().endswith("pressed")
+
+
+def consent(message: str, title: str, timeout: float) -> bool:
+    """Ask for the keyboard. OK or no answer within the timeout is yes, Cancel is no."""
+    user32, _ = _load()
+    answer = user32.MessageBoxTimeoutW(None, message, title, MB_FLAGS, 0, int(timeout * 1000))
+    return answer in (IDOK, MB_TIMEDOUT)
