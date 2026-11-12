@@ -56,14 +56,19 @@ While one stands, quiescence does not count.
 | Question     | Leaves it `waiting_seconds` for a person to answer, then presses its first option      |
 | Approval box | Presses the first answer from `interactions.yaml` that matches it and is not a spent allow, after 2 seconds. With none, leaves it `waiting_seconds` for a person, then stops the run as waiting |
 
-A question's first option is the key `1`, behind the frontmost check and with no activation:
-activating CoWork moves the keyboard to the composer. A multi-choice question is then sent with
-its Submit button, pressed as below. On macOS an approval box, the folder box
-included, is answered by pressing its own button through the Accessibility API, by label
+On macOS a question is answered through the Accessibility API, one step per call, repeated every
+second while the question stands (up to two steps per question plus two). A step chooses the
+first option of the card's current question if none is chosen, and otherwise presses Submit or
+Next question. Choosing the option is enough for a single question and moves a card with several
+on to the next; a multi-choice question needs its Submit. The digit shortcut stopped working in
+the Cowork update of 10 Nov 2026 and now types into the card's "Something else" text field.
+On macOS an approval box, the folder box included, is answered by pressing its own button
+through the Accessibility API, by label
 (`Allow once` or `Allow`, `Deny`), so the keyboard focus and the frontmost application do not
 matter. The press is repeated every 3 seconds while the box stands, four times at most: an
 AXPress that succeeds has been measured to leave the box open. On Windows a question takes `1`
-and a multi-choice question is sent with Ctrl+Enter; a tool box is allowed once with Ctrl+Enter
+(not measured since the update, and the card's text field may take it now) and a multi-choice
+question is sent with Ctrl+Enter; a tool box is allowed once with Ctrl+Enter
 and denied with Escape; the folder box, which takes no key, is denied with Escape and allowed by
 invoking its Allow button through UI Automation (Windows PowerShell). That search takes only a
 button whose parent or grandparent also holds a Deny button, so a chat or a banner called
