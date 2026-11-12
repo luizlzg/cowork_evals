@@ -115,11 +115,11 @@ RETURN = (
 # pressing its button through the Accessibility API (macos.py), which types nothing. On Windows
 # a tool box takes Ctrl+Enter or Escape, and the folder box's Allow button is pressed through UI
 # Automation (windows.press_button), since no key reaches it.
-FIRST_OPTION_KEYS = ("osascript", "-e", 'tell application "System Events" to keystroke "1"')
+# On macOS a question is answered one step at a time through the Accessibility API (macos.py):
+# the digit shortcut stopped working in the Cowork update of 10 Nov 2026 and now types into the
+# card's text field. On Windows it is still the digit, then Ctrl+Enter for a multi-choice card.
 APPROVAL_LABELS = {"allow": ("Allow once", "Allow"), "deny": ("Deny",)}
-# A multi-choice question waits for its send button after the digit ticks an option: Submit on
-# macOS, Ctrl+Enter on Windows.
-SUBMIT_LABELS = ("Submit",)
+# A multi-choice question waits for its send after the digit ticks an option, on Windows.
 SUBMIT = "submit"
 
 # A question or an approval box writes a permission_request, its answer a permission_response.
@@ -135,6 +135,10 @@ FOLDER_TOOL = "mcp__cowork__request_cowork_directory"
 ANSWER_DELAY_SECONDS = 2.0
 RETRY_SECONDS = 3.0
 PRESSES = 4
+# A question takes up to two steps per question (choose, then Next or Submit), each a moment
+# after the last, so the step is repeated faster and more often than a button press.
+STEP = "step"
+STEP_SECONDS = 1.0
 
 # Step 2a. `tell me to activate` is what forces the modal in front of the editor the
 # developer is working in. There is no `default button`, so a Return typed into that editor
@@ -494,11 +498,13 @@ class CoWork:
     def _answer(
         self, request: AuditRecord, approval: Approval | None, *, submit_only: bool = False
     ) -> bool:
-        """Press an approval box's button, or a question's first option once per question.
+        """Press an approval box's button, or answer a question with its first option.
         True when the press was sent, False when there was nothing to press yet.
 
-        A multi-choice question is ticked by its digit and sent by its Submit button on macOS, by
-        Ctrl+Enter on Windows. `submit_only` sends alone: the digit again would untick the option.
+        On macOS a question is answered one step per call: choose the first option of the card's
+        current question, or press its Submit or Next question. On Windows it is the digit once per
+        question, then Ctrl+Enter for a multi-choice card; `submit_only` sends alone, since the
+        digit again would untick the option.
         """
         if approval is not None and not WINDOWS:
             sent = self._press_button(APPROVAL_LABELS[approval.answer])
@@ -512,25 +518,25 @@ class CoWork:
             return self._pressed(
                 request, "Ctrl+Enter" if approval.answer == "allow" else "Esc", True
             )
+        if not WINDOWS:
+            try:
+                acted, detail = macos.answer_question(COWORK_PROCESS)
+            except OSError as error:
+                raise CoWorkError(3, f"answer_question: {error}") from error
+            return self._pressed(request, f"question step ({detail[:240]})", acted)
         questions = (request.tool_input or {}).get("questions")
         count = len(questions) if isinstance(questions, list) and questions else 1
         for position in range(0 if submit_only else count):
             if position:
                 time.sleep(0.5)
             self._guard()
-            if WINDOWS:
-                self._native(windows.press_first_option)
-            else:
-                self._fire(list(FIRST_OPTION_KEYS))
+            self._native(windows.press_first_option)
             self._pressed(request, "first option (1)", True)
         sent = True
         if _multi_select(request):
             time.sleep(0 if submit_only else 0.5)
-            if WINDOWS:
-                self._guard()
-                self._native(windows.press_allow)
-            else:
-                sent = self._press_button(SUBMIT_LABELS)
+            self._guard()
+            self._native(windows.press_allow)
             self._pressed(request, "send", sent)
         return sent
 
@@ -714,16 +720,17 @@ class CoWork:
                     )
                 if index in pressed:
                     answer, count, last, done = pressed[index]
+                    step = answer == STEP
                     if (
                         answer is not None
                         and not done
-                        and count < PRESSES
-                        and now - last >= RETRY_SECONDS
+                        and count < (_question_steps(request) if step else PRESSES)
+                        and now - last >= (STEP_SECONDS if step else RETRY_SECONDS)
                     ):
                         if isinstance(answer, Approval):
                             sent = self._answer(request, answer)
                         else:
-                            sent = self._answer(request, None, submit_only=True)
+                            sent = self._answer(request, None, submit_only=answer == SUBMIT)
                         pressed[index] = (answer, count + 1, now, sent and WINDOWS)
                     elif now - last >= self._config.waiting_seconds:
                         return session_dir
@@ -742,8 +749,10 @@ class CoWork:
                     if request.tool_name != QUESTION_TOOL:
                         return session_dir
                     sent = self._answer(request, None)
-                    multi = _multi_select(request)
-                    pressed[index] = (SUBMIT if multi else None, 1, now, sent and WINDOWS)
+                    # macOS: a step per call until the card is gone. Windows: the digits and,
+                    # for a multi-choice card, Ctrl+Enter again.
+                    again = STEP if not WINDOWS else (SUBMIT if _multi_select(request) else None)
+                    pressed[index] = (again, 1, now, sent and WINDOWS)
 
             elif (
                 _started(audit, session_dir)
@@ -1036,6 +1045,12 @@ def _tool_calls(records: list[SessionRecord]) -> list[ToolCall]:
                 )
             )
     return calls
+
+
+def _question_steps(request: AuditRecord) -> int:
+    """How many steps a question card can take: choose and then Next or Submit, per question."""
+    questions = (request.tool_input or {}).get("questions")
+    return 2 * (len(questions) if isinstance(questions, list) and questions else 1) + 2
 
 
 def _multi_select(request: AuditRecord) -> bool:
