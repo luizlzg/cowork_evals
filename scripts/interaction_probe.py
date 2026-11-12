@@ -75,7 +75,6 @@ KEYS = (
     "1_enter",
     "ax_allow",
     "ax_focus_enter",
-    "ax_dump",
     *"123456789",
 )
 # ax_allow presses the box's Allow button: through the Accessibility API on macOS, through UI
@@ -380,138 +379,6 @@ def _ax(key: str) -> str:
     return f"pressed={pressed} buttons={' | '.join(seen[-10:])}"
 
 
-def _ax_dump() -> str:
-    """macOS: the accessibility subtree of the question card, as JSON. Presses nothing.
-
-    The card is found from its Skip or Submit button: the subtree four parents up holds the
-    options as siblings. Each element lists its role, subrole, title, description, value and the
-    actions it takes, which is what answering a question through accessibility needs."""
-    import ctypes
-    import subprocess
-
-    ax = ctypes.CDLL("/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices")
-    cf = ctypes.CDLL("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")
-    p, utf8 = ctypes.c_void_p, 0x08000100
-    cf.CFStringCreateWithCString.restype = p
-    cf.CFStringCreateWithCString.argtypes = [p, ctypes.c_char_p, ctypes.c_uint32]
-    cf.CFStringGetCString.argtypes = [p, ctypes.c_char_p, ctypes.c_long, ctypes.c_uint32]
-    cf.CFGetTypeID.argtypes = [p]
-    cf.CFGetTypeID.restype = ctypes.c_ulong
-    cf.CFStringGetTypeID.restype = ctypes.c_ulong
-    cf.CFArrayGetTypeID.restype = ctypes.c_ulong
-    cf.CFArrayGetCount.argtypes = [p]
-    cf.CFArrayGetCount.restype = ctypes.c_long
-    cf.CFArrayGetValueAtIndex.argtypes = [p, ctypes.c_long]
-    cf.CFArrayGetValueAtIndex.restype = p
-    cf.CFRelease.argtypes = [p]
-    ax.AXUIElementCreateApplication.argtypes = [ctypes.c_int]
-    ax.AXUIElementCreateApplication.restype = p
-    ax.AXUIElementCopyAttributeValue.argtypes = [p, p, ctypes.POINTER(p)]
-    ax.AXUIElementCopyActionNames.argtypes = [p, ctypes.POINTER(p)]
-    ax.AXUIElementSetAttributeValue.argtypes = [p, p, p]
-    owned: list[int] = []
-
-    def name(text: str) -> int:
-        value = cf.CFStringCreateWithCString(None, text.encode(), utf8)
-        owned.append(value)
-        return value
-
-    def copy(element: int, attribute: int) -> int | None:
-        value = p()
-        if ax.AXUIElementCopyAttributeValue(element, attribute, ctypes.byref(value)) != 0:
-            return None
-        owned.append(value.value)
-        return value.value
-
-    def text(element: int, attribute: int) -> str:
-        value = copy(element, attribute)
-        if not value or cf.CFGetTypeID(value) != cf.CFStringGetTypeID():
-            return ""
-        buffer = ctypes.create_string_buffer(1024)
-        cf.CFStringGetCString(value, buffer, 1024, utf8)
-        return buffer.value.decode(errors="replace")
-
-    def array(value: int | None) -> list[int]:
-        if not value or cf.CFGetTypeID(value) != cf.CFArrayGetTypeID():
-            return []
-        return [cf.CFArrayGetValueAtIndex(value, i) for i in range(cf.CFArrayGetCount(value))]
-
-    role, subrole, title, description, value, children, parent = (
-        name(n)
-        for n in (
-            "AXRole",
-            "AXSubrole",
-            "AXTitle",
-            "AXDescription",
-            "AXValue",
-            "AXChildren",
-            "AXParent",
-        )
-    )
-    found = subprocess.run(["pgrep", "-x", driver.COWORK_PROCESS], capture_output=True, text=True)
-    app = ax.AXUIElementCreateApplication(int(found.stdout.split()[0]))
-    owned.append(app)
-    ax.AXUIElementSetAttributeValue(
-        app, name("AXManualAccessibility"), p.in_dll(cf, "kCFBooleanTrue")
-    )
-
-    def label(element: int) -> str:
-        return text(element, title) or text(element, description) or text(element, value)
-
-    anchor, stack = None, [app]
-    try:
-        while stack and anchor is None:
-            element = stack.pop()
-            if text(element, role) == "AXButton" and label(element).split(" ")[0] in (
-                "Skip",
-                "Submit",
-            ):
-                anchor = element
-            stack.extend(array(copy(element, children)))
-        if anchor is None:
-            return json.dumps({"error": "no Skip or Submit button: no question card on screen"})
-        top = anchor
-        for _ in range(4):
-            up = copy(top, parent)
-            if not up:
-                break
-            top = up
-        out: list[dict[str, Any]] = []
-
-        def walk(element: int, depth: int) -> None:
-            if len(out) >= 160 or depth > 7:
-                return
-            actions = p()
-            names: list[str] = []
-            if ax.AXUIElementCopyActionNames(element, ctypes.byref(actions)) == 0:
-                owned.append(actions.value)
-                names = [text_of(x) for x in array(actions.value)]
-            out.append(
-                {
-                    "depth": depth,
-                    "role": text(element, role),
-                    "subrole": text(element, subrole),
-                    "label": label(element)[:100],
-                    "actions": names,
-                }
-            )
-            for kid in array(copy(element, children)):
-                walk(kid, depth + 1)
-
-        def text_of(x: int) -> str:
-            if cf.CFGetTypeID(x) != cf.CFStringGetTypeID():
-                return ""
-            buffer = ctypes.create_string_buffer(256)
-            cf.CFStringGetCString(x, buffer, 256, utf8)
-            return buffer.value.decode(errors="replace")
-
-        walk(top, 0)
-        return json.dumps(out, ensure_ascii=False)
-    finally:
-        for owned_value in owned:
-            cf.CFRelease(owned_value)
-
-
 def _ax_press(labels: list[str]) -> tuple[str, list[str]]:
     """macOS: press the first Claude button labelled one of `labels`, its shortcut digit dropped.
     The button pressed, or "", and every label seen."""
@@ -632,8 +499,6 @@ def _press(probe: CoWork, key: str, request: dict[str, Any], *, again: bool) -> 
             time.sleep(0.5)
             _press_one(probe, last)
         return key
-    if key == "ax_dump":
-        return f"ax_dump: {_ax_dump()}"
     if key in ("ax_allow", "ax_focus_enter"):
         return f"{key}: {_ax(key)}"
     _press_one(probe, key)
@@ -642,7 +507,7 @@ def _press(probe: CoWork, key: str, request: dict[str, Any], *, again: bool) -> 
 
 def _retries(key: str) -> bool:
     """Whether a key is pressed again while its request stands. A lone digit is not."""
-    return not key.isdigit() and key not in ("1_each", "ax_dump")
+    return not key.isdigit() and key != "1_each"
 
 
 def main() -> int:
