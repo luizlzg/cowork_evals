@@ -37,6 +37,14 @@ FOLDER_PROMPT = (
     "Connect my Downloads folder (~/Downloads) to this chat, then tell me how many files are at "
     "its top level. Do not open or change any file."
 )
+BASH_PROMPT = (
+    "Use the bash tool to run this exact command: curl -s -o /dev/null -w '%{http_code}' "
+    "https://example.com . Then tell me the number it printed."
+)
+CONNECTOR_PROMPT = (
+    "Use the Microsoft 365 connector to list the subjects of my 3 most recent emails, then "
+    "reply with them."
+)
 # Each scenario: the prompt, and the key pressed when its request stands.
 SCENARIOS = {
     "question": (
@@ -61,7 +69,18 @@ SCENARIOS = {
     # Windows: its Allow button is pressed through accessibility instead.
     "folder_allow": (FOLDER_PROMPT, "ax_allow"),
     "folder_deny": (FOLDER_PROMPT, "esc"),
+    # Tool boxes. macOS presses the box's own button; the keys are for Windows.
+    "bash_allow": (BASH_PROMPT, "approve"),
+    "bash_deny": (BASH_PROMPT, "esc"),
+    "connector_deny": (CONNECTOR_PROMPT, "esc"),
 }
+if sys.platform == "darwin":
+    # The digit shortcut stopped working in the Cowork update of 10 Nov 2026: press the options.
+    for _name in ("question", "questions", "multiselect"):
+        SCENARIOS[_name] = (SCENARIOS[_name][0], "ax_option")
+    SCENARIOS["bash_allow"] = (BASH_PROMPT, "ax_allow")
+    SCENARIOS["bash_deny"] = (BASH_PROMPT, "ax_deny")
+    SCENARIOS["connector_deny"] = (CONNECTOR_PROMPT, "ax_deny")
 
 # A key, or a digit for each question then a key. `approve` is Cmd+Return on macOS and Ctrl+Enter
 # on Windows: allow once on every approval box (on Windows the connector box's 2 is "allow for
@@ -74,6 +93,7 @@ KEYS = (
     "1_approve",
     "1_enter",
     "ax_allow",
+    "ax_deny",
     "ax_focus_enter",
     "ax_dump",
     "space",
@@ -90,6 +110,7 @@ TRY_KEYS = ("1", "enter", "down_enter", "space", "tab_enter")
 # Automation on Windows (Windows PowerShell, nothing to install). ax_focus_enter, Windows only,
 # gives that button the keyboard and presses Enter: the box's Allow is its default button.
 AX_ALLOW = ("Allow once", "Allow")
+AX_DENY = ("Deny",)
 SYSTEM_EVENTS = 'tell application "System Events" to '
 MAC_KEYS = {
     "esc": [SYSTEM_EVENTS + "key code 53"],
@@ -656,6 +677,9 @@ def _press(probe: CoWork, key: str, request: dict[str, Any], *, again: bool) -> 
 
         acted, detail = macos.answer_question(driver.COWORK_PROCESS)
         return f"ax_option: acted={acted} {detail[:700]}"
+    if key == "ax_deny":
+        pressed, seen = _ax_press(list(AX_DENY))
+        return f"ax_deny: pressed={pressed} buttons={' | '.join(seen[-10:])}"
     if key in ("ax_allow", "ax_focus_enter"):
         return f"{key}: {_ax(key)}"
     _press_one(probe, key)

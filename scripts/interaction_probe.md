@@ -24,18 +24,29 @@ uv run python scripts/interaction_probe.py questions
 uv run python scripts/interaction_probe.py multiselect
 uv run python scripts/interaction_probe.py folder_allow
 uv run python scripts/interaction_probe.py folder_deny
+uv run python scripts/interaction_probe.py bash_allow
+uv run python scripts/interaction_probe.py bash_deny
+uv run python scripts/interaction_probe.py connector_deny
 ```
 
-Add `--config <path>` if your `cowork_evals.yaml` is in another folder, and `--key <key>` to try
+Run them all, in any order. Since the Cowork update of 10 Nov 2026 the digit no longer answers a
+question on macOS (it types into the card's "Something else" field), so there the three question
+scenarios press the options through accessibility. On Windows they still press the digit: if
+the log shows the digit typed into the text field, tell us.
+
+Add `--delay <seconds>` to wait longer than 2 s before the first press, and `--config <path>` if your `cowork_evals.yaml` is in another folder, and `--key <key>` to try
 another key than the scenario's.
 
 | Scenario       | What Cowork is asked                                          | Key pressed |
 | -------------- | ------------------------------------------------------------- | ----------- |
-| `question`     | Ask you red or blue with its question tool, then write a file | `1`         |
-| `questions`    | Two questions in one question call, colour and size           | `1_each`: `1` once per question |
-| `multiselect`  | One question where several colours can be chosen              | `1_approve`: `1`, then `approve` to send |
+| `question`     | Ask you red or blue with its question tool, then write a file | Windows `1`; macOS `ax_option` |
+| `questions`    | Two questions in one question call, colour and size           | Windows `1_each`: `1` once per question; macOS `ax_option` |
+| `multiselect`  | One question where several colours can be chosen              | Windows `1_approve`: `1`, then `approve` to send; macOS `ax_option` |
 | `folder_allow` | Connect your Downloads folder and count its files             | `ax_allow`  |
 | `folder_deny`  | The same                                                      | `esc`       |
+| `bash_allow`   | Run a `curl` command in the shell (a tool box)                | Windows `approve`; macOS `ax_allow` |
+| `bash_deny`    | The same                                                      | Windows `esc`; macOS `ax_deny` |
+| `connector_deny` | List your 3 latest emails with the Microsoft 365 connector (read only, denied) | Windows `esc`; macOS `ax_deny` |
 
 | Key        | macOS      | Windows    |
 | ---------- | ---------- | ---------- |
@@ -43,6 +54,10 @@ another key than the scenario's.
 | `esc`      | Escape     | Escape     |
 | `enter`    | Return     | Enter      |
 | `1` to `9` | the digit  | the digit  |
+| `ax_option` | chooses the question card's first option, then Submit or Next question, one step per press | not available |
+| `ax_deny`  | presses the box's Deny button through the Accessibility API | not available |
+| `ax_dump`  | writes the question card's accessibility tree to the log, presses nothing | not available |
+| `try_keys` | presses 1, Return, Down+Return, Space, Tab+Return in turn on one request | the same |
 | `ax_allow` | presses the box's Allow button through the Accessibility API | presses it through UI Automation (Windows PowerShell) |
 | `ax_focus_enter` | not available | gives the Allow button the keyboard through UI Automation, then Enter |
 
