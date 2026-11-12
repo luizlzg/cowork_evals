@@ -76,8 +76,15 @@ KEYS = (
     "ax_allow",
     "ax_focus_enter",
     "ax_dump",
+    "space",
+    "down_enter",
+    "tab_enter",
+    "try_keys",
     *"123456789",
 )
+# try_keys presses these in turn, one every few seconds, on one standing request, and the log
+# shows which of them answered it. The digit used to be enough; after a Cowork update it is not.
+TRY_KEYS = ("1", "enter", "down_enter", "space", "tab_enter")
 # ax_allow presses the box's Allow button: through the Accessibility API on macOS, through UI
 # Automation on Windows (Windows PowerShell, nothing to install). ax_focus_enter, Windows only,
 # gives that button the keyboard and presses Enter: the box's Allow is its default button.
@@ -86,6 +93,9 @@ SYSTEM_EVENTS = 'tell application "System Events" to '
 MAC_KEYS = {
     "esc": [SYSTEM_EVENTS + "key code 53"],
     "enter": [SYSTEM_EVENTS + "key code 36"],
+    "space": [SYSTEM_EVENTS + "key code 49"],
+    "down_enter": [SYSTEM_EVENTS + "key code 125", "delay 0.2", SYSTEM_EVENTS + "key code 36"],
+    "tab_enter": [SYSTEM_EVENTS + "key code 48", "delay 0.2", SYSTEM_EVENTS + "key code 36"],
     "approve": [
         SYSTEM_EVENTS + "key down command",
         "delay 0.1",
@@ -95,9 +105,13 @@ MAC_KEYS = {
     ],
 }
 VK_CONTROL, VK_RETURN, VK_ESCAPE, VK_DIGIT_0 = 0x11, 0x0D, 0x1B, 0x30
+VK_SPACE, VK_DOWN, VK_TAB = 0x20, 0x28, 0x09
 WIN_KEYS = {
     "esc": [(VK_ESCAPE, False), (VK_ESCAPE, True)],
     "enter": [(VK_RETURN, False), (VK_RETURN, True)],
+    "space": [(VK_SPACE, False), (VK_SPACE, True)],
+    "down_enter": [(VK_DOWN, False), (VK_DOWN, True), (VK_RETURN, False), (VK_RETURN, True)],
+    "tab_enter": [(VK_TAB, False), (VK_TAB, True), (VK_RETURN, False), (VK_RETURN, True)],
     "approve": [(VK_CONTROL, False), (VK_RETURN, False), (VK_RETURN, True), (VK_CONTROL, True)],
 }
 
@@ -645,6 +659,11 @@ def _retries(key: str) -> bool:
     return not key.isdigit() and key not in ("1_each", "ax_dump")
 
 
+def _limit(key: str) -> int:
+    """How many presses a key gets while its request stands."""
+    return len(TRY_KEYS) if key == "try_keys" else PRESSES
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("scenario", choices=sorted(SCENARIOS))
@@ -711,7 +730,8 @@ def main() -> int:
             if watcher.waiting is None:
                 presses = 0
             elif presses == 0 and now - watcher.waiting_since >= args.delay:
-                pressed = _press(probe, key, watcher.waiting_input, again=False)
+                first = TRY_KEYS[0] if key == "try_keys" else key
+                pressed = _press(probe, first, watcher.waiting_input, again=False)
                 presses, last_press = 1, time.monotonic()
                 log.write(
                     "pressed",
@@ -720,8 +740,9 @@ def main() -> int:
                     count=presses,
                     since_request=round(last_press - watcher.waiting_since, 1),
                 )
-            elif 0 < presses < PRESSES and _retries(key) and now - last_press >= RETRY_SECONDS:
-                pressed = _press(probe, key, watcher.waiting_input, again=True)
+            elif 0 < presses < _limit(key) and _retries(key) and now - last_press >= RETRY_SECONDS:
+                again = TRY_KEYS[presses] if key == "try_keys" else key
+                pressed = _press(probe, again, watcher.waiting_input, again=True)
                 presses, last_press = presses + 1, time.monotonic()
                 log.write(
                     "pressed",
