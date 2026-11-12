@@ -37,13 +37,16 @@ FOLDER_PROMPT = (
     "Connect my Downloads folder (~/Downloads) to this chat, then tell me how many files are at "
     "its top level. Do not open or change any file."
 )
+# These boxes come from the second-brain plugin's send gate, which must be installed in Cowork:
+# Cowork asks for nothing on a shell command or a read by itself. Both requests are harmless: the
+# curl has no token and an empty body, and the event is for a probe test.
 BASH_PROMPT = (
-    "Use the bash tool to run this exact command: curl -s -o /dev/null -w '%{http_code}' "
-    "https://example.com . Then tell me the number it printed."
+    "Use the bash tool to run exactly this command and tell me its output: "
+    "curl -s -X POST https://graph.microsoft.com/v1.0/me/todo/lists -d '{}'"
 )
 CONNECTOR_PROMPT = (
-    "Use the Microsoft 365 connector to list the subjects of my 3 most recent emails, then "
-    "reply with them."
+    "Use the Microsoft 365 connector's create_event tool to create an event called 'probe test' "
+    "tomorrow at 09:00 for 15 minutes, with no attendees. Call the tool directly."
 )
 # Each scenario: the prompt, and the key pressed when its request stands.
 SCENARIOS = {

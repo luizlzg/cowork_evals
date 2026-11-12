@@ -7,8 +7,9 @@ one log file to send back.
 
 ## Before you start
 
-- The Claude desktop app open and signed in, with Cowork available. No plugin is needed: the
-  question tool and the folder box are Cowork's own.
+- The Claude desktop app open and signed in, with Cowork available. The question and folder
+  scenarios need no plugin. `bash_*` and `connector_deny` need the `second-brain` plugin
+  installed in Cowork: its send gate raises those boxes, Cowork raises none by itself.
 - This repository on branch `feat/interaction-probe`, with `uv sync` run once, and a
   `cowork_evals.yaml` that names your profile (`cowork.profile`, for example `Claude-3p`).
 - On macOS, the terminal you run it from allowed under System Settings, Privacy and Security,
@@ -44,9 +45,9 @@ another key than the scenario's.
 | `multiselect`  | One question where several colours can be chosen              | Windows `1_approve`: `1`, then `approve` to send; macOS `ax_option` |
 | `folder_allow` | Connect your Downloads folder and count its files             | `ax_allow`  |
 | `folder_deny`  | The same                                                      | `esc`       |
-| `bash_allow`   | Run a `curl` command in the shell (a tool box)                | Windows `approve`; macOS `ax_allow` |
+| `bash_allow`   | Run a `curl -X POST` to Microsoft Graph in the shell (the second-brain send gate asks) | Windows `approve`; macOS `ax_allow` |
 | `bash_deny`    | The same                                                      | Windows `esc`; macOS `ax_deny` |
-| `connector_deny` | List your 3 latest emails with the Microsoft 365 connector (read only, denied) | Windows `esc`; macOS `ax_deny` |
+| `connector_deny` | Create a calendar event with the Microsoft 365 connector (the send gate asks; always denied on Windows and macOS runs) | Windows `esc`; macOS `ax_deny` |
 
 | Key        | macOS      | Windows    |
 | ---------- | ---------- | ---------- |
