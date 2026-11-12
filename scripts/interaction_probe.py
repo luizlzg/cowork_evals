@@ -515,6 +515,12 @@ def main() -> int:
     parser.add_argument("scenario", choices=sorted(SCENARIOS))
     parser.add_argument("--key", choices=KEYS, help="the key to press instead of the scenario's")
     parser.add_argument(
+        "--delay",
+        type=float,
+        default=FIRST_SECONDS,
+        help="seconds a request stands before the first press (default %(default)s)",
+    )
+    parser.add_argument(
         "--config", help="cowork_evals.yaml to read, default the working directory's"
     )
     args = parser.parse_args()
@@ -569,7 +575,7 @@ def main() -> int:
                 break
             if watcher.waiting is None:
                 presses = 0
-            elif presses == 0 and now - watcher.waiting_since >= FIRST_SECONDS:
+            elif presses == 0 and now - watcher.waiting_since >= args.delay:
                 pressed = _press(probe, key, watcher.waiting_input, again=False)
                 presses, last_press = 1, time.monotonic()
                 log.write(
