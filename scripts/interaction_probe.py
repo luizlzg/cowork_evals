@@ -80,6 +80,7 @@ KEYS = (
     "down_enter",
     "tab_enter",
     "try_keys",
+    "ax_option",
     *"123456789",
 )
 # try_keys presses these in turn, one every few seconds, on one standing request, and the log
@@ -648,6 +649,13 @@ def _press(probe: CoWork, key: str, request: dict[str, Any], *, again: bool) -> 
         return key
     if key == "ax_dump":
         return f"ax_dump: {_ax_dump()}"
+    if key == "ax_option":
+        # The driver's own question step (cowork_evals.macos, branch feat/cowork-interactions):
+        # choose the card's first option, or press its Submit or Next question. One step per press.
+        from cowork_evals import macos
+
+        acted, detail = macos.answer_question(driver.COWORK_PROCESS)
+        return f"ax_option: acted={acted} {detail[:700]}"
     if key in ("ax_allow", "ax_focus_enter"):
         return f"{key}: {_ax(key)}"
     _press_one(probe, key)
@@ -661,6 +669,8 @@ def _retries(key: str) -> bool:
 
 def _limit(key: str) -> int:
     """How many presses a key gets while its request stands."""
+    if key == "ax_option":
+        return 8
     return len(TRY_KEYS) if key == "try_keys" else PRESSES
 
 
