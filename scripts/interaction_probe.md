@@ -7,9 +7,10 @@ one log file to send back.
 
 ## Before you start
 
-- The Claude desktop app open and signed in, with Cowork available, and the Microsoft 365
-  connector connected. The question and folder scenarios need no plugin. For `connector_*`,
-  **disable the `second-brain` plugin in Cowork first**: its send gate refuses the call before
+- The Claude desktop app open and signed in, with Cowork available. The question and folder
+  scenarios need nothing else. For `connector_*`: the Microsoft 365 connector connected with its
+  tool approval set to manual (Cowork settings, Connectors; on automatic the call runs with no
+  box), and the `second-brain` plugin disabled, since its send gate refuses the call before
   Cowork's own box can appear. Cowork raises no box for a shell command.
 - This repository on branch `feat/interaction-probe`, with `uv sync` run once, and a
   `cowork_evals.yaml` that names your profile (`cowork.profile`, for example `Claude-3p`).
@@ -61,7 +62,7 @@ another key than the scenario's.
 | `ax_allow` | presses the box's Allow button through the Accessibility API | presses it through UI Automation (Windows PowerShell) |
 | `ax_focus_enter` | not available | gives the Allow button the keyboard through UI Automation, then Enter |
 
-`approve` allows once on the tool boxes (bash, Microsoft 365 connector). A digit is not used to
+`approve` allows once on the connector box. A digit is not used to
 approve: on the Windows connector box `2` is "Allow for this task", which skips later checks in
 the same chat. The folder box has no shortcut: no key allows it while the keyboard is in the
 message field (measured on macOS and Windows), so `folder_allow` presses its Allow button

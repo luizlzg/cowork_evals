@@ -37,9 +37,10 @@ FOLDER_PROMPT = (
     "Connect my Downloads folder (~/Downloads) to this chat, then tell me how many files are at "
     "its top level. Do not open or change any file."
 )
-# The connector box is Cowork's own: a connector tool that writes needs approval. The second-brain
-# plugin's send gate denies the call before the box can appear, so run these with that plugin
-# disabled in Cowork. Cowork raises no box for a shell command. Allow creates a real 15-minute
+# The connector box is Cowork's own and appears when the connector's tool approval is set to manual
+# (Cowork settings, Connectors). With the approval on automatic the call runs with no box. The
+# second-brain plugin's send gate refuses the call before the box can appear, so run these with
+# that plugin disabled. Cowork raises no box for a shell command. Allow creates a real 15-minute
 # event without attendees: delete it afterwards.
 CONNECTOR_PROMPT = (
     "Use the Microsoft 365 connector's create_event tool to create an event called 'probe test' "
