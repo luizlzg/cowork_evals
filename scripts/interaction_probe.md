@@ -7,9 +7,10 @@ one log file to send back.
 
 ## Before you start
 
-- The Claude desktop app open and signed in, with Cowork available. The question and folder
-  scenarios need no plugin. `bash_*` and `connector_deny` need the `second-brain` plugin
-  installed in Cowork: its send gate raises those boxes, Cowork raises none by itself.
+- The Claude desktop app open and signed in, with Cowork available, and the Microsoft 365
+  connector connected. The question and folder scenarios need no plugin. For `connector_*`,
+  **disable the `second-brain` plugin in Cowork first**: its send gate refuses the call before
+  Cowork's own box can appear. Cowork raises no box for a shell command.
 - This repository on branch `feat/interaction-probe`, with `uv sync` run once, and a
   `cowork_evals.yaml` that names your profile (`cowork.profile`, for example `Claude-3p`).
 - On macOS, the terminal you run it from allowed under System Settings, Privacy and Security,
@@ -25,8 +26,7 @@ uv run python scripts/interaction_probe.py questions
 uv run python scripts/interaction_probe.py multiselect
 uv run python scripts/interaction_probe.py folder_allow
 uv run python scripts/interaction_probe.py folder_deny
-uv run python scripts/interaction_probe.py bash_allow
-uv run python scripts/interaction_probe.py bash_deny
+uv run python scripts/interaction_probe.py connector_allow
 uv run python scripts/interaction_probe.py connector_deny
 ```
 
@@ -45,9 +45,8 @@ another key than the scenario's.
 | `multiselect`  | One question where several colours can be chosen              | Windows `1_approve`: `1`, then `approve` to send; macOS `ax_option` |
 | `folder_allow` | Connect your Downloads folder and count its files             | `ax_allow`  |
 | `folder_deny`  | The same                                                      | `esc`       |
-| `bash_allow`   | Run a `curl -X POST` to Microsoft Graph in the shell (the second-brain send gate asks) | Windows `approve`; macOS `ax_allow` |
-| `bash_deny`    | The same                                                      | Windows `esc`; macOS `ax_deny` |
-| `connector_deny` | Create a calendar event with the Microsoft 365 connector (the send gate asks; always denied on Windows and macOS runs) | Windows `esc`; macOS `ax_deny` |
+| `connector_allow` | Create a calendar event with the Microsoft 365 connector (Cowork's own box). **Creates a real 15-minute event tomorrow at 09:00: delete it** | Windows `approve`; macOS `ax_allow` |
+| `connector_deny` | The same, denied: no event | Windows `esc`; macOS `ax_deny` |
 
 | Key        | macOS      | Windows    |
 | ---------- | ---------- | ---------- |

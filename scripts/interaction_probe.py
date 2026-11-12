@@ -37,13 +37,10 @@ FOLDER_PROMPT = (
     "Connect my Downloads folder (~/Downloads) to this chat, then tell me how many files are at "
     "its top level. Do not open or change any file."
 )
-# These boxes come from the second-brain plugin's send gate, which must be installed in Cowork:
-# Cowork asks for nothing on a shell command or a read by itself. Both requests are harmless: the
-# curl has no token and an empty body, and the event is for a probe test.
-BASH_PROMPT = (
-    "Use the bash tool to run exactly this command and tell me its output: "
-    "curl -s -X POST https://graph.microsoft.com/v1.0/me/todo/lists -d '{}'"
-)
+# The connector box is Cowork's own: a connector tool that writes needs approval. The second-brain
+# plugin's send gate denies the call before the box can appear, so run these with that plugin
+# disabled in Cowork. Cowork raises no box for a shell command. Allow creates a real 15-minute
+# event without attendees: delete it afterwards.
 CONNECTOR_PROMPT = (
     "Use the Microsoft 365 connector's create_event tool to create an event called 'probe test' "
     "tomorrow at 09:00 for 15 minutes, with no attendees. Call the tool directly."
@@ -72,17 +69,15 @@ SCENARIOS = {
     # Windows: its Allow button is pressed through accessibility instead.
     "folder_allow": (FOLDER_PROMPT, "ax_allow"),
     "folder_deny": (FOLDER_PROMPT, "esc"),
-    # Tool boxes. macOS presses the box's own button; the keys are for Windows.
-    "bash_allow": (BASH_PROMPT, "approve"),
-    "bash_deny": (BASH_PROMPT, "esc"),
+    # The Microsoft 365 connector box. macOS presses the box's button; the keys are for Windows.
+    "connector_allow": (CONNECTOR_PROMPT, "approve"),
     "connector_deny": (CONNECTOR_PROMPT, "esc"),
 }
 if sys.platform == "darwin":
     # The digit shortcut stopped working in the Cowork update of 10 Nov 2026: press the options.
     for _name in ("question", "questions", "multiselect"):
         SCENARIOS[_name] = (SCENARIOS[_name][0], "ax_option")
-    SCENARIOS["bash_allow"] = (BASH_PROMPT, "ax_allow")
-    SCENARIOS["bash_deny"] = (BASH_PROMPT, "ax_deny")
+    SCENARIOS["connector_allow"] = (CONNECTOR_PROMPT, "ax_allow")
     SCENARIOS["connector_deny"] = (CONNECTOR_PROMPT, "ax_deny")
 
 # A key, or a digit for each question then a key. `approve` is Cmd+Return on macOS and Ctrl+Enter
