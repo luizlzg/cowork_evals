@@ -20,6 +20,7 @@ cowork:
   # settle_seconds: 3.0
   # session_timeout: 120.0
   # idle_seconds: 20.0
+  # waiting_seconds: 60.0
   # run_timeout: 1800.0
   # max_runs: 50
   # Ask once per process for the keyboard, in a modal that forces itself in front of

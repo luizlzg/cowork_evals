@@ -254,6 +254,7 @@ class CoWorkSection:
     settle_seconds: float = 3.0
     session_timeout: float = 120.0
     idle_seconds: float = 20.0
+    waiting_seconds: float = 60.0
     run_timeout: float = 1800.0
     max_runs: int = 50
     consent: str = CONSENT_DIALOG
@@ -267,6 +268,7 @@ class CoWorkSection:
         "settle_seconds": _seconds,
         "session_timeout": _seconds,
         "idle_seconds": _seconds,
+        "waiting_seconds": _seconds,
         "run_timeout": _seconds,
         "max_runs": _count,
         "consent": _consent,
