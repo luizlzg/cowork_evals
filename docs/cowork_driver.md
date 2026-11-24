@@ -32,7 +32,7 @@ Each step names the code it raises on failure.
 | 4a | Guard               | Check CoWork is still frontmost                                            | 9        |
 | 5  | Submit              | Send the synthetic Return through `osascript`                              | 3        |
 | 6  | Discover            | Poll for one session directory that is not in the baseline                 | 4, 5     |
-| 7  | Attribute           | Compare the prompt the application recorded with the submitted one         | 6        |
+| 7  | Attribute           | Compare the prompt the application recorded with the submitted one, in NFKC | 6        |
 | 8  | Wait                | Block until the session completes                                          | 7        |
 | 9  | Collect             | Build the session document from the session directory                      | 8        |
 
