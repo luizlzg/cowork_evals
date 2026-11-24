@@ -13,6 +13,7 @@ import logging
 import os
 import subprocess
 import time
+import unicodedata
 from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -481,7 +482,7 @@ class CoWork:
         while True:
             recorded = _audit_prompt(_read_jsonl(session_dir / AUDIT, AuditRecord))
             if recorded is not None:
-                if recorded != prompt:
+                if not same_prompt(recorded, prompt):
                     raise CoWorkError(
                         6,
                         f"{session_dir}: the audit prompt does not match the submitted one",
@@ -815,6 +816,16 @@ def _first_user(audit: list[AuditRecord]) -> AuditRecord | None:
         if record.type == "user":
             return record
     return None
+
+
+def same_prompt(recorded: str, submitted: str) -> bool:
+    """Whether the prompt CoWork recorded is the one submitted.
+
+    CoWork records the prompt in Unicode compatibility form: a micro sign (U+00B5) is recorded
+    as a Greek mu (U+03BC), and a superscript three as a 3. Both sides are compared in NFKC, so
+    only a character a person typed differs.
+    """
+    return unicodedata.normalize("NFKC", recorded) == unicodedata.normalize("NFKC", submitted)
 
 
 def _audit_prompt(audit: list[AuditRecord]) -> str | None:

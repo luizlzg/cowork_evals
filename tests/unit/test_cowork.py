@@ -50,6 +50,7 @@ def test_sessions_finds_every_session_and_nothing_else(driver: CoWork) -> None:
         "no_output",
         "no_transcript",
         "no_user_record",
+        "normalised_prompt",
         "one_turn",
         "partial_line",
         "subagent",
@@ -346,6 +347,14 @@ def test_attribution_compares_the_audit_prompt(
     tmp_path: Path, name: str, expected: tuple[object, int | None, Path | None]
 ) -> None:
     assert attempt(lambda: stepping(tmp_path)._attribute(PROFILE / name, PONG)) == expected
+
+
+def test_attribution_accepts_the_prompt_recorded_in_compatibility_form(tmp_path: Path) -> None:
+    """The fixture records a Greek mu and a 3 where a micro sign and a superscript three went in."""
+    submitted = "Reply with exactly: PONG at 5 \u00b5M in 2 mm\u00b3"
+    driver = stepping(tmp_path)
+    attributed = attempt(lambda: driver._attribute(PROFILE / "normalised_prompt", submitted))
+    assert attributed == (None, None, None)
 
 
 @pytest.mark.parametrize(
